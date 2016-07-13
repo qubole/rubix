@@ -29,7 +29,6 @@ import java.io.RandomAccessFile;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 
-import static com.qubole.rubix.core.DataGen.generateContent;
 import static org.testng.AssertJUnit.assertTrue;
 
 /**
@@ -122,15 +121,17 @@ public class TestCachingInputStream
 
     @Test
     public void testChunkCaching()
-            throws IOException
+            throws IOException, InterruptedException
     {
         // 1. Seek and read some data
         testCachingHelper();
 
         // 2. Skip more than a block worth of data
+        Thread.sleep(3000); // sleep to give server chance to update cache status
         inputStream.seek(1550);
 
         // 3. Read some more data from 1550
+        Thread.sleep(3000);
         byte[] buffer = new byte[200];
         int readSize = inputStream.read(buffer, 0, 200);
         String expectedOutput = DataGen.generateContent().substring(1550, 1750);
@@ -141,6 +142,7 @@ public class TestCachingInputStream
         writeZeros(backendFileName, 1550, 1750);
 
         // 5. Read from [0, 1750) and ensure the old data is returned, this verifies that reading in chunks, some from cache and some from backend works as expected
+        Thread.sleep(3000);
         buffer = new byte[1750];
         inputStream.seek(0);
         readSize = inputStream.read(buffer, 0, 1750);
