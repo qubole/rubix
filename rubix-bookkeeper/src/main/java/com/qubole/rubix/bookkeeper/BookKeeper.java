@@ -49,12 +49,16 @@ public class BookKeeper implements BookKeeperService.Iface
     }
 
     @Override
-    public List<Boolean> getCacheStatus(String remotePath, long fileLength, long startBlock, long endBlock)
+    public List<Boolean> getCacheStatus(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock)
             throws TException
     {
         FileMetadata md;
         try {
-            md = fileMetadataCache.get(remotePath, new CreateFileMetadataCallable(remotePath, fileLength, conf));
+            md = fileMetadataCache.get(remotePath, new CreateFileMetadataCallable(remotePath, fileLength, lastModified, conf));
+            if( md.getLastModified() != lastModified ) {
+                invalidate(remotePath);
+                md = fileMetadataCache.get(remotePath, new CreateFileMetadataCallable(remotePath, fileLength, lastModified, conf));
+            }
         }
         catch (ExecutionException e) {
             log.error(String.format("Could not fetch Metadata for %s : %s", remotePath, Throwables.getStackTraceAsString(e)));
@@ -68,22 +72,23 @@ public class BookKeeper implements BookKeeperService.Iface
             blocksInfo.add(md.isBlockCached(blockNum));
         }
 
+
         return blocksInfo;
     }
 
     @Override
-    public void setAllCached(String remotePath, long fileLength, long startBlock, long endBlock)
+    public void setAllCached(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock)
             throws TException
     {
         FileMetadata md;
-        try {
-            md = fileMetadataCache.get(remotePath, new CreateFileMetadataCallable(remotePath, fileLength, conf));
-        }
-        catch (ExecutionException e) {
-            log.error(String.format("Error updating block status for %s [%d %d] : %s", remotePath, startBlock, endBlock, Throwables.getStackTraceAsString(e)));
-            throw new TException(e);
-        }
+        md = fileMetadataCache.getIfPresent(remotePath);
 
+        //md will be null when 2 users try to update the file in parallel and both their entries are invalidated.
+        // TODO: find a way to optimize this so that the file doesn't have to be read again in next request (new data is stored instead of invalidation)
+        if( md==null || md.getLastModified() != lastModified ) {
+            invalidate(remotePath);
+            return;
+        }
         endBlock = setCorrectEndBlock(endBlock, fileLength, remotePath);
 
         synchronized (md) {
@@ -161,7 +166,7 @@ public class BookKeeper implements BookKeeperService.Iface
                                     return;
                                 }
                             }
-
+                            //if file has been modified in cloud, its entry will be deleted due to "EXPLICIT"
                             log.info("deleting entry for" + md.getRemotePath().toString() + " due to "
                                     + notification.getCause());
                             md.closeAndCleanup();
@@ -179,18 +184,21 @@ public class BookKeeper implements BookKeeperService.Iface
         String path;
         Configuration conf;
         long fileLength;
+        long lastModified;
 
-        public CreateFileMetadataCallable(String path, long fileLength, Configuration conf)
+
+        public CreateFileMetadataCallable(String path, long fileLength, long lastModified, Configuration conf)
         {
             this.path = path;
             this.conf = conf;
             this.fileLength = fileLength;
+            this.lastModified=lastModified;
         }
 
         public FileMetadata call()
                 throws Exception
         {
-            return new FileMetadata(path, fileLength, conf);
+            return new FileMetadata(path, fileLength, lastModified, conf);
         }
     }
 
