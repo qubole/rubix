@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/assembly/assembly.iml" filepath="$PROJECT_DIR$/assembly/assembly.iml" />
+      <module fileurl="file://$PROJECT_DIR$/rubix-bookkeeper/rubix-bookkeeper.iml" filepath="$PROJECT_DIR$/rubix-bookkeeper/rubix-bookkeeper.iml" />
+      <module fileurl="file://$PROJECT_DIR$/rubix-core/rubix-core.iml" filepath="$PROJECT_DIR$/rubix-core/rubix-core.iml" />
+      <module fileurl="file://$PROJECT_DIR$/rubix-hadoop1/rubix-hadoop1.iml" filepath="$PROJECT_DIR$/rubix-hadoop1/rubix-hadoop1.iml" />
+      <module fileurl="file://$PROJECT_DIR$/rubix-presto/rubix-presto.iml" filepath="$PROJECT_DIR$/rubix-presto/rubix-presto.iml" />
+      <module fileurl="file://$PROJECT_DIR$/rubix-root.iml" filepath="$PROJECT_DIR$/rubix-root.iml" />
+    </modules>
+  </component>
+</project>

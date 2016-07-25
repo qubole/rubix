@@ -18,6 +18,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.qubole.rubix.bookkeeper.BookKeeper;
 import com.qubole.rubix.bookkeeper.BookKeeperClient;
 import com.qubole.rubix.bookkeeper.BookKeeperConfig;
 import org.apache.commons.logging.Log;
@@ -61,6 +62,7 @@ public class CachingInputStream
     private String remotePath;
     private long fileSize;
     private String localPath;
+    private long lastModified;
 
     private BookKeeperClient bookKeeperClient;
     private Configuration conf;
@@ -72,17 +74,19 @@ public class CachingInputStream
     {
         this.remotePath = backendPath.toString();
         this.fileSize = parentFs.getLength(backendPath);
+        lastModified=parentFs.getFileStatus(backendPath).getModificationTime();
         initialize(parentInputStream,
                 conf);
         this.statsMbean = statsMbean;
     }
 
     @VisibleForTesting
-    public CachingInputStream(FSDataInputStream parentInputStream, Configuration conf, Path backendPath, long size, CachingFileSystemStats statsMbean)
+    public CachingInputStream(FSDataInputStream parentInputStream, Configuration conf, Path backendPath, long size, long lastModified, CachingFileSystemStats statsMbean)
             throws IOException
     {
         this.remotePath = backendPath.toString();
         this.fileSize = size;
+        this.lastModified=lastModified;
         initialize(parentInputStream, conf);
         this.statsMbean = statsMbean;
     }
@@ -200,7 +204,7 @@ public class CachingInputStream
             {
                 ReadRequestChainStats stats = new ReadRequestChainStats();
                 for (ReadRequestChain readRequestChain : readRequestChains) {
-                    readRequestChain.updateCacheStatus(remotePath, fileSize, blockSize, conf);
+                    readRequestChain.updateCacheStatus(remotePath, fileSize, lastModified, blockSize, conf);
                     stats = stats.add(readRequestChain.getStats());
                 }
                 statsMbean.addReadRequestChainStats(stats);
@@ -232,7 +236,7 @@ public class CachingInputStream
         List<Boolean> isCached = null;
         try {
             if (bookKeeperClient != null) {
-                isCached = bookKeeperClient.getCacheStatus(remotePath, fileSize, nextReadBlock, endBlock);
+                isCached = bookKeeperClient.getCacheStatus(remotePath, fileSize, lastModified, nextReadBlock, endBlock);
             }
         }
         catch (Exception e) {
@@ -289,6 +293,7 @@ public class CachingInputStream
                     readRequestChainBuilder.add(cachedReadRequestChain);
                 }
                 cachedReadRequestChain.addReadRequest(readRequest);
+
             }
             else {
                 log.debug(String.format("Sending block %d to remoteReadRequestChain", blockNum));

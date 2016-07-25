@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="Maven: com.facebook.presto:presto-orc:0.142">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/com/facebook/presto/presto-orc/0.142/presto-orc-0.142.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$MAVEN_REPOSITORY$/com/facebook/presto/presto-orc/0.142/presto-orc-0.142-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/com/facebook/presto/presto-orc/0.142/presto-orc-0.142-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>
