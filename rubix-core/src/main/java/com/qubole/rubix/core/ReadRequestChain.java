@@ -91,7 +91,7 @@ public abstract class ReadRequestChain implements Callable<Integer>
     /*
      * This method is used called to update the cache status after read has been done
      */
-    public void updateCacheStatus(String remotePath, long fileSize, int blockSize, Configuration conf)
+    public void updateCacheStatus(String remotePath, long fileSize, long lastModified, int blockSize, Configuration conf)
     {
         // no-op by default
     }

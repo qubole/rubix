@@ -33,16 +33,18 @@ public class FileMetadata
     private String localPath;
     private String mdFilePath;
     private long size;
+    private long lastModified;
 
     private RandomAccessFile mdFile;
     private FileChannel mdFileChannel;
     private MappedByteBufferBitmap blockBitmap;
 
-    public FileMetadata(String remotePath, long fileLength, Configuration conf)
+    public FileMetadata(String remotePath, long fileLength, long lastModified, Configuration conf)
             throws IOException
     {
         this.remotePath = remotePath;
         this.size = fileLength;
+        this.lastModified = lastModified;
         localPath = BookKeeperConfig.getLocalPath(remotePath, conf);
         mdFilePath = BookKeeperConfig.getMDFile(remotePath, conf);
 
@@ -95,6 +97,8 @@ public class FileMetadata
     {
         return size;
     }
+
+    public long getLastModified() { return lastModified; }
 
     /*
      * This method returns the actual occupied size of data file on disk
