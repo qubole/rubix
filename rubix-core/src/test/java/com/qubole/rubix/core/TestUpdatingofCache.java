@@ -20,13 +20,19 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.io.file.tfile.ByteArray;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.io.RandomAccessFile;
+import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -34,9 +40,9 @@ import java.util.Arrays;
 import static org.testng.AssertJUnit.assertTrue;
 
 /**
- * Created by stagra on 25/1/16.
+ * Created by qubole on 19/7/16 .
  */
-public class TestCachingInputStream
+public class TestUpdatingofCache
 {
     int blockSize = 100;
     String backendFileName = "/tmp/backendFile";
@@ -44,10 +50,10 @@ public class TestCachingInputStream
 
     CachingInputStream inputStream;
 
-    private static final Log log = LogFactory.getLog(TestCachingInputStream.class);
+    private static final Log log = LogFactory.getLog(TestUpdatingofCache.class);
 
     @BeforeMethod
-    public void setup()
+    public void setup_initial()
             throws IOException, InterruptedException
     {
         final Configuration conf = new Configuration();
@@ -78,6 +84,27 @@ public class TestCachingInputStream
         inputStream = new CachingInputStream(fsDataInputStream, conf, backendPath, file.length(),file.lastModified(), new CachingFileSystemStats());
     }
 
+    public void setup()
+            throws InterruptedException, IOException
+    {
+        final Configuration conf = new Configuration();
+        conf.setBoolean(CachingConfigHelper.DATA_CACHE_STRICT_MODE, true);
+        conf.setInt(BookKeeperConfig.DATA_CACHE_BOOKKEEPER_PORT, 3456);
+
+        File file = new File(backendFileName);
+
+        LocalFSInputStream localFSInputStream = new LocalFSInputStream(backendFileName);
+        FSDataInputStream fsDataInputStream = new FSDataInputStream(localFSInputStream);
+        conf.setInt(BookKeeperConfig.BLOCK_SIZE, blockSize);
+
+        log.info("All set to test 1");
+
+        // This should be after server comes up else client could not be created
+        inputStream = new CachingInputStream(fsDataInputStream, conf, backendPath, file.length(),file.lastModified(), new CachingFileSystemStats());
+
+
+    }
+
     @AfterMethod
     public void cleanup()
     {
@@ -94,39 +121,23 @@ public class TestCachingInputStream
         localFile.delete();
     }
 
-    @Test
-    public void testCaching()
-            throws IOException
-    {
-        // 1. Seek and read
-        testCachingHelper();
-
-        // 2. Delete backend file
-        File file = new File(backendFileName);
-        file.delete();
-
-        // 3. Read the same data to ensure that data read from cache correctly
-        testCachingHelper();
-    }
-
-    private void testCachingHelper()
+    private void testEvictionHelper()
             throws IOException
     {
         inputStream.seek(100);
         byte[] buffer = new byte[1000];
         int readSize = inputStream.read(buffer, 0, 1000);
-        String output = new String(buffer, Charset.defaultCharset());
         String expectedOutput = DataGen.generateContent().substring(100, 1100);
         assertions(readSize, 1000, buffer,expectedOutput);
     }
 
     @Test
-    public void testChunkCaching()
+    public void testEviction()
             throws IOException, InterruptedException
     {
 
         // 1. Seek and read some data
-        testCachingHelper();
+        testEvictionHelper();
 
         // 2. Skip more than a block worth of data
         Thread.sleep(3000); // sleep to give server chance to update cache status
@@ -140,15 +151,34 @@ public class TestCachingInputStream
         assertions(readSize, 200, buffer, expectedOutput);
 
         // 4. Replace chunks already read from backend file with zeros
-        writeZeros(backendFileName, 100, 1100);
+        writeZeros(backendFileName,100, 1100);
         writeZeros(backendFileName, 1550, 1750);
-        // 5. Read from [0, 1750) and ensure the old data is returned, this verifies that reading in chunks, some from cache and some from backend works as expected
+
+        // 5. Read from [0, 1750) and verify that old data is returned since lastModifiedDate remains the same
         Thread.sleep(3000);
         buffer = new byte[1750];
         inputStream.seek(0);
         readSize = inputStream.read(buffer, 0, 1750);
         expectedOutput = DataGen.generateContent().substring(0, 1750);
         assertions(readSize, 1750, buffer, expectedOutput);
+
+        //6. Close existing stream and start a new one to get the new lastModifiedDate of backend file
+        inputStream.close();
+        setup();
+        log.info("New stream started");
+
+        //7. Read the data again and verify that correct, updated data is being read from the backend file and that the previous cache entry is evicted.
+        inputStream.seek(100);
+        buffer = new byte[1000];
+        readSize = inputStream.read(buffer, 0, 1000);
+
+        StringBuilder stringBuilder = new StringBuilder();
+        for (int j = 0; j < 1000; j++) {
+            stringBuilder.append(0);
+        }
+        expectedOutput = stringBuilder.toString();
+
+        assertions(readSize, 1000, buffer, expectedOutput);
     }
 
     private void writeZeros(String filename, int start, int end)
@@ -165,25 +195,12 @@ public class TestCachingInputStream
         raf.close();
     }
 
-    @Test
-    public void testEOF()
-            throws IOException
-    {
-        inputStream.seek(2500);
-        byte[] buffer = new byte[200];
-        int readSize = inputStream.read(buffer, 0, 200);
-
-        String expectedOutput = DataGen.generateContent().substring(2500);
-        assertions(readSize, 100, Arrays.copyOf(buffer, readSize), expectedOutput);
-
-        readSize = inputStream.read(buffer, 100, 100);
-        assertTrue("Did not get EOF", readSize == -1);
-    }
-
     private void assertions(int readSize, int expectedReadSize, byte[] outputBuffer, String expectedOutput)
+            throws UnsupportedEncodingException
     {
         assertTrue("Wrong amount of data read " + readSize + " was expecting " + expectedReadSize, readSize == expectedReadSize);
-        String output = new String(outputBuffer, Charset.defaultCharset());
+        String output = new String(outputBuffer,"UTF-8");
         assertTrue("Wrong data read, expected\n" + expectedOutput + "\nBut got\n" + output, expectedOutput.equals(output));
     }
+
 }
