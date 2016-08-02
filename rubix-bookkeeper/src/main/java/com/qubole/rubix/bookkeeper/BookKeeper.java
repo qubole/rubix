@@ -27,7 +27,9 @@ import org.apache.thrift.TException;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -39,6 +41,8 @@ public class BookKeeper implements BookKeeperService.Iface
 {
     private static Cache<String, FileMetadata> fileMetadataCache;
     private static Log log = LogFactory.getLog(BookKeeper.class.getName());
+    private long totalRequests = 0;
+    private long cachedRequests = 0;
 
     private Configuration conf;
 
@@ -69,7 +73,14 @@ public class BookKeeper implements BookKeeperService.Iface
 
         List<Boolean> blocksInfo = new ArrayList<Boolean>((int)(endBlock - startBlock));
         for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
-            blocksInfo.add(md.isBlockCached(blockNum));
+            totalRequests++;
+            if(md.isBlockCached(blockNum)) {
+                blocksInfo.add(true);
+                cachedRequests++;
+            }
+            else {
+                blocksInfo.add(false);
+            }
         }
 
 
@@ -96,6 +107,15 @@ public class BookKeeper implements BookKeeperService.Iface
                 md.setBlockCached(blockNum);
             }
         }
+    }
+
+    @Override
+    public Map getCacheStats()
+    {
+        Map<String, Double> stats = new HashMap<String, Double>();
+        stats.put("Cache Hit Rate", ((double) cachedRequests / totalRequests));
+        stats.put("Cache Misse Rate", ((double) (totalRequests - cachedRequests) / totalRequests));
+        return stats;
     }
 
     private long setCorrectEndBlock(long endBlock, long fileLength, String remotePath)
