@@ -108,8 +108,8 @@ public class BookKeeper implements BookKeeperService.Iface
     public Map getCacheStats()
     {
         Map<String, Double> stats = new HashMap<String, Double>();
-        stats.put("Cache Hit Rate",  ((double)cachedRequests/totalRequests));
-        stats.put("Cache Misse Rate",  ((double)(totalRequests-cachedRequests)/totalRequests));
+        stats.put("Cache Hit Rate", ((double) cachedRequests / totalRequests));
+        stats.put("Cache Misse Rate", ((double) (totalRequests - cachedRequests) / totalRequests));
         return stats;
     }
 
