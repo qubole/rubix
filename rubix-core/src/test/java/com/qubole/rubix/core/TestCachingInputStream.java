@@ -51,6 +51,7 @@ public class TestCachingInputStream
             throws IOException, InterruptedException
     {
         final Configuration conf = new Configuration();
+
         conf.setBoolean(CachingConfigHelper.DATA_CACHE_STRICT_MODE, true);
         conf.setInt(BookKeeperConfig.DATA_CACHE_BOOKKEEPER_PORT, 3456);
         Thread thread = new Thread() {
@@ -62,20 +63,33 @@ public class TestCachingInputStream
         thread.start();
 
         DataGen.populateFile(backendFileName);
-        LocalFSInputStream localFSInputStream = new LocalFSInputStream(backendFileName);
-        FSDataInputStream fsDataInputStream = new FSDataInputStream(localFSInputStream);
-
-        File file = new File(backendFileName);
-        conf.setInt(BookKeeperConfig.BLOCK_SIZE, blockSize);
 
         while (!BookKeeperServer.isServerUp()) {
             Thread.sleep(200);
             log.info("Waiting for BookKeeper Server to come up");
         }
+
+        createCachingStream(conf);
+
+    }
+
+    public void createCachingStream(Configuration conf)
+            throws InterruptedException, IOException
+    {
+        conf.setBoolean(CachingConfigHelper.DATA_CACHE_STRICT_MODE, true);
+        conf.setInt(BookKeeperConfig.DATA_CACHE_BOOKKEEPER_PORT, 3456);
+
+        File file = new File(backendFileName);
+
+        LocalFSInputStream localFSInputStream = new LocalFSInputStream(backendFileName);
+        FSDataInputStream fsDataInputStream = new FSDataInputStream(localFSInputStream);
+        conf.setInt(BookKeeperConfig.BLOCK_SIZE, blockSize);
+
         log.info("All set to test");
 
         // This should be after server comes up else client could not be created
         inputStream = new CachingInputStream(fsDataInputStream, conf, backendPath, file.length(),file.lastModified(), new CachingFileSystemStats());
+
     }
 
     @AfterMethod
@@ -121,7 +135,7 @@ public class TestCachingInputStream
     }
 
     @Test
-    public void testChunkCaching()
+    public void testChunkCachingAndEviction()
             throws IOException, InterruptedException
     {
 
@@ -142,6 +156,7 @@ public class TestCachingInputStream
         // 4. Replace chunks already read from backend file with zeros
         writeZeros(backendFileName, 100, 1100);
         writeZeros(backendFileName, 1550, 1750);
+
         // 5. Read from [0, 1750) and ensure the old data is returned, this verifies that reading in chunks, some from cache and some from backend works as expected
         Thread.sleep(3000);
         buffer = new byte[1750];
@@ -149,6 +164,25 @@ public class TestCachingInputStream
         readSize = inputStream.read(buffer, 0, 1750);
         expectedOutput = DataGen.generateContent().substring(0, 1750);
         assertions(readSize, 1750, buffer, expectedOutput);
+
+        //6. Close existing stream and start a new one to get the new lastModifiedDate of backend file
+        inputStream.close();
+        Configuration conf = new Configuration();
+        createCachingStream(conf);
+        log.info("New stream started");
+
+        //7. Read the data again and verify that correct, updated data is being read from the backend file and that the previous cache entry is evicted.
+        buffer = new byte[1000];
+        inputStream.seek(100);
+        readSize = inputStream.read(buffer, 0, 1000);
+
+        StringBuilder stringBuilder = new StringBuilder();
+        for (int j = 0; j < 1000; j++) {
+            stringBuilder.append(0);
+        }
+        expectedOutput = stringBuilder.toString();
+
+        assertions(readSize, 1000, buffer, expectedOutput);
     }
 
     private void writeZeros(String filename, int start, int end)
