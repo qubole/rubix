@@ -30,6 +30,11 @@
 
         <dependency>
             <groupId>com.qubole.rubix</groupId>
+            <artifactId>rubix-hadoop2</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-core</artifactId>
         </dependency>
     </dependencies>
@@ -68,6 +73,22 @@
                             </descriptors>
                         </configuration>
                     </execution>
+
+                    <execution>
+                        <id>rubix-hadoop2</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <appendAssemblyId>false</appendAssemblyId>
+                            <finalName>rubix-hadoop2-${project.version}</finalName>
+                            <descriptors>
+                                <descriptor>src/main/resources/assemblies/rubix-hadoop2.xml</descriptor>
+                            </descriptors>
+                        </configuration>
+                    </execution>
+
                 </executions>
             </plugin>
         </plugins>
