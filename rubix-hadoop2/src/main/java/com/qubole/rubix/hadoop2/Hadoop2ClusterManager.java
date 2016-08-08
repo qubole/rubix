@@ -17,19 +17,14 @@ import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.gson.*;
+import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-
 import com.qubole.rubix.core.ClusterManager;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
-import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -38,8 +33,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Logger;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -54,15 +50,14 @@ public class Hadoop2ClusterManager
     private String serverAddress = "localhost";
     private Supplier<List<String>> nodesSupplier;
     String address = "localhost:8088";
-    private static final Logger log = Logger.getLogger(Hadoop2ClusterManager.class.getName());
-
+    private Log log = LogFactory.getLog(Hadoop2ClusterManager.class);
     static String ADDRESS = "yarn.resourcemanager.webapp.address";
 
     @Override
     public void initialize(Configuration conf)
     {
         super.initialize(conf);
-        log.info("Initializing: Hadoop2ClusterManager");
+        log.debug("Initializing: Hadoop2ClusterManager");
         this.address = conf.get(ADDRESS, address);
         this.serverAddress = address.substring(0, address.indexOf(":"));
         this.serverPort = Integer.parseInt(address.substring(address.indexOf(":") + 1));
@@ -92,6 +87,7 @@ public class Hadoop2ClusterManager
                             response.append(inputLine);
                         }
                         in.close();
+                        httpcon.disconnect();
                     }
                     else {
                         log.info("/ws/v1/cluster/nodes failed due to " + responseCode + ". Setting this node as worker.");
@@ -106,7 +102,7 @@ public class Hadoop2ClusterManager
                     for (Elements node : allNodes) {
                         String state = node.getState();
                         String nodeHostName = node.getNodeHostName();
-                        log.info("Hostname: " + nodeHostName + "State: " + state);
+                        log.debug("Hostname: " + nodeHostName + "State: " + state);
                         if (!state.equalsIgnoreCase("Running") && !state.equalsIgnoreCase("New") && !state.equalsIgnoreCase("Rebooted")) {
                             unhealthyNodes.add(node);
                         }
@@ -124,7 +120,7 @@ public class Hadoop2ClusterManager
                     }
                     List<String> hostList = Lists.newArrayList(hosts.toArray(new String[0]));
                     Collections.sort(hostList);
-                    log.info("Hostlist: " + hostList.toString());
+                    log.debug("Hostlist: " + hostList.toString());
                     return hostList;
                 }
                 catch (Exception e) {
@@ -157,36 +153,32 @@ public class Hadoop2ClusterManager
     public static class Nodes
     {
         public Nodes()
-        {}
-
+        {
+        }
         private Node nodes;
 
         public void setNodes(Node nodes)
         {
             this.nodes = nodes;
         }
-
         public Node getNodes()
         {
             return nodes;
         }
-
-
     }
 
     public static class Node
     {
 
         public Node()
-        {}
-
+        {
+        }
         private List<Elements> node;
 
         public void setNode(List<Elements> node)
         {
             this.node = node;
         }
-
         public List<Elements> getNode()
         {
             return node;
