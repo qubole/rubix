@@ -92,6 +92,7 @@ public class Hadoop2ClusterManager
                     else {
                         log.info("/ws/v1/cluster/nodes failed due to " + responseCode + ". Setting this node as worker.");
                         isMaster = false;
+                        httpcon.disconnect();
                         return ImmutableList.of();
                     }
                     Gson gson = new Gson();
