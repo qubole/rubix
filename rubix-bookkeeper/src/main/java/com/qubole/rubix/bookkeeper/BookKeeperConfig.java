@@ -26,16 +26,16 @@ import java.util.List;
  */
 public class BookKeeperConfig
 {
-    public static String DATA_CACHE_EXPIRATION = "hadoop.cache.data.expiration";
-    public static String DATA_CACHE_EXIPIRATION_AFTER_WRITE = "hadoop.cache.data.expiration.after-write";
-    public static String DATA_CACHE_FULLNESS = "hadoop.cache.data.fullness.percentage";
-    public static String DATA_CACHE_DIRPREFIXES = "hadoop.cache.data.dirprefix.list";
-    public static String BLOCK_SIZE = "hadoop.cache.data.block-size";
-    public static String DATA_CACHE_BOOKKEEPER_PORT = "hadoop.cache.data.bookkeeper.port";
-    public static String DATA_CACHE_BOOKKEEPER_MAX_THREADS = "hadoop.cache.data.bookkeeper.max-threads";
+    public static String dataCacheExpirationConf = "hadoop.cache.data.expiration";
+    public static String dataCacheExpirationAfterWriteConf = "hadoop.cache.data.expiration.after-write";
+    public static String dataCacheFullnessConf = "hadoop.cache.data.fullness.percentage";
+    public static String dataCacheDirprefixesConf = "hadoop.cache.data.dirprefix.list";
+    public static String blockSizeConf = "hadoop.cache.data.block-size";
+    public static String dataCacheBookkeeperPortConf = "hadoop.cache.data.bookkeeper.port";
+    public static String dataCacheBookkeeperMaxThreadsConf = "hadoop.cache.data.bookkeeper.max-threads";
 
-    static String FILE_CACHE_DIR_SUFFIX = "/fcache/";
-    static int MAX_DISKS = 5;
+    static String fileCacheDirSuffixConf = "/fcache/";
+    static int maxDisksConf = 5;
 
     // default values
     private static final int dataCacheExpiry = Integer.MAX_VALUE;
@@ -49,42 +49,46 @@ public class BookKeeperConfig
 
     public static int getCacheDataExpiration(Configuration conf)
     {
-        return conf.getInt(DATA_CACHE_EXPIRATION, dataCacheExpiry);
+        return conf.getInt(dataCacheExpirationConf, dataCacheExpiry);
     }
 
     public static int getCacheDataExpirationAfterWrite(Configuration conf)
     {
-        return conf.getInt(DATA_CACHE_EXIPIRATION_AFTER_WRITE, dataCacheExpiryAfterWrite);
+        return conf.getInt(dataCacheExpirationAfterWriteConf, dataCacheExpiryAfterWrite);
     }
 
     public static int getCacheDataFullnessPercentage(Configuration conf)
     {
-        return conf.getInt(DATA_CACHE_FULLNESS, dataCacheFullness);
+        return conf.getInt(dataCacheFullnessConf, dataCacheFullness);
     }
 
     public static String getCacheDirPrefixList(Configuration conf)
     {
-        return conf.get(DATA_CACHE_DIRPREFIXES, dataCacheDirPrefixes);
+        return conf.get(dataCacheDirprefixesConf, dataCacheDirPrefixes);
     }
 
     public static int getBlockSize(Configuration conf)
     {
-        return conf.getInt(BLOCK_SIZE, blockSize);
+        return conf.getInt(blockSizeConf, blockSize);
     }
 
     public static int getServerPort(Configuration conf)
     {
-        return conf.getInt(DATA_CACHE_BOOKKEEPER_PORT, serverPort);
+        return conf.getInt(dataCacheBookkeeperPortConf, serverPort);
     }
 
     public static int getServerMaxThreads(Configuration conf)
     {
-        return conf.getInt(DATA_CACHE_BOOKKEEPER_MAX_THREADS, serverMaxThreads);
+        return conf.getInt(dataCacheBookkeeperMaxThreadsConf, serverMaxThreads);
     }
 
     public static int numDisks(Configuration conf)
     {
         return getDiskPathsMap(conf).size();
+    }
+
+    private BookKeeperConfig()
+    {
     }
 
     public static HashMap<Integer, String> getDiskPathsMap(final Configuration conf)
@@ -98,9 +102,9 @@ public class BookKeeperConfig
                 int ndisks = 0;
                 List<String> dirPrefixList = getDirPrefixList(conf);
                 for (String dirPrefix : dirPrefixList) {
-                    for (int i = 0; i < MAX_DISKS; ++i) {
+                    for (int i = 0; i < maxDisksConf; ++i) {
                         if (exists(dirPrefix + i)) {
-                            File dir = new File(dirPrefix + i + FILE_CACHE_DIR_SUFFIX);
+                            File dir = new File(dirPrefix + i + fileCacheDirSuffixConf);
                             dir.mkdir();
                             dirPathMap.put(ndisks, dirPrefix + i);
                             ++ndisks;
@@ -121,7 +125,7 @@ public class BookKeeperConfig
 
     public static String getDirPath(Configuration conf, int d)
     {
-        HashMap<Integer, String> dirPrefixMap =  getDiskPathsMap(conf);
+        HashMap<Integer, String> dirPrefixMap = getDiskPathsMap(conf);
         return dirPrefixMap.get(d);
     }
 
@@ -145,7 +149,7 @@ public class BookKeeperConfig
     public static String getDirectory(String remotePath, Configuration conf)
     {
         String parentPath = getParent(remotePath);
-        String relLocation = parentPath.indexOf(':') == -1 ? parentPath :parentPath.substring(parentPath.indexOf(':') + 3);
+        String relLocation = parentPath.indexOf(':') == -1 ? parentPath : parentPath.substring(parentPath.indexOf(':') + 3);
         String absLocation = getLocalDirFor(remotePath, conf) + relLocation;
         File parent = new File(absLocation);
         parent.mkdirs();
@@ -156,7 +160,7 @@ public class BookKeeperConfig
     {
         int h = Math.abs(remotePath.hashCode());
         int d = h % numDisks(conf);
-        String dirname = getDirPath(conf, d) + BookKeeperConfig.FILE_CACHE_DIR_SUFFIX ;
+        String dirname = getDirPath(conf, d) + BookKeeperConfig.fileCacheDirSuffixConf;
         return dirname;
     }
 

@@ -28,11 +28,11 @@ public abstract class ClusterManager
 {
     private long splitSize = 64 * 1024 * 1024; // 64MB
 
-    public static String SPLIT_SIZE = "caching.fs.split-size";
+    public static String splitSizeConf = "caching.fs.split-size";
 
     public void initialize(Configuration conf)
     {
-        splitSize = conf.getLong(SPLIT_SIZE, splitSize);
+        splitSize = conf.getLong(splitSizeConf, splitSize);
     }
 
     // This is the size in which the file will be logically divided into splits
@@ -41,9 +41,9 @@ public abstract class ClusterManager
         return splitSize;
     }
 
-    abstract public boolean isMaster();
+    public abstract boolean isMaster();
 
     // Nodes format as per the note above
     // Should return sorted list
-    abstract public List<String> getNodes();
+    public abstract List<String> getNodes();
 }

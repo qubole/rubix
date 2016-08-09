@@ -44,7 +44,6 @@ public class RemoteReadRequestChain extends ReadRequestChain
 
     private static final Log log = LogFactory.getLog(RemoteReadRequestChain.class);
 
-
     public RemoteReadRequestChain(FSDataInputStream inputStream, String localFile)
     {
         this.inputStream = inputStream;

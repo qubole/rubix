@@ -40,11 +40,16 @@ public class BookKeeperServer
 
     private static Log log = LogFactory.getLog(BookKeeperServer.class.getName());
 
-    public static void main(String args[])
+    private BookKeeperServer()
+    {
+    }
+
+    public static void main(String[] args)
     {
         conf = new Configuration();
         Runnable bookKeeperServer = new Runnable() {
-            public void run() {
+            public void run()
+            {
                 startServer(conf);
             }
         };

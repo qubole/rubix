@@ -37,7 +37,8 @@ import java.util.concurrent.TimeUnit;
 /**
  * Created by stagra on 12/2/16.
  */
-public class BookKeeper implements BookKeeperService.Iface
+public class BookKeeper
+        implements com.qubole.rubix.bookkeeper.BookKeeperService.Iface
 {
     private static Cache<String, FileMetadata> fileMetadataCache;
     private static Log log = LogFactory.getLog(BookKeeper.class.getName());
@@ -59,7 +60,7 @@ public class BookKeeper implements BookKeeperService.Iface
         FileMetadata md;
         try {
             md = fileMetadataCache.get(remotePath, new CreateFileMetadataCallable(remotePath, fileLength, lastModified, conf));
-            if( md.getLastModified() != lastModified ) {
+            if (md.getLastModified() != lastModified) {
                 invalidate(remotePath);
                 md = fileMetadataCache.get(remotePath, new CreateFileMetadataCallable(remotePath, fileLength, lastModified, conf));
             }
@@ -71,10 +72,10 @@ public class BookKeeper implements BookKeeperService.Iface
 
         endBlock = setCorrectEndBlock(endBlock, fileLength, remotePath);
 
-        List<Boolean> blocksInfo = new ArrayList<Boolean>((int)(endBlock - startBlock));
+        List<Boolean> blocksInfo = new ArrayList<Boolean>((int) (endBlock - startBlock));
         for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
             totalRequests++;
-            if(md.isBlockCached(blockNum)) {
+            if (md.isBlockCached(blockNum)) {
                 blocksInfo.add(true);
                 cachedRequests++;
             }
@@ -82,7 +83,6 @@ public class BookKeeper implements BookKeeperService.Iface
                 blocksInfo.add(false);
             }
         }
-
 
         return blocksInfo;
     }
@@ -96,7 +96,7 @@ public class BookKeeper implements BookKeeperService.Iface
 
         //md will be null when 2 users try to update the file in parallel and both their entries are invalidated.
         // TODO: find a way to optimize this so that the file doesn't have to be read again in next request (new data is stored instead of invalidation)
-        if( md == null || md.getLastModified() != lastModified ) {
+        if (md == null || md.getLastModified() != lastModified) {
             invalidate(remotePath);
             return;
         }
@@ -114,7 +114,7 @@ public class BookKeeper implements BookKeeperService.Iface
     {
         Map<String, Double> stats = new HashMap<String, Double>();
         stats.put("Cache Hit Rate", ((double) cachedRequests / totalRequests));
-        stats.put("Cache Misse Rate", ((double) (totalRequests - cachedRequests) / totalRequests));
+        stats.put("Cache Miss Rate", ((double) (totalRequests - cachedRequests) / totalRequests));
         return stats;
     }
 
@@ -199,20 +199,20 @@ public class BookKeeper implements BookKeeperService.Iface
                 .build();
     }
 
-    private static class CreateFileMetadataCallable implements Callable<FileMetadata>
+    private static class CreateFileMetadataCallable
+            implements Callable<FileMetadata>
     {
         String path;
         Configuration conf;
         long fileLength;
         long lastModified;
 
-
         public CreateFileMetadataCallable(String path, long fileLength, long lastModified, Configuration conf)
         {
             this.path = path;
             this.conf = conf;
             this.fileLength = fileLength;
-            this.lastModified=lastModified;
+            this.lastModified = lastModified;
         }
 
         public FileMetadata call()

@@ -98,7 +98,10 @@ public class FileMetadata
         return size;
     }
 
-    public long getLastModified() { return lastModified; }
+    public long getLastModified()
+    {
+        return lastModified;
+    }
 
     /*
      * This method returns the actual occupied size of data file on disk

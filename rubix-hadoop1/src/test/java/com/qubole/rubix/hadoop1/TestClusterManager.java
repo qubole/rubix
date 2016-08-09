@@ -73,7 +73,7 @@ public class TestClusterManager
     {
         ClusterManager clusterManager = new Hadoop1ClusterManager();
         Configuration conf = new Configuration();
-        conf.setInt(Hadoop1ClusterManager.NN_PORT, 45326);
+        conf.setInt(Hadoop1ClusterManager.nnPortConf, 45326);
         clusterManager.initialize(conf);
         return clusterManager;
     }

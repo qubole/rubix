@@ -33,7 +33,7 @@ public class MappedByteBufferBitmap
     {
         byte containerByte = mbuf.get(idx / 8);
         int offset = idx % 8;
-        if (((containerByte & ( 1 << offset)) != 0)) {
+        if (((containerByte & (1 << offset)) != 0)) {
             return true;
         }
 
@@ -44,14 +44,14 @@ public class MappedByteBufferBitmap
     {
         byte containerByte = mbuf.get(idx / 8);
         int offset = idx % 8;
-        mbuf.put(idx/ 8, (byte) (containerByte | ( 1 << offset)));
+        mbuf.put(idx / 8, (byte) (containerByte | (1 << offset)));
     }
 
     public void unset(int idx)
     {
         byte containerByte = mbuf.get(idx / 8);
         int offset = idx % 8;
-        mbuf.put(idx/ 8, (byte) (containerByte & ~( 1 << offset)));
+        mbuf.put(idx / 8, (byte) (containerByte & ~(1 << offset)));
     }
 
     public MappedByteBuffer getMappedByteBuffer()

@@ -21,7 +21,7 @@ public class CachingFileSystemStats
 {
     private ReadRequestChainStats stats;
 
-    private int BYTES_IN_MB = 1024 * 1024;
+    private int bytesInMb = 1024 * 1024;
 
     public CachingFileSystemStats()
     {
@@ -36,19 +36,19 @@ public class CachingFileSystemStats
     @Managed(description = "Gets the total size in MB that was downloaded from Remote files")
     public double getReadFromRemote()
     {
-        return (double) stats.getTotalDownloaded() / BYTES_IN_MB;
+        return (double) stats.getTotalDownloaded() / bytesInMb;
     }
 
     @Managed(description = "Gets the extra  MB read from remote files due to block alignment")
     public double getExtraReadFromRemote()
     {
-        return (double) stats.getExtraRead() / BYTES_IN_MB;
+        return (double) stats.getExtraRead() / bytesInMb;
     }
 
     @Managed(description = "Gets the MB read from cache")
     public double getReadFromCache()
     {
-        return (double) stats.getCachedDataRead() / BYTES_IN_MB;
+        return (double) stats.getCachedDataRead() / bytesInMb;
     }
 
     @Managed(description = "Gets the total number of request going out to Remote")

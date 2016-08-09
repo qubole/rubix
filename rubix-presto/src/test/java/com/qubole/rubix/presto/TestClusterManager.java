@@ -114,7 +114,7 @@ public class TestClusterManager
     {
         ClusterManager clusterManager = new PrestoClusterManager();
         Configuration conf = new Configuration();
-        conf.setInt(PrestoClusterManager.SERVER_PORT, 45326);
+        conf.setInt(PrestoClusterManager.serverPortConf, 45326);
         clusterManager.initialize(conf);
         return clusterManager;
     }

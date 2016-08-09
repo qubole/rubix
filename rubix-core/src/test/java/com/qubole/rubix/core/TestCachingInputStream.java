@@ -19,7 +19,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.SequenceFile;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -53,7 +52,7 @@ public class TestCachingInputStream
         final Configuration conf = new Configuration();
 
         conf.setBoolean(CachingConfigHelper.DATA_CACHE_STRICT_MODE, true);
-        conf.setInt(BookKeeperConfig.DATA_CACHE_BOOKKEEPER_PORT, 3456);
+        conf.setInt(BookKeeperConfig.dataCacheBookkeeperPortConf, 3456);
         Thread thread = new Thread() {
             public void run()
             {
@@ -77,13 +76,13 @@ public class TestCachingInputStream
             throws InterruptedException, IOException
     {
         conf.setBoolean(CachingConfigHelper.DATA_CACHE_STRICT_MODE, true);
-        conf.setInt(BookKeeperConfig.DATA_CACHE_BOOKKEEPER_PORT, 3456);
+        conf.setInt(BookKeeperConfig.dataCacheBookkeeperPortConf, 3456);
 
         File file = new File(backendFileName);
 
         LocalFSInputStream localFSInputStream = new LocalFSInputStream(backendFileName);
         FSDataInputStream fsDataInputStream = new FSDataInputStream(localFSInputStream);
-        conf.setInt(BookKeeperConfig.BLOCK_SIZE, blockSize);
+        conf.setInt(BookKeeperConfig.blockSizeConf, blockSize);
 
         log.info("All set to test");
 

@@ -18,7 +18,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.qubole.rubix.bookkeeper.BookKeeper;
 import com.qubole.rubix.bookkeeper.BookKeeperClient;
 import com.qubole.rubix.bookkeeper.BookKeeperConfig;
 import org.apache.commons.logging.Log;
@@ -58,7 +57,6 @@ public class CachingInputStream
     private static ListeningExecutorService readService = MoreExecutors.listeningDecorator(Executors.newCachedThreadPool());
     private static final Log log = LogFactory.getLog(CachingInputStream.class);
 
-
     private String remotePath;
     private long fileSize;
     private String localPath;
@@ -74,7 +72,7 @@ public class CachingInputStream
     {
         this.remotePath = backendPath.toString();
         this.fileSize = parentFs.getLength(backendPath);
-        lastModified=parentFs.getFileStatus(backendPath).getModificationTime();
+        lastModified = parentFs.getFileStatus(backendPath).getModificationTime();
         initialize(parentInputStream,
                 conf);
         this.statsMbean = statsMbean;
@@ -86,7 +84,7 @@ public class CachingInputStream
     {
         this.remotePath = backendPath.toString();
         this.fileSize = size;
-        this.lastModified=lastModified;
+        this.lastModified = lastModified;
         initialize(parentInputStream, conf);
         this.statsMbean = statsMbean;
     }
@@ -211,7 +209,6 @@ public class CachingInputStream
             }
         });
 
-
         log.debug(String.format("Read %d bytes", sizeRead));
         if (sizeRead > 0) {
             nextReadPosition += sizeRead;
@@ -248,7 +245,6 @@ public class CachingInputStream
 
         int idx = 0;
         for (long blockNum = nextReadBlock; blockNum < endBlock; blockNum++, idx++) {
-
             long backendReadStart = blockNum * blockSize;
             long backendReadEnd = (blockNum + 1) * blockSize;
 
@@ -262,7 +258,7 @@ public class CachingInputStream
                 backendReadEnd = fileSize;
             }
             long actualReadStart = (blockNum == nextReadBlock ? nextReadPosition : backendReadStart);
-            long actualReadEnd = (blockNum == (endBlock -1) ? (nextReadPosition + length) : backendReadEnd);
+            long actualReadEnd = (blockNum == (endBlock - 1) ? (nextReadPosition + length) : backendReadEnd);
             if (actualReadEnd >= fileSize) {
                 actualReadEnd = fileSize;
             }
