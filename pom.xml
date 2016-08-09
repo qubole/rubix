@@ -55,6 +55,7 @@
         <module>rubix-core</module>
         <module>rubix-presto</module>
         <module>rubix-hadoop1</module>
+        <module>rubix-hadoop2</module>
         <module>assembly</module>
     </modules>
 
@@ -83,6 +84,13 @@
                 <artifactId>rubix-hadoop1</artifactId>
                 <version>${project.version}</version>
             </dependency>
+
+            <dependency>
+                <groupId>com.qubole.rubix</groupId>
+                <artifactId>rubix-hadoop2</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
 
             <dependency>
                 <groupId>com.qubole.rubix</groupId>
