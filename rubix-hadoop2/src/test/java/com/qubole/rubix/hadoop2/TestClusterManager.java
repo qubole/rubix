@@ -44,26 +44,11 @@ public class TestClusterManager
             throws IOException
     {
         HttpServer server = startServer(new MultipleNodeHandler());
-        LOG.info("Started Server");
+        LOG.debug("Started Server");
         ClusterManager cm = getHadoop2ClusterManager();
         List<String> nodes = cm.getNodes();
-        LOG.info("Got nodes: " + nodes);
-        assertTrue("Should have 1 nodes", nodes.size() == 1);
-        server.stop(0);
-    }
-
-    //Returns master when master only node
-    @Test
-    public void testMasterOnlyCluster()
-            throws IOException
-    {
-        HttpServer server = startServer(new SingleNodeHandler());
-        LOG.info("Started Server");
-        ClusterManager cm = getHadoop2ClusterManager();
-        List<String> nodes = cm.getNodes();
-        LOG.info("Got nodes: " + nodes);
-        assertTrue("Should have 1 node", nodes.size() == 1);
-        assertTrue("Should be master",nodes.get(0).equals(InetAddress.getLocalHost().getHostName()));
+        LOG.debug("Got nodes: " + nodes);
+        assertTrue("Should have 2 nodes", nodes.size() == 2);
         server.stop(0);
     }
 
@@ -73,14 +58,14 @@ public class TestClusterManager
             throws IOException
     {
         HttpServer server = startServer(new FailedNodeHandler());
-        LOG.info("Started Server");
+        LOG.debug("Started Server");
         try{
             ClusterManager cm = getHadoop2ClusterManager();
             List<String> nodes = cm.getNodes();
-            fail("Expected exception : All the nodes obtained were Unhealthy and were deleted");
+            fail("Expected exception : No healthy data nodes found.");
         }
         catch (Exception e){
-            LOG.info("Caught Exception: " + e.getMessage());
+            LOG.debug("Caught Exception: " + e.getMessage());
         }
 
         server.stop(0);
@@ -125,7 +110,7 @@ public class TestClusterManager
     class FailedNodeHandler implements HttpHandler
     {
         public void handle(HttpExchange exchange) throws IOException {
-            String nodes = String.format("{\"nodes\":{\"node\":[{\rack\":\"\\/default-rack\",\"state\":\"NEW\",\"id\":\"h2:1235\",\"nodeHostName\":\"%s\",\"nodeHTTPAddress\":\"h2:2\",\"healthStatus\":\"Healthy\",\"lastHealthUpdate\":1324056895432,\"healthReport\":\"Healthy\",\"numContainers\":0,\"usedMemoryMB\":0,\"availMemoryMB\":8192,\"usedVirtualCores\":0,\"availableVirtualCores\":8},{\"rack\":\"\\/default-rack\",\"state\":\"Unhealthy\",\"id\":\"h1:1234\",\"nodeHostName\":\"h1\",\"nodeHTTPAddress\":\"h1:2\",\"healthStatus\":\"Healthy\",\"lastHealthUpdate\":1324056895092,\"healthReport\":\"Healthy\",\"numContainers\":0,\"usedMemoryMB\":0,\"availMemoryMB\":8192,\"usedVirtualCores\":0,\"availableVirtualCores\":8}]}}",InetAddress.getLocalHost().getHostName());
+            String nodes = String.format("{\"nodes\":{\"node\":[{\rack\":\"\\/default-rack\",\"state\":\"Unhealthy\",\"id\":\"h2:1235\",\"nodeHostName\":\"%s\",\"nodeHTTPAddress\":\"h2:2\",\"healthStatus\":\"Healthy\",\"lastHealthUpdate\":1324056895432,\"healthReport\":\"Healthy\",\"numContainers\":0,\"usedMemoryMB\":0,\"availMemoryMB\":8192,\"usedVirtualCores\":0,\"availableVirtualCores\":8},{\"rack\":\"\\/default-rack\",\"state\":\"Unhealthy\",\"id\":\"h1:1234\",\"nodeHostName\":\"h1\",\"nodeHTTPAddress\":\"h1:2\",\"healthStatus\":\"Healthy\",\"lastHealthUpdate\":1324056895092,\"healthReport\":\"Healthy\",\"numContainers\":0,\"usedMemoryMB\":0,\"availMemoryMB\":8192,\"usedVirtualCores\":0,\"availableVirtualCores\":8}]}}",InetAddress.getLocalHost().getHostName());
             exchange.getResponseHeaders().add("Content-Type", "application/json");
             exchange.sendResponseHeaders(200, nodes.length());
             OutputStream os = exchange.getResponseBody();
@@ -134,16 +119,6 @@ public class TestClusterManager
         }
     }
 
-    class SingleNodeHandler implements HttpHandler
-    {
-        public void handle(HttpExchange exchange) throws IOException {
-            String nodes = String.format("{\"nodes\":{\"node\":[{\rack\":\"\\/default-rack\",\"state\":\"NEW\",\"id\":\"h2:1235\",\"nodeHostName\":\"%s\",\"nodeHTTPAddress\":\"h2:2\",\"healthStatus\":\"Healthy\",\"lastHealthUpdate\":1324056895432,\"healthReport\":\"Healthy\",\"numContainers\":0,\"usedMemoryMB\":0,\"availMemoryMB\":8192,\"usedVirtualCores\":0,\"availableVirtualCores\":8}]}}",InetAddress.getLocalHost().getHostName());
-            exchange.getResponseHeaders().add("Content-Type", "application/json");
-            exchange.sendResponseHeaders(200, nodes.length());
-            OutputStream os = exchange.getResponseBody();
-            os.write(nodes.getBytes());
-            os.close();
-        }
-    }
+
 }
 

@@ -40,7 +40,7 @@ public class CachingHadoop2FileSystem extends CachingFileSystem<NativeS3FileSyst
     public void initialize(URI uri, Configuration conf)
             throws IOException
     {
-        LOG.info("Initializing CachingNativeS3FileSystem - Hadoop2");
+        LOG.debug("Initializing CachingNativeS3FileSystem - Hadoop2");
         if (clusterManager == null) {
             initializeClusterManager(conf);
         }

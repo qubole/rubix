@@ -27,7 +27,6 @@ import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -78,7 +77,7 @@ public class Hadoop2ClusterManager
                     HttpURLConnection httpcon = (HttpURLConnection) obj.openConnection();
                     httpcon.setRequestMethod("GET");
                     int responseCode = httpcon.getResponseCode();
-                    log.info("Sending 'GET' request to URL: " + obj.toString());
+                    log.debug("Sending 'GET' request to URL: " + obj.toString());
                     if (responseCode == HttpURLConnection.HTTP_OK) {
 
                         BufferedReader in = new BufferedReader(new InputStreamReader(httpcon.getInputStream()));
@@ -99,26 +98,21 @@ public class Hadoop2ClusterManager
                     Type type = new TypeToken<Nodes>() {}.getType();
                     Nodes nodes = gson.fromJson(response.toString(), type);
                     List<Elements> allNodes = nodes.getNodes().getNode();
-                    List<Elements> unhealthyNodes = new ArrayList<Elements>();
+                    Set<String> hosts = new HashSet<>();
+
                     for (Elements node : allNodes) {
                         String state = node.getState();
-                        String nodeHostName = node.getNodeHostName();
-                        log.debug("Hostname: " + nodeHostName + "State: " + state);
-                        if (!state.equalsIgnoreCase("Running") && !state.equalsIgnoreCase("New") && !state.equalsIgnoreCase("Rebooted")) {
-                            unhealthyNodes.add(node);
+                        log.debug("Hostname: " + node.getNodeHostName() + "State: " + state);
+                        //keep only healthy data nodes
+                        if (state.equalsIgnoreCase("Running") || state.equalsIgnoreCase("New") || state.equalsIgnoreCase("Rebooted")) {
+                            hosts.add(node.getNodeHostName());
                         }
                     }
-                    //keep only healthy data nodes*/
-                    if (!unhealthyNodes.isEmpty()) {
-                        allNodes.removeAll(unhealthyNodes);
-                    }
-                    Set<String> hosts = new HashSet<>();
-                    for (Elements node : allNodes) {
-                        hosts.add(node.getNodeHostName());
-                    }
+
                     if (hosts.isEmpty()) {
                         throw new Exception("No healthy data nodes found.");
                     }
+
                     List<String> hostList = Lists.newArrayList(hosts.toArray(new String[0]));
                     Collections.sort(hostList);
                     log.debug("Hostlist: " + hostList.toString());
