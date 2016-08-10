@@ -9,4 +9,4 @@ before_install:
   - sudo apt-get install libboost-dev libboost-test-dev libboost-program-options-dev libevent-dev automake libtool flex bison pkg-config g++ libssl-dev
   - wget http://archive.apache.org/dist/thrift/0.9.0/thrift-0.9.0.tar.gz
   - tar xfz thrift-0.9.0.tar.gz
-  - cd thrift-0.9.1 && ./configure && sudo make install
+  - cd thrift-0.9.0 && ./configure && sudo make install
