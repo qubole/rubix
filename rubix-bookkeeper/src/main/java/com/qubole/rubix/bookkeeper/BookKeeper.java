@@ -115,6 +115,8 @@ public class BookKeeper
         Map<String, Double> stats = new HashMap<String, Double>();
         stats.put("Cache Hit Rate", ((double) cachedRequests / totalRequests));
         stats.put("Cache Miss Rate", ((double) (totalRequests - cachedRequests) / totalRequests));
+        stats.put("Cache Reads", ((double) cachedRequests));
+        stats.put("Remote Reads", ((double) (totalRequests  - cachedRequests)));
         return stats;
     }
 
