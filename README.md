@@ -41,7 +41,7 @@ OR
 ##### Using RubiX with Hive - Hadoop
 
 1. Add RubiX jars:  rubix-bookkeeper.jar, rubix-core.jar, rubix-hadoop1.jar either to hadoop/lib directly or via `add jar` command. 
-	    All these jars are packaged in rubix-hadoop1.tar under assembly module 
+	    All these jars are packaged in rubix-hadoop1.tar under assembly module.
 2. Configuration changes: Use following configs to start using RubiX:
 		fs.s3n.impl=com.qubole.rubix.hadoop1.CachingNativeS3FileSystem   
 		fs.s3.impl=com.qubole.rubix.hadoop1.CachingNativeS3FileSystem   
