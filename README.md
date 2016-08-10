@@ -11,8 +11,9 @@ thereby improving performance.
 
 ### Supported Engines and Cloud Stores
 
-- Presto: Amazon S3 is supported
-- Hadoop-1: Any engine using hadoop-1, e.g. Hive can utilize RubiX. Amazon S3 is supported
+- Presto: Amazon S3 is supported.
+- Hadoop-1: Any engine using hadoop-1, e.g. Hive can utilize RubiX. Amazon S3 is supported.
+- Hadoop-2: Any engine using hadoop-2, e.g. Hive can utilize RubiX. Amazon S3 is supported.
 
 ###  How to use it
 
@@ -20,33 +21,45 @@ RubiX has two components: a BookKeeper server and a FileSystem implementation th
 
 List of things to be done to use RubiX are:
 
-1. Start the BookKeeper server. It can be started via `hadoop jar` command, e.g.:   
->	hadoop jar rubix-bookkeeper-1.0.jar com.qubole.rubix.bookkeeper.BookKeeperServer
+1. Engine side changes: 
+	To use RubiX, you need to place the appropriate jars in the classpath and configure Engines to use RubiX filesystem to access the cloud store. Sections below show how to get started on RubiX with supported plugins.
 
-2. Engine side changes:   
-	To use RubiX, you need to place the appropriate jars in the classpath and configure Engines to use RubiX filesystem to access the cloud store. Sections below show how to get started on RubiX with supported plugins
+2. Start the BookKeeper server. It can be started via `hadoop jar` command, e.g.: 
+>	hadoop jar rubix-bookkeeper-1.0.jar com.qubole.rubix.bookkeeper.BookKeeperServer
+OR
+>	sudo /usr/lib/hive2/bin/cache-bookkeeper start
 
 ##### Using RubiX with Presto
   
-1. Place rubix-bookkeeper.jar, rubix-core.jar, rubix-presto.jar in presto/plugin/hive-hadoop2/ directory.   
+1. Place rubix-bookkeeper.jar, rubix-core.jar, rubix-presto.jar in presto/plugin/hive-hadoop2/ directory. 
    All these jars are packaged in rubix-presto.tar under assembly module
-2. Configuration changes    
-     i. Set configuration to use RubiX filesystem in Presto.   
-     ii. Set "hive.force-local-scheduling=true" in hive.properties   
+2. Configuration changes
+     i. Set configuration to use RubiX filesystem in Presto. 
+     ii. Set "hive.force-local-scheduling=true" in hive.properties 
 3. Start/Re-start the Presto server
 		
-##### Using RubiX with Hive
+##### Using RubiX with Hive - Hadoop
 
-1. Add RubiX jars:  rubix-bookkeeper.jar, rubix-core.jar, rubix-hadoop1 either to hadoop/lib directly or via `add jar` command.   
-	    All these jars are packaged in rubix-hadoop1.tar under assembly module   
-2. Configuration changes: Use following configs to start using RubiX   
+1. Add RubiX jars:  rubix-bookkeeper.jar, rubix-core.jar, rubix-hadoop1.jar either to hadoop/lib directly or via `add jar` command. 
+	    All these jars are packaged in rubix-hadoop1.tar under assembly module 
+2. Configuration changes: Use following configs to start using RubiX:
 		fs.s3n.impl=com.qubole.rubix.hadoop1.CachingNativeS3FileSystem   
 		fs.s3.impl=com.qubole.rubix.hadoop1.CachingNativeS3FileSystem   
+
+##### Using RubiX with Hive - Hadoop2
+
+1. Add RubiX jars:  rubix-bookkeeper.jar, rubix-core.jar, rubix-hadoop2.jar either to /usr/lib/hadoop2/share/hadoop/common/ directly or via `add jar` command. 
+	    All these jars are packaged in rubix-hadoop2.tar under assembly module. 
+2. Configuration changes: Use following configs to start using RubiX:
+		fs.s3n.impl=com.qubole.rubix.hadoop2.CachingHadoop2FileSystem
+		fs.s3.impl=com.qubole.rubix.hadoop2.CachingHadoop2FileSystem
+		yarn.scheduler.fair.locality.threshold.node = 1.0
+3. Start/Restart Hadoop2 cluster. 
 
 ### Configurations
 
 ##### BookKeeper server configurations
-These configurations are to be providing as hadoop configs while started the BookKeeper server
+These configurations are to be provided as hadoop configs while starting the BookKeeper server
 
 | Configuration                            | Default          | Description                                                                                                                                                                    |
 |------------------------------------------|------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -67,7 +80,7 @@ These configurations need to be provided by the engine which is going to use Rub
 
 ### Monitoring
 
-Client side monitoring is set up right  now, stats are published to MBean named `rubix:name=stats`
+Client side monitoring is set up right now, stats are published to MBean named `rubix:name=stats`
 
 Engines which provide interface to view jmx stats can see these stats. E.g. in Presto you can run this query to see the stats:
 >
