@@ -1,8 +1,9 @@
 branches:
   only: 
     - master
+    - travis
 language: java
-sudo: false
+sudo: required
 before_install:
   - sudo apt-get update -qq
   - sudo apt-get install libboost-dev libboost-test-dev libboost-program-options-dev libevent-dev automake libtool flex bison pkg-config g++ libssl-dev
