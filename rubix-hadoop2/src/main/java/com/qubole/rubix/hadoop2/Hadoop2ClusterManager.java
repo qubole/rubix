@@ -43,26 +43,24 @@ import org.apache.hadoop.conf.Configuration;
 public class Hadoop2ClusterManager
         extends ClusterManager
 {
-
     private boolean isMaster = true;
     public int serverPort = 8088;
     private String serverAddress = "localhost";
     private Supplier<List<String>> nodesSupplier;
     String address = "localhost:8088";
     private Log log = LogFactory.getLog(Hadoop2ClusterManager.class);
-    static String ADDRESS = "yarn.resourcemanager.webapp.address";
+    static String addressConf = "yarn.resourcemanager.webapp.address";
 
     @Override
     public void initialize(Configuration conf)
     {
         super.initialize(conf);
         log.debug("Initializing: Hadoop2ClusterManager");
-        this.address = conf.get(ADDRESS, address);
+        this.address = conf.get(addressConf, address);
         this.serverAddress = address.substring(0, address.indexOf(":"));
         this.serverPort = Integer.parseInt(address.substring(address.indexOf(":") + 1));
         nodesSupplier = Suppliers.memoizeWithExpiration(new Supplier<List<String>>()
         {
-
             @Override
             public List<String> get()
             {
@@ -79,7 +77,6 @@ public class Hadoop2ClusterManager
                     int responseCode = httpcon.getResponseCode();
                     log.debug("Sending 'GET' request to URL: " + obj.toString());
                     if (responseCode == HttpURLConnection.HTTP_OK) {
-
                         BufferedReader in = new BufferedReader(new InputStreamReader(httpcon.getInputStream()));
                         String inputLine;
                         while ((inputLine = in.readLine()) != null) {
@@ -164,7 +161,6 @@ public class Hadoop2ClusterManager
 
     public static class Node
     {
-
         public Node()
         {
         }
@@ -183,24 +179,30 @@ public class Hadoop2ClusterManager
     public static class Elements
     {
         /*
-        rack 	         string
-        state 	         string
-        id 	             string
-        nodeHostName 	 string
+        rack             string
+        state            string
+        id               string
+        nodeHostName     string
         nodeHTTPAddress  string
-        healthStatus 	 string
-        healthReport 	 string
+        healthStatus     string
+        healthReport     string
         lastHealthUpdate long
-        usedMemoryMB 	 long
-        availMemoryMB 	 long
-        numContainers 	 int
+        usedMemoryMB     long
+        availMemoryMB    long
+        numContainers    int
         */
 
         String nodeHostName;
         String state;
 
-        String getState() { return state; }
+        String getState()
+        {
+            return state;
+        }
 
-        String getNodeHostName() { return nodeHostName; }
+        String getNodeHostName()
+        {
+            return nodeHostName;
+        }
     }
 }

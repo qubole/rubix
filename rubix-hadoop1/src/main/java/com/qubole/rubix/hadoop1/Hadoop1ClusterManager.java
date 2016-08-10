@@ -42,7 +42,7 @@ public class Hadoop1ClusterManager extends ClusterManager
     Supplier<List<String>> nodesSupplier;
     private int nnPort = 50070;
 
-    public static String NN_PORT = "caching.fs.namenode-port";
+    public static String nnPortConf = "caching.fs.namenode-port";
 
     private static final Log LOG = LogFactory.getLog(Hadoop1ClusterManager.class);
 
@@ -50,7 +50,7 @@ public class Hadoop1ClusterManager extends ClusterManager
     public void initialize(Configuration conf)
     {
         super.initialize(conf);
-        nnPort = conf.getInt(NN_PORT, nnPort);
+        nnPort = conf.getInt(nnPortConf, nnPort);
 
         nodesSupplier = Suppliers.memoizeWithExpiration(new Supplier<List<String>>()
         {
@@ -100,7 +100,6 @@ public class Hadoop1ClusterManager extends ClusterManager
 
     private List<String> extractNodes(String dfsnodelist)
     {
-
         Document doc = Jsoup.parse(dfsnodelist);
 
         String title = doc.title();
@@ -126,7 +125,7 @@ public class Hadoop1ClusterManager extends ClusterManager
     {
         long start = System.nanoTime();
         List<String> nodes = nodesSupplier.get();
-        LOG.info("Fetched node list in " + (System.nanoTime() - start) / Math.pow(10,9) + "sec");
+        LOG.info("Fetched node list in " + (System.nanoTime() - start) / Math.pow(10, 9) + "sec");
         return nodes;
     }
 

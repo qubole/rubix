@@ -57,7 +57,7 @@ public class PrestoClusterManager extends ClusterManager
 
     private static final Logger log = Logger.get(PrestoClusterManager.class);
 
-    public static String SERVER_PORT = "caching.fs.presto-server-port";
+    public static String serverPortConf = "caching.fs.presto-server-port";
 
     // Safe to use single instance of HttpClient since Supplier.get() provides synchronization
     private static HttpClient httpClient = new JettyHttpClient();
@@ -66,10 +66,9 @@ public class PrestoClusterManager extends ClusterManager
     public void initialize(Configuration conf)
     {
         super.initialize(conf);
-        this.serverPort = conf.getInt(SERVER_PORT, serverPort);
+        this.serverPort = conf.getInt(serverPortConf, serverPort);
 
         nodesSupplier = Suppliers.memoizeWithExpiration(new Supplier<List<String>>() {
-
             @Override
             public List<String> get()
             {
@@ -196,11 +195,13 @@ public class PrestoClusterManager extends ClusterManager
             this.uri = uri;
         }
 
-        @JsonProperty String getLastResponseTime() {
+        @JsonProperty String getLastResponseTime()
+        {
             return lastResponseTime;
         }
 
-        public void setLastResponseTime(String lastResponseTime) {
+        public void setLastResponseTime(String lastResponseTime)
+        {
             this.lastResponseTime = lastResponseTime;
         }
 

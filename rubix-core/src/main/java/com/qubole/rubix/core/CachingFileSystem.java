@@ -69,7 +69,6 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
         return (Class<T>) paramType.getActualTypeArguments()[0];
     }
 
-
     public CachingFileSystem()
     {
         try {
@@ -199,7 +198,8 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
     }
 
     @Override
-    public BlockLocation[] getFileBlockLocations(FileStatus file, long start, long len) throws IOException {
+    public BlockLocation[] getFileBlockLocations(FileStatus file, long start, long len) throws IOException
+    {
         if (!clusterManager.isMaster() || cacheSkipped) {
             // If in worker node, blockLocation does not matter
             return fs.getFileBlockLocations(file, start, len);
@@ -207,11 +207,11 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
 
         List<String> nodes = clusterManager.getNodes();
 
-        if(file == null) {
+        if (file == null) {
             return null;
         }
-        else if(start >= 0L && len >= 0L) {
-            if(file.getLen() < start) {
+        else if (start >= 0L && len >= 0L) {
+            if (file.getLen() < start) {
                 return new BlockLocation[0];
             }
             else {

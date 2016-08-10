@@ -22,7 +22,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.testng.annotations.Test;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.List;
@@ -78,7 +77,7 @@ public class TestClusterManager
 
             ClusterManager clusterManager = new Hadoop2ClusterManager();
             Configuration conf = new Configuration();
-            conf.set(Hadoop2ClusterManager.ADDRESS, "localhost:45326");
+            conf.set(Hadoop2ClusterManager.addressConf, "localhost:45326");
             clusterManager.initialize(conf);
             return clusterManager;
     }

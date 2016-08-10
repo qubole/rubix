@@ -14,59 +14,66 @@ package com.qubole.rubix.bookkeeper.utils;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.List;
-
-
 import com.google.common.io.ByteStreams;
 //import io.airlift.log.Logger;
 
-public class ShellExec {
+public class ShellExec
+{
     //private static final Logger log = Logger.get(ShellExec.class);
 
     private List<String> args = null;
 
-    public static class CommandResult {
+    public static class CommandResult
+    {
         private int exitValue;
         private String out;
         private String err;
 
-        public int getExitValue() {
+        public int getExitValue()
+        {
             return exitValue;
         }
 
-        public void setExitValue(int exitValue) {
+        public void setExitValue(int exitValue)
+        {
             this.exitValue = exitValue;
         }
 
-        public String getOut() {
+        public String getOut()
+        {
             return out;
         }
 
-        public void setOut(String out) {
+        public void setOut(String out)
+        {
             this.out = out;
         }
 
-        public String getErr() {
+        public String getErr()
+        {
             return err;
         }
 
-        public void setErr(String err) {
+        public void setErr(String err)
+        {
             this.err = err;
         }
     }
 
-    public ShellExec(String cmd) {
+    public ShellExec(String cmd)
+    {
         super();
         this.args = Arrays.asList("/bin/bash", "-c", cmd);
     }
 
-    public CommandResult runCmd() throws IOException {
+    public CommandResult runCmd() throws IOException
+    {
         checkNotNull(args);
         checkArgument(args.size() > 0);
         //log.debug("executing " + args);
@@ -75,7 +82,8 @@ public class ShellExec {
         try {
             ProcessBuilder pb = new ProcessBuilder(args);
             p = pb.start();
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             cr.setExitValue(1);
             cr.setErr("unable to start process");
             throw e;
@@ -96,7 +104,8 @@ public class ShellExec {
                 out.join();
                 err.join();
                 break;
-            } catch (InterruptedException e) {
+            }
+            catch (InterruptedException e) {
                 // ignore
             }
         }
@@ -106,39 +115,47 @@ public class ShellExec {
         return cr;
     }
 
-    public static class ThreadedStreamHandler extends Thread {
+    public static class ThreadedStreamHandler extends Thread
+    {
         private InputStream is;
         private String str;
 
-        public ThreadedStreamHandler(InputStream is) {
+        public ThreadedStreamHandler(InputStream is)
+        {
             this.is = is;
             setDaemon(true);
         }
 
-        private void close() {
+        private void close()
+        {
             try {
                 is.close();
-            } catch (IOException e) {
+            }
+            catch (IOException e) {
                 str = "unable to close " + e.getMessage();
             }
         }
 
         @Override
-        public void run() {
+        public void run()
+        {
             try {
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 PrintStream ps = new PrintStream(baos);
                 ByteStreams.copy(is, ps);
                 str = baos.toString();
-            } catch (IOException e) {
+            }
+            catch (IOException e) {
                 str = e.toString();
-            } finally {
+            }
+            finally {
                 close();
             }
         }
 
         @Override
-        public String toString() {
+        public String toString()
+        {
             return str;
         }
     }
