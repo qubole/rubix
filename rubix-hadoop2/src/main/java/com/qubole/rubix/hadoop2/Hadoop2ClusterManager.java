@@ -196,9 +196,13 @@ public class Hadoop2ClusterManager
         String state;
 
         String getState()
-        { return state; }
+        {
+            return state;
+        }
 
         String getNodeHostName()
-        { return nodeHostName; }
+        {
+            return nodeHostName;
+        }
     }
 }
