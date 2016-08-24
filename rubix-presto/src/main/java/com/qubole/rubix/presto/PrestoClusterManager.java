@@ -12,6 +12,7 @@
  */
 package com.qubole.rubix.presto;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -183,6 +184,14 @@ public class PrestoClusterManager extends ClusterManager
     {
         URI uri;
         String lastResponseTime;
+
+        @JsonCreator
+        public Stats(@JsonProperty("uri") URI uri,
+                @JsonProperty("lastResponseTime") String lastResponseTime)
+        {
+            this.uri = uri;
+            this.lastResponseTime = lastResponseTime;
+        }
 
         @JsonProperty
         public URI getUri()
