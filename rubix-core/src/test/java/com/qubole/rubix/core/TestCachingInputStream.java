@@ -87,7 +87,7 @@ public class TestCachingInputStream
         log.info("All set to test");
 
         // This should be after server comes up else client could not be created
-        inputStream = new CachingInputStream(fsDataInputStream, conf, backendPath, file.length(),file.lastModified(), new CachingFileSystemStats());
+        inputStream = new CachingInputStream(fsDataInputStream, conf, backendPath, file.length(),file.lastModified(), new CachingFileSystemStats(), 64*1024*1024);
 
     }
 

@@ -36,7 +36,7 @@ public class DirectReadRequestChain extends ReadRequestChain
     {
         return new ReadRequestChainStats()
                 .setRemoteReads(requests)
-                .setRequestedRead(requests);
+                .setRequestedRead(totalRead);
     }
 
     @Override

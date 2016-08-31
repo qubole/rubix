@@ -29,6 +29,9 @@ public class ReadRequestChainStats
     private long cachedDataRead = 0;
     private long cachedReads = 0;
 
+    private long nonLocalReads = 0;
+    private long nonLocalDataRead = 0;
+
     public long getPrefixRead()
     {
         return prefixRead;
@@ -116,6 +119,28 @@ public class ReadRequestChainStats
         return cachedReads;
     }
 
+    public ReadRequestChainStats setNonLocalReads(long nonLocalReads)
+    {
+        this.nonLocalReads = nonLocalReads;
+        return this;
+    }
+
+    public long getNonLocalReads()
+    {
+        return nonLocalReads;
+    }
+
+    public ReadRequestChainStats setNonLocalDataRead(long nonLocalDataRead)
+    {
+        this.nonLocalDataRead = nonLocalDataRead;
+        return this;
+    }
+
+    public long getNonLocalDataRead()
+    {
+        return nonLocalDataRead;
+    }
+
     public ReadRequestChainStats add(ReadRequestChainStats other)
     {
         return new ReadRequestChainStats()
@@ -125,6 +150,8 @@ public class ReadRequestChainStats
                 .setSuffixRead(suffixRead + other.getSuffixRead())
                 .setRemoteReads(remoteReads + other.getRemoteReads())
                 .setWarmupPenalty(warmupPenalty + other.getWarmupPenalty())
-                .setCachedReads(cachedReads + other.getCachedReads());
+                .setCachedReads(cachedReads + other.getCachedReads())
+                .setNonLocalReads(nonLocalReads + other.getNonLocalReads())
+                .setNonLocalDataRead(nonLocalDataRead + other.getNonLocalDataRead());
     }
 }

@@ -38,7 +38,9 @@ import java.lang.management.ManagementFactory;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.net.URI;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static com.qubole.rubix.core.CachingConfigHelper.skipCache;
 /**
@@ -114,7 +116,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
 
         return new FSDataInputStream(
                 new BufferedFSInputStream(
-                        new CachingInputStream(inputStream, this, path, this.getConf(), statsMBean),
+                        new CachingInputStream(inputStream, this, path, this.getConf(), statsMBean, clusterManager.getSplitSize()),
                         BookKeeperConfig.getBlockSize(getConf())));
     }
 
@@ -216,8 +218,10 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
             }
             else {
                 // Using similar logic of returning all Blocks as FileSystem.getFileBlockLocations does instead of only returning blocks from start till len
+                CachingConfigHelper.setLocalityInfoForwarded(getConf(), true);
 
                 BlockLocation[] blockLocations = new BlockLocation[(int) Math.ceil((double) file.getLen() / clusterManager.getSplitSize())];
+                Map<String, StringBuilder> nodeSplits = new HashMap<String, StringBuilder>();
                 int blockNumber = 0;
                 for (long i = 0; i < file.getLen(); i = i + clusterManager.getSplitSize()) {
                     long end = i + clusterManager.getSplitSize();
@@ -231,7 +235,20 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
                     String[] name = new String[]{nodes.get(nodeIndex)};
                     String[] host = new String[]{nodes.get(nodeIndex)};
                     blockLocations[blockNumber++] = new BlockLocation(name, host, i, end - i);
+                    StringBuilder blocks = nodeSplits.get(name[0]);
+                    if (blocks == null) {
+                        blocks = new StringBuilder();
+                        nodeSplits.put(name[0], blocks);
+                    }
+                    else {
+                        blocks.append(",");
+                    }
+                    blocks.append(blockNumber);
                     log.info(String.format("BlockLocation %s %d %d %s totalHosts: %s", file.getPath().toString(), i, end - i, host[0], nodes.size()));
+                }
+
+                for (Map.Entry<String, StringBuilder> nodeSplit : nodeSplits.entrySet()) {
+                    CachingConfigHelper.setLocalityInfo(getConf(), nodeSplit.getKey(), file.getPath().toString(), nodeSplit.getValue().toString());
                 }
 
                 return blockLocations;
