@@ -12,6 +12,8 @@
  */
 package com.qubole.rubix.core;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -25,6 +27,8 @@ public class DirectReadRequestChain extends ReadRequestChain
 {
     FSDataInputStream inputStream;
     int totalRead = 0;
+
+    private static final Log log = LogFactory.getLog(DirectReadRequestChain.class);
 
     public DirectReadRequestChain(FSDataInputStream inputStream)
     {
@@ -63,6 +67,7 @@ public class DirectReadRequestChain extends ReadRequestChain
             }
             totalRead += nread;
         }
+        log.info(String.format("Read %d bytes from cached file", totalRead));
         return totalRead;
     }
 }

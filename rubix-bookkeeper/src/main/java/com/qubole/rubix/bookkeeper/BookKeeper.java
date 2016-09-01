@@ -189,11 +189,12 @@ public class BookKeeper
                                 }
                             }
                             //if file has been modified in cloud, its entry will be deleted due to "EXPLICIT"
-                            log.info("deleting entry for" + md.getRemotePath().toString() + " due to "
+                            log.warn("deleting entry for" + md.getRemotePath().toString() + " due to "
                                     + notification.getCause());
                             md.closeAndCleanup();
                         }
                         catch (IOException e) {
+                            log.error("Exception: ", e);
                             throw Throwables.propagate(e);
                         }
                     }
