@@ -96,7 +96,10 @@ public class BookKeeper
 
         //md will be null when 2 users try to update the file in parallel and both their entries are invalidated.
         // TODO: find a way to optimize this so that the file doesn't have to be read again in next request (new data is stored instead of invalidation)
-        if (md == null || md.getLastModified() != lastModified) {
+        if (md == null) {
+            return;
+        }
+        if (md.getLastModified() != lastModified) {
             invalidate(remotePath);
             return;
         }
@@ -184,12 +187,12 @@ public class BookKeeper
                                 if (free > total * 1.0 * (100.0 - BookKeeperConfig.getCacheDataFullnessPercentage(conf) / 100)) {
                                     // still havent utilized the allowed space so do not delete the backing file
                                     md.close();
-                                    log.info("Evicting " + md.getRemotePath().toString() + " due to " + notification.getCause());
+                                    log.warn("Evicting " + md.getRemotePath().toString() + " due to " + notification.getCause());
                                     return;
                                 }
                             }
                             //if file has been modified in cloud, its entry will be deleted due to "EXPLICIT"
-                            log.info("deleting entry for" + md.getRemotePath().toString() + " due to "
+                            log.warn("deleting entry for" + md.getRemotePath().toString() + " due to "
                                     + notification.getCause());
                             md.closeAndCleanup();
                         }
