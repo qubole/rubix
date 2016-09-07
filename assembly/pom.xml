@@ -20,16 +20,6 @@
 
         <dependency>
             <groupId>com.qubole.rubix</groupId>
-            <artifactId>rubix-hadoop1</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.qubole.rubix</groupId>
-            <artifactId>rubix-presto</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-hadoop2</artifactId>
         </dependency>
 
@@ -37,6 +27,12 @@
             <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-core</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>com.qubole.rubix</groupId>
+            <artifactId>rubix-spi</artifactId>
+        </dependency>
+
     </dependencies>
 
     <profiles>

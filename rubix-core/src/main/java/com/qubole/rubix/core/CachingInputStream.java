@@ -18,8 +18,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.qubole.rubix.bookkeeper.BookKeeper;
 import com.qubole.rubix.bookkeeper.BookKeeperClient;
-import com.qubole.rubix.bookkeeper.BookKeeperConfig;
+import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.CachingConfigHelper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -27,12 +29,10 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.net.InetAddress;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -81,10 +81,8 @@ public class CachingInputStream
         initialize(parentInputStream,
                 conf);
         this.statsMbean = statsMbean;
-        String nodename = InetAddress.getLocalHost().getCanonicalHostName();
-        localSplits = CachingConfigHelper.getLocalityInfo(conf, nodename, backendPath.toString());
         this.splitSize = splitSize;
-        this.localityInfoPresent = CachingConfigHelper.isLocalityInfoForwarded(conf);
+
     }
 
     @VisibleForTesting
@@ -115,8 +113,8 @@ public class CachingInputStream
             bookKeeperClient = null;
         }
         this.inputStream = checkNotNull(parentInputStream, "ParentInputStream is null");
-        this.blockSize = BookKeeperConfig.getBlockSize(conf);
-        this.localPath = BookKeeperConfig.getLocalPath(remotePath, conf);
+        this.blockSize = CacheConfig.getBlockSize(conf);
+        this.localPath = CacheConfig.getLocalPath(remotePath, conf);
         try {
             this.localFileForReading = new RandomAccessFile(localPath, "r");
         }
@@ -165,7 +163,6 @@ public class CachingInputStream
     public int read(byte[] buffer, int offset, int length)
             throws IOException
     {
-        log.warn("YYY READ in " + InetAddress.getLocalHost().getCanonicalHostName() + ": " + conf.get("ABCD"));
         log.debug(String.format("Got Read, currentPos: %d currentBlock: %d bufferOffset: %d length: %d", nextReadPosition, nextReadBlock, offset, length));
         if (nextReadPosition >= fileSize) {
             log.debug("Already at eof, returning");
@@ -242,10 +239,12 @@ public class CachingInputStream
         ImmutableList.Builder readRequestChainBuilder = ImmutableList.builder();
 
         int lengthAlreadyConsidered = 0;
-        List<Boolean> isCached = null;
+        List<Integer> isCached = null;
+        int c = conf.getInt("ClusterManager", 0);
         try {
             if (bookKeeperClient != null) {
-                isCached = bookKeeperClient.getCacheStatus(remotePath, fileSize, lastModified, nextReadBlock, endBlock);
+                log.info("Getting Cache Status");
+                isCached = bookKeeperClient.getCacheStatus(remotePath, fileSize, lastModified, nextReadBlock, endBlock, c);
             }
         }
         catch (Exception e) {
@@ -287,15 +286,15 @@ public class CachingInputStream
             lengthAlreadyConsidered += readRequest.getActualReadLength();
 
             if (isCached == null) {
-                log.debug(String.format("Sending block %d to DirectReadRequestChain", blockNum));
+                log.info(String.format("Sending block %d to DirectReadRequestChain", blockNum));
                 if (directReadRequestChain == null) {
                     directReadRequestChain = new DirectReadRequestChain(inputStream);
                     readRequestChainBuilder.add(directReadRequestChain);
                 }
                 directReadRequestChain.addReadRequest(readRequest);
             }
-            else if (isCached.get(idx)) {
-                log.debug(String.format("Sending Cached block %d to cachedReadRequestChain", blockNum));
+            else if (isCached.get(idx) == BookKeeper.State.Cached.ordinal()) {
+                log.info(String.format("Sending Cached block %d to cachedReadRequestChain", blockNum));
                 if (cachedReadRequestChain == null) {
                     cachedReadRequestChain = new CachedReadRequestChain(localFileForReading);
                     readRequestChainBuilder.add(cachedReadRequestChain);
@@ -304,8 +303,8 @@ public class CachingInputStream
 
             }
             else {
-                if (!isLocal(blockNum)) {
-                    log.debug(String.format("Sending block %d to NonLocalReadRequestChain", blockNum));
+                if (isCached.get(idx) == BookKeeper.State.Non_Local.ordinal()) {
+                    log.info(String.format("Sending block %d to NonLocalReadRequestChain", blockNum));
                     if (nonLocalReadRequestChain == null) {
                         nonLocalReadRequestChain = new NonLocalReadRequestChain(inputStream);
                         readRequestChainBuilder.add(nonLocalReadRequestChain);
@@ -313,7 +312,7 @@ public class CachingInputStream
                     nonLocalReadRequestChain.addReadRequest(readRequest);
                 }
                 else {
-                    log.debug(String.format("Sending block %d to remoteReadRequestChain", blockNum));
+                    log.info(String.format("Sending block %d to remoteReadRequestChain", blockNum));
                     if (remoteReadRequestChain == null) {
                         remoteReadRequestChain = new RemoteReadRequestChain(inputStream, localPath);
                         readRequestChainBuilder.add(remoteReadRequestChain);
@@ -333,10 +332,12 @@ public class CachingInputStream
 
     private boolean isLocal(long block)
     {
+        log.info("Checking isLocal: localityInfoPresent is" + localityInfoPresent);
         if (!localityInfoPresent) {
             return true;
         }
         long split = (block * blockSize) /  splitSize;
+        log.info("Checking isLocal: localSplits is" + localSplits.contains(Long.toString(split)));
         return localSplits.contains(Long.toString(split));
     }
 

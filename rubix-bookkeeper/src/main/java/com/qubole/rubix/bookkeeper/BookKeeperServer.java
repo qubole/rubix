@@ -23,8 +23,8 @@ import org.apache.thrift.transport.TServerSocket;
 import org.apache.thrift.transport.TServerTransport;
 import org.apache.thrift.transport.TTransportException;
 
-import static com.qubole.rubix.bookkeeper.BookKeeperConfig.getServerMaxThreads;
-import static com.qubole.rubix.bookkeeper.BookKeeperConfig.getServerPort;
+import static com.qubole.rubix.spi.CacheConfig.getServerMaxThreads;
+import static com.qubole.rubix.spi.CacheConfig.getServerPort;
 
 /**
  * Created by stagra on 15/2/16.
@@ -47,6 +47,7 @@ public class BookKeeperServer
     public static void main(String[] args)
     {
         conf = new Configuration();
+
         Runnable bookKeeperServer = new Runnable() {
             public void run()
             {
@@ -61,11 +62,9 @@ public class BookKeeperServer
     {
         bookKeeper = new BookKeeper(conf);
         processor = new BookKeeperService.Processor(bookKeeper);
-
         log.info("Starting BookKeeperServer on port " + getServerPort(conf));
         try {
             TServerTransport serverTransport = new TServerSocket(getServerPort(conf));
-
             server = new TThreadPoolServer(new TThreadPoolServer
                     .Args(serverTransport)
                     .processor(processor)

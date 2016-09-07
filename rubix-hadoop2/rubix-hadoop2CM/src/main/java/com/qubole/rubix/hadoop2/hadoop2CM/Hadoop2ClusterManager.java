@@ -1,4 +1,4 @@
-/**
+package com.qubole.rubix.hadoop2.hadoop2CM; /**
  * Copyright (c) 2016. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
@@ -10,7 +10,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-package com.qubole.rubix.hadoop2;
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -19,7 +18,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import com.qubole.rubix.core.ClusterManager;
+import com.qubole.rubix.spi.ClusterManager;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -36,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 /**
  * Created by sakshia on 28/7/16.
@@ -47,6 +47,7 @@ public class Hadoop2ClusterManager
     public int serverPort = 8088;
     private String serverAddress = "localhost";
     private Supplier<List<String>> nodesSupplier;
+    YarnConfiguration yconf;
     String address = "localhost:8088";
     private Log log = LogFactory.getLog(Hadoop2ClusterManager.class);
     static String addressConf = "yarn.resourcemanager.webapp.address";
@@ -55,8 +56,9 @@ public class Hadoop2ClusterManager
     public void initialize(Configuration conf)
     {
         super.initialize(conf);
-        log.debug("Initializing: Hadoop2ClusterManager");
-        this.address = conf.get(addressConf, address);
+        yconf = new YarnConfiguration();
+        log.info("Initializing: Hadoop2ClusterManager");
+        this.address = yconf.get(addressConf, address);
         this.serverAddress = address.substring(0, address.indexOf(":"));
         this.serverPort = Integer.parseInt(address.substring(address.indexOf(":") + 1));
         nodesSupplier = Suppliers.memoizeWithExpiration(new Supplier<List<String>>()
@@ -74,8 +76,8 @@ public class Hadoop2ClusterManager
                     URL obj = getNodeURL();
                     HttpURLConnection httpcon = (HttpURLConnection) obj.openConnection();
                     httpcon.setRequestMethod("GET");
+                    log.info("Sending 'GET' request to URL: " + obj.toString());
                     int responseCode = httpcon.getResponseCode();
-                    log.debug("Sending 'GET' request to URL: " + obj.toString());
                     if (responseCode == HttpURLConnection.HTTP_OK) {
                         BufferedReader in = new BufferedReader(new InputStreamReader(httpcon.getInputStream()));
                         String inputLine;

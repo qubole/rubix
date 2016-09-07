@@ -17,7 +17,9 @@ import com.google.common.base.Throwables;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import com.qubole.rubix.bookkeeper.BookKeeperConfig;
+import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.CachingConfigHelper;
+import com.qubole.rubix.spi.ClusterManager;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -42,7 +44,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.qubole.rubix.core.CachingConfigHelper.skipCache;
+import static com.qubole.rubix.spi.CachingConfigHelper.skipCache;
 /**
  * Created by stagra on 29/12/15.
  */
@@ -117,7 +119,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
         return new FSDataInputStream(
                 new BufferedFSInputStream(
                         new CachingInputStream(inputStream, this, path, this.getConf(), statsMBean, clusterManager.getSplitSize()),
-                        BookKeeperConfig.getBlockSize(getConf())));
+                        CacheConfig.getBlockSize(getConf())));
     }
 
     @Override
@@ -219,7 +221,6 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
             else {
                 // Using similar logic of returning all Blocks as FileSystem.getFileBlockLocations does instead of only returning blocks from start till len
                 CachingConfigHelper.setLocalityInfoForwarded(getConf(), true);
-
                 BlockLocation[] blockLocations = new BlockLocation[(int) Math.ceil((double) file.getLen() / clusterManager.getSplitSize())];
                 Map<String, StringBuilder> nodeSplits = new HashMap<String, StringBuilder>();
                 int blockNumber = 0;

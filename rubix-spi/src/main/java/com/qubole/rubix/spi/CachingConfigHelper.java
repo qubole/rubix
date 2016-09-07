@@ -10,7 +10,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-package com.qubole.rubix.core;
+package com.qubole.rubix.spi;
 
 import com.google.common.collect.Sets;
 import org.apache.hadoop.conf.Configuration;
@@ -29,7 +29,7 @@ import java.util.Set;
  * Hive: --hiveconf argument can be used
  * Spark: --config spark.hadoop.XYZ can be used
  */
-class CachingConfigHelper
+public class CachingConfigHelper
 {
     public static final String DATA_CACHE_ENABLED = "hadoop.cache.data.enabled";
     public static final String DATA_CACHE_TABLE_WHITELIST = "hadoop.cache.data.table.whitelist";
@@ -92,27 +92,27 @@ class CachingConfigHelper
         return c.getInt(DATA_CACHE_TABLE_COLS_CHOSEN, 0);
     }
 
-    static boolean isStrictMode(Configuration c)
+    public static boolean isStrictMode(Configuration c)
     {
         return c.getBoolean(DATA_CACHE_STRICT_MODE, false);
     }
 
-    static boolean isLocalityInfoForwarded(Configuration c)
+    public static boolean isLocalityInfoForwarded(Configuration c)
     {
         return c.getBoolean(LOCALITY_INFO_FORWARDED, false);
     }
 
-    static void setLocalityInfoForwarded(Configuration c, boolean value)
+    public static void setLocalityInfoForwarded(Configuration c, boolean value)
     {
         c.setBoolean(LOCALITY_INFO_FORWARDED, value);
     }
 
-    static Set<String> getLocalityInfo(Configuration c, String node, String file)
+    public static Set<String> getLocalityInfo(Configuration c, String node, String file)
     {
         return Sets.newHashSet(c.getStringCollection(getLocalityKey(node, file)));
     }
 
-    static void setLocalityInfo(Configuration c, String node, String file, String splits)
+    public static void setLocalityInfo(Configuration c, String node, String file, String splits)
     {
         c.set(getLocalityKey(node, file), splits);
     }
@@ -124,7 +124,7 @@ class CachingConfigHelper
 
     // Helper methods to get information based on configuration
 
-    static boolean skipCache(Path path, Configuration conf)
+    public static boolean skipCache(Path path, Configuration conf)
     {
         if (!CachingConfigHelper.isCacheDataEnabled(conf)) {
             return true;

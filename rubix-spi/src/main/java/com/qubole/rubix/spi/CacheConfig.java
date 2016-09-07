@@ -10,7 +10,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-package com.qubole.rubix.bookkeeper;
+package com.qubole.rubix.spi;
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -24,7 +24,7 @@ import java.util.List;
 /**
  * Created by stagra on 14/2/16.
  */
-public class BookKeeperConfig
+public class CacheConfig
 {
     public static String dataCacheExpirationConf = "hadoop.cache.data.expiration";
     public static String dataCacheExpirationAfterWriteConf = "hadoop.cache.data.expiration.after-write";
@@ -40,7 +40,7 @@ public class BookKeeperConfig
     // default values
     private static final int dataCacheExpiry = Integer.MAX_VALUE;
     // Keepnig this low to workaround the Guava Cache static weighing limitation
-    private static final int dataCacheExpiryAfterWrite = 300; //In sec
+    private static final int dataCacheExpiryAfterWrite = 3000; //In sec
     private static final int dataCacheFullness = 80; // percent
     private static final String dataCacheDirPrefixes = "/media/ephemeral";
     private static final int blockSize = 1 * 1024 * 1024; // 1MB
@@ -87,7 +87,7 @@ public class BookKeeperConfig
         return getDiskPathsMap(conf).size();
     }
 
-    private BookKeeperConfig()
+    private CacheConfig()
     {
     }
 
@@ -160,7 +160,7 @@ public class BookKeeperConfig
     {
         int h = Math.abs(remotePath.hashCode());
         int d = h % numDisks(conf);
-        String dirname = getDirPath(conf, d) + BookKeeperConfig.fileCacheDirSuffixConf;
+        String dirname = getDirPath(conf, d) + CacheConfig.fileCacheDirSuffixConf;
         return dirname;
     }
 
