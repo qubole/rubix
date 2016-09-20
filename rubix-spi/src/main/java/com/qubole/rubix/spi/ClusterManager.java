@@ -30,6 +30,11 @@ public abstract class ClusterManager
 
     public static String splitSizeConf = "caching.fs.split-size";
 
+    public ClusterType getClusterType()
+    {
+        return null;
+    }
+
     public void initialize(Configuration conf)
     {
         splitSize = conf.getLong(splitSizeConf, splitSize);

@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -142,6 +143,12 @@ public class Hadoop2ClusterManager
     public List<String> getNodes()
     {
         return nodesSupplier.get();
+    }
+
+    @Override
+    public ClusterType getClusterType()
+    {
+        return ClusterType.HADOOP2_CLUSTER_MANAGER;
     }
 
     public static class Nodes

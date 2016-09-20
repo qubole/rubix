@@ -10,7 +10,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-package com.qubole.rubix.hadoop.hadoop2FS;
+package com.qubole.rubix.hadoop2.hadoop2FS;
 import com.qubole.rubix.core.CachingFileSystem;
 import com.qubole.rubix.hadoop2.hadoop2CM.Hadoop2ClusterManager;
 import com.qubole.rubix.spi.ClusterManager;
@@ -25,13 +25,14 @@ import java.net.URI;
 /**
  * Created by sakshia on 28/7/16.
  */
-public class CachingHadoop2FileSystem extends CachingFileSystem<NativeS3FileSystem>
+public class CachingNativeS3FileSystem
+        extends CachingFileSystem<NativeS3FileSystem>
 {
-    private static final Log LOG = LogFactory.getLog(CachingHadoop2FileSystem.class);
+    private static final Log LOG = LogFactory.getLog(CachingNativeS3FileSystem.class);
 
     private static ClusterManager clusterManager;
 
-    public CachingHadoop2FileSystem()
+    public CachingNativeS3FileSystem()
             throws IOException
     {
         super();
@@ -46,7 +47,6 @@ public class CachingHadoop2FileSystem extends CachingFileSystem<NativeS3FileSyst
             initializeClusterManager(conf);
         }
         setClusterManager(clusterManager);
-        conf.setInt("ClusterManager", 0);
         super.initialize(uri, conf);
     }
 

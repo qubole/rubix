@@ -11,6 +11,12 @@
     <artifactId>rubix-hadoop2</artifactId>
     <packaging>pom</packaging>
 
+
+    <modules>
+        <module>rubix-hadoop2CM</module>
+        <module>rubix-hadoop2FS</module>
+    </modules>
+
     <properties>
         <main.basedir>${project.parent.basedir}</main.basedir>
     </properties>
@@ -18,11 +24,6 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-core</artifactId>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.testng</groupId>
@@ -53,9 +54,5 @@
         </plugins>
     </build>
 
-    <modules>
-        <module>rubix-hadoop2CM</module>
-        <module>rubix-hadoop2FS</module>
-    </modules>
 
 </project>

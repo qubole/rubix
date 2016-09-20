@@ -23,14 +23,13 @@ import com.google.common.cache.Weigher;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import com.qubole.rubix.spi.CachingConfigHelper;
-import com.qubole.rubix.spi.ClusterManager;
+import com.qubole.rubix.hadoop2.hadoop2CM.Hadoop2ClusterManager;
 import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.ClusterManager;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.TException;
-import com.qubole.rubix.hadoop2.hadoop2CM.Hadoop2ClusterManager;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,12 +37,16 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+
+import static com.qubole.rubix.spi.ClusterType.HADOOP2_CLUSTER_MANAGER;
+import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
 
 /**
  * Created by stagra on 12/2/16.
@@ -56,11 +59,14 @@ public class BookKeeper
     private static Log log = LogFactory.getLog(BookKeeper.class.getName());
     private long totalRequests = 0;
     private long cachedRequests = 0;
-    private Set<String> localSplits;
+    private long remoteRequests = 0;
     private Configuration conf;
-    List<String> nodes;
-    public enum Cluster {Hadoop2ClusterManager, PrestoClusterManager, HadoopClusterManager}
-    public enum State {Cached, Local, Non_Local}
+    private static Integer lock = 1;
+    private List<String> nodes;
+    static int currentNodeIndex = -1;
+    static int nodeListSize;
+    static long splitSize;
+
     public BookKeeper(Configuration conf)
     {
         this.conf = conf;
@@ -68,59 +74,57 @@ public class BookKeeper
     }
 
     @Override
-    public List<Integer> getCacheStatus(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock, int c)
+    public List<com.qubole.rubix.bookkeeper.Location> getCacheStatus(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock, int clusterType)
             throws TException
     {
-        if (clusterManager == null) {
-            if (c == 0) {
-                clusterManager = new Hadoop2ClusterManager();
-                clusterManager.initialize(conf);
-                nodes = clusterManager.getNodes();
-                log.info("Nodes are : " + nodes);
+        if (clusterManager == null || currentNodeIndex == -1) {
+            String nodename = null;
+            synchronized (lock) {
+                try {
+                    nodename = InetAddress.getLocalHost().getCanonicalHostName();
+                }
+                catch (UnknownHostException e) {
+                    e.printStackTrace();
+                    log.warn("Could not get nodename", e);
+                }
+
+                if (clusterType == HADOOP2_CLUSTER_MANAGER.ordinal()) {
+                    clusterManager = new Hadoop2ClusterManager();
+                    clusterManager.initialize(conf);
+                    nodes = clusterManager.getNodes();
+                    splitSize = clusterManager.getSplitSize();
+                }
+                else if (clusterType == TEST_CLUSTER_MANAGER.ordinal()) {
+                    nodes = new ArrayList<>();
+                    nodes.add(nodename);
+                    splitSize = 64 * 1024 * 1024;
+                }
+
+                if (nodes != null) {
+                    nodeListSize = nodes.size();
+                    currentNodeIndex = nodes.indexOf(nodename);
+                }
             }
         }
-        String nodename = null;
-        try {
-            nodename = InetAddress.getLocalHost().getCanonicalHostName();
-        }
-        catch (UnknownHostException e) {
-            e.printStackTrace();
-        }
 
-        localSplits = CachingConfigHelper.getLocalityInfo(conf, nodename, remotePath);
+        Set<Long> localSplits = new HashSet<>();
+        long blockNumber = 0;
 
-        if (localSplits.isEmpty()) {
-            Map<String, StringBuilder> nodeSplits = new HashMap<String, StringBuilder>();
-            int blockNumber = 0;
-            for (long i = 0; i < fileLength; i = i + clusterManager.getSplitSize()) {
-                long end = i + clusterManager.getSplitSize();
-                if (end > fileLength) {
-                    end = fileLength;
-                }
-                String key = remotePath + i + end;
-                HashFunction hf = Hashing.md5();
-                HashCode hc = hf.hashString(key, Charsets.UTF_8);
-                int nodeIndex = Hashing.consistentHash(hc, nodes.size());
-                String[] name = new String[] {nodes.get(nodeIndex)};
-                StringBuilder blocks = nodeSplits.get(name[0]);
-                if (blocks == null) {
-                    blocks = new StringBuilder();
-                    nodeSplits.put(name[0], blocks);
-                }
-                else {
-                    blocks.append(",");
-                }
-                blocks.append(blockNumber);
-                blockNumber++;
+        for (long i = 0; i < fileLength; i = i + splitSize) {
+            long end = i + splitSize;
+            if (end > fileLength) {
+                end = fileLength;
             }
-                for (Map.Entry<String, StringBuilder> nodeSplit : nodeSplits.entrySet()) {
-                    log.info("node is: " + nodeSplit.getKey() + "Split is: " + nodeSplit.getValue().toString());
-                    CachingConfigHelper.setLocalityInfo(conf, nodeSplit.getKey(), remotePath, nodeSplit.getValue().toString());
-                }
-
-            localSplits = CachingConfigHelper.getLocalityInfo(conf, nodename, remotePath);
+            String key = remotePath + i + end;
+            HashFunction hf = Hashing.md5();
+            HashCode hc = hf.hashString(key, Charsets.UTF_8);
+            int nodeIndex = Hashing.consistentHash(hc, nodeListSize);
+            if (nodeIndex == currentNodeIndex) {
+                localSplits.add(blockNumber);
+            }
+            blockNumber++;
         }
-        log.info("LocalSplits are : " + localSplits + " for nodename " + nodename);
+
         FileMetadata md;
         try {
             md = fileMetadataCache.get(remotePath, new CreateFileMetadataCallable(remotePath, fileLength, lastModified, conf));
@@ -134,26 +138,25 @@ public class BookKeeper
             throw new TException(e);
         }
         endBlock = setCorrectEndBlock(endBlock, fileLength, remotePath);
-        List<Integer> blocksInfo = new ArrayList<Integer>((int) (endBlock - startBlock));
-
-        //log.info("RemotePath is" + remotePath + "and LocalSplits");
+        List<Location> blocksInfo = new ArrayList<>((int) (endBlock - startBlock));
         int blockSize = CacheConfig.getBlockSize(conf);
+
         for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
             totalRequests++;
-            long split = (blockNum * blockSize) /  clusterManager.getSplitSize();
+            long split = (blockNum * blockSize) /  splitSize;
 
-            log.info("split to check is " + split + " and blocknum is " + blockNum);
             if (md.isBlockCached(blockNum)) {
-                blocksInfo.add(State.Cached.ordinal());
+                blocksInfo.add(Location.CACHED);
                 cachedRequests++;
             }
             else {
-                if (localSplits.contains(Long.toString(split))) {
-                    blocksInfo.add(State.Local.ordinal());
+                if (localSplits.contains(split)) {
+                    blocksInfo.add(Location.LOCAL);
+                remoteRequests++;
                 }
                 else {
-                    blocksInfo.add(State.Non_Local.ordinal());
-                }
+                    blocksInfo.add(Location.NON_LOCAL);
+               }
             }
         }
 
@@ -193,14 +196,14 @@ public class BookKeeper
         stats.put("Cache Hit Rate", ((double) cachedRequests / totalRequests));
         stats.put("Cache Miss Rate", ((double) (totalRequests - cachedRequests) / totalRequests));
         stats.put("Cache Reads", ((double) cachedRequests));
-        stats.put("Remote Reads", ((double) (totalRequests  - cachedRequests)));
+        stats.put("Remote Reads", ((double) remoteRequests));
+        stats.put("Non-Local Reads", ((double) (totalRequests - cachedRequests - remoteRequests)));
         return stats;
     }
 
     private long setCorrectEndBlock(long endBlock, long fileLength, String remotePath)
     {
         long lastBlock = (fileLength - 1) / CacheConfig.getBlockSize(conf);
-
         if (endBlock > (lastBlock + 1)) {
             log.debug(String.format("Correct endBlock from %d to %d for path %s and length %d", endBlock, lastBlock + 1, remotePath, fileLength));
             endBlock = lastBlock + 1;

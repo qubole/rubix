@@ -12,11 +12,8 @@
  */
 package com.qubole.rubix.spi;
 
-import com.google.common.collect.Sets;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-
-import java.util.Set;
 
 /**
  * Created by stagra on 25/1/16.
@@ -97,32 +94,17 @@ public class CachingConfigHelper
         return c.getBoolean(DATA_CACHE_STRICT_MODE, false);
     }
 
-    public static boolean isLocalityInfoForwarded(Configuration c)
+ // Helper methods to get information based on configuration
+
+    public static void setClusterManagerType(Configuration conf, Enum c)
     {
-        return c.getBoolean(LOCALITY_INFO_FORWARDED, false);
+        conf.setEnum("ClusterManager", c);
     }
 
-    public static void setLocalityInfoForwarded(Configuration c, boolean value)
+    public static Enum getClusterManagerType(Configuration conf)
     {
-        c.setBoolean(LOCALITY_INFO_FORWARDED, value);
+        return conf.getEnum("ClusterManager", null);
     }
-
-    public static Set<String> getLocalityInfo(Configuration c, String node, String file)
-    {
-        return Sets.newHashSet(c.getStringCollection(getLocalityKey(node, file)));
-    }
-
-    public static void setLocalityInfo(Configuration c, String node, String file, String splits)
-    {
-        c.set(getLocalityKey(node, file), splits);
-    }
-
-    private static String getLocalityKey(String node, String file)
-    {
-        return LOCALITY_INFO + node + file;
-    }
-
-    // Helper methods to get information based on configuration
 
     public static boolean skipCache(Path path, Configuration conf)
     {

@@ -15,6 +15,7 @@ package com.qubole.rubix.core;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.bookkeeper.BookKeeperServer;
 import com.qubole.rubix.spi.CachingConfigHelper;
+import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -84,11 +85,10 @@ public class TestCachingInputStream
         LocalFSInputStream localFSInputStream = new LocalFSInputStream(backendFileName);
         FSDataInputStream fsDataInputStream = new FSDataInputStream(localFSInputStream);
         conf.setInt(CacheConfig.blockSizeConf, blockSize);
-
         log.info("All set to test");
 
         // This should be after server comes up else client could not be created
-        inputStream = new CachingInputStream(fsDataInputStream, conf, backendPath, file.length(),file.lastModified(), new CachingFileSystemStats(), 64*1024*1024);
+        inputStream = new CachingInputStream(fsDataInputStream, conf, backendPath, file.length(),file.lastModified(), new CachingFileSystemStats(), 64*1024*1024, ClusterType.TEST_CLUSTER_MANAGER);
 
     }
 

@@ -47,6 +47,10 @@ public class CacheConfig
     private static int serverPort = 8899;
     private static int serverMaxThreads = Integer.MAX_VALUE;
 
+    private CacheConfig()
+    {
+    }
+
     public static int getCacheDataExpiration(Configuration conf)
     {
         return conf.getInt(dataCacheExpirationConf, dataCacheExpiry);
@@ -85,10 +89,6 @@ public class CacheConfig
     public static int numDisks(Configuration conf)
     {
         return getDiskPathsMap(conf).size();
-    }
-
-    private CacheConfig()
-    {
     }
 
     public static HashMap<Integer, String> getDiskPathsMap(final Configuration conf)

@@ -39,7 +39,7 @@ public class CachingFileSystemStats
         return (double) stats.getTotalDownloaded() / bytesInMb;
     }
 
-    @Managed(description = "Gets the total size in MB that was read for non Local splits")
+    @Managed(description = "Gets the total size in MB that was read for non local splits")
     public double getNonLocalDataRead()
     {
         return (double) stats.getNonLocalDataRead() / bytesInMb;
