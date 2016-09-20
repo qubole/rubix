@@ -10,8 +10,7 @@
     <groupId>com.qubole.rubix</groupId>
     <artifactId>rubix-hadoop2</artifactId>
     <packaging>pom</packaging>
-
-
+    
     <modules>
         <module>rubix-hadoop2CM</module>
         <module>rubix-hadoop2FS</module>

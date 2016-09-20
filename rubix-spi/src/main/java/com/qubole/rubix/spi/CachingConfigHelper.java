@@ -36,9 +36,6 @@ public class CachingConfigHelper
     public static final String DATA_CACHE_TABLE_COLS_CHOSEN = "hadoop.cache.data.table.columns.chosen";
 
     // Internal
-    public static final String LOCALITY_INFO_FORWARDED = "hadoop.cache.locality.info.forwarded";
-    public static final String LOCALITY_INFO = "hadoop.cache.locality.info";
-
     // In strict mode, queries will error out if BookKeeper cannot be reached
     public static final String DATA_CACHE_STRICT_MODE = "hadoop.cache.data.strict.mode";
 
@@ -95,16 +92,6 @@ public class CachingConfigHelper
     }
 
  // Helper methods to get information based on configuration
-
-    public static void setClusterManagerType(Configuration conf, Enum c)
-    {
-        conf.setEnum("ClusterManager", c);
-    }
-
-    public static Enum getClusterManagerType(Configuration conf)
-    {
-        return conf.getEnum("ClusterManager", null);
-    }
 
     public static boolean skipCache(Path path, Configuration conf)
     {
