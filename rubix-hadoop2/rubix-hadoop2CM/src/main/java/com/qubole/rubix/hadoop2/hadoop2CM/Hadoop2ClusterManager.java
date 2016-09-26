@@ -11,9 +11,10 @@ package com.qubole.rubix.hadoop2.hadoop2CM; /**
  * limitations under the License. See accompanying LICENSE file.
  */
 
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.gson.Gson;
@@ -30,6 +31,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import com.qubole.rubix.spi.ClusterType;
@@ -47,11 +49,12 @@ public class Hadoop2ClusterManager
     private boolean isMaster = true;
     public int serverPort = 8088;
     private String serverAddress = "localhost";
-    private Supplier<List<String>> nodesSupplier;
+    LoadingCache<String, List<String>> nodesCache;
     YarnConfiguration yconf;
     String address = "localhost:8088";
     private Log log = LogFactory.getLog(Hadoop2ClusterManager.class);
     static String addressConf = "yarn.resourcemanager.webapp.address";
+    int refreshTime = super.getNodeRefreshTime();
 
     @Override
     public void initialize(Configuration conf)
@@ -62,10 +65,11 @@ public class Hadoop2ClusterManager
         this.address = yconf.get(addressConf, address);
         this.serverAddress = address.substring(0, address.indexOf(":"));
         this.serverPort = Integer.parseInt(address.substring(address.indexOf(":") + 1));
-        nodesSupplier = Suppliers.memoizeWithExpiration(new Supplier<List<String>>()
+        nodesCache = CacheBuilder.newBuilder().refreshAfterWrite(refreshTime, TimeUnit.SECONDS).build(new CacheLoader<String, List<String>>()
         {
             @Override
-            public List<String> get()
+            public List<String> load(String s)
+                    throws Exception
             {
                 if (!isMaster) {
                     // First time all nodes start assuming themselves as master and down the line figure out their role
@@ -122,7 +126,7 @@ public class Hadoop2ClusterManager
                     throw Throwables.propagate(e);
                 }
             }
-        }, 10, TimeUnit.SECONDS);
+        });
     }
 
     public URL getNodeURL()
@@ -135,14 +139,26 @@ public class Hadoop2ClusterManager
     public boolean isMaster()
     {
         // issue get on nodesSupplier to ensure that isMaster is set correctly
-        nodesSupplier.get();
+        try {
+            nodesCache.get("nodeList");
+        }
+        catch (ExecutionException e) {
+            e.printStackTrace();
+        }
         return isMaster;
     }
 
     @Override
     public List<String> getNodes()
     {
-        return nodesSupplier.get();
+        try {
+            return nodesCache.get("nodeList");
+        }
+        catch (ExecutionException e) {
+            e.printStackTrace();
+        }
+
+        return null;
     }
 
     @Override
@@ -156,12 +172,14 @@ public class Hadoop2ClusterManager
         public Nodes()
         {
         }
+
         private Node nodes;
 
         public void setNodes(Node nodes)
         {
             this.nodes = nodes;
         }
+
         public Node getNodes()
         {
             return nodes;
@@ -173,12 +191,14 @@ public class Hadoop2ClusterManager
         public Node()
         {
         }
+
         private List<Elements> node;
 
         public void setNode(List<Elements> node)
         {
             this.node = node;
         }
+
         public List<Elements> getNode()
         {
             return node;

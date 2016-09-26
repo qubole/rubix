@@ -28,7 +28,11 @@ public abstract class ClusterManager
 {
     private long splitSize = 64 * 1024 * 1024; // 64MB
 
+    private int nodeRefreshTime = 10;
+
     public static String splitSizeConf = "caching.fs.split-size";
+
+    public static String nodeRefreshTimeConf = "caching.fs.node-refresh-time";
 
     public ClusterType getClusterType()
     {
@@ -36,14 +40,21 @@ public abstract class ClusterManager
     }
 
     public void initialize(Configuration conf)
+
     {
         splitSize = conf.getLong(splitSizeConf, splitSize);
+        nodeRefreshTime = conf.getInt(nodeRefreshTimeConf, nodeRefreshTime);
     }
 
     // This is the size in which the file will be logically divided into splits
     public long getSplitSize()
     {
         return splitSize;
+    }
+
+    public int getNodeRefreshTime()
+    {
+        return nodeRefreshTime;
     }
 
     public abstract boolean isMaster();

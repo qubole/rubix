@@ -100,11 +100,15 @@ public class BookKeeper
                     splitSize = 64 * 1024 * 1024;
                 }
 
-                if (nodes != null) {
+                if (nodename == null) {
+                    return null;
+                }
                     nodeListSize = nodes.size();
                     currentNodeIndex = nodes.indexOf(nodename);
-                }
             }
+        }
+        else {
+            nodes = clusterManager.getNodes();
         }
 
         Set<Long> localSplits = new HashSet<>();

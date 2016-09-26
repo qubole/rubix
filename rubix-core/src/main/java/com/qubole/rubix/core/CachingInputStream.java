@@ -201,7 +201,6 @@ public class CachingInputStream
         catch (ExecutionException e) {
             throw Throwables.propagate(e);
         }
-
         // mark all read blocks cached
         // We can let this is happen in background
         final long lastBlock = nextReadBlock;
