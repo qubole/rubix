@@ -53,14 +53,16 @@ public class BookKeeperClient extends BookKeeperService.Client
     }
 
     // Caller responsible to close the client
-    public static BookKeeperClient createBookKeeperClient(Configuration conf)
+    public static RetryingBookkeeperClient createBookKeeperClient(Configuration conf)
             throws TTransportException
     {
         TTransport transport;
-        transport = new TSocket("localhost", CacheConfig.getServerPort(conf));
+        transport = new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf));
+
         transport.open();
 
         BookKeeperClient client = new BookKeeperClient(transport);
-        return client;
+        RetryingBookkeeperClient retryingBookkeeperClient =  new RetryingBookkeeperClient(client, CacheConfig.getMaxRetries(conf));
+        return retryingBookkeeperClient;
     }
 }

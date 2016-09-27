@@ -103,8 +103,8 @@ public class BookKeeper
                 if (nodename == null) {
                     return null;
                 }
-                    nodeListSize = nodes.size();
-                    currentNodeIndex = nodes.indexOf(nodename);
+                nodeListSize = nodes.size();
+                currentNodeIndex = nodes.indexOf(nodename);
             }
         }
         else {
