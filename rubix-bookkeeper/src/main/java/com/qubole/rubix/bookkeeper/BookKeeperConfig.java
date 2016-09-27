@@ -12,8 +12,12 @@
  */
 package com.qubole.rubix.bookkeeper;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.hash.HashCode;
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hashing;
 import org.apache.hadoop.conf.Configuration;
 
 import java.io.File;
@@ -158,9 +162,14 @@ public class BookKeeperConfig
 
     public static String getLocalDirFor(String remotePath, Configuration conf)
     {
-        int h = Math.abs(remotePath.hashCode());
-        int d = h % numDisks(conf);
-        String dirname = getDirPath(conf, d) + BookKeeperConfig.fileCacheDirSuffixConf;
+        int numDisks = numDisks(conf);
+        int numBuckets = 100 * numDisks;
+        HashFunction hf = Hashing.murmur3_32();
+        HashCode hc = hf.hashString(remotePath, Charsets.UTF_8);
+        int bucket = Math.abs(hc.asInt()) % numBuckets;
+        int dirNum = (bucket / numDisks) % numDisks;
+
+        String dirname = getDirPath(conf, dirNum) + BookKeeperConfig.fileCacheDirSuffixConf;
         return dirname;
     }
 

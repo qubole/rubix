@@ -24,13 +24,14 @@ import java.net.URI;
 /**
  * Created by sakshia on 28/7/16.
  */
-public class CachingHadoop2FileSystem extends CachingFileSystem<NativeS3FileSystem>
+public class CachingNativeS3FileSystem
+        extends CachingFileSystem<NativeS3FileSystem>
 {
-    private static final Log LOG = LogFactory.getLog(CachingHadoop2FileSystem.class);
+    private static final Log LOG = LogFactory.getLog(CachingNativeS3FileSystem.class);
 
     private static ClusterManager clusterManager;
 
-    public CachingHadoop2FileSystem()
+    public CachingNativeS3FileSystem()
             throws IOException
     {
         super();
