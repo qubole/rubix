@@ -60,7 +60,7 @@ public class CacheConfig
     // default values
     private static final int dataCacheExpiry = Integer.MAX_VALUE;
     // Keepnig this low to workaround the Guava Cache static weighing limitation
-    private static final int dataCacheExpiryAfterWrite = 3000; //In sec
+    private static final int dataCacheExpiryAfterWrite = 300; //In sec
     private static final int dataCacheFullness = 80; // percent
     private static final String dataCacheDirPrefixes = "/media/ephemeral";
     private static final int blockSize = 1 * 1024 * 1024; // 1MB
@@ -188,9 +188,14 @@ public class CacheConfig
 
     public static String getLocalDirFor(String remotePath, Configuration conf)
     {
-        int h = Math.abs(remotePath.hashCode());
-        int d = h % numDisks(conf);
-        String dirname = getDirPath(conf, d) + CacheConfig.fileCacheDirSuffixConf;
+        int numDisks = numDisks(conf);
+        int numBuckets = 100 * numDisks;
+        HashFunction hf = Hashing.murmur3_32();
+        HashCode hc = hf.hashString(remotePath, Charsets.UTF_8);
+        int bucket = Math.abs(hc.asInt()) % numBuckets;
+        int dirNum = (bucket / numDisks) % numDisks;
+
+        String dirname = getDirPath(conf, dirNum) + BookKeeperConfig.fileCacheDirSuffixConf;
         return dirname;
     }
 
