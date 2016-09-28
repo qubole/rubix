@@ -99,7 +99,6 @@ public class CachingInputStream
     }
 
     private void initialize(FSDataInputStream parentInputStream, Configuration conf)
-            throws IOException
     {
         this.conf = conf;
         this.strictMode = CachingConfigHelper.isStrictMode(conf);
@@ -122,8 +121,15 @@ public class CachingInputStream
         catch (FileNotFoundException e) {
             log.info("Creating local file " + localPath);
             File file = new File(localPath);
-            file.createNewFile();
-            this.localFileForReading = new RandomAccessFile(file, "rw");
+            try {
+                file.createNewFile();
+                this.localFileForReading = new RandomAccessFile(file, "rw");
+            }
+            catch (IOException e1) {
+                log.error("Error in creating local file " + localPath, e1);
+                // reset bookkeeper client so that we take direct route
+                this.bookKeeperClient = null;
+            }
         }
     }
 
@@ -352,7 +358,9 @@ public class CachingInputStream
     {
         try {
             inputStream.close();
-            localFileForReading.close();
+            if (localFileForReading != null) {
+                localFileForReading.close();
+            }
             if (bookKeeperClient != null) {
                 bookKeeperClient.close();
             }
