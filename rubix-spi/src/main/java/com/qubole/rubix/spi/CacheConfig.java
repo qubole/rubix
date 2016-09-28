@@ -12,8 +12,12 @@
  */
 package com.qubole.rubix.spi;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.hash.HashCode;
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hashing;
 import org.apache.hadoop.conf.Configuration;
 
 import java.io.File;
@@ -161,6 +165,13 @@ public class CacheConfig
         int h = Math.abs(remotePath.hashCode());
         int d = h % numDisks(conf);
         String dirname = getDirPath(conf, d) + CacheConfig.fileCacheDirSuffixConf;
+        int numDisks = numDisks(conf);
+        int numBuckets = 100 * numDisks;
+        HashFunction hf = Hashing.murmur3_32();
+        HashCode hc = hf.hashString(remotePath, Charsets.UTF_8);
+        int bucket = Math.abs(hc.asInt()) % numBuckets;
+        int dirNum = (bucket / numDisks) % numDisks;
+
         return dirname;
     }
 
