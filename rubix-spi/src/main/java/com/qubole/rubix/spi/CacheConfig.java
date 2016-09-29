@@ -12,8 +12,12 @@
  */
 package com.qubole.rubix.spi;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.hash.HashCode;
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hashing;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
@@ -195,7 +199,7 @@ public class CacheConfig
         int bucket = Math.abs(hc.asInt()) % numBuckets;
         int dirNum = (bucket / numDisks) % numDisks;
 
-        String dirname = getDirPath(conf, dirNum) + BookKeeperConfig.fileCacheDirSuffixConf;
+        String dirname = getDirPath(conf, dirNum) + CacheConfig.fileCacheDirSuffixConf;
         return dirname;
     }
 

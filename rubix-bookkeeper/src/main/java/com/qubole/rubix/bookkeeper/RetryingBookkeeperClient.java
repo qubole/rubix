@@ -19,6 +19,7 @@ package com.qubole.rubix.bookkeeper;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.Callable;
 
 import com.google.common.base.Throwables;
 import org.apache.thrift.TException;
@@ -53,17 +54,24 @@ public final class RetryingBookkeeperClient
     }
 
     @Override
-    public List<Location> getCacheStatus(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock, int clusterType)
+    public List<Location> getCacheStatus(final String remotePath, final long fileLength, final long lastModified, final long startBlock, final long endBlock, final int clusterType)
     {
         try {
-            return super.getCacheStatus(remotePath, fileLength, lastModified, startBlock, endBlock, clusterType);
+            return bookKeeperClient.getCacheStatus(remotePath, fileLength, lastModified, startBlock, endBlock, clusterType);
         }
         catch (TException e) {
             try {
-                retryConnection();
-                return super.getCacheStatus(remotePath, fileLength, lastModified, startBlock, endBlock, clusterType);
+                return retryConnection(new Callable<List<Location>>()
+                {
+                    @Override
+                    public List<Location> call()
+                            throws Exception
+                    {
+                        return bookKeeperClient.getCacheStatus(remotePath, fileLength, lastModified, startBlock, endBlock, clusterType);
+                    }
+                });
             }
-            catch (TException e1) {
+            catch (Exception e1) {
                 LOG.info("Could not get cache status from server " + Throwables.getStackTraceAsString(e));
             }
         }
@@ -71,24 +79,36 @@ public final class RetryingBookkeeperClient
     }
 
     @Override
-    public void setAllCached(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock)
+    public void setAllCached(final String remotePath, final long fileLength, final long lastModified, final long startBlock, final long endBlock)
     {
         try {
-            super.setAllCached(remotePath, fileLength, lastModified, startBlock, endBlock);
+            bookKeeperClient.setAllCached(remotePath, fileLength, lastModified, startBlock, endBlock);
+        }
+        catch (TTransportException e) {
+            try {
+                LOG.debug("Retrying Connection");
+                retryConnection(new Callable<Void>()
+                {
+                    @Override
+                    public Void call()
+                            throws Exception
+                    {
+                        bookKeeperClient.setAllCached(remotePath, fileLength, lastModified, startBlock, endBlock);
+                        return null;
+                    }
+                });
+            }
+            catch (Exception e1) {
+                LOG.info("Could not update BookKeeper about newly cached blocks: " + Throwables.getStackTraceAsString(e));
+            }
         }
         catch (TException e) {
-            try {
-                retryConnection();
-                super.setAllCached(remotePath, fileLength, lastModified, startBlock, endBlock);
-            }
-            catch (TException e1) {
-                LOG.info("\"Could not update BookKeeper about newly cached blocks: " + Throwables.getStackTraceAsString(e));
-            }
+            e.printStackTrace();
         }
     }
 
-    private void retryConnection()
-            throws TTransportException
+    private <V> V retryConnection(Callable<V> callable)
+            throws Exception
     {
         int errors = 0;
         bookKeeperClient.transport.close();
@@ -96,10 +116,10 @@ public final class RetryingBookkeeperClient
         while (errors < maxRetries) {
             try {
                 bookKeeperClient.transport.open();
+                return callable.call();
             }
             catch (TTransportException e1) {
-                LOG.error("Error while reconnecting:", e1);
-                bookKeeperClient.transport.close();
+                LOG.info("Error while reconnecting");
                 errors++;
             }
         }
@@ -107,6 +127,7 @@ public final class RetryingBookkeeperClient
         if (errors >= maxRetries) {
             throw new TTransportException("Failed to reconnect");
         }
+        return null;
     }
 
     @Override
