@@ -95,7 +95,6 @@ public class CacheConfig
         return getDiskPathsMap(conf).size();
     }
 
-
     public static HashMap<Integer, String> getDiskPathsMap(final Configuration conf)
     {
         Supplier<HashMap<Integer, String>> s = Suppliers.memoize(new Supplier<HashMap<Integer, String>>()

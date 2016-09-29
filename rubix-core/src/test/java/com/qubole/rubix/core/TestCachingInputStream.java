@@ -44,7 +44,6 @@ public class TestCachingInputStream
     Path backendPath = new Path("file://" + backendFileName);
 
     CachingInputStream inputStream;
-    final Configuration conf = new Configuration();
 
     private static final Log log = LogFactory.getLog(TestCachingInputStream.class);
 
@@ -52,7 +51,7 @@ public class TestCachingInputStream
     public void setup()
             throws IOException, InterruptedException
     {
-
+        final Configuration conf = new Configuration();
 
         conf.setBoolean(CachingConfigHelper.DATA_CACHE_STRICT_MODE, true);
         conf.setInt(CacheConfig.dataCacheBookkeeperPortConf, 3456);
@@ -214,12 +213,6 @@ public class TestCachingInputStream
         readSize = inputStream.read(buffer, 100, 100);
         assertTrue("Did not get EOF", readSize == -1);
 
-        BookKeeperServer.stopServer();
-        buffer = new byte[1000];
-        inputStream.seek(0);
-        inputStream.read(buffer, 0, 1000);
-        inputStream.seek(0);
-        inputStream.read(buffer, 0, 1000);
     }
 
     private void assertions(int readSize, int expectedReadSize, byte[] outputBuffer, String expectedOutput)
