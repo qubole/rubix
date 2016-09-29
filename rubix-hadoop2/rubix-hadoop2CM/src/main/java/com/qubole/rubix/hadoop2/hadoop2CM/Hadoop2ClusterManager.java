@@ -18,8 +18,6 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.qubole.rubix.spi.ClusterManager;
@@ -135,9 +133,6 @@ public class Hadoop2ClusterManager
                         }
                     }
                 }, executor));
-
-
-
     }
 
     public URL getNodeURL()

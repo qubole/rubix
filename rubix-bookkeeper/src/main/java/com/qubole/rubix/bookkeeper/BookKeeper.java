@@ -78,10 +78,9 @@ public class BookKeeper
     public List<com.qubole.rubix.bookkeeper.Location> getCacheStatus(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock, int clusterType)
             throws TException
     {
-        initializeCLusterManager(clusterType);
+        initializeClusterManager(clusterType);
 
-        if(nodeName == null)
-        {
+        if (nodeName == null) {
             return null;
         }
 
@@ -141,7 +140,7 @@ public class BookKeeper
         return blocksInfo;
     }
 
-    private void initializeCLusterManager(int clusterType)
+    private void initializeClusterManager(int clusterType)
     {
         if (clusterManager == null || currentNodeIndex == -1) {
             synchronized (lock) {
