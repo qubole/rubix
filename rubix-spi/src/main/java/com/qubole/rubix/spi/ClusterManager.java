@@ -28,7 +28,7 @@ public abstract class ClusterManager
 {
     private long splitSize = 64 * 1024 * 1024; // 64MB
 
-    private int nodeRefreshTime = 10;
+    private int nodeRefreshTime = 10; //sec
 
     public static String splitSizeConf = "caching.fs.split-size";
 

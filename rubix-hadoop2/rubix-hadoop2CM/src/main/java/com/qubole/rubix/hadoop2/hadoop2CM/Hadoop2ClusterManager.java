@@ -1,4 +1,4 @@
-package com.qubole.rubix.hadoop2.hadoop2CM; /**
+/**
  * Copyright (c) 2016. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
@@ -10,6 +10,7 @@ package com.qubole.rubix.hadoop2.hadoop2CM; /**
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
+package com.qubole.rubix.hadoop2.hadoop2CM;
 
 import com.google.common.base.Throwables;
 import com.google.common.cache.CacheBuilder;
@@ -17,6 +18,8 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.qubole.rubix.spi.ClusterManager;
@@ -32,6 +35,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import com.qubole.rubix.spi.ClusterType;
@@ -61,72 +66,78 @@ public class Hadoop2ClusterManager
     {
         super.initialize(conf);
         yconf = new YarnConfiguration();
-        log.info("Initializing: Hadoop2ClusterManager");
         this.address = yconf.get(addressConf, address);
         this.serverAddress = address.substring(0, address.indexOf(":"));
         this.serverPort = Integer.parseInt(address.substring(address.indexOf(":") + 1));
-        nodesCache = CacheBuilder.newBuilder().refreshAfterWrite(refreshTime, TimeUnit.SECONDS).build(new CacheLoader<String, List<String>>()
-        {
-            @Override
-            public List<String> load(String s)
-                    throws Exception
-            {
-                if (!isMaster) {
-                    // First time all nodes start assuming themselves as master and down the line figure out their role
-                    // Next time onwards, only master will be fetching the list of nodes
-                    return ImmutableList.of();
-                }
-                try {
-                    StringBuffer response = new StringBuffer();
-                    URL obj = getNodeURL();
-                    HttpURLConnection httpcon = (HttpURLConnection) obj.openConnection();
-                    httpcon.setRequestMethod("GET");
-                    log.info("Sending 'GET' request to URL: " + obj.toString());
-                    int responseCode = httpcon.getResponseCode();
-                    if (responseCode == HttpURLConnection.HTTP_OK) {
-                        BufferedReader in = new BufferedReader(new InputStreamReader(httpcon.getInputStream()));
-                        String inputLine;
-                        while ((inputLine = in.readLine()) != null) {
-                            response.append(inputLine);
+
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        nodesCache = CacheBuilder.newBuilder()
+                .refreshAfterWrite(refreshTime, TimeUnit.SECONDS)
+                .build(CacheLoader.asyncReloading(new CacheLoader<String, List<String>>()
+                {
+                    @Override
+                    public List<String> load(String s)
+                            throws Exception
+                    {
+                        if (!isMaster) {
+                            // First time all nodes start assuming themselves as master and down the line figure out their role
+                            // Next time onwards, only master will be fetching the list of nodes
+                            return ImmutableList.of();
                         }
-                        in.close();
-                        httpcon.disconnect();
-                    }
-                    else {
-                        log.info("/ws/v1/cluster/nodes failed due to " + responseCode + ". Setting this node as worker.");
-                        isMaster = false;
-                        httpcon.disconnect();
-                        return ImmutableList.of();
-                    }
-                    Gson gson = new Gson();
-                    Type type = new TypeToken<Nodes>() {}.getType();
-                    Nodes nodes = gson.fromJson(response.toString(), type);
-                    List<Elements> allNodes = nodes.getNodes().getNode();
-                    Set<String> hosts = new HashSet<>();
+                        try {
+                            StringBuffer response = new StringBuffer();
+                            URL obj = getNodeURL();
+                            HttpURLConnection httpcon = (HttpURLConnection) obj.openConnection();
+                            httpcon.setRequestMethod("GET");
+                            log.debug("Sending 'GET' request to URL: " + obj.toString());
+                            int responseCode = httpcon.getResponseCode();
+                            if (responseCode == HttpURLConnection.HTTP_OK) {
+                                BufferedReader in = new BufferedReader(new InputStreamReader(httpcon.getInputStream()));
+                                String inputLine;
+                                while ((inputLine = in.readLine()) != null) {
+                                    response.append(inputLine);
+                                }
+                                in.close();
+                                httpcon.disconnect();
+                            }
+                            else {
+                                log.info("/ws/v1/cluster/nodes failed due to " + responseCode + ". Setting this node as worker.");
+                                isMaster = false;
+                                httpcon.disconnect();
+                                return ImmutableList.of();
+                            }
+                            Gson gson = new Gson();
+                            Type type = new TypeToken<Nodes>() {}.getType();
+                            Nodes nodes = gson.fromJson(response.toString(), type);
+                            List<Elements> allNodes = nodes.getNodes().getNode();
+                            Set<String> hosts = new HashSet<>();
 
-                    for (Elements node : allNodes) {
-                        String state = node.getState();
-                        log.debug("Hostname: " + node.getNodeHostName() + "State: " + state);
-                        //keep only healthy data nodes
-                        if (state.equalsIgnoreCase("Running") || state.equalsIgnoreCase("New") || state.equalsIgnoreCase("Rebooted")) {
-                            hosts.add(node.getNodeHostName());
+                            for (Elements node : allNodes) {
+                                String state = node.getState();
+                                log.debug("Hostname: " + node.getNodeHostName() + "State: " + state);
+                                //keep only healthy data nodes
+                                if (state.equalsIgnoreCase("Running") || state.equalsIgnoreCase("New") || state.equalsIgnoreCase("Rebooted")) {
+                                    hosts.add(node.getNodeHostName());
+                                }
+                            }
+
+                            if (hosts.isEmpty()) {
+                                throw new Exception("No healthy data nodes found.");
+                            }
+
+                            List<String> hostList = Lists.newArrayList(hosts.toArray(new String[0]));
+                            Collections.sort(hostList);
+                            log.debug("Hostlist: " + hostList.toString());
+                            return hostList;
+                        }
+                        catch (Exception e) {
+                            throw Throwables.propagate(e);
                         }
                     }
+                }, executor));
 
-                    if (hosts.isEmpty()) {
-                        throw new Exception("No healthy data nodes found.");
-                    }
 
-                    List<String> hostList = Lists.newArrayList(hosts.toArray(new String[0]));
-                    Collections.sort(hostList);
-                    log.debug("Hostlist: " + hostList.toString());
-                    return hostList;
-                }
-                catch (Exception e) {
-                    throw Throwables.propagate(e);
-                }
-            }
-        });
+
     }
 
     public URL getNodeURL()

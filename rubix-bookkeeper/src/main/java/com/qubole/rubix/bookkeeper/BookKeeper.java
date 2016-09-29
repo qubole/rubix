@@ -60,6 +60,7 @@ public class BookKeeper
     private long totalRequests = 0;
     private long cachedRequests = 0;
     private long remoteRequests = 0;
+    static String nodeName = null;
     private Configuration conf;
     private static Integer lock = 1;
     private List<String> nodes;
@@ -77,38 +78,11 @@ public class BookKeeper
     public List<com.qubole.rubix.bookkeeper.Location> getCacheStatus(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock, int clusterType)
             throws TException
     {
-        if (clusterManager == null || currentNodeIndex == -1) {
-            String nodename = null;
-            synchronized (lock) {
-                try {
-                    nodename = InetAddress.getLocalHost().getCanonicalHostName();
-                }
-                catch (UnknownHostException e) {
-                    e.printStackTrace();
-                    log.warn("Could not get nodename", e);
-                }
+        initializeCLusterManager(clusterType);
 
-                if (clusterType == HADOOP2_CLUSTER_MANAGER.ordinal()) {
-                    clusterManager = new Hadoop2ClusterManager();
-                    clusterManager.initialize(conf);
-                    nodes = clusterManager.getNodes();
-                    splitSize = clusterManager.getSplitSize();
-                }
-                else if (clusterType == TEST_CLUSTER_MANAGER.ordinal()) {
-                    nodes = new ArrayList<>();
-                    nodes.add(nodename);
-                    splitSize = 64 * 1024 * 1024;
-                }
-
-                if (nodename == null) {
-                    return null;
-                }
-                    nodeListSize = nodes.size();
-                    currentNodeIndex = nodes.indexOf(nodename);
-            }
-        }
-        else {
-            nodes = clusterManager.getNodes();
+        if(nodeName == null)
+        {
+            return null;
         }
 
         Set<Long> localSplits = new HashSet<>();
@@ -147,7 +121,7 @@ public class BookKeeper
 
         for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
             totalRequests++;
-            long split = (blockNum * blockSize) /  splitSize;
+            long split = (blockNum * blockSize) / splitSize;
 
             if (md.isBlockCached(blockNum)) {
                 blocksInfo.add(Location.CACHED);
@@ -156,16 +130,47 @@ public class BookKeeper
             else {
                 if (localSplits.contains(split)) {
                     blocksInfo.add(Location.LOCAL);
-                remoteRequests++;
+                    remoteRequests++;
                 }
                 else {
                     blocksInfo.add(Location.NON_LOCAL);
-               }
+                }
             }
         }
 
         return blocksInfo;
+    }
 
+    private void initializeCLusterManager(int clusterType)
+    {
+        if (clusterManager == null || currentNodeIndex == -1) {
+            synchronized (lock) {
+                try {
+                    nodeName = InetAddress.getLocalHost().getCanonicalHostName();
+                }
+                catch (UnknownHostException e) {
+                    e.printStackTrace();
+                    log.warn("Could not get nodeName", e);
+                }
+
+                if (clusterType == HADOOP2_CLUSTER_MANAGER.ordinal()) {
+                    clusterManager = new Hadoop2ClusterManager();
+                    clusterManager.initialize(conf);
+                    nodes = clusterManager.getNodes();
+                    splitSize = clusterManager.getSplitSize();
+                }
+                else if (clusterType == TEST_CLUSTER_MANAGER.ordinal()) {
+                    nodes = new ArrayList<>();
+                    nodes.add(nodeName);
+                    splitSize = 64 * 1024 * 1024;
+                }
+                nodeListSize = nodes.size();
+                currentNodeIndex = nodes.indexOf(nodeName);
+            }
+        }
+        else {
+            nodes = clusterManager.getNodes();
+        }
     }
 
     @Override
@@ -274,7 +279,7 @@ public class BookKeeper
                             }
                             //if file has been modified in cloud, its entry will be deleted due to "EXPLICIT"
                             log.warn("deleting entry for" + md.getRemotePath().toString() + " due to "
-                                    + notification.getCause());
+                                             + notification.getCause());
                             md.closeAndCleanup();
                         }
                         catch (IOException e) {
