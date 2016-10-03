@@ -26,6 +26,7 @@ import com.google.common.hash.Hashing;
 import com.qubole.rubix.hadoop2.hadoop2CM.Hadoop2ClusterManager;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterManager;
+import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -60,7 +61,6 @@ public class BookKeeper
     private long totalRequests = 0;
     private long cachedRequests = 0;
     private long remoteRequests = 0;
-    private long timeElapsed = 0;
     static String nodeName = null;
     private Configuration conf;
     private static Integer lock = 1;
@@ -82,6 +82,7 @@ public class BookKeeper
         initializeClusterManager(clusterType);
 
         if (nodeName == null) {
+            log.error("Node name is null for Cluster Type" + ClusterType.findByValue(clusterType));
             return null;
         }
 
