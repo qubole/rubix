@@ -168,6 +168,9 @@ public class BookKeeper
                     nodeListSize = nodes.size();
                     currentNodeIndex = nodes.indexOf(nodeName);
                 }
+                else {
+                    nodes = clusterManager.getNodes();
+                }
             }
         }
         else {
