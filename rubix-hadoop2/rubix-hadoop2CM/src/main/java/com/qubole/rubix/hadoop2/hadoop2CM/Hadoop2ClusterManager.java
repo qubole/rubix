@@ -57,7 +57,6 @@ public class Hadoop2ClusterManager
     String address = "localhost:8088";
     private Log log = LogFactory.getLog(Hadoop2ClusterManager.class);
     static String addressConf = "yarn.resourcemanager.webapp.address";
-    int refreshTime = super.getNodeRefreshTime();
 
     @Override
     public void initialize(Configuration conf)
@@ -70,7 +69,7 @@ public class Hadoop2ClusterManager
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
         nodesCache = CacheBuilder.newBuilder()
-                .refreshAfterWrite(refreshTime, TimeUnit.SECONDS)
+                .refreshAfterWrite(getNodeRefreshTime(), TimeUnit.SECONDS)
                 .build(CacheLoader.asyncReloading(new CacheLoader<String, List<String>>()
                 {
                     @Override

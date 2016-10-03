@@ -60,6 +60,7 @@ public class BookKeeper
     private long totalRequests = 0;
     private long cachedRequests = 0;
     private long remoteRequests = 0;
+    private long timeElapsed = 0;
     static String nodeName = null;
     private Configuration conf;
     private static Integer lock = 1;
@@ -144,27 +145,29 @@ public class BookKeeper
     {
         if (clusterManager == null || currentNodeIndex == -1) {
             synchronized (lock) {
-                try {
-                    nodeName = InetAddress.getLocalHost().getCanonicalHostName();
-                }
-                catch (UnknownHostException e) {
-                    e.printStackTrace();
-                    log.warn("Could not get nodeName", e);
-                }
+                if (clusterManager == null || currentNodeIndex == -1) {
+                    try {
+                        nodeName = InetAddress.getLocalHost().getCanonicalHostName();
+                    }
+                    catch (UnknownHostException e) {
+                        e.printStackTrace();
+                        log.warn("Could not get nodeName", e);
+                    }
 
-                if (clusterType == HADOOP2_CLUSTER_MANAGER.ordinal()) {
-                    clusterManager = new Hadoop2ClusterManager();
-                    clusterManager.initialize(conf);
-                    nodes = clusterManager.getNodes();
-                    splitSize = clusterManager.getSplitSize();
+                    if (clusterType == HADOOP2_CLUSTER_MANAGER.ordinal()) {
+                        clusterManager = new Hadoop2ClusterManager();
+                        clusterManager.initialize(conf);
+                        nodes = clusterManager.getNodes();
+                        splitSize = clusterManager.getSplitSize();
+                    }
+                    else if (clusterType == TEST_CLUSTER_MANAGER.ordinal()) {
+                        nodes = new ArrayList<>();
+                        nodes.add(nodeName);
+                        splitSize = 64 * 1024 * 1024;
+                    }
+                    nodeListSize = nodes.size();
+                    currentNodeIndex = nodes.indexOf(nodeName);
                 }
-                else if (clusterType == TEST_CLUSTER_MANAGER.ordinal()) {
-                    nodes = new ArrayList<>();
-                    nodes.add(nodeName);
-                    splitSize = 64 * 1024 * 1024;
-                }
-                nodeListSize = nodes.size();
-                currentNodeIndex = nodes.indexOf(nodeName);
             }
         }
         else {
