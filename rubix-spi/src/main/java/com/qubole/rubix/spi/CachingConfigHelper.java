@@ -10,7 +10,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-package com.qubole.rubix.core;
+package com.qubole.rubix.spi;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -26,7 +26,7 @@ import org.apache.hadoop.fs.Path;
  * Hive: --hiveconf argument can be used
  * Spark: --config spark.hadoop.XYZ can be used
  */
-class CachingConfigHelper
+public class CachingConfigHelper
 {
     public static final String DATA_CACHE_ENABLED = "hadoop.cache.data.enabled";
     public static final String DATA_CACHE_TABLE_WHITELIST = "hadoop.cache.data.table.whitelist";
@@ -35,6 +35,7 @@ class CachingConfigHelper
     public static final String DATA_CACHE_TABLE_MIN_COLS = "hadoop.cache.data.table.columns.min";
     public static final String DATA_CACHE_TABLE_COLS_CHOSEN = "hadoop.cache.data.table.columns.chosen";
 
+    // Internal
     // In strict mode, queries will error out if BookKeeper cannot be reached
     public static final String DATA_CACHE_STRICT_MODE = "hadoop.cache.data.strict.mode";
 
@@ -85,14 +86,14 @@ class CachingConfigHelper
         return c.getInt(DATA_CACHE_TABLE_COLS_CHOSEN, 0);
     }
 
-    static boolean isStrictMode(Configuration c)
+    public static boolean isStrictMode(Configuration c)
     {
         return c.getBoolean(DATA_CACHE_STRICT_MODE, false);
     }
 
-    // Helper methods to get information based on configuration
+ // Helper methods to get information based on configuration
 
-    static boolean skipCache(Path path, Configuration conf)
+    public static boolean skipCache(Path path, Configuration conf)
     {
         if (!CachingConfigHelper.isCacheDataEnabled(conf)) {
             return true;

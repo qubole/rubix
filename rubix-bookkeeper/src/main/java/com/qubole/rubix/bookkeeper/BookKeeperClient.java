@@ -12,6 +12,7 @@
  */
 package com.qubole.rubix.bookkeeper;
 
+import com.qubole.rubix.spi.CacheConfig;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -27,7 +28,8 @@ import java.io.IOException;
 /**
  * Created by stagra on 16/2/16.
  */
-public class BookKeeperClient extends BookKeeperService.Client implements Closeable
+public class BookKeeperClient extends BookKeeperService.Client
+        implements Closeable
 {
     private static Log log = LogFactory.getLog(BookKeeperClient.class.getName());
     TTransport transport;
@@ -55,7 +57,7 @@ public class BookKeeperClient extends BookKeeperService.Client implements Closea
             throws TTransportException
     {
         TTransport transport;
-        transport = new TSocket("localhost", BookKeeperConfig.getServerPort(conf));
+        transport = new TSocket("localhost", CacheConfig.getServerPort(conf));
         transport.open();
 
         BookKeeperClient client = new BookKeeperClient(transport);

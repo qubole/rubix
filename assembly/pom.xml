@@ -20,6 +20,11 @@
 
         <dependency>
             <groupId>com.qubole.rubix</groupId>
+            <artifactId>rubix-hadoop2</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-hadoop1</artifactId>
         </dependency>
 
@@ -30,13 +35,25 @@
 
         <dependency>
             <groupId>com.qubole.rubix</groupId>
-            <artifactId>rubix-hadoop2</artifactId>
+            <artifactId>rubix-core</artifactId>
         </dependency>
 
         <dependency>
             <groupId>com.qubole.rubix</groupId>
-            <artifactId>rubix-core</artifactId>
+            <artifactId>rubix-spi</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>com.qubole.rubix</groupId>
+            <artifactId>rubix-hadoop2CM</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.qubole.rubix</groupId>
+            <artifactId>rubix-hadoop2FS</artifactId>
+        </dependency>
+
+
     </dependencies>
 
     <profiles>

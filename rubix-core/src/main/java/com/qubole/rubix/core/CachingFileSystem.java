@@ -17,7 +17,8 @@ import com.google.common.base.Throwables;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import com.qubole.rubix.bookkeeper.BookKeeperConfig;
+import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.ClusterManager;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -40,7 +41,7 @@ import java.lang.reflect.Type;
 import java.net.URI;
 import java.util.List;
 
-import static com.qubole.rubix.core.CachingConfigHelper.skipCache;
+import static com.qubole.rubix.spi.CachingConfigHelper.skipCache;
 /**
  * Created by stagra on 29/12/15.
  */
@@ -114,8 +115,9 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
 
         return new FSDataInputStream(
                 new BufferedFSInputStream(
-                        new CachingInputStream(inputStream, this, path, this.getConf(), statsMBean),
-                        BookKeeperConfig.getBlockSize(getConf())));
+                        new CachingInputStream(inputStream, this, path, this.getConf(), statsMBean,
+                                               clusterManager.getSplitSize(), clusterManager.getClusterType()),
+                                                    CacheConfig.getBlockSize(getConf())));
     }
 
     @Override

@@ -12,8 +12,10 @@
  */
 package com.qubole.rubix.core;
 
-import com.qubole.rubix.bookkeeper.BookKeeperConfig;
+import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.bookkeeper.BookKeeperServer;
+import com.qubole.rubix.spi.CachingConfigHelper;
+import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -52,7 +54,7 @@ public class TestCachingInputStream
         final Configuration conf = new Configuration();
 
         conf.setBoolean(CachingConfigHelper.DATA_CACHE_STRICT_MODE, true);
-        conf.setInt(BookKeeperConfig.dataCacheBookkeeperPortConf, 3456);
+        conf.setInt(CacheConfig.dataCacheBookkeeperPortConf, 3456);
         Thread thread = new Thread() {
             public void run()
             {
@@ -76,18 +78,17 @@ public class TestCachingInputStream
             throws InterruptedException, IOException
     {
         conf.setBoolean(CachingConfigHelper.DATA_CACHE_STRICT_MODE, true);
-        conf.setInt(BookKeeperConfig.dataCacheBookkeeperPortConf, 3456);
+        conf.setInt(CacheConfig.dataCacheBookkeeperPortConf, 3456);
 
         File file = new File(backendFileName);
 
         LocalFSInputStream localFSInputStream = new LocalFSInputStream(backendFileName);
         FSDataInputStream fsDataInputStream = new FSDataInputStream(localFSInputStream);
-        conf.setInt(BookKeeperConfig.blockSizeConf, blockSize);
-
+        conf.setInt(CacheConfig.blockSizeConf, blockSize);
         log.info("All set to test");
 
         // This should be after server comes up else client could not be created
-        inputStream = new CachingInputStream(fsDataInputStream, conf, backendPath, file.length(),file.lastModified(), new CachingFileSystemStats());
+        inputStream = new CachingInputStream(fsDataInputStream, conf, backendPath, file.length(),file.lastModified(), new CachingFileSystemStats(), 64*1024*1024, ClusterType.TEST_CLUSTER_MANAGER);
 
     }
 
@@ -100,10 +101,10 @@ public class TestCachingInputStream
         File file = new File(backendFileName);
         file.delete();
 
-        File mdFile = new File(BookKeeperConfig.getMDFile(backendPath.toString(), conf));
+        File mdFile = new File(CacheConfig.getMDFile(backendPath.toString(), conf));
         mdFile.delete();
 
-        File localFile = new File(BookKeeperConfig.getLocalPath(backendPath.toString(), conf));
+        File localFile = new File(CacheConfig.getLocalPath(backendPath.toString(), conf));
         localFile.delete();
     }
 
@@ -211,6 +212,7 @@ public class TestCachingInputStream
 
         readSize = inputStream.read(buffer, 100, 100);
         assertTrue("Did not get EOF", readSize == -1);
+
     }
 
     private void assertions(int readSize, int expectedReadSize, byte[] outputBuffer, String expectedOutput)

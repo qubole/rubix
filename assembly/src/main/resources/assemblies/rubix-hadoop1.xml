@@ -12,6 +12,7 @@
             <includes>
                 <include>com.qubole.rubix:rubix-bookkeeper</include>
                 <include>com.qubole.rubix:rubix-core</include>
+                <include>com.qubole.rubix:rubix-spi</include>
                 <include>com.qubole.rubix:rubix-hadoop1</include>
             </includes>
         </dependencySet>

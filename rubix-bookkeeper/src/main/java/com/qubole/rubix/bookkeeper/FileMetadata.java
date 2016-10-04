@@ -13,6 +13,7 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.qubole.rubix.spi.CacheConfig;
 import org.apache.hadoop.conf.Configuration;
 
 import java.io.File;
@@ -21,8 +22,8 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 
-import static com.qubole.rubix.bookkeeper.BookKeeperConfig.getBlockSize;
 import static com.qubole.rubix.bookkeeper.utils.DiskUtils.getActualSize;
+import static com.qubole.rubix.spi.CacheConfig.getBlockSize;
 
 /**
  * Created by stagra on 29/12/15.
@@ -45,8 +46,8 @@ public class FileMetadata
         this.remotePath = remotePath;
         this.size = fileLength;
         this.lastModified = lastModified;
-        localPath = BookKeeperConfig.getLocalPath(remotePath, conf);
-        mdFilePath = BookKeeperConfig.getMDFile(remotePath, conf);
+        localPath = CacheConfig.getLocalPath(remotePath, conf);
+        mdFilePath = CacheConfig.getMDFile(remotePath, conf);
 
         try {
             mdFile = new RandomAccessFile(mdFilePath, "rw");

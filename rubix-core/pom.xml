@@ -18,15 +18,17 @@
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>com.qubole.rubix</groupId>
-            <artifactId>rubix-bookkeeper</artifactId>
-        </dependency>
 
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-core</artifactId>
             <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-common</artifactId>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
@@ -53,6 +55,16 @@
             <version>1.7.5</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.qubole.rubix</groupId>
+            <artifactId>rubix-bookkeeper</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.qubole.rubix</groupId>
+            <artifactId>rubix-hadoop2CM</artifactId>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
     <build>

@@ -10,7 +10,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-package com.qubole.rubix.bookkeeper;
+package com.qubole.rubix.spi;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Supplier;
@@ -28,7 +28,7 @@ import java.util.List;
 /**
  * Created by stagra on 14/2/16.
  */
-public class BookKeeperConfig
+public class CacheConfig
 {
     public static String dataCacheExpirationConf = "hadoop.cache.data.expiration";
     public static String dataCacheExpirationAfterWriteConf = "hadoop.cache.data.expiration.after-write";
@@ -50,6 +50,10 @@ public class BookKeeperConfig
     private static final int blockSize = 1 * 1024 * 1024; // 1MB
     private static int serverPort = 8899;
     private static int serverMaxThreads = Integer.MAX_VALUE;
+
+    private CacheConfig()
+    {
+    }
 
     public static int getCacheDataExpiration(Configuration conf)
     {
@@ -89,10 +93,6 @@ public class BookKeeperConfig
     public static int numDisks(Configuration conf)
     {
         return getDiskPathsMap(conf).size();
-    }
-
-    private BookKeeperConfig()
-    {
     }
 
     public static HashMap<Integer, String> getDiskPathsMap(final Configuration conf)
@@ -169,7 +169,7 @@ public class BookKeeperConfig
         int bucket = Math.abs(hc.asInt()) % numBuckets;
         int dirNum = (bucket / numDisks) % numDisks;
 
-        String dirname = getDirPath(conf, dirNum) + BookKeeperConfig.fileCacheDirSuffixConf;
+        String dirname = getDirPath(conf, dirNum) + CacheConfig.fileCacheDirSuffixConf;
         return dirname;
     }
 

@@ -39,6 +39,18 @@ public class CachingFileSystemStats
         return (double) stats.getTotalDownloaded() / bytesInMb;
     }
 
+    @Managed(description = "Gets the total size in MB that was read for non local splits")
+    public double getNonLocalDataRead()
+    {
+        return (double) stats.getNonLocalDataRead() / bytesInMb;
+    }
+
+    @Managed(description = "Gets the total number of non local reads that were done")
+    public long getNonLocalReads()
+    {
+        return stats.getNonLocalReads();
+    }
+
     @Managed(description = "Gets the extra  MB read from remote files due to block alignment")
     public double getExtraReadFromRemote()
     {

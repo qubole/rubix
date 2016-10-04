@@ -47,15 +47,17 @@
         <dep.presto.version>0.142</dep.presto.version>
         <dep.airlift.version>0.98</dep.airlift.version>
         <commons-httpclient.version>3.0.1</commons-httpclient.version>
-        <dep.hadoop.version>1.2.1</dep.hadoop.version>
+        <dep.hadoop1.version>1.2.0</dep.hadoop1.version>
+        <dep.hadoop2.version>2.6.0</dep.hadoop2.version>
     </properties>
 
     <modules>
+        <module>rubix-spi</module>
+        <module>rubix-hadoop2</module>
         <module>rubix-bookkeeper</module>
         <module>rubix-core</module>
         <module>rubix-presto</module>
         <module>rubix-hadoop1</module>
-        <module>rubix-hadoop2</module>
         <module>assembly</module>
     </modules>
 
@@ -94,6 +96,25 @@
 
             <dependency>
                 <groupId>com.qubole.rubix</groupId>
+                <artifactId>rubix-hadoop2FS</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+
+            <dependency>
+                <groupId>com.qubole.rubix</groupId>
+                <artifactId>rubix-hadoop2CM</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.qubole.rubix</groupId>
+                <artifactId>rubix-spi</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.qubole.rubix</groupId>
                 <artifactId>assembly</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -101,14 +122,27 @@
             <dependency>
                 <groupId>org.apache.hadoop</groupId>
                 <artifactId>hadoop-core</artifactId>
-                <version>${dep.hadoop.version}</version>
+                <version>${dep.hadoop1.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-aws</artifactId>
+                <version>${dep.hadoop2.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>org.apache.hadoop</groupId>
                 <artifactId>hadoop-common</artifactId>
-                <version>${dep.hadoop.version}</version>
+                <version>${dep.hadoop2.version}</version>
             </dependency>
+
+            <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-yarn-api</artifactId>
+                <version>${dep.hadoop2.version}</version>
+            </dependency>
+
 
             <dependency>
                 <groupId>org.weakref</groupId>
