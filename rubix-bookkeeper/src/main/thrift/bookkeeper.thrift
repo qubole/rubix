@@ -9,10 +9,16 @@ LOCAL,
 NON_LOCAL
 }
 
+struct BlockLocation {
+    1: required Location location;
+    2: required string remoteLocation;
+}
+
+
 
 service BookKeeperService
 {
-    list<Location> getCacheStatus(1:string remotePath, 2:long fileLength, 3:long lastModified, 4:long startBlock, 5:long endBlock, 6:int clusterType)
+    list<BlockLocation> getCacheStatus(1:string remotePath, 2:long fileLength, 3:long lastModified, 4:long startBlock, 5:long endBlock, 6:int clusterType)
 
     oneway void setAllCached(1:string remotePath, 2:long fileLength, 3:long lastModified, 4:long startBlock, 5:long endBlock)
 

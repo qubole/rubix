@@ -12,16 +12,24 @@
  */
 package com.qubole.rubix.core;
 
+import com.google.common.base.Throwables;
+import com.qubole.rubix.bookkeeper.BookKeeperClient;
 import org.apache.hadoop.fs.FSDataInputStream;
+
+import static com.qubole.rubix.bookkeeper.BookKeeperClient.createBookKeeperClient;
 
 /**
  * Created by qubole on 31/8/16.
  */
-public class NonLocalReadRequestChain extends DirectReadRequestChain
+public class NonLocalReadRequestChain extends ReadRequestChain
 {
-    public NonLocalReadRequestChain(FSDataInputStream inputStream)
+    String remoteNodeName;
+    long totalRead = 0;
+    BookKeeperClient bookKeeperClient;
+
+    public NonLocalReadRequestChain(String remoteNodeName)
     {
-        super(inputStream);
+        this.remoteNodeName = remoteNodeName;
     }
 
     public ReadRequestChainStats getStats()
@@ -31,5 +39,23 @@ public class NonLocalReadRequestChain extends DirectReadRequestChain
                 .setNonLocalReads(requests)
                 .setRequestedRead(totalRead)
                 .setNonLocalDataRead(totalRead);
+    }
+
+    @Override
+    public Integer call()
+            throws Exception
+    {
+        try {
+            this.bookKeeperClient = createBookKeeperClient(conf);
+        }
+        catch (Exception e) {
+            if (strictMode) {
+                throw Throwables.propagate(e);
+            }
+            log.warn("Could not create BookKeeper Client " + Throwables.getStackTraceAsString(e));
+            bookKeeperClient = null;
+        }
+
+        return null;
     }
 }

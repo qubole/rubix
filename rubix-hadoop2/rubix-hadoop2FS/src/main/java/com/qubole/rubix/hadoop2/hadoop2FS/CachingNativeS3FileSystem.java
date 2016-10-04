@@ -30,7 +30,7 @@ public class CachingNativeS3FileSystem
 {
     private static final Log LOG = LogFactory.getLog(CachingNativeS3FileSystem.class);
 
-    private static ClusterManager clusterManager;
+    private ClusterManager clusterManager;
 
     public CachingNativeS3FileSystem()
             throws IOException

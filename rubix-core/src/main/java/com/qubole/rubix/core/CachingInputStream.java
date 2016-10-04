@@ -18,6 +18,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.qubole.rubix.bookkeeper.BlockLocation;
 import com.qubole.rubix.bookkeeper.BookKeeperClient;
 import com.qubole.rubix.bookkeeper.Location;
 import com.qubole.rubix.spi.CacheConfig;
@@ -34,7 +35,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 
@@ -241,11 +244,11 @@ public class CachingInputStream
         RemoteReadRequestChain remoteReadRequestChain = null;
         CachedReadRequestChain cachedReadRequestChain = null;
         NonLocalReadRequestChain nonLocalReadRequestChain = null;
-
+        Map<String, NonLocalReadRequestChain> nonLocalRequests = new HashMap<>();
         ImmutableList.Builder chainedReadRequestChainBuilder = ImmutableList.builder();
 
         int lengthAlreadyConsidered = 0;
-        List<Location> isCached = null;
+        List<BlockLocation> isCached = null;
 
         try {
             if (bookKeeperClient != null) {
@@ -298,7 +301,7 @@ public class CachingInputStream
                 directReadRequestChain.addReadRequest(readRequest);
             }
 
-            else if (isCached.get(idx) == Location.CACHED) {
+            else if (isCached.get(idx).getLocation() == Location.CACHED) {
                 log.debug(String.format("Sending cached block %d to cachedReadRequestChain", blockNum));
                 if (cachedReadRequestChain == null) {
                     cachedReadRequestChain = new CachedReadRequestChain(localFileForReading);
@@ -306,12 +309,16 @@ public class CachingInputStream
                 cachedReadRequestChain.addReadRequest(readRequest);
             }
             else {
-                if (isCached.get(idx) == Location.NON_LOCAL) {
+                if (isCached.get(idx).getLocation() == Location.NON_LOCAL) {
                     log.debug(String.format("Sending block %d to NonLocalReadRequestChain", blockNum));
-                    if (nonLocalReadRequestChain == null) {
-                        nonLocalReadRequestChain = new NonLocalReadRequestChain(inputStream);
+                    if(nonLocalRequests.get(isCached.get(idx).getRemoteLocation()) == null) {
+                        nonLocalReadRequestChain = new NonLocalReadRequestChain(isCached.get(idx).getRemoteLocation());
+                        nonLocalRequests.put(isCached.get(idx).getRemoteLocation(), nonLocalReadRequestChain);
                     }
-                    nonLocalReadRequestChain.addReadRequest(readRequest);
+                    /*if (nonLocalReadRequestChain == null) {
+                        nonLocalReadRequestChain = new NonLocalReadRequestChain(inputStream);
+                    }*/
+                    nonLocalRequests.get(isCached.get(idx).getRemoteLocation()).addReadRequest(readRequest);
                 }
                 else {
                     log.debug(String.format("Sending block %d to remoteReadRequestChain", blockNum));
@@ -341,6 +348,12 @@ public class CachingInputStream
 
             if (directReadRequestChain != null) {
                 shared.addReadRequestChain(directReadRequestChain);
+            }
+
+            if(!nonLocalRequests.isEmpty()) {
+
+                for(NonLocalReadRequestChain nonLocalReadRequestChain1 : nonLocalRequests.values())
+                shared.addReadRequestChain(nonLocalReadRequestChain1);
             }
             chainedReadRequestChainBuilder.add(shared);
         }

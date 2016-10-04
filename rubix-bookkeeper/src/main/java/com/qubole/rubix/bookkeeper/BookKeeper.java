@@ -76,7 +76,7 @@ public class BookKeeper
     }
 
     @Override
-    public List<com.qubole.rubix.bookkeeper.Location> getCacheStatus(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock, int clusterType)
+    public List<BlockLocation> getCacheStatus(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock, int clusterType)
             throws TException
     {
         initializeClusterManager(clusterType);
@@ -87,6 +87,7 @@ public class BookKeeper
         }
 
         Set<Long> localSplits = new HashSet<>();
+        Map<Long, String> blockSplits = new HashMap<>();
         long blockNumber = 0;
 
         for (long i = 0; i < fileLength; i = i + splitSize) {
@@ -101,6 +102,7 @@ public class BookKeeper
             if (nodeIndex == currentNodeIndex) {
                 localSplits.add(blockNumber);
             }
+            blockSplits.put(blockNumber, nodes.get(nodeIndex));
             blockNumber++;
         }
 
@@ -117,7 +119,8 @@ public class BookKeeper
             throw new TException(e);
         }
         endBlock = setCorrectEndBlock(endBlock, fileLength, remotePath);
-        List<Location> blocksInfo = new ArrayList<>((int) (endBlock - startBlock));
+        List<BlockLocation> blockLocations = new ArrayList<>((int) (endBlock - startBlock));
+        //List<Location> blocksInfo = new ArrayList<>((int) (endBlock - startBlock));
         int blockSize = CacheConfig.getBlockSize(conf);
 
         for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
@@ -125,21 +128,26 @@ public class BookKeeper
             long split = (blockNum * blockSize) / splitSize;
 
             if (md.isBlockCached(blockNum)) {
-                blocksInfo.add(Location.CACHED);
+                //blocksInfo.add(Location.CACHED);
+                blockLocations.add(new BlockLocation(Location.CACHED, blockSplits.get(split)));
                 cachedRequests++;
             }
             else {
+                if(blockSplits.get(split).equalsIgnoreCase(nodeName))
                 if (localSplits.contains(split)) {
-                    blocksInfo.add(Location.LOCAL);
+                    //blocksInfo.add(Location.LOCAL);
+                    blockLocations.add(new BlockLocation(Location.LOCAL, blockSplits.get(split)));
                     remoteRequests++;
                 }
                 else {
-                    blocksInfo.add(Location.NON_LOCAL);
+                  //  blocksInfo.add(Location.NON_LOCAL);
+                    blockLocations.add(new BlockLocation(Location.NON_LOCAL, blockSplits.get(split)));
                 }
             }
         }
 
-        return blocksInfo;
+        //return blocksInfo;
+        return blockLocations;
     }
 
     private void initializeClusterManager(int clusterType)

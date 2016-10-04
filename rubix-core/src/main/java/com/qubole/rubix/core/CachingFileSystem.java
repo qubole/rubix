@@ -49,7 +49,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
 {
     private static final Log log = LogFactory.getLog(CachingFileSystem.class);
     private T fs = null;
-    private ClusterManager clusterManager;
+    private static ClusterManager clusterManager;
 
     private boolean cacheSkipped = false;
 
