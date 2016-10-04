@@ -26,6 +26,7 @@ import com.google.common.hash.Hashing;
 import com.qubole.rubix.hadoop2.hadoop2CM.Hadoop2ClusterManager;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterManager;
+import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -78,9 +79,10 @@ public class BookKeeper
     public List<com.qubole.rubix.bookkeeper.Location> getCacheStatus(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock, int clusterType)
             throws TException
     {
-        initializeCLusterManager(clusterType);
+        initializeClusterManager(clusterType);
 
         if (nodeName == null) {
+            log.error("Node name is null for Cluster Type" + ClusterType.findByValue(clusterType));
             return null;
         }
 
@@ -114,10 +116,12 @@ public class BookKeeper
             log.error(String.format("Could not fetch Metadata for %s : %s", remotePath, Throwables.getStackTraceAsString(e)));
             throw new TException(e);
         }
+
         endBlock = setCorrectEndBlock(endBlock, fileLength, remotePath);
         List<Location> blocksInfo = new ArrayList<>((int) (endBlock - startBlock));
         int blockSize = CacheConfig.getBlockSize(conf);
 
+        List<Boolean> blocksInfo = new ArrayList<Boolean>((int) (endBlock - startBlock));
         for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
             totalRequests++;
             long split = (blockNum * blockSize) / splitSize;
@@ -140,31 +144,36 @@ public class BookKeeper
         return blocksInfo;
     }
 
-    private void initializeCLusterManager(int clusterType)
+    private void initializeClusterManager(int clusterType)
     {
         if (clusterManager == null || currentNodeIndex == -1) {
             synchronized (lock) {
-                try {
-                    nodeName = InetAddress.getLocalHost().getCanonicalHostName();
-                }
-                catch (UnknownHostException e) {
-                    e.printStackTrace();
-                    log.warn("Could not get nodeName", e);
-                }
+                if (clusterManager == null || currentNodeIndex == -1) {
+                    try {
+                        nodeName = InetAddress.getLocalHost().getCanonicalHostName();
+                    }
+                    catch (UnknownHostException e) {
+                        e.printStackTrace();
+                        log.warn("Could not get nodeName", e);
+                    }
 
-                if (clusterType == HADOOP2_CLUSTER_MANAGER.ordinal()) {
-                    clusterManager = new Hadoop2ClusterManager();
-                    clusterManager.initialize(conf);
+                    if (clusterType == HADOOP2_CLUSTER_MANAGER.ordinal()) {
+                        clusterManager = new Hadoop2ClusterManager();
+                        clusterManager.initialize(conf);
+                        nodes = clusterManager.getNodes();
+                        splitSize = clusterManager.getSplitSize();
+                    }
+                    else if (clusterType == TEST_CLUSTER_MANAGER.ordinal()) {
+                        nodes = new ArrayList<>();
+                        nodes.add(nodeName);
+                        splitSize = 64 * 1024 * 1024;
+                    }
+                    nodeListSize = nodes.size();
+                    currentNodeIndex = nodes.indexOf(nodeName);
+                }
+                else {
                     nodes = clusterManager.getNodes();
-                    splitSize = clusterManager.getSplitSize();
                 }
-                else if (clusterType == TEST_CLUSTER_MANAGER.ordinal()) {
-                    nodes = new ArrayList<>();
-                    nodes.add(nodeName);
-                    splitSize = 64 * 1024 * 1024;
-                }
-                nodeListSize = nodes.size();
-                currentNodeIndex = nodes.indexOf(nodeName);
             }
         }
         else {
@@ -269,7 +278,7 @@ public class BookKeeper
                                 for (int d = 0; d < CacheConfig.numDisks(conf); d++) {
                                     free += new File(CacheConfig.getDirPath(conf, d)).getUsableSpace();
                                 }
-                                if (free > total * 1.0 * (100.0 - CacheConfig.getCacheDataFullnessPercentage(conf) / 100)) {
+                                if (free > total * 1.0 * (100.0 - BookKeeperConfig.getCacheDataFullnessPercentage(conf) / 100)) {
                                     // still havent utilized the allowed space so do not delete the backing file
                                     md.close();
                                     log.warn("Evicting " + md.getRemotePath().toString() + " due to " + notification.getCause());

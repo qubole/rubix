@@ -19,7 +19,7 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
+import com.google.common.reflect.TypeToken;
 import com.qubole.rubix.spi.ClusterManager;
 
 import java.io.BufferedReader;
@@ -52,12 +52,11 @@ public class Hadoop2ClusterManager
     private boolean isMaster = true;
     public int serverPort = 8088;
     private String serverAddress = "localhost";
-    LoadingCache<String, List<String>> nodesCache;
+    static LoadingCache<String, List<String>> nodesCache;
     YarnConfiguration yconf;
     String address = "localhost:8088";
     private Log log = LogFactory.getLog(Hadoop2ClusterManager.class);
     static String addressConf = "yarn.resourcemanager.webapp.address";
-    int refreshTime = super.getNodeRefreshTime();
 
     @Override
     public void initialize(Configuration conf)
@@ -70,7 +69,7 @@ public class Hadoop2ClusterManager
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
         nodesCache = CacheBuilder.newBuilder()
-                .refreshAfterWrite(refreshTime, TimeUnit.SECONDS)
+                .refreshAfterWrite(getNodeRefreshTime(), TimeUnit.SECONDS)
                 .build(CacheLoader.asyncReloading(new CacheLoader<String, List<String>>()
                 {
                     @Override
@@ -133,7 +132,6 @@ public class Hadoop2ClusterManager
                         }
                     }
                 }, executor));
-
     }
 
     public URL getNodeURL()

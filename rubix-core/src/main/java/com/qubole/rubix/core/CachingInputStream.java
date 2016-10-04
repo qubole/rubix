@@ -18,9 +18,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.qubole.rubix.bookkeeper.BookKeeperClient;
 import com.qubole.rubix.bookkeeper.Location;
 import com.qubole.rubix.bookkeeper.RetryingBookkeeperClient;
 import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.CachingConfigHelper;
 import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -29,6 +31,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -195,6 +198,8 @@ public class CachingInputStream
         }
 
         List<ListenableFuture<Integer>> futures = builder.build();
+
+        int sizeRead = 0;
         try {
             for (ListenableFuture<Integer> future : futures) {
                 sizeRead += future.get();
@@ -206,6 +211,7 @@ public class CachingInputStream
         catch (ExecutionException e) {
             throw Throwables.propagate(e);
         }
+
         // mark all read blocks cached
         // We can let this is happen in background
         final long lastBlock = nextReadBlock;
@@ -293,6 +299,7 @@ public class CachingInputStream
                 log.debug(String.format("Sending block %d to DirectReadRequestChain", blockNum));
                 if (directReadRequestChain == null) {
                     directReadRequestChain = new DirectReadRequestChain(inputStream);
+                    readRequestChainBuilder.add(directReadRequestChain);
                 }
                 directReadRequestChain.addReadRequest(readRequest);
             }
@@ -301,8 +308,10 @@ public class CachingInputStream
                 log.debug(String.format("Sending cached block %d to cachedReadRequestChain", blockNum));
                 if (cachedReadRequestChain == null) {
                     cachedReadRequestChain = new CachedReadRequestChain(localFileForReading);
+                    readRequestChainBuilder.add(cachedReadRequestChain);
                 }
                 cachedReadRequestChain.addReadRequest(readRequest);
+
             }
             else {
                 if (isCached.get(idx) == Location.NON_LOCAL) {

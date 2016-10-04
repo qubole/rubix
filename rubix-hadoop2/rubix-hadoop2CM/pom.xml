@@ -49,8 +49,11 @@
                             </artifactSet>
                             <relocations>
                                 <relocation>
-                                    <pattern>com.google</pattern>
-                                    <shadedPattern>com.google.shaded</shadedPattern>
+                                    <pattern>com.google.common</pattern>
+                                    <shadedPattern>com.google.common.shaded</shadedPattern>
+                                    <excludes>
+                                        <exclude>com.google.common.reflect</exclude>
+                                    </excludes>
                                 </relocation>
                             </relocations>
                         </configuration>

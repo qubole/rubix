@@ -3,14 +3,14 @@
     <parent>
         <groupId>com.qubole.rubix</groupId>
         <artifactId>rubix-root</artifactId>
-        <version>0.2.2-SNAPSHOT</version>
+        <version>0.2.3-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.qubole.rubix</groupId>
     <artifactId>rubix-hadoop2</artifactId>
     <packaging>pom</packaging>
-
+    
     <modules>
         <module>rubix-hadoop2CM</module>
         <module>rubix-hadoop2FS</module>
@@ -29,6 +29,11 @@
             <artifactId>testng</artifactId>
             <version>6.9.8</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-core</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.google.code.gson</groupId>
@@ -52,6 +57,8 @@
             </plugin>
         </plugins>
     </build>
+
+
 
 
 </project>

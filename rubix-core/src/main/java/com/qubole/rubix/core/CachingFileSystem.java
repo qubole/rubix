@@ -115,9 +115,8 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
 
         return new FSDataInputStream(
                 new BufferedFSInputStream(
-                        new CachingInputStream(inputStream, this, path, this.getConf(), statsMBean,
-                                               clusterManager.getSplitSize(), clusterManager.getClusterType()),
-                                                    CacheConfig.getBlockSize(getConf())));
+                        new CachingInputStream(inputStream, this, path, this.getConf(), statsMBean),
+                        BookKeeperConfig.getBlockSize(getConf())));
     }
 
     @Override

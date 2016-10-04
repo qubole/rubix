@@ -14,6 +14,7 @@ package com.qubole.rubix.core;
 
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.bookkeeper.BookKeeperServer;
+import com.qubole.rubix.spi.CachingConfigHelper;
 import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -52,7 +53,7 @@ public class TestCachingInputStream
     {
         final Configuration conf = new Configuration();
 
-        conf.setBoolean(CacheConfig.DATA_CACHE_STRICT_MODE, true);
+        conf.setBoolean(CachingConfigHelper.DATA_CACHE_STRICT_MODE, true);
         conf.setInt(CacheConfig.dataCacheBookkeeperPortConf, 3456);
         Thread thread = new Thread() {
             public void run()
@@ -76,7 +77,7 @@ public class TestCachingInputStream
     public void createCachingStream(Configuration conf)
             throws InterruptedException, IOException
     {
-        conf.setBoolean(CacheConfig.DATA_CACHE_STRICT_MODE, true);
+        conf.setBoolean(CachingConfigHelper.DATA_CACHE_STRICT_MODE, true);
         conf.setInt(CacheConfig.dataCacheBookkeeperPortConf, 3456);
 
         File file = new File(backendFileName);
@@ -211,6 +212,7 @@ public class TestCachingInputStream
 
         readSize = inputStream.read(buffer, 100, 100);
         assertTrue("Did not get EOF", readSize == -1);
+
     }
 
     private void assertions(int readSize, int expectedReadSize, byte[] outputBuffer, String expectedOutput)
