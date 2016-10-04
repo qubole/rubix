@@ -29,6 +29,8 @@ List of things to be done to use RubiX are:
 OR
 >	sudo /usr/lib/hive2/bin/cache-bookkeeper start
 
+NOTE: The master branch is not compatible with Presto and Hadoop1. Use RubiX version 0.2.1 for Presto & Hadoop1.
+
 ##### Using RubiX with Presto
   
 1. Place rubix-bookkeeper.jar, rubix-core.jar, rubix-presto.jar in presto/plugin/hive-hadoop2/ directory. 
@@ -52,16 +54,16 @@ OR
 	    All these jars are packaged in rubix-hadoop2.tar under assembly module.
 	    
 2. Configuration changes: Use following configs to start using RubiX:
-		fs.s3n.impl=com.qubole.rubix.hadoop2.CachingNativeS3FileSystem
-		fs.s3.impl=com.qubole.rubix.hadoop2.CachingNativeS3FileSystem
+		fs.s3n.impl=com.qubole.rubix.hadoop2.hadoop2FS.CachingNativeS3FileSystem
+		fs.s3.impl=com.qubole.rubix.hadoop2.hadoop2FS.CachingNativeS3FileSystem
 		
 3. Optional Configs for better Hadoop scheduling:
 	a. yarn.scheduler.fair.locality.threshold.node=1.0
 		OR
 	b. yarn.scheduler.fair.continuous-scheduling-enabled=true
-	   yarn.scheduler.fair.locality-delay-node-ms=60000
+	   yarn.scheduler.fair.locality-delay-node-ms=60000  
 	   yarn.scheduler.fair.locality-delay-rack-ms=60000
-	   
+	   (Give time in millisecond)
 4. Start/Restart Hadoop2 cluster. 
 
 ### Configurations
