@@ -40,7 +40,7 @@ NOTE: The master branch is not compatible with Presto and Hadoop1. Use RubiX ver
      ii. Set "hive.force-local-scheduling=true" in hive.properties 
 3. Start/Re-start the Presto server
 		
-##### Using RubiX with Hive - Hadoop
+##### Using RubiX with Hive - Hadoop1
 
 1. Add RubiX jars:  rubix-bookkeeper.jar, rubix-core.jar, rubix-hadoop1.jar either to hadoop/lib directly or via `add jar` command. 
 	    All these jars are packaged in rubix-hadoop1.tar under assembly module.
