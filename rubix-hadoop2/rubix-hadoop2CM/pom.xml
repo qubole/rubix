@@ -14,7 +14,6 @@
     <groupId>com.qubole.rubix</groupId>
     <artifactId>rubix-hadoop2CM</artifactId>
     <name>rubix-hadoop2CM</name>
-    <version>0.2.3-SNAPSHOT</version>
 
     <properties>
         <main.basedir>${project.parent.parent.basedir}</main.basedir>
