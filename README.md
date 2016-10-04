@@ -29,7 +29,7 @@ List of things to be done to use RubiX are:
 OR
 >	sudo /usr/lib/hive2/bin/cache-bookkeeper start
 
-NOTE: The master branch is not compatible with Presto and Hadoop1. Use RubiX version 0.2.1 for Presto & Hadoop1.
+NOTE: The master branch is not compatible with Presto and Hadoop1. Use RubiX version 0.2.2 or below for Presto & Hadoop1.
 
 ##### Using RubiX with Presto
   
