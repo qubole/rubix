@@ -50,7 +50,7 @@ NOTE: The master branch is not compatible with Presto and Hadoop1. Use RubiX ver
 
 ##### Using RubiX with Hive - Hadoop2/Tez
 
-1. Add RubiX jars:  rubix-bookkeeper.jar, rubix-core.jar, rubix-hadoop2.jar either to /usr/lib/hadoop2/share/hadoop/common/ directly or via `add jar` command. 
+1. Add RubiX jars:  rubix-bookkeeper.jar, rubix-core.jar, rubix-hadoop2.jar either to /usr/lib/hadoop2/share/hadoop/common/lib/ directly or via `add jar` command. 
 	    All these jars are packaged in rubix-hadoop2.tar under assembly module.
 	    
 2. Configuration changes: Use following configs to start using RubiX:
