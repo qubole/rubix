@@ -121,7 +121,6 @@ public class BookKeeper
         List<Location> blocksInfo = new ArrayList<>((int) (endBlock - startBlock));
         int blockSize = CacheConfig.getBlockSize(conf);
 
-        List<Boolean> blocksInfo = new ArrayList<Boolean>((int) (endBlock - startBlock));
         for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
             totalRequests++;
             long split = (blockNum * blockSize) / splitSize;
@@ -278,7 +277,7 @@ public class BookKeeper
                                 for (int d = 0; d < CacheConfig.numDisks(conf); d++) {
                                     free += new File(CacheConfig.getDirPath(conf, d)).getUsableSpace();
                                 }
-                                if (free > total * 1.0 * (100.0 - BookKeeperConfig.getCacheDataFullnessPercentage(conf) / 100)) {
+                                if (free > total * 1.0 * (100.0 - CacheConfig.getCacheDataFullnessPercentage(conf) / 100)) {
                                     // still havent utilized the allowed space so do not delete the backing file
                                     md.close();
                                     log.warn("Evicting " + md.getRemotePath().toString() + " due to " + notification.getCause());

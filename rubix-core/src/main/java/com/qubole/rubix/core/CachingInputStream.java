@@ -18,11 +18,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.qubole.rubix.bookkeeper.BookKeeperClient;
 import com.qubole.rubix.bookkeeper.Location;
 import com.qubole.rubix.bookkeeper.RetryingBookkeeperClient;
 import com.qubole.rubix.spi.CacheConfig;
-import com.qubole.rubix.spi.CachingConfigHelper;
 import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -84,7 +82,6 @@ public class CachingInputStream
         this.statsMbean = statsMbean;
         this.splitSize = splitSize;
         this.clusterType = clusterType;
-
     }
 
     @VisibleForTesting
@@ -179,7 +176,7 @@ public class CachingInputStream
         }
 
         // Get the last block
-        final long endBlock = ((nextReadPosition + (length - 1)) /  blockSize) + 1; // this block will not be read
+        final long endBlock = ((nextReadPosition + (length - 1)) / blockSize) + 1; // this block will not be read
 
         // Create read requests
         final List<ReadRequestChain> readRequestChains = setupReadRequestChains(buffer,
@@ -199,7 +196,6 @@ public class CachingInputStream
 
         List<ListenableFuture<Integer>> futures = builder.build();
 
-        int sizeRead = 0;
         try {
             for (ListenableFuture<Integer> future : futures) {
                 sizeRead += future.get();
@@ -215,7 +211,8 @@ public class CachingInputStream
         // mark all read blocks cached
         // We can let this is happen in background
         final long lastBlock = nextReadBlock;
-        readService.execute(new Runnable(){
+        readService.execute(new Runnable()
+        {
             @Override
             public void run()
             {
@@ -299,7 +296,6 @@ public class CachingInputStream
                 log.debug(String.format("Sending block %d to DirectReadRequestChain", blockNum));
                 if (directReadRequestChain == null) {
                     directReadRequestChain = new DirectReadRequestChain(inputStream);
-                    readRequestChainBuilder.add(directReadRequestChain);
                 }
                 directReadRequestChain.addReadRequest(readRequest);
             }
@@ -308,10 +304,8 @@ public class CachingInputStream
                 log.debug(String.format("Sending cached block %d to cachedReadRequestChain", blockNum));
                 if (cachedReadRequestChain == null) {
                     cachedReadRequestChain = new CachedReadRequestChain(localFileForReading);
-                    readRequestChainBuilder.add(cachedReadRequestChain);
                 }
                 cachedReadRequestChain.addReadRequest(readRequest);
-
             }
             else {
                 if (isCached.get(idx) == Location.NON_LOCAL) {

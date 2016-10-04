@@ -20,11 +20,6 @@
 
         <dependency>
             <groupId>com.qubole.rubix</groupId>
-            <artifactId>rubix-hadoop2</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-hadoop1</artifactId>
         </dependency>
 
@@ -53,7 +48,6 @@
             <artifactId>rubix-hadoop2FS</artifactId>
         </dependency>
 
-
     </dependencies>
 
     <profiles>
@@ -73,7 +67,7 @@
             <build>
                 <plugins>
                     <plugin>
-                    <artifactId>maven-assembly-plugin</artifactId>
+                        <artifactId>maven-assembly-plugin</artifactId>
                         <executions>
                             <execution>
                                 <id>rubix-prestom</id>

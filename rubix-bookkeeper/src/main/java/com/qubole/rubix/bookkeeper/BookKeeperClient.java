@@ -28,7 +28,8 @@ import java.io.IOException;
 /**
  * Created by stagra on 16/2/16.
  */
-public class BookKeeperClient extends BookKeeperService.Client
+public class BookKeeperClient
+        extends BookKeeperService.Client
         implements Closeable
 {
     private static Log log = LogFactory.getLog(BookKeeperClient.class.getName());
@@ -39,6 +40,7 @@ public class BookKeeperClient extends BookKeeperService.Client
         super(new TBinaryProtocol(transport));
         this.transport = transport;
     }
+
     public BookKeeperClient(TProtocol prot)
     {
         super(prot);
@@ -62,7 +64,7 @@ public class BookKeeperClient extends BookKeeperService.Client
         transport.open();
 
         BookKeeperClient client = new BookKeeperClient(transport);
-        RetryingBookkeeperClient retryingBookkeeperClient =  new RetryingBookkeeperClient(client, CacheConfig.getMaxRetries(conf));
+        RetryingBookkeeperClient retryingBookkeeperClient = new RetryingBookkeeperClient(client, CacheConfig.getMaxRetries(conf));
         return retryingBookkeeperClient;
     }
 }

@@ -29,10 +29,11 @@ import static com.qubole.rubix.bookkeeper.BookKeeperClient.createBookKeeperClien
 
 /**
  * Created by stagra on 4/1/16.
- *
+ * <p>
  * This chain reads from Remote and stores one copy in cache
  */
-public class RemoteReadRequestChain extends ReadRequestChain
+public class RemoteReadRequestChain
+        extends ReadRequestChain
 {
     final FSDataInputStream inputStream;
     final String localFilename;
@@ -50,7 +51,8 @@ public class RemoteReadRequestChain extends ReadRequestChain
         this.localFilename = localFile;
     }
 
-    public Integer call() throws IOException
+    public Integer call()
+            throws IOException
     {
         Thread.currentThread().setName(threadName);
         checkState(isLocked, "Trying to execute Chain without locking");

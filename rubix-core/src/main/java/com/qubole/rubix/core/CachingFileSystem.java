@@ -42,10 +42,12 @@ import java.net.URI;
 import java.util.List;
 
 import static com.qubole.rubix.spi.CacheConfig.skipCache;
+
 /**
  * Created by stagra on 29/12/15.
  */
-public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
+public abstract class CachingFileSystem<T extends FileSystem>
+        extends FileSystem
 {
     private static final Log log = LogFactory.getLog(CachingFileSystem.class);
     private T fs = null;
@@ -87,7 +89,8 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
     }
 
     @Override
-    public void initialize(URI uri, Configuration conf) throws IOException
+    public void initialize(URI uri, Configuration conf)
+            throws IOException
     {
         if (clusterManager == null) {
             throw new IOException("Cluster Manager not set");
@@ -115,8 +118,10 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
 
         return new FSDataInputStream(
                 new BufferedFSInputStream(
-                        new CachingInputStream(inputStream, this, path, this.getConf(), statsMBean),
-                        BookKeeperConfig.getBlockSize(getConf())));
+                        new CachingInputStream(inputStream, this, path,
+                                this.getConf(), statsMBean, clusterManager.getSplitSize(),
+                                clusterManager.getClusterType()),
+                        CacheConfig.getBlockSize(getConf())));
     }
 
     @Override
@@ -199,7 +204,8 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
     }
 
     @Override
-    public BlockLocation[] getFileBlockLocations(FileStatus file, long start, long len) throws IOException
+    public BlockLocation[] getFileBlockLocations(FileStatus file, long start, long len)
+            throws IOException
     {
         if (!clusterManager.isMaster() || cacheSkipped) {
             // If in worker node, blockLocation does not matter
@@ -229,8 +235,8 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
                     HashFunction hf = Hashing.md5();
                     HashCode hc = hf.hashString(key, Charsets.UTF_8);
                     int nodeIndex = Hashing.consistentHash(hc, nodes.size());
-                    String[] name = new String[]{nodes.get(nodeIndex)};
-                    String[] host = new String[]{nodes.get(nodeIndex)};
+                    String[] name = new String[] {nodes.get(nodeIndex)};
+                    String[] host = new String[] {nodes.get(nodeIndex)};
                     blockLocations[blockNumber++] = new BlockLocation(name, host, i, end - i);
                     log.info(String.format("BlockLocation %s %d %d %s totalHosts: %s", file.getPath().toString(), i, end - i, host[0], nodes.size()));
                 }

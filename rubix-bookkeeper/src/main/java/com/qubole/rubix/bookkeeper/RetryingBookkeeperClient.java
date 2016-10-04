@@ -16,17 +16,17 @@ package com.qubole.rubix.bookkeeper;
  * Created by sakshia on 27/9/16.
  */
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.util.List;
-import java.util.concurrent.Callable;
-
 import com.google.common.base.Throwables;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.transport.TTransportException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.Closeable;
+import java.io.IOException;
+import java.util.List;
+import java.util.concurrent.Callable;
 
 public final class RetryingBookkeeperClient
         extends BookKeeperService.Client
@@ -86,7 +86,6 @@ public final class RetryingBookkeeperClient
         }
         catch (TTransportException e) {
             try {
-                LOG.debug("Retrying Connection");
                 retryConnection(new Callable<Void>()
                 {
                     @Override

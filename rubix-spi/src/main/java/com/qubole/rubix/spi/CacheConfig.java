@@ -19,6 +19,7 @@ import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 
 import java.io.File;
 import java.util.Arrays;
@@ -210,5 +211,117 @@ public class CacheConfig
     public static String getParent(String remotePath)
     {
         return remotePath.lastIndexOf('/') == -1 ? "" : remotePath.substring(0, remotePath.lastIndexOf('/'));
+    }
+
+    static boolean isCacheDataEnabled(Configuration c)
+    {
+        return c.getBoolean(DATA_CACHE_ENABLED, true);
+    }
+
+    // Configs below need support from engines and wouldn't help unless corresponding setters are called from inside engines
+
+    static String getCacheDataTableWhitelist(Configuration c)
+    {
+        return c.get(DATA_CACHE_TABLE_WHITELIST, ".*");
+    }
+
+    static void setCacheDataTable(Configuration configuration, String table)
+    {
+        configuration.set(DATA_CACHE_TABLE, table);
+    }
+
+    static String getCacheDataTable(Configuration configuration)
+    {
+        return configuration.get(DATA_CACHE_TABLE, "");
+    }
+
+    static String getCacheDataLocationBlacklist(Configuration configuration)
+    {
+        return configuration.get(DATA_CACHE_LOCATION_BLACKLIST, "");
+    }
+
+    static int getCacheDataMinColumns(Configuration c)
+    {
+        return c.getInt(DATA_CACHE_TABLE_MIN_COLS, 0);
+    }
+
+    static void setCacheDataChosenColumns(Configuration c, int chosen)
+    {
+        c.setInt(DATA_CACHE_TABLE_COLS_CHOSEN, chosen);
+    }
+
+    static int getCacheDataChosenColumns(Configuration c)
+    {
+        return c.getInt(DATA_CACHE_TABLE_COLS_CHOSEN, 0);
+    }
+
+    // Internal
+    // In strict mode, queries will error out if BookKeeper cannot be reached
+
+    public static boolean isStrictMode(Configuration c)
+    {
+        return c.getBoolean(DATA_CACHE_STRICT_MODE, false);
+    }
+
+    // Helper methods to get information based on configuration
+
+    public static boolean skipCache(Path path, Configuration conf)
+    {
+        if (!CacheConfig.isCacheDataEnabled(conf)) {
+            return true;
+        }
+
+        if (!isLocationAllowedToCache(path, conf)) {
+            return true;
+        }
+
+        if (!isTableAllowedToCache(conf)) {
+            return true;
+        }
+
+        if (!minColumnsSelected(conf)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static boolean isTableAllowedToCache(Configuration conf)
+    {
+        String table = CacheConfig.getCacheDataTable(conf);
+        if (table == null || (table != null && table.isEmpty())) {
+            // Support not added by engine
+            return true;
+        }
+
+        String whitelist = CacheConfig.getCacheDataTableWhitelist(conf);
+        if (whitelist.length() > 0) {
+            if (!table.matches(whitelist)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static boolean isLocationAllowedToCache(Path path, Configuration conf)
+    {
+        String blacklist = CacheConfig.getCacheDataLocationBlacklist(conf);
+        if (blacklist.length() > 0) {
+            if (path.toString().matches(blacklist)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static boolean minColumnsSelected(Configuration conf)
+    {
+        if (CacheConfig.getCacheDataMinColumns(conf) > CacheConfig
+                .getCacheDataChosenColumns(conf)) {
+            return false;
+        }
+        return true;
     }
 }
