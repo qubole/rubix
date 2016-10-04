@@ -109,13 +109,19 @@ public class CacheConfig
         return conf.getInt(dataCacheBookkeeperMaxThreadsConf, serverMaxThreads);
     }
 
+    public static int getClientTimeout(Configuration conf)
+    {
+        return conf.getInt(clientTimeoutConf, 60000); //ms
+    }
+
+    public static int getMaxRetries(Configuration conf)
+    {
+        return conf.getInt(maxRetriesConf, 3);
+    }
+
     public static int numDisks(Configuration conf)
     {
         return getDiskPathsMap(conf).size();
-    }
-
-    private BookKeeperConfig()
-    {
     }
 
     public static HashMap<Integer, String> getDiskPathsMap(final Configuration conf)

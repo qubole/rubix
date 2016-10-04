@@ -287,7 +287,7 @@ public class BookKeeper
                             }
                             //if file has been modified in cloud, its entry will be deleted due to "EXPLICIT"
                             log.warn("deleting entry for" + md.getRemotePath().toString() + " due to "
-                                             + notification.getCause());
+                                    + notification.getCause());
                             md.closeAndCleanup();
                         }
                         catch (IOException e) {
