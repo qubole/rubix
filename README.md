@@ -13,7 +13,7 @@ thereby improving performance.
 
 - Presto: Amazon S3 is supported.
 - Hadoop-1: Any engine using hadoop-1, e.g. Hive can utilize RubiX. Amazon S3 is supported.
-- Hadoop-2: Any engine using hadoop-2, e.g. Hive can utilize RubiX. Amazon S3 is supported.
+- Hadoop-2/Tez: Any engine using hadoop-2 / tez, e.g. Hive can utilize RubiX. Amazon S3 is supported.
 
 ###  How to use it
 
@@ -48,7 +48,7 @@ NOTE: The master branch is not compatible with Presto and Hadoop1. Use RubiX ver
 		fs.s3n.impl=com.qubole.rubix.hadoop1.CachingNativeS3FileSystem   
 		fs.s3.impl=com.qubole.rubix.hadoop1.CachingNativeS3FileSystem   
 
-##### Using RubiX with Hive - Hadoop2
+##### Using RubiX with Hive - Hadoop2/Tez
 
 1. Add RubiX jars:  rubix-bookkeeper.jar, rubix-core.jar, rubix-hadoop2.jar either to /usr/lib/hadoop2/share/hadoop/common/ directly or via `add jar` command. 
 	    All these jars are packaged in rubix-hadoop2.tar under assembly module.
@@ -58,12 +58,14 @@ NOTE: The master branch is not compatible with Presto and Hadoop1. Use RubiX ver
 		fs.s3.impl=com.qubole.rubix.hadoop2.hadoop2FS.CachingNativeS3FileSystem
 		
 3. Optional Configs for better Hadoop scheduling:
-	a. yarn.scheduler.fair.locality.threshold.node=1.0
-		OR
-	b. yarn.scheduler.fair.continuous-scheduling-enabled=true
+
+	a. yarn.scheduler.fair.locality.threshold.node=1.0 		
+		OR    
+	b. yarn.scheduler.fair.continuous-scheduling-enabled=true  
 	   yarn.scheduler.fair.locality-delay-node-ms=60000  
 	   yarn.scheduler.fair.locality-delay-rack-ms=60000
 	   (Give time in millisecond)
+	   
 4. Start/Restart Hadoop2 cluster. 
 
 ### Configurations
