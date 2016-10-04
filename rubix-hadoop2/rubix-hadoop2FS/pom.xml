@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.qubole.rubix</groupId>
         <artifactId>rubix-hadoop2</artifactId>
-        <version>0.2.2-SNAPSHOT</version>
+        <version>0.2.3-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -13,7 +13,6 @@
     <groupId>com.qubole.rubix</groupId>
     <artifactId>rubix-hadoop2FS</artifactId>
     <name>rubix-hadoop2FS</name>
-    <version>0.2.2-SNAPSHOT</version>
 
     <properties>
         <main.basedir>${project.parent.parent.basedir}</main.basedir>
