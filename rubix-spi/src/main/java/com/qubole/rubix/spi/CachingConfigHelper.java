@@ -31,7 +31,8 @@ public class CachingConfigHelper
     public static final String DATA_CACHE_ENABLED = "hadoop.cache.data.enabled";
     public static final String DATA_CACHE_TABLE_WHITELIST = "hadoop.cache.data.table.whitelist";
     public static final String DATA_CACHE_TABLE = "hadoop.cache.data.table";
-    public static final String DATA_CACHE_LOCATION_BLACKLIST = "hadoop.cache.data.location.blacklist"; // these locations will be skipped
+    public static final String DATA_CACHE_LOCATION_WHITELIST = "hadoop.cache.data.location.whitelist"; // only these locations will cached
+    public static final String DATA_CACHE_LOCATION_BLACKLIST = "hadoop.cache.data.location.blacklist"; // these locations will be skipped, takes priority over Whitelist
     public static final String DATA_CACHE_TABLE_MIN_COLS = "hadoop.cache.data.table.columns.min";
     public static final String DATA_CACHE_TABLE_COLS_CHOSEN = "hadoop.cache.data.table.columns.chosen";
 
@@ -69,6 +70,11 @@ public class CachingConfigHelper
     static String getCacheDataLocationBlacklist(Configuration configuration)
     {
         return configuration.get(DATA_CACHE_LOCATION_BLACKLIST, "");
+    }
+
+    static String getCacheDataLocationWhitelist(Configuration configuration)
+    {
+        return configuration.get(DATA_CACHE_LOCATION_WHITELIST, ".*");
     }
 
     static int getCacheDataMinColumns(Configuration c)
@@ -134,6 +140,14 @@ public class CachingConfigHelper
 
     private static boolean isLocationAllowedToCache(Path path, Configuration conf)
     {
+        // Check whitelist first, if location matches whitelist and blacklist both then blacklist it
+        String whitelist = CachingConfigHelper.getCacheDataLocationWhitelist(conf);
+        if (whitelist.length() > 0) {
+            if (!path.toString().matches(whitelist)) {
+                return false;
+            }
+        }
+
         String blacklist = CachingConfigHelper.getCacheDataLocationBlacklist(conf);
         if (blacklist.length() > 0) {
             if (path.toString().matches(blacklist)) {
