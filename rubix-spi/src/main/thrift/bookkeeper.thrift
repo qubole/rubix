@@ -1,4 +1,4 @@
-namespace java com.qubole.rubix.bookkeeper
+namespace java com.qubole.rubix.spi
 
 typedef i64 long
 typedef i32 int
@@ -12,6 +12,11 @@ NON_LOCAL
 struct BlockLocation {
     1: required Location location;
     2: required string remoteLocation;
+}
+
+struct DataRead {
+1: binary data
+2: i64 sizeRead
 }
 
 

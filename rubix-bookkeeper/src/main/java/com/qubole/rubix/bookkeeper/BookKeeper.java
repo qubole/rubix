@@ -23,13 +23,20 @@ import com.google.common.cache.Weigher;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
+import com.qubole.rubix.core.CachingInputStream;
 import com.qubole.rubix.hadoop2.hadoop2CM.Hadoop2ClusterManager;
+import com.qubole.rubix.spi.BlockLocation;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
+import com.qubole.rubix.spi.DataRead;
+import com.qubole.rubix.spi.Location;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BufferedFSInputStream;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.s3native.NativeS3FileSystem;
 import org.apache.thrift.TException;
 
 import java.io.File;
@@ -76,7 +83,7 @@ public class BookKeeper
     }
 
     @Override
-    public List<com.qubole.rubix.bookkeeper.Location> getCacheStatus(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock, int clusterType)
+    public List<BlockLocation> getCacheStatus(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock, int clusterType)
             throws TException
     {
         initializeClusterManager(clusterType);
@@ -87,6 +94,7 @@ public class BookKeeper
         }
 
         Set<Long> localSplits = new HashSet<>();
+        Map<Long, String> blockSplits = new HashMap<>();
         long blockNumber = 0;
 
         for (long i = 0; i < fileLength; i = i + splitSize) {
@@ -101,6 +109,7 @@ public class BookKeeper
             if (nodeIndex == currentNodeIndex) {
                 localSplits.add(blockNumber);
             }
+            blockSplits.put(blockNumber, nodes.get(nodeIndex));
             blockNumber++;
         }
 
@@ -116,9 +125,9 @@ public class BookKeeper
             log.error(String.format("Could not fetch Metadata for %s : %s", remotePath, Throwables.getStackTraceAsString(e)));
             throw new TException(e);
         }
-
         endBlock = setCorrectEndBlock(endBlock, fileLength, remotePath);
-        List<Location> blocksInfo = new ArrayList<>((int) (endBlock - startBlock));
+        List<BlockLocation> blockLocations = new ArrayList<>((int) (endBlock - startBlock));
+        //List<Location> blocksInfo = new ArrayList<>((int) (endBlock - startBlock));
         int blockSize = CacheConfig.getBlockSize(conf);
 
         for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
@@ -126,21 +135,26 @@ public class BookKeeper
             long split = (blockNum * blockSize) / splitSize;
 
             if (md.isBlockCached(blockNum)) {
-                blocksInfo.add(Location.CACHED);
+                //blocksInfo.add(Location.CACHED);
+                blockLocations.add(new BlockLocation(Location.CACHED, blockSplits.get(split)));
                 cachedRequests++;
             }
             else {
+                if(blockSplits.get(split).equalsIgnoreCase(nodeName))
                 if (localSplits.contains(split)) {
-                    blocksInfo.add(Location.LOCAL);
+                    //blocksInfo.add(Location.LOCAL);
+                    blockLocations.add(new BlockLocation(Location.LOCAL, blockSplits.get(split)));
                     remoteRequests++;
                 }
                 else {
-                    blocksInfo.add(Location.NON_LOCAL);
+                  //  blocksInfo.add(Location.NON_LOCAL);
+                    blockLocations.add(new BlockLocation(Location.NON_LOCAL, blockSplits.get(split)));
                 }
             }
         }
 
-        return blocksInfo;
+        //return blocksInfo;
+        return blockLocations;
     }
 
     private void initializeClusterManager(int clusterType)
@@ -286,7 +300,7 @@ public class BookKeeper
                             }
                             //if file has been modified in cloud, its entry will be deleted due to "EXPLICIT"
                             log.warn("deleting entry for" + md.getRemotePath().toString() + " due to "
-                                    + notification.getCause());
+                                             + notification.getCause());
                             md.closeAndCleanup();
                         }
                         catch (IOException e) {
@@ -296,6 +310,24 @@ public class BookKeeper
                 })
                 .build();
     }
+
+   public DataRead readData() {
+
+       NativeS3FileSystem fs = new NativeS3FileSystem();
+       FSDataInputStream inputStream = fs.open(path, bufferSize);
+
+      /* if (skipCache(path, getConf())) {
+           cacheSkipped = true;
+           return inputStream;
+       }*/
+
+       FSDataInputStream is = new FSDataInputStream(
+               new BufferedFSInputStream(
+                       new CachingInputStream(inputStream, this, path, this.getConf(), statsMBean,
+                               clusterManager.getSplitSize(), clusterManager.getClusterType()),
+                       CacheConfig.getBlockSize(getConf())));
+
+   }
 
     private static class CreateFileMetadataCallable
             implements Callable<FileMetadata>

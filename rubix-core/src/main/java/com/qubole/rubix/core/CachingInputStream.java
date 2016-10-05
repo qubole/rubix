@@ -18,9 +18,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.qubole.rubix.bookkeeper.BlockLocation;
+import com.qubole.rubix.spi.BlockLocation;
 import com.qubole.rubix.bookkeeper.BookKeeperClient;
-import com.qubole.rubix.bookkeeper.Location;
+import com.qubole.rubix.spi.Location;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CachingConfigHelper;
 import com.qubole.rubix.spi.ClusterType;
@@ -312,7 +312,7 @@ public class CachingInputStream
                 if (isCached.get(idx).getLocation() == Location.NON_LOCAL) {
                     log.debug(String.format("Sending block %d to NonLocalReadRequestChain", blockNum));
                     if(nonLocalRequests.get(isCached.get(idx).getRemoteLocation()) == null) {
-                        nonLocalReadRequestChain = new NonLocalReadRequestChain(isCached.get(idx).getRemoteLocation());
+                        nonLocalReadRequestChain = new NonLocalReadRequestChain(isCached.get(idx).getRemoteLocation(), conf, inputStream, remotePath);
                         nonLocalRequests.put(isCached.get(idx).getRemoteLocation(), nonLocalReadRequestChain);
                     }
                     /*if (nonLocalReadRequestChain == null) {

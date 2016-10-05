@@ -12,6 +12,7 @@
  */
 package com.qubole.rubix.bookkeeper;
 
+import com.qubole.rubix.spi.BookKeeperService;
 import com.qubole.rubix.spi.CacheConfig;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -64,11 +65,11 @@ public class BookKeeperClient extends BookKeeperService.Client
         return client;
     }
 
-    public static BookKeeperClient createBookKeeperClient(String )
+    public static BookKeeperClient createBookKeeperClient(String hostName, Configuration conf)
             throws TTransportException
     {
         TTransport transport;
-        transport = new TSocket("localhost", CacheConfig.getServerPort(conf));
+        transport = new TSocket(hostName, CacheConfig.getServerPort(conf));
         transport.open();
 
         BookKeeperClient client = new BookKeeperClient(transport);
