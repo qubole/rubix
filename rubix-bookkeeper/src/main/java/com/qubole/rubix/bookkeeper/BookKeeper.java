@@ -76,7 +76,7 @@ public class BookKeeper
     }
 
     @Override
-    public List<BlockLocation> getCacheStatus(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock, int clusterType)
+    public List<com.qubole.rubix.bookkeeper.Location> getCacheStatus(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock, int clusterType)
             throws TException
     {
         initializeClusterManager(clusterType);
@@ -87,7 +87,6 @@ public class BookKeeper
         }
 
         Set<Long> localSplits = new HashSet<>();
-        Map<Long, String> blockSplits = new HashMap<>();
         long blockNumber = 0;
 
         for (long i = 0; i < fileLength; i = i + splitSize) {
@@ -102,7 +101,6 @@ public class BookKeeper
             if (nodeIndex == currentNodeIndex) {
                 localSplits.add(blockNumber);
             }
-            blockSplits.put(blockNumber, nodes.get(nodeIndex));
             blockNumber++;
         }
 
@@ -118,9 +116,9 @@ public class BookKeeper
             log.error(String.format("Could not fetch Metadata for %s : %s", remotePath, Throwables.getStackTraceAsString(e)));
             throw new TException(e);
         }
+
         endBlock = setCorrectEndBlock(endBlock, fileLength, remotePath);
-        List<BlockLocation> blockLocations = new ArrayList<>((int) (endBlock - startBlock));
-        //List<Location> blocksInfo = new ArrayList<>((int) (endBlock - startBlock));
+        List<Location> blocksInfo = new ArrayList<>((int) (endBlock - startBlock));
         int blockSize = CacheConfig.getBlockSize(conf);
 
         for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
@@ -128,26 +126,21 @@ public class BookKeeper
             long split = (blockNum * blockSize) / splitSize;
 
             if (md.isBlockCached(blockNum)) {
-                //blocksInfo.add(Location.CACHED);
-                blockLocations.add(new BlockLocation(Location.CACHED, blockSplits.get(split)));
+                blocksInfo.add(Location.CACHED);
                 cachedRequests++;
             }
             else {
-                if(blockSplits.get(split).equalsIgnoreCase(nodeName))
                 if (localSplits.contains(split)) {
-                    //blocksInfo.add(Location.LOCAL);
-                    blockLocations.add(new BlockLocation(Location.LOCAL, blockSplits.get(split)));
+                    blocksInfo.add(Location.LOCAL);
                     remoteRequests++;
                 }
                 else {
-                  //  blocksInfo.add(Location.NON_LOCAL);
-                    blockLocations.add(new BlockLocation(Location.NON_LOCAL, blockSplits.get(split)));
+                    blocksInfo.add(Location.NON_LOCAL);
                 }
             }
         }
 
-        //return blocksInfo;
-        return blockLocations;
+        return blocksInfo;
     }
 
     private void initializeClusterManager(int clusterType)
@@ -293,7 +286,7 @@ public class BookKeeper
                             }
                             //if file has been modified in cloud, its entry will be deleted due to "EXPLICIT"
                             log.warn("deleting entry for" + md.getRemotePath().toString() + " due to "
-                                             + notification.getCause());
+                                    + notification.getCause());
                             md.closeAndCleanup();
                         }
                         catch (IOException e) {
