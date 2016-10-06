@@ -76,7 +76,6 @@ public final class RetryingBookkeeperClient
     @Override
     public void setAllCached(final String remotePath, final long fileLength, final long lastModified, final long startBlock, final long endBlock)
     {
-
         try {
             retryConnection(new Callable<Void>()
             {
