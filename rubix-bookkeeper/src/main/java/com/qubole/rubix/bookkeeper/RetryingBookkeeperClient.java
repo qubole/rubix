@@ -16,8 +16,13 @@ package com.qubole.rubix.bookkeeper;
  * Created by sakshia on 27/9/16.
  */
 
+import com.qubole.rubix.spi.CacheConfig;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.thrift.transport.TSocket;
+import org.apache.thrift.transport.TTransport;
+import org.apache.thrift.transport.TTransportException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,28 +32,29 @@ import java.util.List;
 import java.util.concurrent.Callable;
 
 public final class RetryingBookkeeperClient
-        extends BookKeeperService.Client
+        extends com.qubole.rubix.bookkeeper.BookKeeperService.Client
         implements Closeable
 {
     private static final Logger LOG = LoggerFactory.getLogger(RetryingBookkeeperClient.class);
     private int maxRetries;
-    private BookKeeperClient bookKeeperClient = null;
+    TTransport transport;
 
-    /**
-     * List of causes for TTransportException
-     * ALREADY_OPEN
-     * END_OF_FILE
-     * NOT_OPEN
-     * TIMED_OUT
-     * type_
-     * UNKNOWN
-     */
-
-    public RetryingBookkeeperClient(BookKeeperClient client, int maxRetries)
+    public RetryingBookkeeperClient(TTransport transport, int maxRetries)
     {
-        super(new TBinaryProtocol(client.transport));
-        this.bookKeeperClient = client;
+        super(new TBinaryProtocol(transport));
+        this.transport = transport;
         this.maxRetries = maxRetries;
+    }
+
+    public static RetryingBookkeeperClient createBookKeeperClient(Configuration conf)
+            throws TTransportException
+    {
+        TTransport transport;
+        transport = new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf));
+        transport.open();
+
+        RetryingBookkeeperClient retryingBookkeeperClient = new RetryingBookkeeperClient(transport, CacheConfig.getMaxRetries(conf));
+        return retryingBookkeeperClient;
     }
 
     @Override
@@ -61,7 +67,7 @@ public final class RetryingBookkeeperClient
             public List<Location> call()
                     throws TException
             {
-                return bookKeeperClient.getCacheStatus(remotePath, fileLength, lastModified, startBlock, endBlock, clusterType);
+                return RetryingBookkeeperClient.super.getCacheStatus(remotePath, fileLength, lastModified, startBlock, endBlock, clusterType);
             }
         });
     }
@@ -76,7 +82,7 @@ public final class RetryingBookkeeperClient
             public Void call()
                     throws Exception
             {
-                bookKeeperClient.setAllCached(remotePath, fileLength, lastModified, startBlock, endBlock);
+                RetryingBookkeeperClient.super.setAllCached(remotePath, fileLength, lastModified, startBlock, endBlock);
                 return null;
             }
         });
@@ -90,8 +96,8 @@ public final class RetryingBookkeeperClient
 
         while (errors < maxRetries) {
             try {
-                if (!bookKeeperClient.transport.isOpen()) {
-                    bookKeeperClient.transport.open();
+                if (!transport.isOpen()) {
+                    transport.open();
                 }
                 return callable.call();
             }
@@ -99,7 +105,7 @@ public final class RetryingBookkeeperClient
                 LOG.info("Error while connecting" + e.getStackTrace().toString());
                 errors++;
             }
-            bookKeeperClient.transport.close();
+            transport.close();
         }
 
         throw new TException();
@@ -109,6 +115,6 @@ public final class RetryingBookkeeperClient
     public void close()
             throws IOException
     {
-        bookKeeperClient.close();
+        transport.close();
     }
 }
