@@ -18,6 +18,7 @@ import com.qubole.rubix.spi.ClusterManager;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3native.NativeS3FileSystem;
 
 import java.io.IOException;
@@ -32,6 +33,7 @@ public class CachingNativeS3FileSystem
     private static final Log LOG = LogFactory.getLog(CachingNativeS3FileSystem.class);
 
     private ClusterManager clusterManager;
+    public BookKeeperFactory factory = new BookKeeperFactory();
 
     public CachingNativeS3FileSystem()
             throws IOException
@@ -39,10 +41,12 @@ public class CachingNativeS3FileSystem
         super();
     }
 
-    public CachingNativeS3FileSystem(BookKeeperFactory factory)
+    public CachingNativeS3FileSystem(BookKeeperFactory factory, Path path, Configuration conf)
             throws IOException
     {
         super();
+        initialize(path.toUri(), conf);
+        this.factory = factory;
     }
 
     @Override

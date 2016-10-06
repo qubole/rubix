@@ -1,7 +1,7 @@
 package com.qubole.rubix.spi;
 
-import com.qubole.rubix.bookkeeper.BookKeeper;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.thrift.TException;
 import org.apache.thrift.transport.TTransport;
 
 import java.util.List;
@@ -12,24 +12,23 @@ import java.util.List;
 public class LocalBookKeeperClient
         extends BookKeeperClient
 {
-    public static BookKeeper bookKeeper = null;
-
-    public LocalBookKeeperClient(TTransport transport, BookKeeper bookKeeper)
+    BookKeeperService.Iface bookKeeper = null;
+    public LocalBookKeeperClient(TTransport transport, BookKeeperService.Iface bookKeeper)
     {
         super(transport);
+        this.bookKeeper = bookKeeper;
     }
 
-    public static BookKeeperClient createBookKeeperClient(BookKeeper bookKeeper, Configuration conf)
+    public static BookKeeperClient createBookKeeperClient(Configuration conf, BookKeeperService.Iface bookKeeper)
     {
-        TTransport transport= null;
-        LocalBookKeeperClient.bookKeeper = bookKeeper;
-        return new LocalBookKeeperClient(transport);
+        TTransport transport = null;
+        return new LocalBookKeeperClient(transport, bookKeeper);
     }
 
     @Override
     public List<BlockLocation> getCacheStatus(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock, int clusterType)
+            throws TException
     {
-
-
+        return bookKeeper.getCacheStatus(remotePath, fileLength, lastModified, startBlock, endBlock, clusterType);
     }
 }

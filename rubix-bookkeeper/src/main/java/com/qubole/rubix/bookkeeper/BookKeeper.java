@@ -320,8 +320,8 @@ public class BookKeeper
        DataRead dataRead = new DataRead();
        byte[] buffer = new byte[CacheConfig.getBufferSize()];
        int nread = 0;
-       CachingNativeS3FileSystem fs = new CachingNativeS3FileSystem();
-       //BookKeeperFactory bookKeeperFactory = new
+       BookKeeperFactory bookKeeperFactory = new BookKeeperFactory(this);
+       CachingNativeS3FileSystem fs = new CachingNativeS3FileSystem(bookKeeperFactory, new Path(path), conf);
        FSDataInputStream inputStream = null;
        try {
            inputStream = fs.open(new Path(path), bufferSize);
