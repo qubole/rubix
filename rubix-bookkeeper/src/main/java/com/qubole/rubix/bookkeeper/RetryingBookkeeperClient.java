@@ -32,7 +32,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 
 public final class RetryingBookkeeperClient
-        extends com.qubole.rubix.bookkeeper.BookKeeperService.Client
+        extends BookKeeperService.Client
         implements Closeable
 {
     private static final Logger LOG = LoggerFactory.getLogger(RetryingBookkeeperClient.class);

@@ -18,8 +18,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.qubole.rubix.bookkeeper.BookKeeperService;
 import com.qubole.rubix.bookkeeper.Location;
+import com.qubole.rubix.bookkeeper.RetryingBookkeeperClient;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
@@ -64,7 +64,7 @@ public class CachingInputStream
     private String localPath;
     private long lastModified;
 
-    private BookKeeperService.Client bookKeeperClient;
+    private RetryingBookkeeperClient bookKeeperClient;
     private Configuration conf;
 
     private boolean strictMode = false;

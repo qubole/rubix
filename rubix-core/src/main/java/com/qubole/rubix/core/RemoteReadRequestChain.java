@@ -13,7 +13,7 @@
 package com.qubole.rubix.core;
 
 import com.google.common.base.Throwables;
-import com.qubole.rubix.bookkeeper.BookKeeperService;
+import com.qubole.rubix.bookkeeper.RetryingBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -149,7 +149,7 @@ public class RemoteReadRequestChain
     public void updateCacheStatus(String remotePath, long fileSize, long lastModified, int blockSize, Configuration conf)
     {
         try {
-            BookKeeperService.Client client = createBookKeeperClient(conf);
+            RetryingBookkeeperClient client = createBookKeeperClient(conf);
             for (ReadRequest readRequest : readRequests) {
                 client.setAllCached(remotePath, fileSize, lastModified, toBlock(readRequest.getBackendReadStart(), blockSize), toBlock(readRequest.getBackendReadEnd() - 1, blockSize) + 1);
             }
