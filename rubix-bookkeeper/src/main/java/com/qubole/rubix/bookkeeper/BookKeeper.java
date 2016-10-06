@@ -23,6 +23,7 @@ import com.google.common.cache.Weigher;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
+import com.qubole.rubix.core.CachingFileSystemStats;
 import com.qubole.rubix.core.CachingInputStream;
 import com.qubole.rubix.hadoop2.hadoop2CM.Hadoop2ClusterManager;
 import com.qubole.rubix.spi.BlockLocation;
@@ -36,6 +37,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BufferedFSInputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3native.NativeS3FileSystem;
 import org.apache.thrift.TException;
 
@@ -43,6 +45,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -60,7 +63,7 @@ import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
  * Created by stagra on 12/2/16.
  */
 public class BookKeeper
-        implements com.qubole.rubix.bookkeeper.BookKeeperService.Iface
+        implements com.qubole.rubix.spi.BookKeeperService.Iface
 {
     private static Cache<String, FileMetadata> fileMetadataCache;
     private static ClusterManager clusterManager = null;
@@ -75,6 +78,7 @@ public class BookKeeper
     static int currentNodeIndex = -1;
     static int nodeListSize;
     static long splitSize;
+    private int bufferSize;
 
     public BookKeeper(Configuration conf)
     {
@@ -311,21 +315,41 @@ public class BookKeeper
                 .build();
     }
 
-   public DataRead readData() {
+   public DataRead readData(String path, int offset, int length) {
+
+       DataRead dataRead = new DataRead();
+       byte[] buffer = new byte[CacheConfig.getBufferSize()];
+       int nread = 0;
 
        NativeS3FileSystem fs = new NativeS3FileSystem();
-       FSDataInputStream inputStream = fs.open(path, bufferSize);
+       FSDataInputStream inputStream = null;
+       try {
+           inputStream = fs.open(new Path(path), bufferSize);
+       }
+       catch (IOException e) {
+           e.printStackTrace();
+       }
 
       /* if (skipCache(path, getConf())) {
            cacheSkipped = true;
            return inputStream;
        }*/
 
-       FSDataInputStream is = new FSDataInputStream(
-               new BufferedFSInputStream(
-                       new CachingInputStream(inputStream, this, path, this.getConf(), statsMBean,
-                               clusterManager.getSplitSize(), clusterManager.getClusterType()),
-                       CacheConfig.getBlockSize(getConf())));
+       try {
+           FSDataInputStream is = new FSDataInputStream(
+                   new BufferedFSInputStream(
+                           new CachingInputStream(inputStream, fs, new Path(path), conf, new CachingFileSystemStats(),
+                                   clusterManager.getSplitSize(), clusterManager.getClusterType()),
+                           CacheConfig.getBlockSize(conf)));
+           nread += is.read(buffer, offset, length);
+           dataRead.data = ByteBuffer.wrap(buffer, offset, length);
+           dataRead.sizeRead = nread;
+           return  dataRead;
+       }
+       catch (IOException e) {
+           e.printStackTrace();
+       }
+    return null;
 
    }
 

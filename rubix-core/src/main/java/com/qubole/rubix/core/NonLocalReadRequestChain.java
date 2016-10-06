@@ -14,7 +14,9 @@ package com.qubole.rubix.core;
 
 import com.google.common.base.Throwables;
 import com.qubole.rubix.bookkeeper.BookKeeperClient;
+import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CachingConfigHelper;
+import com.qubole.rubix.spi.DataRead;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -78,7 +80,24 @@ public class NonLocalReadRequestChain extends DirectReadRequestChain
         }
 
         for (ReadRequest readRequest : readRequests) {
-            totalRead += bookKeeperClient.readData();;
+            int readLength = 0;
+            int currentPosition = readRequest.destBufferOffset;
+            int lengthRemaining = readRequest.getActualReadLength();
+            DataRead dataRead = null;
+            int bufferLength = CacheConfig.getBufferSize();
+
+            while (lengthRemaining > 0) {
+                if (lengthRemaining < bufferLength) {
+                    bufferLength = lengthRemaining;
+                }
+                dataRead += bookKeeperClient.readData(filePath, currentPosition, bufferLength);
+                readLength += dataRead.sizeRead;
+                lengthRemaining = readRequest.getActualReadLength() - readLength;
+                totalRead += dataRead.sizeRead;
+                currentPosition += bufferLength;
+            }
+
+            readRequest.destBuffer = dataRead.getData();
         }
 
         return totalRead;

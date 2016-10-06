@@ -16,7 +16,7 @@ struct BlockLocation {
 
 struct DataRead {
 1: binary data
-2: i64 sizeRead
+2: i32 sizeRead
 }
 
 
