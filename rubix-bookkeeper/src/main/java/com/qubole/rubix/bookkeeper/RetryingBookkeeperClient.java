@@ -97,7 +97,13 @@ public final class RetryingBookkeeperClient
         while (errors < maxRetries) {
             try {
                 if (!transport.isOpen()) {
-                    transport.open();
+                    try {
+                        transport.open();
+                    }
+                    catch (Exception e1) {
+                        LOG.info("Error while reconnecting");
+                        continue;
+                    }
                 }
                 return callable.call();
             }
