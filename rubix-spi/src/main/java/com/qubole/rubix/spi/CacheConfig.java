@@ -43,12 +43,14 @@ public class CacheConfig
     public static final String DATA_CACHE_ENABLED = "hadoop.cache.data.enabled";
     public static final String DATA_CACHE_TABLE_WHITELIST = "hadoop.cache.data.table.whitelist";
     public static final String DATA_CACHE_TABLE = "hadoop.cache.data.table";
-    public static final String DATA_CACHE_LOCATION_BLACKLIST = "hadoop.cache.data.location.blacklist"; // these locations will be skipped
-    public static final String DATA_CACHE_TABLE_MIN_COLS = "hadoop.cache.data.table.columns.min";
-    public static final String DATA_CACHE_TABLE_COLS_CHOSEN = "hadoop.cache.data.table.columns.chosen";
     // Internal
     // In strict mode, queries will error out if BookKeeper cannot be reached
     public static final String DATA_CACHE_STRICT_MODE = "hadoop.cache.data.strict.mode";
+    public static final String DATA_CACHE_LOCATION_WHITELIST = "hadoop.cache.data.location.whitelist"; // only these locations will cached
+    public static final String DATA_CACHE_LOCATION_BLACKLIST = "hadoop.cache.data.location.blacklist"; // these locations will be skipped, takes priority over Whitelist
+    public static final String DATA_CACHE_TABLE_MIN_COLS = "hadoop.cache.data.table.columns.min";
+    public static final String DATA_CACHE_TABLE_COLS_CHOSEN = "hadoop.cache.data.table.columns.chosen";
+
     public static String dataCacheExpirationConf = "hadoop.cache.data.expiration";
     public static String dataCacheExpirationAfterWriteConf = "hadoop.cache.data.expiration.after-write";
     public static String dataCacheFullnessConf = "hadoop.cache.data.fullness.percentage";
@@ -213,43 +215,6 @@ public class CacheConfig
         return remotePath.lastIndexOf('/') == -1 ? "" : remotePath.substring(0, remotePath.lastIndexOf('/'));
     }
 
-    static boolean isCacheDataEnabled(Configuration c)
-    {
-        return c.getBoolean(DATA_CACHE_ENABLED, true);
-    }
-
-    // Configs below need support from engines and wouldn't help unless corresponding setters are called from inside engines
-
-    static String getCacheDataTableWhitelist(Configuration c)
-    {
-        return c.get(DATA_CACHE_TABLE_WHITELIST, ".*");
-    }
-
-    static void setCacheDataTable(Configuration configuration, String table)
-    {
-        configuration.set(DATA_CACHE_TABLE, table);
-    }
-
-    static String getCacheDataTable(Configuration configuration)
-    {
-        return configuration.get(DATA_CACHE_TABLE, "");
-    }
-
-    static String getCacheDataLocationBlacklist(Configuration configuration)
-    {
-        return configuration.get(DATA_CACHE_LOCATION_BLACKLIST, "");
-    }
-
-    static int getCacheDataMinColumns(Configuration c)
-    {
-        return c.getInt(DATA_CACHE_TABLE_MIN_COLS, 0);
-    }
-
-    static void setCacheDataChosenColumns(Configuration c, int chosen)
-    {
-        c.setInt(DATA_CACHE_TABLE_COLS_CHOSEN, chosen);
-    }
-
     static int getCacheDataChosenColumns(Configuration c)
     {
         return c.getInt(DATA_CACHE_TABLE_COLS_CHOSEN, 0);
@@ -306,6 +271,14 @@ public class CacheConfig
 
     private static boolean isLocationAllowedToCache(Path path, Configuration conf)
     {
+        // Check whitelist first, if location matches whitelist and blacklist both then blacklist it
+        String whitelist = CacheConfig.getCacheDataLocationWhitelist(conf);
+        if (whitelist.length() > 0) {
+            if (!path.toString().matches(whitelist)) {
+                return false;
+            }
+        }
+
         String blacklist = CacheConfig.getCacheDataLocationBlacklist(conf);
         if (blacklist.length() > 0) {
             if (path.toString().matches(blacklist)) {
@@ -323,5 +296,45 @@ public class CacheConfig
             return false;
         }
         return true;
+    }
+
+    static boolean isCacheDataEnabled(Configuration c)
+    {
+        return c.getBoolean(DATA_CACHE_ENABLED, true);
+    }
+
+    static String getCacheDataTableWhitelist(Configuration c)
+    {
+        return c.get(DATA_CACHE_TABLE_WHITELIST, ".*");
+    }
+
+    static void setCacheDataTable(Configuration configuration, String table)
+    {
+        configuration.set(DATA_CACHE_TABLE, table);
+    }
+
+    static String getCacheDataTable(Configuration configuration)
+    {
+        return configuration.get(DATA_CACHE_TABLE, "");
+    }
+
+    static String getCacheDataLocationBlacklist(Configuration configuration)
+    {
+        return configuration.get(DATA_CACHE_LOCATION_BLACKLIST, "");
+    }
+
+    static String getCacheDataLocationWhitelist(Configuration configuration)
+    {
+        return configuration.get(DATA_CACHE_LOCATION_WHITELIST, ".*");
+    }
+
+    static int getCacheDataMinColumns(Configuration c)
+    {
+        return c.getInt(DATA_CACHE_TABLE_MIN_COLS, 0);
+    }
+
+    static void setCacheDataChosenColumns(Configuration c, int chosen)
+    {
+        c.setInt(DATA_CACHE_TABLE_COLS_CHOSEN, chosen);
     }
 }

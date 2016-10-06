@@ -19,7 +19,6 @@ package com.qubole.rubix.bookkeeper;
 import com.google.common.base.Throwables;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
-import org.apache.thrift.transport.TTransportException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,59 +56,56 @@ public final class RetryingBookkeeperClient
     public List<Location> getCacheStatus(final String remotePath, final long fileLength, final long lastModified, final long startBlock, final long endBlock, final int clusterType)
     {
         try {
-            return bookKeeperClient.getCacheStatus(remotePath, fileLength, lastModified, startBlock, endBlock, clusterType);
+            return retryConnection(new Callable<List<Location>>()
+            {
+                @Override
+                public List<Location> call()
+                        throws TException
+                {
+                    return bookKeeperClient.getCacheStatus(remotePath, fileLength, lastModified, startBlock, endBlock, clusterType);
+                }
+            });
         }
         catch (TException e) {
-            try {
-                return retryConnection(new Callable<List<Location>>()
-                {
-                    @Override
-                    public List<Location> call()
-                            throws Exception
-                    {
-                        return bookKeeperClient.getCacheStatus(remotePath, fileLength, lastModified, startBlock, endBlock, clusterType);
-                    }
-                });
-            }
-            catch (Exception e1) {
-                LOG.info("Could not get cache status from server " + Throwables.getStackTraceAsString(e));
-            }
+            LOG.info("Could not get cache status from server");
         }
+
         return null;
     }
 
     @Override
     public void setAllCached(final String remotePath, final long fileLength, final long lastModified, final long startBlock, final long endBlock)
     {
+
         try {
-            bookKeeperClient.setAllCached(remotePath, fileLength, lastModified, startBlock, endBlock);
-        }
-        catch (TTransportException e) {
-            try {
-                retryConnection(new Callable<Void>()
+            retryConnection(new Callable<Void>()
+            {
+                @Override
+                public Void call()
+                        throws Exception
                 {
-                    @Override
-                    public Void call()
-                            throws Exception
-                    {
-                        bookKeeperClient.setAllCached(remotePath, fileLength, lastModified, startBlock, endBlock);
-                        return null;
-                    }
-                });
-            }
-            catch (Exception e1) {
-                LOG.info("Could not update BookKeeper about newly cached blocks: " + Throwables.getStackTraceAsString(e));
-            }
+                    bookKeeperClient.setAllCached(remotePath, fileLength, lastModified, startBlock, endBlock);
+                    return null;
+                }
+            });
         }
-        catch (TException e) {
-            e.printStackTrace();
+        catch (Exception e1) {
+            LOG.info("Could not update BookKeeper about newly cached blocks: " + Throwables.getStackTraceAsString(e1));
         }
     }
 
+    //Assuming that transport from bookKeeperClient is already open
     private <V> V retryConnection(Callable<V> callable)
-            throws Exception
+            throws TException
     {
         int errors = 0;
+        try {
+            return callable.call();
+        }
+        catch (Exception e) {
+            LOG.info("Retrying connection" + e.getStackTrace().toString());
+        }
+
         bookKeeperClient.transport.close();
 
         while (errors < maxRetries) {
@@ -117,16 +113,13 @@ public final class RetryingBookkeeperClient
                 bookKeeperClient.transport.open();
                 return callable.call();
             }
-            catch (TTransportException e1) {
+            catch (Exception e) {
                 LOG.info("Error while reconnecting");
                 errors++;
             }
         }
 
-        if (errors >= maxRetries) {
-            throw new TTransportException("Failed to reconnect");
-        }
-        return null;
+        throw new TException();
     }
 
     @Override

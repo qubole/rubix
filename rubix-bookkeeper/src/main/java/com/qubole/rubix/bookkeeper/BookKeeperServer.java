@@ -48,8 +48,7 @@ public class BookKeeperServer
     {
         conf = new Configuration();
 
-        Runnable bookKeeperServer = new Runnable()
-        {
+        Runnable bookKeeperServer = new Runnable() {
             public void run()
             {
                 startServer(conf);

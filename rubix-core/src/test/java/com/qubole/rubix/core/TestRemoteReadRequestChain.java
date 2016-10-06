@@ -131,7 +131,8 @@ public class TestRemoteReadRequestChain
         readSize = 0;
 
         FileInputStream localFileInputStream = new FileInputStream(new File(localFileName));
-        for (int i = 1; i < 20; i++) {
+        for (int i = 1; i < 20; i++)
+        {
             if (i % 2 == 0) {
                 // epmty buffer
                 localFileInputStream.read(emptyBuffer, 0, 100);

@@ -116,7 +116,6 @@ public class BookKeeper
             log.error(String.format("Could not fetch Metadata for %s : %s", remotePath, Throwables.getStackTraceAsString(e)));
             throw new TException(e);
         }
-
         endBlock = setCorrectEndBlock(endBlock, fileLength, remotePath);
         List<Location> blocksInfo = new ArrayList<>((int) (endBlock - startBlock));
         int blockSize = CacheConfig.getBlockSize(conf);
@@ -286,7 +285,7 @@ public class BookKeeper
                             }
                             //if file has been modified in cloud, its entry will be deleted due to "EXPLICIT"
                             log.warn("deleting entry for" + md.getRemotePath().toString() + " due to "
-                                    + notification.getCause());
+                                             + notification.getCause());
                             md.closeAndCleanup();
                         }
                         catch (IOException e) {
