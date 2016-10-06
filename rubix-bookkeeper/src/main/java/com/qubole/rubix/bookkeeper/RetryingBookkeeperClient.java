@@ -16,7 +16,6 @@ package com.qubole.rubix.bookkeeper;
  * Created by sakshia on 27/9/16.
  */
 
-import com.google.common.base.Throwables;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.slf4j.Logger;
@@ -54,43 +53,33 @@ public final class RetryingBookkeeperClient
 
     @Override
     public List<Location> getCacheStatus(final String remotePath, final long fileLength, final long lastModified, final long startBlock, final long endBlock, final int clusterType)
+            throws TException
     {
-        try {
-            return retryConnection(new Callable<List<Location>>()
+        return retryConnection(new Callable<List<Location>>()
+        {
+            @Override
+            public List<Location> call()
+                    throws TException
             {
-                @Override
-                public List<Location> call()
-                        throws TException
-                {
-                    return bookKeeperClient.getCacheStatus(remotePath, fileLength, lastModified, startBlock, endBlock, clusterType);
-                }
-            });
-        }
-        catch (TException e) {
-            LOG.info("Could not get cache status from server");
-        }
-
-        return null;
+                return bookKeeperClient.getCacheStatus(remotePath, fileLength, lastModified, startBlock, endBlock, clusterType);
+            }
+        });
     }
 
     @Override
     public void setAllCached(final String remotePath, final long fileLength, final long lastModified, final long startBlock, final long endBlock)
+            throws TException
     {
-        try {
-            retryConnection(new Callable<Void>()
+        retryConnection(new Callable<Void>()
+        {
+            @Override
+            public Void call()
+                    throws Exception
             {
-                @Override
-                public Void call()
-                        throws Exception
-                {
-                    bookKeeperClient.setAllCached(remotePath, fileLength, lastModified, startBlock, endBlock);
-                    return null;
-                }
-            });
-        }
-        catch (Exception e1) {
-            LOG.info("Could not update BookKeeper about newly cached blocks: " + Throwables.getStackTraceAsString(e1));
-        }
+                bookKeeperClient.setAllCached(remotePath, fileLength, lastModified, startBlock, endBlock);
+                return null;
+            }
+        });
     }
 
     //Assuming that transport from bookKeeperClient is already open
@@ -98,24 +87,19 @@ public final class RetryingBookkeeperClient
             throws TException
     {
         int errors = 0;
-        try {
-            return callable.call();
-        }
-        catch (Exception e) {
-            LOG.info("Retrying connection" + e.getStackTrace().toString());
-        }
-
-        bookKeeperClient.transport.close();
 
         while (errors < maxRetries) {
             try {
-                bookKeeperClient.transport.open();
+                if (!bookKeeperClient.transport.isOpen()) {
+                    bookKeeperClient.transport.open();
+                }
                 return callable.call();
             }
             catch (Exception e) {
-                LOG.info("Error while reconnecting");
+                LOG.info("Error while connecting" + e.getStackTrace().toString());
                 errors++;
             }
+            bookKeeperClient.transport.close();
         }
 
         throw new TException();
