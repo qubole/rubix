@@ -23,8 +23,7 @@ import com.google.common.cache.Weigher;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import com.qubole.rubix.core.CachingFileSystemStats;
-import com.qubole.rubix.core.CachingInputStream;
+import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.hadoop2.hadoop2CM.Hadoop2ClusterManager;
 import com.qubole.rubix.hadoop2.hadoop2FS.CachingNativeS3FileSystem;
 import com.qubole.rubix.spi.BlockLocation;
@@ -36,10 +35,8 @@ import com.qubole.rubix.spi.Location;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.BufferedFSInputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3native.NativeS3FileSystem;
 import org.apache.thrift.TException;
 
 import java.io.File;
@@ -316,12 +313,15 @@ public class BookKeeper
                 .build();
     }
 
-   public DataRead readData(String path, int offset, int length) {
+   public DataRead readData(String path, int offset, int length)
+           throws IOException
+   {
 
        DataRead dataRead = new DataRead();
        byte[] buffer = new byte[CacheConfig.getBufferSize()];
        int nread = 0;
        CachingNativeS3FileSystem fs = new CachingNativeS3FileSystem();
+       //BookKeeperFactory bookKeeperFactory = new
        FSDataInputStream inputStream = null;
        try {
            inputStream = fs.open(new Path(path), bufferSize);

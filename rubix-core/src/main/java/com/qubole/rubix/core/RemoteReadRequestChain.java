@@ -13,7 +13,7 @@
 package com.qubole.rubix.core;
 
 import com.google.common.base.Throwables;
-import com.qubole.rubix.bookkeeper.BookKeeperClient;
+import com.qubole.rubix.spi.BookKeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -25,7 +25,7 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
 import static com.google.common.base.Preconditions.checkState;
-import static com.qubole.rubix.bookkeeper.BookKeeperClient.createBookKeeperClient;
+import static com.qubole.rubix.spi.BookKeeperClient.createBookKeeperClient;
 
 /**
  * Created by stagra on 4/1/16.

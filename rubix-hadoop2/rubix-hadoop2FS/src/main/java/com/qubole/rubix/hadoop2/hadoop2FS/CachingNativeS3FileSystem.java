@@ -11,7 +11,7 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 package com.qubole.rubix.hadoop2.hadoop2FS;
-import com.qubole.rubix.core.BookKeeperFactory;
+import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.core.CachingFileSystem;
 import com.qubole.rubix.hadoop2.hadoop2CM.Hadoop2ClusterManager;
 import com.qubole.rubix.spi.ClusterManager;

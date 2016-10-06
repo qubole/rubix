@@ -13,7 +13,7 @@
 package com.qubole.rubix.core;
 
 import com.google.common.base.Throwables;
-import com.qubole.rubix.bookkeeper.BookKeeperClient;
+import com.qubole.rubix.spi.BookKeeperClient;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CachingConfigHelper;
 import com.qubole.rubix.spi.DataRead;
@@ -22,7 +22,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 
-import static com.qubole.rubix.bookkeeper.BookKeeperClient.createBookKeeperClient;
+import static com.qubole.rubix.spi.BookKeeperClient.createBookKeeperClient;
 
 /**
  * Created by qubole on 31/8/16.
