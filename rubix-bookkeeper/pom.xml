@@ -63,6 +63,10 @@
             <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-hadoop2CM</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.qubole.rubix</groupId>
+            <artifactId>rubix-hadoop2FS</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

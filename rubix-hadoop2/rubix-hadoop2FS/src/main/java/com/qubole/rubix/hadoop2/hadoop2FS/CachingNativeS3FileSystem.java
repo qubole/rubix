@@ -11,6 +11,7 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 package com.qubole.rubix.hadoop2.hadoop2FS;
+import com.qubole.rubix.core.BookKeeperFactory;
 import com.qubole.rubix.core.CachingFileSystem;
 import com.qubole.rubix.hadoop2.hadoop2CM.Hadoop2ClusterManager;
 import com.qubole.rubix.spi.ClusterManager;
@@ -33,6 +34,12 @@ public class CachingNativeS3FileSystem
     private ClusterManager clusterManager;
 
     public CachingNativeS3FileSystem()
+            throws IOException
+    {
+        super();
+    }
+
+    public CachingNativeS3FileSystem(BookKeeperFactory factory)
             throws IOException
     {
         super();

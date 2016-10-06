@@ -26,6 +26,7 @@ import com.google.common.hash.Hashing;
 import com.qubole.rubix.core.CachingFileSystemStats;
 import com.qubole.rubix.core.CachingInputStream;
 import com.qubole.rubix.hadoop2.hadoop2CM.Hadoop2ClusterManager;
+import com.qubole.rubix.hadoop2.hadoop2FS.CachingNativeS3FileSystem;
 import com.qubole.rubix.spi.BlockLocation;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterManager;
@@ -320,8 +321,7 @@ public class BookKeeper
        DataRead dataRead = new DataRead();
        byte[] buffer = new byte[CacheConfig.getBufferSize()];
        int nread = 0;
-
-       NativeS3FileSystem fs = new NativeS3FileSystem();
+       CachingNativeS3FileSystem fs = new CachingNativeS3FileSystem();
        FSDataInputStream inputStream = null;
        try {
            inputStream = fs.open(new Path(path), bufferSize);
@@ -336,12 +336,7 @@ public class BookKeeper
        }*/
 
        try {
-           FSDataInputStream is = new FSDataInputStream(
-                   new BufferedFSInputStream(
-                           new CachingInputStream(inputStream, fs, new Path(path), conf, new CachingFileSystemStats(),
-                                   clusterManager.getSplitSize(), clusterManager.getClusterType()),
-                           CacheConfig.getBlockSize(conf)));
-           nread += is.read(buffer, offset, length);
+           nread += inputStream.read(buffer, offset, length);
            dataRead.data = ByteBuffer.wrap(buffer, offset, length);
            dataRead.sizeRead = nread;
            return  dataRead;

@@ -10,8 +10,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-package com.qubole.rubix.core;
+package com.qubole.rubix.tests;
 
+import com.qubole.rubix.core.CachingFileSystemStats;
+import com.qubole.rubix.core.CachingInputStream;
+import com.qubole.rubix.core.DataGen;
+import com.qubole.rubix.core.LocalFSInputStream;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.bookkeeper.BookKeeperServer;
 import com.qubole.rubix.spi.CachingConfigHelper;
@@ -21,6 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
+import org.testng.AssertJUnit;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -211,14 +216,14 @@ public class TestCachingInputStream
         assertions(readSize, 100, Arrays.copyOf(buffer, readSize), expectedOutput);
 
         readSize = inputStream.read(buffer, 100, 100);
-        assertTrue("Did not get EOF", readSize == -1);
+        AssertJUnit.assertTrue("Did not get EOF", readSize == -1);
 
     }
 
     private void assertions(int readSize, int expectedReadSize, byte[] outputBuffer, String expectedOutput)
     {
-        assertTrue("Wrong amount of data read " + readSize + " was expecting " + expectedReadSize, readSize == expectedReadSize);
+        AssertJUnit.assertTrue("Wrong amount of data read " + readSize + " was expecting " + expectedReadSize, readSize == expectedReadSize);
         String output = new String(outputBuffer, Charset.defaultCharset());
-        assertTrue("Wrong data read, expected\n" + expectedOutput + "\nBut got\n" + output, expectedOutput.equals(output));
+        AssertJUnit.assertTrue("Wrong data read, expected\n" + expectedOutput + "\nBut got\n" + output, expectedOutput.equals(output));
     }
 }
