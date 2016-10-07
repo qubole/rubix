@@ -97,13 +97,7 @@ public final class RetryingBookkeeperClient
         while (errors < maxRetries) {
             try {
                 if (!transport.isOpen()) {
-                    try {
-                        transport.open();
-                    }
-                    catch (Exception e1) {
-                        LOG.info("Error while reconnecting");
-                        continue;
-                    }
+                    transport.open();
                 }
                 return callable.call();
             }
@@ -111,7 +105,9 @@ public final class RetryingBookkeeperClient
                 LOG.info("Error while connecting" + e.getStackTrace().toString());
                 errors++;
             }
-            transport.close();
+            if (transport.isOpen()) {
+                transport.close();
+            }
         }
 
         throw new TException();
