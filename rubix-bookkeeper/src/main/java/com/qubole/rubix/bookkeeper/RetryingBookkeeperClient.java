@@ -87,8 +87,7 @@ public final class RetryingBookkeeperClient
             }
         });
     }
-
-    //Assuming that transport from bookKeeperClient is already open
+    
     private <V> V retryConnection(Callable<V> callable)
             throws TException
     {
