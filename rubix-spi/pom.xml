@@ -111,7 +111,7 @@
                                     <pattern>com.google</pattern>
                                     <shadedPattern>com.google.shaded</shadedPattern>
                                 </relocation>
-                                <relocation>
+                               <relocation>
                                     <pattern>org.apache.thrift</pattern>
                                     <shadedPattern>org.apache.thrift.shaded</shadedPattern>
                                 </relocation>

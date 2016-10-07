@@ -71,24 +71,6 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>build-helper-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>add-source</id>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>add-source</goal>
-                        </goals>
-                        <configuration>
-                            <sources>
-                                <source>src/main/gen-java/com/qubole/caching/bookkeeper</source>
-                            </sources>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -100,23 +82,6 @@
                 </configuration>
             </plugin>
 
-            <plugin>
-                <groupId>org.apache.thrift.tools</groupId>
-                <artifactId>maven-thrift-plugin</artifactId>
-                <version>0.1.10</version>
-                <configuration>
-                    <thriftExecutable>/usr/local/bin/thrift</thriftExecutable>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>thrift-sources</id>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>compile</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -131,7 +96,6 @@
                         <configuration>
                             <artifactSet>
                                 <includes>
-                                    <include>org.apache.thrift:libthrift</include>
                                     <include>com.google.guava:guava</include>
                                 </includes>
                             </artifactSet>
@@ -139,10 +103,6 @@
                                 <relocation>
                                     <pattern>com.google</pattern>
                                     <shadedPattern>com.google.shaded</shadedPattern>
-                                </relocation>
-                                <relocation>
-                                    <pattern>org.apache.thrift</pattern>
-                                    <shadedPattern>org.apache.thrift.shaded</shadedPattern>
                                 </relocation>
                             </relocations>
 

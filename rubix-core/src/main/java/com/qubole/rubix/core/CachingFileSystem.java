@@ -17,6 +17,7 @@ import com.google.common.base.Throwables;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
+import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterManager;
 import org.apache.commons.logging.Log;
@@ -54,6 +55,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
     private boolean cacheSkipped = false;
 
     private static CachingFileSystemStats statsMBean;
+    public BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
 
     static {
         MBeanExporter exporter = new MBeanExporter(ManagementFactory.getPlatformMBeanServer());
@@ -86,6 +88,12 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
         this.clusterManager = clusterManager;
     }
 
+    public void setBookKeeper(BookKeeperFactory bookKeeperFactory)
+    {
+        this.bookKeeperFactory = bookKeeperFactory;
+
+    }
+
     @Override
     public void initialize(URI uri, Configuration conf) throws IOException
     {
@@ -116,7 +124,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
         return new FSDataInputStream(
                 new BufferedFSInputStream(
                         new CachingInputStream(inputStream, this, path, this.getConf(), statsMBean,
-                                               clusterManager.getSplitSize(), clusterManager.getClusterType()),
+                                               clusterManager.getSplitSize(), clusterManager.getClusterType(), bookKeeperFactory),
                                                     CacheConfig.getBlockSize(getConf())));
     }
 

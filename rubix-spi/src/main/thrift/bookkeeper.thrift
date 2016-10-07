@@ -28,4 +28,6 @@ service BookKeeperService
     oneway void setAllCached(1:string remotePath, 2:long fileLength, 3:long lastModified, 4:long startBlock, 5:long endBlock)
 
     map<string,double> getCacheStats()
+
+    DataRead readData(1:string path, 2:int offset, 3:int length)
 }

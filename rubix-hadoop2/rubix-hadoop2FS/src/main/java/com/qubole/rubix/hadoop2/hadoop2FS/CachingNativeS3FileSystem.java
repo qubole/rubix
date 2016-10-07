@@ -33,7 +33,6 @@ public class CachingNativeS3FileSystem
     private static final Log LOG = LogFactory.getLog(CachingNativeS3FileSystem.class);
 
     private ClusterManager clusterManager;
-    public BookKeeperFactory factory = new BookKeeperFactory();
 
     public CachingNativeS3FileSystem()
             throws IOException
@@ -45,8 +44,8 @@ public class CachingNativeS3FileSystem
             throws IOException
     {
         super();
+        super.setBookKeeper(factory);
         initialize(path.toUri(), conf);
-        this.factory = factory;
     }
 
     @Override

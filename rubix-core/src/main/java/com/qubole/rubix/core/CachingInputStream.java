@@ -20,6 +20,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.qubole.rubix.spi.BlockLocation;
 import com.qubole.rubix.spi.BookKeeperClient;
+import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.Location;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CachingConfigHelper;
@@ -43,7 +44,6 @@ import java.util.concurrent.Executors;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
-import static com.qubole.rubix.spi.BookKeeperClient.createBookKeeperClient;
 
 /**
  * Created by stagra on 29/12/15.
@@ -74,14 +74,14 @@ public class CachingInputStream
     private long splitSize;
     ClusterType clusterType;
 
-    public CachingInputStream(FSDataInputStream parentInputStream, FileSystem parentFs, Path backendPath, Configuration conf, CachingFileSystemStats statsMbean, long splitSize, ClusterType clusterType)
+    public CachingInputStream(FSDataInputStream parentInputStream, FileSystem parentFs, Path backendPath, Configuration conf, CachingFileSystemStats statsMbean, long splitSize, ClusterType clusterType, BookKeeperFactory bookKeeperFactory)
             throws IOException
     {
         this.remotePath = backendPath.toString();
         this.fileSize = parentFs.getLength(backendPath);
         lastModified = parentFs.getFileStatus(backendPath).getModificationTime();
         initialize(parentInputStream,
-                conf);
+                conf, bookKeeperFactory);
         this.statsMbean = statsMbean;
         this.splitSize = splitSize;
         this.clusterType = clusterType;
@@ -89,24 +89,24 @@ public class CachingInputStream
     }
 
     @VisibleForTesting
-    public CachingInputStream(FSDataInputStream parentInputStream, Configuration conf, Path backendPath, long size, long lastModified, CachingFileSystemStats statsMbean, long splitSize, ClusterType clusterType)
+    public CachingInputStream(FSDataInputStream parentInputStream, Configuration conf, Path backendPath, long size, long lastModified, CachingFileSystemStats statsMbean, long splitSize, ClusterType clusterType, BookKeeperFactory bookKeeperFactory)
             throws IOException
     {
         this.remotePath = backendPath.toString();
         this.fileSize = size;
         this.lastModified = lastModified;
-        initialize(parentInputStream, conf);
+        initialize(parentInputStream, conf, bookKeeperFactory);
         this.statsMbean = statsMbean;
         this.splitSize = splitSize;
         this.clusterType = clusterType;
     }
 
-    private void initialize(FSDataInputStream parentInputStream, Configuration conf)
+    private void initialize(FSDataInputStream parentInputStream, Configuration conf, BookKeeperFactory bookKeeperFactory)
     {
         this.conf = conf;
         this.strictMode = CachingConfigHelper.isStrictMode(conf);
         try {
-            this.bookKeeperClient = createBookKeeperClient(conf);
+            this.bookKeeperClient = bookKeeperFactory.createBookKeeperClient(conf);
         }
         catch (Exception e) {
             if (strictMode) {
@@ -311,7 +311,7 @@ public class CachingInputStream
             else {
                 if (isCached.get(idx).getLocation() == Location.NON_LOCAL) {
                     log.debug(String.format("Sending block %d to NonLocalReadRequestChain", blockNum));
-                    if(nonLocalRequests.get(isCached.get(idx).getRemoteLocation()) == null) {
+                    if (nonLocalRequests.get(isCached.get(idx).getRemoteLocation()) == null) {
                         nonLocalReadRequestChain = new NonLocalReadRequestChain(isCached.get(idx).getRemoteLocation(), conf, inputStream, remotePath);
                         nonLocalRequests.put(isCached.get(idx).getRemoteLocation(), nonLocalReadRequestChain);
                     }
@@ -350,10 +350,10 @@ public class CachingInputStream
                 shared.addReadRequestChain(directReadRequestChain);
             }
 
-            if(!nonLocalRequests.isEmpty()) {
-
-                for(NonLocalReadRequestChain nonLocalReadRequestChain1 : nonLocalRequests.values())
-                shared.addReadRequestChain(nonLocalReadRequestChain1);
+            if (!nonLocalRequests.isEmpty()) {
+                for (NonLocalReadRequestChain nonLocalReadRequestChain1 : nonLocalRequests.values()) {
+                    shared.addReadRequestChain(nonLocalReadRequestChain1);
+                }
             }
             chainedReadRequestChainBuilder.add(shared);
         }

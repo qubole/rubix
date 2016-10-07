@@ -16,6 +16,7 @@ import com.qubole.rubix.core.CachingFileSystemStats;
 import com.qubole.rubix.core.CachingInputStream;
 import com.qubole.rubix.core.DataGen;
 import com.qubole.rubix.core.LocalFSInputStream;
+import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.bookkeeper.BookKeeperServer;
 import com.qubole.rubix.spi.CachingConfigHelper;
@@ -93,7 +94,7 @@ public class TestCachingInputStream
         log.info("All set to test");
 
         // This should be after server comes up else client could not be created
-        inputStream = new CachingInputStream(fsDataInputStream, conf, backendPath, file.length(),file.lastModified(), new CachingFileSystemStats(), 64*1024*1024, ClusterType.TEST_CLUSTER_MANAGER);
+        inputStream = new CachingInputStream(fsDataInputStream, conf, backendPath, file.length(),file.lastModified(), new CachingFileSystemStats(), 64*1024*1024, ClusterType.TEST_CLUSTER_MANAGER, new BookKeeperFactory());
 
     }
 

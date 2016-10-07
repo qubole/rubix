@@ -74,8 +74,7 @@ public class NonLocalReadRequestChain extends DirectReadRequestChain
             bookKeeperClient = null;
         }
         //this might interrupt remoteReadRequests
-        if(bookKeeperClient == null)
-        {
+        if (bookKeeperClient == null) {
             super.call();
         }
 
@@ -90,7 +89,7 @@ public class NonLocalReadRequestChain extends DirectReadRequestChain
                 if (lengthRemaining < bufferLength) {
                     bufferLength = lengthRemaining;
                 }
-                dataRead += bookKeeperClient.readData(filePath, currentPosition, bufferLength);
+                dataRead = bookKeeperClient.readData(filePath, currentPosition, bufferLength);
                 readLength += dataRead.sizeRead;
                 lengthRemaining = readRequest.getActualReadLength() - readLength;
                 totalRead += dataRead.sizeRead;

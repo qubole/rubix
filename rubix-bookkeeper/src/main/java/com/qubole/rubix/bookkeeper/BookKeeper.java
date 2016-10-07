@@ -142,7 +142,7 @@ public class BookKeeper
                 cachedRequests++;
             }
             else {
-                if(blockSplits.get(split).equalsIgnoreCase(nodeName))
+                //if (blockSplits.get(split).equalsIgnoreCase(nodeName))
                 if (localSplits.contains(split)) {
                     //blocksInfo.add(Location.LOCAL);
                     blockLocations.add(new BlockLocation(Location.LOCAL, blockSplits.get(split)));
@@ -198,7 +198,6 @@ public class BookKeeper
 
     @Override
     public void setAllCached(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock)
-            throws TException
     {
         FileMetadata md;
         md = fileMetadataCache.getIfPresent(remotePath);
@@ -314,14 +313,18 @@ public class BookKeeper
     }
 
    public DataRead readData(String path, int offset, int length)
-           throws IOException
    {
-
        DataRead dataRead = new DataRead();
        byte[] buffer = new byte[CacheConfig.getBufferSize()];
        int nread = 0;
        BookKeeperFactory bookKeeperFactory = new BookKeeperFactory(this);
-       CachingNativeS3FileSystem fs = new CachingNativeS3FileSystem(bookKeeperFactory, new Path(path), conf);
+       CachingNativeS3FileSystem fs = null;
+       try {
+           fs = new CachingNativeS3FileSystem(bookKeeperFactory, new Path(path), conf);
+       }
+       catch (IOException e) {
+           e.printStackTrace();
+       }
        FSDataInputStream inputStream = null;
        try {
            inputStream = fs.open(new Path(path), bufferSize);
