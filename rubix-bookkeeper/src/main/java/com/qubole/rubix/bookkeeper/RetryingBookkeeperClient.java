@@ -87,7 +87,6 @@ public final class RetryingBookkeeperClient
             }
         });
     }
-    
     private <V> V retryConnection(Callable<V> callable)
             throws TException
     {
