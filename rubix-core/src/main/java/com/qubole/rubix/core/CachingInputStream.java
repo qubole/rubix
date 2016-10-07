@@ -18,10 +18,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.qubole.rubix.bookkeeper.BookKeeperClient;
 import com.qubole.rubix.bookkeeper.Location;
+import com.qubole.rubix.bookkeeper.RetryingBookkeeperClient;
 import com.qubole.rubix.spi.CacheConfig;
-import com.qubole.rubix.spi.CachingConfigHelper;
 import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -30,6 +29,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -40,7 +40,7 @@ import java.util.concurrent.Executors;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
-import static com.qubole.rubix.bookkeeper.BookKeeperClient.createBookKeeperClient;
+import static com.qubole.rubix.bookkeeper.RetryingBookkeeperClient.createBookKeeperClient;
 
 /**
  * Created by stagra on 29/12/15.
@@ -64,7 +64,7 @@ public class CachingInputStream
     private String localPath;
     private long lastModified;
 
-    private BookKeeperClient bookKeeperClient;
+    private RetryingBookkeeperClient bookKeeperClient;
     private Configuration conf;
 
     private boolean strictMode = false;
@@ -82,7 +82,6 @@ public class CachingInputStream
         this.statsMbean = statsMbean;
         this.splitSize = splitSize;
         this.clusterType = clusterType;
-
     }
 
     @VisibleForTesting
@@ -101,7 +100,7 @@ public class CachingInputStream
     private void initialize(FSDataInputStream parentInputStream, Configuration conf)
     {
         this.conf = conf;
-        this.strictMode = CachingConfigHelper.isStrictMode(conf);
+        this.strictMode = CacheConfig.isStrictMode(conf);
         try {
             this.bookKeeperClient = createBookKeeperClient(conf);
         }
@@ -177,7 +176,7 @@ public class CachingInputStream
         }
 
         // Get the last block
-        final long endBlock = ((nextReadPosition + (length - 1)) /  blockSize) + 1; // this block will not be read
+        final long endBlock = ((nextReadPosition + (length - 1)) / blockSize) + 1; // this block will not be read
 
         // Create read requests
         final List<ReadRequestChain> readRequestChains = setupReadRequestChains(buffer,
@@ -196,6 +195,7 @@ public class CachingInputStream
         }
 
         List<ListenableFuture<Integer>> futures = builder.build();
+
         try {
             for (ListenableFuture<Integer> future : futures) {
                 sizeRead += future.get();
@@ -207,10 +207,12 @@ public class CachingInputStream
         catch (ExecutionException e) {
             throw Throwables.propagate(e);
         }
+
         // mark all read blocks cached
         // We can let this is happen in background
         final long lastBlock = nextReadBlock;
-        readService.execute(new Runnable(){
+        readService.execute(new Runnable()
+        {
             @Override
             public void run()
             {

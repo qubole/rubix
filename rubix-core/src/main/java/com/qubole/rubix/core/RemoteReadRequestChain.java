@@ -13,7 +13,7 @@
 package com.qubole.rubix.core;
 
 import com.google.common.base.Throwables;
-import com.qubole.rubix.bookkeeper.BookKeeperClient;
+import com.qubole.rubix.bookkeeper.RetryingBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -25,14 +25,15 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
 import static com.google.common.base.Preconditions.checkState;
-import static com.qubole.rubix.bookkeeper.BookKeeperClient.createBookKeeperClient;
+import static com.qubole.rubix.bookkeeper.RetryingBookkeeperClient.createBookKeeperClient;
 
 /**
  * Created by stagra on 4/1/16.
  *
  * This chain reads from Remote and stores one copy in cache
  */
-public class RemoteReadRequestChain extends ReadRequestChain
+public class RemoteReadRequestChain
+        extends ReadRequestChain
 {
     final FSDataInputStream inputStream;
     final String localFilename;
@@ -50,7 +51,8 @@ public class RemoteReadRequestChain extends ReadRequestChain
         this.localFilename = localFile;
     }
 
-    public Integer call() throws IOException
+    public Integer call()
+            throws IOException
     {
         Thread.currentThread().setName(threadName);
         checkState(isLocked, "Trying to execute Chain without locking");
@@ -147,7 +149,7 @@ public class RemoteReadRequestChain extends ReadRequestChain
     public void updateCacheStatus(String remotePath, long fileSize, long lastModified, int blockSize, Configuration conf)
     {
         try {
-            BookKeeperClient client = createBookKeeperClient(conf);
+            RetryingBookkeeperClient client = createBookKeeperClient(conf);
             for (ReadRequest readRequest : readRequests) {
                 client.setAllCached(remotePath, fileSize, lastModified, toBlock(readRequest.getBackendReadStart(), blockSize), toBlock(readRequest.getBackendReadEnd() - 1, blockSize) + 1);
             }

@@ -12,9 +12,8 @@
  */
 package com.qubole.rubix.core;
 
-import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.bookkeeper.BookKeeperServer;
-import com.qubole.rubix.spi.CachingConfigHelper;
+import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -53,9 +52,10 @@ public class TestCachingInputStream
     {
         final Configuration conf = new Configuration();
 
-        conf.setBoolean(CachingConfigHelper.DATA_CACHE_STRICT_MODE, true);
+        conf.setBoolean(CacheConfig.DATA_CACHE_STRICT_MODE, true);
         conf.setInt(CacheConfig.dataCacheBookkeeperPortConf, 3456);
-        Thread thread = new Thread() {
+        Thread thread = new Thread()
+        {
             public void run()
             {
                 BookKeeperServer.startServer(conf);
@@ -71,13 +71,12 @@ public class TestCachingInputStream
         }
 
         createCachingStream(conf);
-
     }
 
     public void createCachingStream(Configuration conf)
             throws InterruptedException, IOException
     {
-        conf.setBoolean(CachingConfigHelper.DATA_CACHE_STRICT_MODE, true);
+        conf.setBoolean(CacheConfig.DATA_CACHE_STRICT_MODE, true);
         conf.setInt(CacheConfig.dataCacheBookkeeperPortConf, 3456);
 
         File file = new File(backendFileName);
@@ -88,8 +87,7 @@ public class TestCachingInputStream
         log.info("All set to test");
 
         // This should be after server comes up else client could not be created
-        inputStream = new CachingInputStream(fsDataInputStream, conf, backendPath, file.length(),file.lastModified(), new CachingFileSystemStats(), 64*1024*1024, ClusterType.TEST_CLUSTER_MANAGER);
-
+        inputStream = new CachingInputStream(fsDataInputStream, conf, backendPath, file.length(), file.lastModified(), new CachingFileSystemStats(), 64 * 1024 * 1024, ClusterType.TEST_CLUSTER_MANAGER);
     }
 
     @AfterMethod
@@ -131,7 +129,7 @@ public class TestCachingInputStream
         int readSize = inputStream.read(buffer, 0, 1000);
         String output = new String(buffer, Charset.defaultCharset());
         String expectedOutput = DataGen.generateContent().substring(100, 1100);
-        assertions(readSize, 1000, buffer,expectedOutput);
+        assertions(readSize, 1000, buffer, expectedOutput);
     }
 
     @Test
@@ -212,7 +210,6 @@ public class TestCachingInputStream
 
         readSize = inputStream.read(buffer, 100, 100);
         assertTrue("Did not get EOF", readSize == -1);
-
     }
 
     private void assertions(int readSize, int expectedReadSize, byte[] outputBuffer, String expectedOutput)
