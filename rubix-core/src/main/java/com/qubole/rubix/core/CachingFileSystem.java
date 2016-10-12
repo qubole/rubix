@@ -43,6 +43,7 @@ import java.net.URI;
 import java.util.List;
 
 import static com.qubole.rubix.spi.CachingConfigHelper.skipCache;
+
 /**
  * Created by stagra on 29/12/15.
  */
@@ -88,9 +89,11 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
         this.clusterManager = clusterManager;
     }
 
-    public void setBookKeeper(BookKeeperFactory bookKeeperFactory)
+    public void setBookKeeper(BookKeeperFactory bookKeeperFactory, Configuration conf)
     {
+        log.info("Setting bookKeeper factory");
         this.bookKeeperFactory = bookKeeperFactory;
+        this.setConf(conf);
 
     }
 

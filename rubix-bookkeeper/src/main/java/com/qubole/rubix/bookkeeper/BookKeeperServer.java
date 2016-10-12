@@ -18,11 +18,11 @@ import com.qubole.rubix.spi.BookKeeperService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.thrift.server.TServer;
-import org.apache.thrift.server.TThreadPoolServer;
-import org.apache.thrift.transport.TServerSocket;
-import org.apache.thrift.transport.TServerTransport;
-import org.apache.thrift.transport.TTransportException;
+import org.apache.thrift.shaded.server.TServer;
+import org.apache.thrift.shaded.server.TThreadPoolServer;
+import org.apache.thrift.shaded.transport.TServerSocket;
+import org.apache.thrift.shaded.transport.TServerTransport;
+import org.apache.thrift.shaded.transport.TTransportException;
 
 import static com.qubole.rubix.spi.CacheConfig.getServerMaxThreads;
 import static com.qubole.rubix.spi.CacheConfig.getServerPort;

@@ -26,6 +26,7 @@
             <groupId>org.apache.thrift</groupId>
             <artifactId>libthrift</artifactId>
             <version>0.9.2</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
@@ -97,17 +98,12 @@
                             <artifactSet>
                                 <includes>
                                     <include>com.google.guava:guava</include>
-                                    <include>org.apache.thrift:libthrift</include>
                                 </includes>
                             </artifactSet>
                             <relocations>
                                 <relocation>
                                     <pattern>com.google</pattern>
                                     <shadedPattern>com.google.shaded</shadedPattern>
-                                </relocation>
-                                <relocation>
-                                    <pattern>org.apache.thrift</pattern>
-                                    <shadedPattern>org.apache.thrift.shaded</shadedPattern>
                                 </relocation>
                             </relocations>
 

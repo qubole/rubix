@@ -50,7 +50,7 @@ public class CacheConfig
     private static final int blockSize = 1 * 1024 * 1024; // 1MB
     private static int serverPort = 8899;
     private static int serverMaxThreads = Integer.MAX_VALUE;
-    public static int bufferSize;
+    public static int bufferSize = 5 * 1024 * 1024;
 
     private CacheConfig()
     {

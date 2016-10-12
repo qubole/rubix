@@ -37,7 +37,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.thrift.TException;
+import org.apache.thrift.shaded.TException;
 
 import java.io.File;
 import java.io.IOException;
@@ -88,6 +88,7 @@ public class BookKeeper
     public List<BlockLocation> getCacheStatus(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock, int clusterType)
             throws TException
     {
+        log.info("Getting Cache status in BK");
         initializeClusterManager(clusterType);
 
         if (nodeName == null) {
@@ -325,6 +326,8 @@ public class BookKeeper
        catch (IOException e) {
            e.printStackTrace();
        }
+
+       bufferSize = CacheConfig.getBufferSize();
        FSDataInputStream inputStream = null;
        try {
            inputStream = fs.open(new Path(path), bufferSize);
@@ -333,14 +336,14 @@ public class BookKeeper
            e.printStackTrace();
        }
 
-      /* if (skipCache(path, getConf())) {
+       /*if (skipCache(path, getConf())) {
            cacheSkipped = true;
            return inputStream;
        }*/
 
        try {
-           nread += inputStream.read(buffer, offset, length);
-           dataRead.data = ByteBuffer.wrap(buffer, offset, length);
+           nread = inputStream.read(buffer, offset, length);
+           dataRead.data = ByteBuffer.wrap(buffer, 0, nread);
            dataRead.sizeRead = nread;
            return  dataRead;
        }
