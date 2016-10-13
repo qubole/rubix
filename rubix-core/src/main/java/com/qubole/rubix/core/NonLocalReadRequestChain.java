@@ -13,10 +13,9 @@
 package com.qubole.rubix.core;
 
 import com.google.common.base.Throwables;
-import com.qubole.rubix.spi.BookKeeperClient;
 import com.qubole.rubix.spi.CacheConfig;
-import com.qubole.rubix.spi.CachingConfigHelper;
 import com.qubole.rubix.spi.DataRead;
+import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -25,7 +24,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.thrift.shaded.TException;
 
-import static com.qubole.rubix.spi.BookKeeperClient.createBookKeeperClient;
+import static com.qubole.rubix.spi.RetryingBookkeeperClient.createBookKeeperClient;
 
 /**
  * Created by sakshia on 31/8/16.
@@ -34,10 +33,10 @@ public class NonLocalReadRequestChain extends ReadRequestChain
 {
     private final String filePath;
     String remoteNodeName;
-    BookKeeperClient bookKeeperClient;
+    RetryingBookkeeperClient bookKeeperClient;
     Configuration conf;
     private boolean strictMode = false;
-    int sizeRead = 0;
+    int totalRead = 0;
     FileSystem fs;
     FSDataInputStream inputStream = null;
 
@@ -48,17 +47,16 @@ public class NonLocalReadRequestChain extends ReadRequestChain
         this.remoteNodeName = remoteNodeName;
         this.fs = fs;
         this.conf = conf;
-        this.strictMode = CachingConfigHelper.isStrictMode(conf);
+        this.strictMode = CacheConfig.isStrictMode(conf);
         this.filePath = remotePath;
     }
 
     public ReadRequestChainStats getStats()
     {
         return new ReadRequestChainStats()
-                .setRemoteReads(requests)
                 .setNonLocalReads(requests)
-                .setRequestedRead(sizeRead)
-                .setNonLocalDataRead(sizeRead);
+                .setRequestedRead(totalRead)
+                .setNonLocalDataRead(totalRead);
     }
 
     @Override
@@ -77,48 +75,48 @@ public class NonLocalReadRequestChain extends ReadRequestChain
                 throw Throwables.propagate(e);
             }
             log.warn("Could not create BookKeeper Client " + Throwables.getStackTraceAsString(e));
-            return directReadRequest();
+            return directReadRequest(0);
         }
 
         for (ReadRequest readRequest : readRequests) {
             int readLength = 0;
-            int offset = readRequest.getDestBufferOffset();
-            long readStart = readRequest.getActualReadStart();
             int lengthRemaining = readRequest.getActualReadLength();
+            int bufferLength = CacheConfig.getBufferSize(conf);
+
             DataRead dataRead;
-            int bufferLength = CacheConfig.getBufferSize();
 
             while (lengthRemaining > 0) {
                 if (lengthRemaining < bufferLength) {
                     bufferLength = lengthRemaining;
                 }
                 try {
-                    dataRead = bookKeeperClient.readData(filePath, readStart + readLength, offset, bufferLength);
+                    dataRead = bookKeeperClient.readData(filePath, readRequest.getActualReadStart() + readLength, readRequest.getDestBufferOffset(), bufferLength);
                 }
                 catch (TException e) {
-                    return directReadRequest();
+                    return directReadRequest(readRequests.indexOf(readRequest));
                 }
                 System.arraycopy(dataRead.getData(), 0, readRequest.destBuffer, readRequest.getDestBufferOffset() + readLength, dataRead.getSizeRead());
                 readLength += dataRead.getSizeRead();
                 lengthRemaining = readRequest.getActualReadLength() - readLength;
-                sizeRead += dataRead.getSizeRead();
+                totalRead += dataRead.getSizeRead();
             }
         }
 
         if (bookKeeperClient != null) {
             bookKeeperClient.close();
         }
-        log.info(String.format("Read %d bytes directly from node %s", sizeRead, remoteNodeName));
-        return sizeRead;
+
+        log.info(String.format("Read %d bytes directly from node %s", totalRead, remoteNodeName));
+        return totalRead;
     }
 
-    private int directReadRequest()
+    private int directReadRequest(int index)
             throws Exception
     {
         int read;
         inputStream = fs.open(new Path(filePath));
         DirectReadRequestChain readChain = new DirectReadRequestChain(inputStream);
-        for (ReadRequest readRequest : readRequests) {
+        for (ReadRequest readRequest : readRequests.subList(index, readRequests.size())) {
             readChain.addReadRequest(readRequest);
         }
         readChain.lock();

@@ -42,8 +42,7 @@ import java.lang.reflect.Type;
 import java.net.URI;
 import java.util.List;
 
-import static com.qubole.rubix.spi.CachingConfigHelper.skipCache;
-
+import static com.qubole.rubix.spi.CacheConfig.skipCache;
 /**
  * Created by stagra on 29/12/15.
  */

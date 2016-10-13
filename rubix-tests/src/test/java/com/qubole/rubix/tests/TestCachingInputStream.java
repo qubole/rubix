@@ -19,14 +19,12 @@ import com.qubole.rubix.core.LocalFSInputStream;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.bookkeeper.BookKeeperServer;
-import com.qubole.rubix.spi.CachingConfigHelper;
 import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
-import org.testng.AssertJUnit;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -59,9 +57,10 @@ public class TestCachingInputStream
     {
         final Configuration conf = new Configuration();
 
-        conf.setBoolean(CachingConfigHelper.DATA_CACHE_STRICT_MODE, true);
+        conf.setBoolean(CacheConfig.DATA_CACHE_STRICT_MODE, true);
         conf.setInt(CacheConfig.dataCacheBookkeeperPortConf, 3456);
-        Thread thread = new Thread() {
+        Thread thread = new Thread()
+        {
             public void run()
             {
                 BookKeeperServer.startServer(conf);
@@ -83,7 +82,7 @@ public class TestCachingInputStream
     public void createCachingStream(Configuration conf)
             throws InterruptedException, IOException
     {
-        conf.setBoolean(CachingConfigHelper.DATA_CACHE_STRICT_MODE, true);
+        conf.setBoolean(CacheConfig.DATA_CACHE_STRICT_MODE, true);
         conf.setInt(CacheConfig.dataCacheBookkeeperPortConf, 3456);
 
         File file = new File(backendFileName);
@@ -137,7 +136,7 @@ public class TestCachingInputStream
         int readSize = inputStream.read(buffer, 0, 1000);
         String output = new String(buffer, Charset.defaultCharset());
         String expectedOutput = DataGen.generateContent().substring(100, 1100);
-        assertions(readSize, 1000, buffer,expectedOutput);
+        assertions(readSize, 1000, buffer, expectedOutput);
     }
 
     @Test
@@ -217,14 +216,14 @@ public class TestCachingInputStream
         assertions(readSize, 100, Arrays.copyOf(buffer, readSize), expectedOutput);
 
         readSize = inputStream.read(buffer, 100, 100);
-        AssertJUnit.assertTrue("Did not get EOF", readSize == -1);
+        assertTrue("Did not get EOF", readSize == -1);
 
     }
 
     private void assertions(int readSize, int expectedReadSize, byte[] outputBuffer, String expectedOutput)
     {
-        AssertJUnit.assertTrue("Wrong amount of data read " + readSize + " was expecting " + expectedReadSize, readSize == expectedReadSize);
+        assertTrue("Wrong amount of data read " + readSize + " was expecting " + expectedReadSize, readSize == expectedReadSize);
         String output = new String(outputBuffer, Charset.defaultCharset());
-        AssertJUnit.assertTrue("Wrong data read, expected\n" + expectedOutput + "\nBut got\n" + output, expectedOutput.equals(output));
+        assertTrue("Wrong data read, expected\n" + expectedOutput + "\nBut got\n" + output, expectedOutput.equals(output));
     }
 }

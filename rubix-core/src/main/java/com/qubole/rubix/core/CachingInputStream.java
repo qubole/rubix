@@ -19,12 +19,11 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.qubole.rubix.spi.BlockLocation;
-import com.qubole.rubix.spi.BookKeeperClient;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.Location;
 import com.qubole.rubix.spi.CacheConfig;
-import com.qubole.rubix.spi.CachingConfigHelper;
 import com.qubole.rubix.spi.ClusterType;
+import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -67,7 +66,7 @@ public class CachingInputStream
     private String localPath;
     private long lastModified;
 
-    private BookKeeperClient bookKeeperClient;
+    private RetryingBookkeeperClient bookKeeperClient;
     private Configuration conf;
 
     private boolean strictMode = false;
@@ -106,7 +105,7 @@ public class CachingInputStream
     private void initialize(FSDataInputStream parentInputStream, Configuration conf, BookKeeperFactory bookKeeperFactory)
     {
         this.conf = conf;
-        this.strictMode = CachingConfigHelper.isStrictMode(conf);
+        this.strictMode = CacheConfig.isStrictMode(conf);
         try {
             this.bookKeeperClient = bookKeeperFactory.createBookKeeperClient(conf);
         }
@@ -184,7 +183,7 @@ public class CachingInputStream
         }
 
         // Get the last block
-        final long endBlock = ((nextReadPosition + (length - 1)) /  blockSize) + 1; // this block will not be read
+        final long endBlock = ((nextReadPosition + (length - 1)) / blockSize) + 1; // this block will not be read
 
         // Create read requests
         final List<ReadRequestChain> readRequestChains = setupReadRequestChains(buffer,
@@ -214,10 +213,12 @@ public class CachingInputStream
         catch (ExecutionException e) {
             throw Throwables.propagate(e);
         }
+
         // mark all read blocks cached
         // We can let this is happen in background
         final long lastBlock = nextReadBlock;
-        readService.execute(new Runnable(){
+        readService.execute(new Runnable()
+        {
             @Override
             public void run()
             {
@@ -315,7 +316,7 @@ public class CachingInputStream
             else {
                 if (isCached.get(idx).getLocation() == Location.NON_LOCAL) {
                     String remoteLocation = isCached.get(idx).getRemoteLocation();
-                    log.debug(String.format("Sending block %d to NonLocalReadRequestChain", blockNum));
+                    log.debug(String.format("Sending block %d to NonLocalReadRequestChain to node : %s", blockNum, remoteLocation));
                     if (!nonLocalRequests.containsKey(remoteLocation)) {
                         nonLocalReadRequestChain = new NonLocalReadRequestChain(remoteLocation, conf, fs, remotePath);
                         nonLocalRequests.put(remoteLocation, nonLocalReadRequestChain);

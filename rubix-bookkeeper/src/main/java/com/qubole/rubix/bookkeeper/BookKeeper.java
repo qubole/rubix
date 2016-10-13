@@ -23,10 +23,10 @@ import com.google.common.cache.Weigher;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.hadoop2.hadoop2CM.Hadoop2ClusterManager;
 import com.qubole.rubix.hadoop2.hadoop2FS.CachingNativeS3FileSystem;
 import com.qubole.rubix.spi.BlockLocation;
+import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
@@ -309,21 +309,14 @@ public class BookKeeper
    public DataRead readData(String path, long readStart, int offset, int length)
    {
        DataRead dataRead = new DataRead();
-       byte[] buffer = new byte[CacheConfig.getBufferSize()];
-       int nread = 0;
+       byte[] buffer = new byte[CacheConfig.getBufferSize(conf)];
+       int nread;
        BookKeeperFactory bookKeeperFactory = new BookKeeperFactory(this);
        CachingNativeS3FileSystem fs = null;
        try {
            fs = new CachingNativeS3FileSystem(bookKeeperFactory, new Path(path), conf);
-       }
-       catch (IOException e) {
-           e.printStackTrace();
-       }
-
-       bufferSize = CacheConfig.getBufferSize();
-       FSDataInputStream inputStream;
-       try {
-           inputStream = fs.open(new Path(path), bufferSize);
+           bufferSize = CacheConfig.getBufferSize(conf);
+           FSDataInputStream inputStream = fs.open(new Path(path), bufferSize);
            inputStream.seek(readStart);
            nread = inputStream.read(buffer, 0, length);
            dataRead.data = ByteBuffer.wrap(buffer, 0, nread);
@@ -331,12 +324,12 @@ public class BookKeeper
            if (inputStream != null) {
                inputStream.close();
            }
-           return  dataRead;
+           return dataRead;
        }
        catch (IOException e) {
            e.printStackTrace();
        }
-    return null;
+       return null;
 
    }
 

@@ -23,16 +23,16 @@ import java.util.List;
  * Created by sakshia on 6/10/16.
  */
 public class LocalBookKeeperClient
-        extends BookKeeperClient
+        extends RetryingBookkeeperClient
 {
     BookKeeperService.Iface bookKeeper = null;
     public LocalBookKeeperClient(TTransport transport, BookKeeperService.Iface bookKeeper)
     {
-        super(transport);
+        super(transport, 1);
         this.bookKeeper = bookKeeper;
     }
 
-    public static BookKeeperClient createBookKeeperClient(Configuration conf, BookKeeperService.Iface bookKeeper)
+    public static RetryingBookkeeperClient createBookKeeperClient(Configuration conf, BookKeeperService.Iface bookKeeper)
     {
         TTransport transport = null;
         return new LocalBookKeeperClient(transport, bookKeeper);
