@@ -44,7 +44,7 @@ public class CachingNativeS3FileSystem
             throws IOException
     {
         super();
-        super.setBookKeeper(factory, conf);
+        setBookKeeper(factory, conf);
         initialize(path.toUri(), conf);
     }
 

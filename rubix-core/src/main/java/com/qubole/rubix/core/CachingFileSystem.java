@@ -91,10 +91,8 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
 
     public void setBookKeeper(BookKeeperFactory bookKeeperFactory, Configuration conf)
     {
-        log.info("Setting bookKeeper factory");
         this.bookKeeperFactory = bookKeeperFactory;
         this.setConf(conf);
-
     }
 
     @Override
@@ -127,7 +125,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
         return new FSDataInputStream(
                 new BufferedFSInputStream(
                         new CachingInputStream(inputStream, this, path, this.getConf(), statsMBean,
-                                               clusterManager.getSplitSize(), clusterManager.getClusterType(), bookKeeperFactory),
+                                               clusterManager.getSplitSize(), clusterManager.getClusterType(), bookKeeperFactory, fs),
                                                     CacheConfig.getBlockSize(getConf())));
     }
 

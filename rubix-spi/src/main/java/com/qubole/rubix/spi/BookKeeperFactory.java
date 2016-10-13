@@ -37,11 +37,9 @@ public class BookKeeperFactory
             throws TTransportException
     {
         if (bookKeeper == null) {
-            log.info("Creating client");
             return BookKeeperClient.createBookKeeperClient(conf);
         }
         else {
-            log.info("Creating Local Bclient");
             return LocalBookKeeperClient.createBookKeeperClient(conf, bookKeeper);
         }
     }

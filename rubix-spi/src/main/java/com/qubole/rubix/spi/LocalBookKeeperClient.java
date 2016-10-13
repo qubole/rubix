@@ -16,6 +16,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.TException;
 import org.apache.thrift.transport.TTransport;
 
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -42,5 +43,11 @@ public class LocalBookKeeperClient
             throws TException
     {
         return bookKeeper.getCacheStatus(remotePath, fileLength, lastModified, startBlock, endBlock, clusterType);
+    }
+
+    @Override
+    public void close()
+            throws IOException
+    {
     }
 }

@@ -88,7 +88,6 @@ public class BookKeeper
     public List<BlockLocation> getCacheStatus(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock, int clusterType)
             throws TException
     {
-        log.info("Getting Cache status in BK");
         initializeClusterManager(clusterType);
 
         if (nodeName == null) {
@@ -130,7 +129,6 @@ public class BookKeeper
         }
         endBlock = setCorrectEndBlock(endBlock, fileLength, remotePath);
         List<BlockLocation> blockLocations = new ArrayList<>((int) (endBlock - startBlock));
-        //List<Location> blocksInfo = new ArrayList<>((int) (endBlock - startBlock));
         int blockSize = CacheConfig.getBlockSize(conf);
 
         for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
@@ -138,25 +136,20 @@ public class BookKeeper
             long split = (blockNum * blockSize) / splitSize;
 
             if (md.isBlockCached(blockNum)) {
-                //blocksInfo.add(Location.CACHED);
                 blockLocations.add(new BlockLocation(Location.CACHED, blockSplits.get(split)));
                 cachedRequests++;
             }
             else {
-                //if (blockSplits.get(split).equalsIgnoreCase(nodeName))
                 if (localSplits.contains(split)) {
-                    //blocksInfo.add(Location.LOCAL);
                     blockLocations.add(new BlockLocation(Location.LOCAL, blockSplits.get(split)));
                     remoteRequests++;
                 }
                 else {
-                  //  blocksInfo.add(Location.NON_LOCAL);
                     blockLocations.add(new BlockLocation(Location.NON_LOCAL, blockSplits.get(split)));
                 }
             }
         }
 
-        //return blocksInfo;
         return blockLocations;
     }
 
@@ -313,7 +306,7 @@ public class BookKeeper
                 .build();
     }
 
-   public DataRead readData(String path, int offset, int length)
+   public DataRead readData(String path, long readStart, int offset, int length)
    {
        DataRead dataRead = new DataRead();
        byte[] buffer = new byte[CacheConfig.getBufferSize()];
@@ -328,23 +321,16 @@ public class BookKeeper
        }
 
        bufferSize = CacheConfig.getBufferSize();
-       FSDataInputStream inputStream = null;
+       FSDataInputStream inputStream;
        try {
            inputStream = fs.open(new Path(path), bufferSize);
-       }
-       catch (IOException e) {
-           e.printStackTrace();
-       }
-
-       /*if (skipCache(path, getConf())) {
-           cacheSkipped = true;
-           return inputStream;
-       }*/
-
-       try {
-           nread = inputStream.read(buffer, offset, length);
+           inputStream.seek(readStart);
+           nread = inputStream.read(buffer, 0, length);
            dataRead.data = ByteBuffer.wrap(buffer, 0, nread);
            dataRead.sizeRead = nread;
+           if (inputStream != null) {
+               inputStream.close();
+           }
            return  dataRead;
        }
        catch (IOException e) {

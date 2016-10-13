@@ -29,5 +29,5 @@ service BookKeeperService
 
     map<string,double> getCacheStats()
 
-    DataRead readData(1:string path, 2:int offset, 3:int length)
+    DataRead readData(1:string path, 2:long readStart, 3:int offset, 4:int length)
 }
