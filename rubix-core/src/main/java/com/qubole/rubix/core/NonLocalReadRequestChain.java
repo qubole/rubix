@@ -13,6 +13,7 @@
 package com.qubole.rubix.core;
 
 import com.google.common.base.Throwables;
+import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.DataRead;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
@@ -23,8 +24,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.thrift.shaded.TException;
-
-import static com.qubole.rubix.spi.RetryingBookkeeperClient.createBookKeeperClient;
 
 /**
  * Created by sakshia on 31/8/16.
@@ -37,6 +36,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
     Configuration conf;
     private boolean strictMode = false;
     int totalRead = 0;
+    int directRead = 0;
     FileSystem fs;
     FSDataInputStream inputStream = null;
 
@@ -55,7 +55,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
     {
         return new ReadRequestChainStats()
                 .setNonLocalReads(requests)
-                .setRequestedRead(totalRead)
+                .setRequestedRead(totalRead + directRead)
                 .setNonLocalDataRead(totalRead);
     }
 
@@ -68,7 +68,8 @@ public class NonLocalReadRequestChain extends ReadRequestChain
         }
 
         try {
-            this.bookKeeperClient = createBookKeeperClient(remoteNodeName, conf);
+            BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
+            this.bookKeeperClient = bookKeeperFactory.createBookKeeperClient(remoteNodeName, conf);
         }
         catch (Exception e) {
             if (strictMode) {
@@ -82,7 +83,6 @@ public class NonLocalReadRequestChain extends ReadRequestChain
             int readLength = 0;
             int lengthRemaining = readRequest.getActualReadLength();
             int bufferLength = CacheConfig.getBufferSize(conf);
-
             DataRead dataRead;
 
             while (lengthRemaining > 0) {
@@ -90,11 +90,13 @@ public class NonLocalReadRequestChain extends ReadRequestChain
                     bufferLength = lengthRemaining;
                 }
                 try {
-                    dataRead = bookKeeperClient.readData(filePath, readRequest.getActualReadStart() + readLength, readRequest.getDestBufferOffset(), bufferLength);
+                    dataRead = bookKeeperClient.readData(filePath, readRequest.getActualReadStart() + readLength, bufferLength);
                 }
                 catch (TException e) {
+                    log.info("Could not read data from BookKeeper " + Throwables.getStackTraceAsString(e));
                     return directReadRequest(readRequests.indexOf(readRequest));
                 }
+
                 System.arraycopy(dataRead.getData(), 0, readRequest.destBuffer, readRequest.getDestBufferOffset() + readLength, dataRead.getSizeRead());
                 readLength += dataRead.getSizeRead();
                 lengthRemaining = readRequest.getActualReadLength() - readLength;
@@ -106,21 +108,19 @@ public class NonLocalReadRequestChain extends ReadRequestChain
             bookKeeperClient.close();
         }
 
-        log.info(String.format("Read %d bytes directly from node %s", totalRead, remoteNodeName));
         return totalRead;
     }
 
     private int directReadRequest(int index)
             throws Exception
     {
-        int read;
         inputStream = fs.open(new Path(filePath));
         DirectReadRequestChain readChain = new DirectReadRequestChain(inputStream);
         for (ReadRequest readRequest : readRequests.subList(index, readRequests.size())) {
             readChain.addReadRequest(readRequest);
         }
         readChain.lock();
-        read = readChain.call();
-        return read;
+        directRead = readChain.call();
+        return (totalRead + directRead);
     }
 }

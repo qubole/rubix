@@ -16,12 +16,9 @@ package com.qubole.rubix.spi;
  * Created by sakshia on 27/9/16.
  */
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
-import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
-import org.apache.thrift.transport.TTransportException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,28 +40,6 @@ public class RetryingBookkeeperClient
         super(new TBinaryProtocol(transport));
         this.transport = transport;
         this.maxRetries = maxRetries;
-    }
-
-    public static RetryingBookkeeperClient createBookKeeperClient(Configuration conf)
-            throws TTransportException
-    {
-        TTransport transport;
-        transport = new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf));
-        transport.open();
-
-        RetryingBookkeeperClient retryingBookkeeperClient = new RetryingBookkeeperClient(transport, CacheConfig.getMaxRetries(conf));
-        return retryingBookkeeperClient;
-    }
-
-    public static RetryingBookkeeperClient createBookKeeperClient(String remoteNodeName, Configuration conf)
-            throws TTransportException
-    {
-        TTransport transport;
-        transport = new TSocket(remoteNodeName, CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf));
-        transport.open();
-
-        RetryingBookkeeperClient retryingBookkeeperClient = new RetryingBookkeeperClient(transport, CacheConfig.getMaxRetries(conf));
-        return retryingBookkeeperClient;
     }
 
     @Override
@@ -110,7 +85,7 @@ public class RetryingBookkeeperClient
                 return callable.call();
             }
             catch (Exception e) {
-                LOG.info("Error while connecting" + e.getStackTrace().toString());
+                LOG.info("Error while connecting" + e.getStackTrace());
                 errors++;
             }
             if (transport.isOpen()) {

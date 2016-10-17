@@ -12,7 +12,6 @@
  */
 package com.qubole.rubix.spi;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.TException;
 import org.apache.thrift.transport.TTransport;
 
@@ -30,12 +29,6 @@ public class LocalBookKeeperClient
     {
         super(transport, 1);
         this.bookKeeper = bookKeeper;
-    }
-
-    public static RetryingBookkeeperClient createBookKeeperClient(Configuration conf, BookKeeperService.Iface bookKeeper)
-    {
-        TTransport transport = null;
-        return new LocalBookKeeperClient(transport, bookKeeper);
     }
 
     @Override

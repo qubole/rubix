@@ -13,6 +13,7 @@
 package com.qubole.rubix.core;
 
 import com.google.common.base.Throwables;
+import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -25,7 +26,6 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
 import static com.google.common.base.Preconditions.checkState;
-import static com.qubole.rubix.spi.RetryingBookkeeperClient.createBookKeeperClient;
 
 /**
  * Created by stagra on 4/1/16.
@@ -149,7 +149,8 @@ public class RemoteReadRequestChain
     public void updateCacheStatus(String remotePath, long fileSize, long lastModified, int blockSize, Configuration conf)
     {
         try {
-            RetryingBookkeeperClient client = createBookKeeperClient(conf);
+            BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
+            RetryingBookkeeperClient client = bookKeeperFactory.createBookKeeperClient(conf);
             for (ReadRequest readRequest : readRequests) {
                 client.setAllCached(remotePath, fileSize, lastModified, toBlock(readRequest.getBackendReadStart(), blockSize), toBlock(readRequest.getBackendReadEnd() - 1, blockSize) + 1);
             }

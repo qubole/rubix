@@ -13,6 +13,8 @@
 package com.qubole.rubix.spi;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.thrift.transport.TSocket;
+import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
 
 /**
@@ -34,10 +36,26 @@ public class BookKeeperFactory
             throws TTransportException
     {
         if (bookKeeper == null) {
-            return RetryingBookkeeperClient.createBookKeeperClient(conf);
+            TTransport transport;
+            transport = new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf));
+            transport.open();
+            RetryingBookkeeperClient retryingBookkeeperClient = new RetryingBookkeeperClient(transport, CacheConfig.getMaxRetries(conf));
+            return retryingBookkeeperClient;
         }
         else {
-            return LocalBookKeeperClient.createBookKeeperClient(conf, bookKeeper);
+            TTransport transport = null;
+            return new LocalBookKeeperClient(transport, bookKeeper);
         }
+    }
+
+    public RetryingBookkeeperClient createBookKeeperClient(String remoteNodeName, Configuration conf)
+            throws TTransportException
+    {
+        TTransport transport;
+        transport = new TSocket(remoteNodeName, CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf));
+        transport.open();
+
+        RetryingBookkeeperClient retryingBookkeeperClient = new RetryingBookkeeperClient(transport, CacheConfig.getMaxRetries(conf));
+        return retryingBookkeeperClient;
     }
 }

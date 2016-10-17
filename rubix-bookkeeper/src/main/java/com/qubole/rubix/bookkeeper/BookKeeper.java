@@ -306,10 +306,10 @@ public class BookKeeper
                 .build();
     }
 
-   public DataRead readData(String path, long readStart, int offset, int length)
+   public DataRead readData(String path, long readStart, int length)
    {
        DataRead dataRead = new DataRead();
-       byte[] buffer = new byte[CacheConfig.getBufferSize(conf)];
+       byte[] buffer = new byte[length];
        int nread;
        BookKeeperFactory bookKeeperFactory = new BookKeeperFactory(this);
        CachingNativeS3FileSystem fs = null;
@@ -321,9 +321,7 @@ public class BookKeeper
            nread = inputStream.read(buffer, 0, length);
            dataRead.data = ByteBuffer.wrap(buffer, 0, nread);
            dataRead.sizeRead = nread;
-           if (inputStream != null) {
-               inputStream.close();
-           }
+           inputStream.close();
            return dataRead;
        }
        catch (IOException e) {
