@@ -107,7 +107,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
         if (bookKeeperClient != null) {
             bookKeeperClient.close();
         }
-
+        log.info(String.format("Read %d bytes directly from node %s", totalRead, remoteNodeName));
         return totalRead;
     }
 

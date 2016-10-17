@@ -144,6 +144,7 @@ public class CacheConfig
                         if (exists(dirPrefix + i)) {
                             File dir = new File(dirPrefix + i + fileCacheDirSuffixConf);
                             dir.mkdir();
+                            dir.setWritable(true, false);
                             dirPathMap.put(ndisks, dirPrefix + i);
                             ++ndisks;
                         }
@@ -191,6 +192,7 @@ public class CacheConfig
         String absLocation = getLocalDirFor(remotePath, conf) + relLocation;
         File parent = new File(absLocation);
         parent.mkdirs();
+        parent.setWritable(true, false);
         return absLocation;
     }
 

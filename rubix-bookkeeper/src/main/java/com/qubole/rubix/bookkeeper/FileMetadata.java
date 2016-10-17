@@ -55,6 +55,8 @@ public class FileMetadata
         catch (FileNotFoundException e) {
             File file = new File(mdFilePath);
             file.createNewFile();
+            file.setWritable(true, false);
+            file.setReadable(true, false);
             mdFile = new RandomAccessFile(file, "rw");
         }
         mdFileChannel = mdFile.getChannel();
