@@ -218,8 +218,8 @@ public class BookKeeper
     public Map getCacheStats()
     {
         Map<String, Double> stats = new HashMap<String, Double>();
-        stats.put("Cache Hit Rate", ((double) cachedRequests / totalRequests));
-        stats.put("Cache Miss Rate", ((double) (totalRequests - cachedRequests) / totalRequests));
+        stats.put("Cache Hit Rate", ((double) cachedRequests / (cachedRequests + remoteRequests)));
+        stats.put("Cache Miss Rate", ((double) (remoteRequests) / (cachedRequests + remoteRequests)));
         stats.put("Cache Reads", ((double) cachedRequests));
         stats.put("Remote Reads", ((double) remoteRequests));
         stats.put("Non-Local Reads", ((double) (totalRequests - cachedRequests - remoteRequests)));
