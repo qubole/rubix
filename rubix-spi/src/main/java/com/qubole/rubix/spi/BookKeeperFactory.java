@@ -32,6 +32,7 @@ public class BookKeeperFactory
     {
         this.bookKeeper = bookKeeper;
     }
+
     public RetryingBookkeeperClient createBookKeeperClient(Configuration conf)
             throws TTransportException
     {

@@ -334,7 +334,7 @@ public class CachingInputStream
         }
 
         if (cachedReadRequestChain != null) {
-            chainedReadRequestChainBuilder.add(new ChainedReadRequestChain().addReadRequestChain(cachedReadRequestChain));
+            chainedReadRequestChainBuilder.add(cachedReadRequestChain);
         }
 
         if (directReadRequestChain != null ||
@@ -352,7 +352,7 @@ public class CachingInputStream
 
         if (!nonLocalRequests.isEmpty()) {
             for (NonLocalReadRequestChain nonLocalReadRequestChain1 : nonLocalRequests.values()) {
-                chainedReadRequestChainBuilder.add(new ChainedReadRequestChain().addReadRequestChain(nonLocalReadRequestChain1));
+                chainedReadRequestChainBuilder.add(nonLocalReadRequestChain1);
             }
         }
         return chainedReadRequestChainBuilder.build();

@@ -76,7 +76,6 @@ public class BookKeeper
     static int currentNodeIndex = -1;
     static int nodeListSize;
     static long splitSize;
-    private int bufferSize;
 
     public BookKeeper(Configuration conf)
     {
@@ -315,8 +314,7 @@ public class BookKeeper
        CachingNativeS3FileSystem fs = null;
        try {
            fs = new CachingNativeS3FileSystem(bookKeeperFactory, new Path(path), conf);
-           bufferSize = CacheConfig.getBufferSize(conf);
-           FSDataInputStream inputStream = fs.open(new Path(path), bufferSize);
+           FSDataInputStream inputStream = fs.open(new Path(path), length);
            inputStream.seek(readStart);
            nread = inputStream.read(buffer, 0, length);
            dataRead.data = ByteBuffer.wrap(buffer, 0, nread);
