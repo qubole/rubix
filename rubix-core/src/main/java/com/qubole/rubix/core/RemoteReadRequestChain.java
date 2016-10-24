@@ -114,7 +114,7 @@ public class RemoteReadRequestChain
                 localFile.close();
             }
         }
-        log.info(String.format("Read %d bytes from remote file, added %d to destination buffer", totalPrefixRead + totalRequestedRead + totalSuffixRead, totalRequestedRead));
+        //log.info(String.format("Read %d bytes from remote file, added %d to destination buffer", totalPrefixRead + totalRequestedRead + totalSuffixRead, totalRequestedRead));
         return totalRequestedRead;
     }
 

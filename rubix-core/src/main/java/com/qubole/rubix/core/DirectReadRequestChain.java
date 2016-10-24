@@ -67,7 +67,7 @@ public class DirectReadRequestChain extends ReadRequestChain
             }
             totalRead += nread;
         }
-        log.info(String.format("Read %d bytes directly from remote, no caching", totalRead));
+        //log.info(String.format("Read %d bytes directly from remote, no caching", totalRead));
         return totalRead;
     }
 }

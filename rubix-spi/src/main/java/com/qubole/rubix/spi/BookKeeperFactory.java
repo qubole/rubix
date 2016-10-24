@@ -17,6 +17,11 @@ import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.nio.channels.SocketChannel;
+
 /**
  * Created by sakshia on 5/10/16.
  */
@@ -49,14 +54,28 @@ public class BookKeeperFactory
         }
     }
 
-    public RetryingBookkeeperClient createBookKeeperClient(String remoteNodeName, Configuration conf)
+    public SocketChannel createBookKeeperClient(String remoteNodeName, Configuration conf)
             throws TTransportException
     {
-        TTransport transport;
+        SocketAddress sad = new InetSocketAddress(remoteNodeName, CacheConfig.getServerPort(conf));
+        SocketChannel sc = null;
+        try {
+            sc = SocketChannel.open();
+            sc.connect(sad);
+            sc.configureBlocking(true);
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+        return sc;
+
+        /*TTransport transport;
         transport = new TSocket(remoteNodeName, CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf));
         transport.open();
 
         RetryingBookkeeperClient retryingBookkeeperClient = new RetryingBookkeeperClient(transport, CacheConfig.getMaxRetries(conf));
         return retryingBookkeeperClient;
+    */
+
     }
 }

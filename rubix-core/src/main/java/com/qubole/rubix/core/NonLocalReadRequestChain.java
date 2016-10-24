@@ -25,6 +25,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.thrift.shaded.TException;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
+
 /**
  * Created by sakshia on 31/8/16.
  */
@@ -39,6 +43,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
     int directRead = 0;
     FileSystem fs;
     FSDataInputStream inputStream = null;
+    SocketChannel sc;
 
     private static final Log log = LogFactory.getLog(ReadRequestChain.class);
 
@@ -69,7 +74,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
 
         try {
             BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
-            this.bookKeeperClient = bookKeeperFactory.createBookKeeperClient(remoteNodeName, conf);
+             sc = bookKeeperFactory.createBookKeeperClient(remoteNodeName, conf);
         }
         catch (Exception e) {
             if (strictMode) {
@@ -85,7 +90,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
             int bufferLength = CacheConfig.getBufferSize(conf);
             DataRead dataRead;
 
-            while (lengthRemaining > 0) {
+            /*while (lengthRemaining > 0) {
                 if (lengthRemaining < bufferLength) {
                     bufferLength = lengthRemaining;
                 }
@@ -101,13 +106,27 @@ public class NonLocalReadRequestChain extends ReadRequestChain
                 readLength += dataRead.getSizeRead();
                 lengthRemaining = readRequest.getActualReadLength() - readLength;
                 totalRead += dataRead.getSizeRead();
+
+            }*/
+            int nread = 0;
+            long bytesread = 0;
+            while (nread != -1)  {
+                ByteBuffer dst = ByteBuffer.allocate(4096);
+                try {
+                    nread = sc.read(dst);
+                    bytesread += nread;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    nread = -1;
+                }
+                dst.rewind();
             }
         }
 
         if (bookKeeperClient != null) {
             bookKeeperClient.close();
         }
-        log.info(String.format("Read %d bytes directly from node %s", totalRead, remoteNodeName));
+        //log.info(String.format("Read %d bytes directly from node %s", totalRead, remoteNodeName));
         return totalRead;
     }
 

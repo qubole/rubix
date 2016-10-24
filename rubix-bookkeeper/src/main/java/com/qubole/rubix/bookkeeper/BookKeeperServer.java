@@ -24,6 +24,15 @@ import org.apache.thrift.shaded.transport.TServerSocket;
 import org.apache.thrift.shaded.transport.TServerTransport;
 import org.apache.thrift.shaded.transport.TTransportException;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
+
 import static com.qubole.rubix.spi.CacheConfig.getServerMaxThreads;
 import static com.qubole.rubix.spi.CacheConfig.getServerPort;
 
@@ -42,10 +51,10 @@ public class BookKeeperServer
     private static Log log = LogFactory.getLog(BookKeeperServer.class.getName());
 
     private BookKeeperServer()
-    {
-    }
+    {}
 
-    public static void main(String[] args)
+
+   /* public static void main(String[] args)
     {
         conf = new Configuration();
 
@@ -59,7 +68,7 @@ public class BookKeeperServer
         new Thread(bookKeeperServer).run();
     }
 
-    public static void startServer(Configuration conf)
+  /*  public static void startServer(Configuration conf)
     {
         bookKeeper = new BookKeeper(conf);
         processor = new BookKeeperService.Processor(bookKeeper);
@@ -79,7 +88,38 @@ public class BookKeeperServer
         }
     }
 
-    public static void stopServer()
+*/
+   static ServerSocketChannel listener = null;
+
+    protected void mySetup()
+    {
+        InetSocketAddress listenAddr = new InetSocketAddress(9026);
+
+        try {
+            listener = ServerSocketChannel.open();
+            ServerSocket ss = listener.socket();
+            ss.setReuseAddress(true);
+            ss.bind(listenAddr);
+            System.out.println("Listening on port : " + listenAddr.toString());
+        }
+        catch (IOException e) {
+            System.out.println("Failed to bind, is port : " + listenAddr.toString()
+                    + " already in use ? Error Msg : " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    public static void main(String[] args)
+    {
+        conf = new Configuration();
+        BookKeeper bookKeeper = new BookKeeper(conf);
+        BookKeeperServer dns = new BookKeeperServer();
+        dns.mySetup();
+        bookKeeper.readData(listener);
+    }
+
+
+    /*public static void stopServer()
     {
         server.stop();
     }
@@ -93,4 +133,6 @@ public class BookKeeperServer
 
         return false;
     }
+*/
+
 }

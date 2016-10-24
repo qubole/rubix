@@ -40,10 +40,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.thrift.shaded.TException;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -328,6 +332,27 @@ public class BookKeeper
        return null;
 
    }
+    public void readData(ServerSocketChannel listener) {
+        ByteBuffer dst = ByteBuffer.allocate(4096);
+        int nread = 0;
+        long bytesread = 0;
+        while (nread != -1)  {
+
+            SocketChannel conn = null;
+            try {
+                conn = listener.accept();
+
+                FileChannel fc = new FileInputStream(fname).getChannel();
+                long start = System.currentTimeMillis();
+                long nsent = 0, curnset = 0;
+                curnset = fc.transferTo(0, fc.size(), conn);
+            }
+            catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
 
     private static class CreateFileMetadataCallable
             implements Callable<FileMetadata>

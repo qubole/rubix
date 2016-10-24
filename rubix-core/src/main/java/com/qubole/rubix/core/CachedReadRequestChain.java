@@ -63,7 +63,7 @@ public class CachedReadRequestChain extends ReadRequestChain
             }
             read += nread;
         }
-        log.info(String.format("Read %d bytes from cached file", read));
+        //log.info(String.format("Read %d bytes from cached file", read));
         return read;
     }
 
