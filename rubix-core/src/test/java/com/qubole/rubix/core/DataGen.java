@@ -33,7 +33,7 @@ public class DataGen
         return stringBuilder.toString();
     }
 
-    static String generateContent()
+    public static String generateContent()
     {
         return generateContent(1);
     }
@@ -45,7 +45,7 @@ public class DataGen
     }
 
 
-    static void populateFile(String filename)
+    public static void populateFile(String filename)
             throws IOException
     {
         PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(filename, false)));

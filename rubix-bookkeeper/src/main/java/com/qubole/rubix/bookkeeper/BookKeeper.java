@@ -24,18 +24,26 @@ import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.qubole.rubix.hadoop2.hadoop2CM.Hadoop2ClusterManager;
+import com.qubole.rubix.hadoop2.hadoop2FS.CachingNativeS3FileSystem;
+import com.qubole.rubix.spi.BlockLocation;
+import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
+import com.qubole.rubix.spi.DataRead;
+import com.qubole.rubix.spi.Location;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.thrift.TException;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.Path;
+import org.apache.thrift.shaded.TException;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -53,7 +61,7 @@ import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
  * Created by stagra on 12/2/16.
  */
 public class BookKeeper
-        implements com.qubole.rubix.bookkeeper.BookKeeperService.Iface
+        implements com.qubole.rubix.spi.BookKeeperService.Iface
 {
     private static Cache<String, FileMetadata> fileMetadataCache;
     private static ClusterManager clusterManager = null;
@@ -76,7 +84,7 @@ public class BookKeeper
     }
 
     @Override
-    public List<com.qubole.rubix.bookkeeper.Location> getCacheStatus(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock, int clusterType)
+    public List<BlockLocation> getCacheStatus(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock, int clusterType)
             throws TException
     {
         initializeClusterManager(clusterType);
@@ -87,6 +95,7 @@ public class BookKeeper
         }
 
         Set<Long> localSplits = new HashSet<>();
+        Map<Long, String> blockSplits = new HashMap<>();
         long blockNumber = 0;
 
         for (long i = 0; i < fileLength; i = i + splitSize) {
@@ -101,6 +110,7 @@ public class BookKeeper
             if (nodeIndex == currentNodeIndex) {
                 localSplits.add(blockNumber);
             }
+            blockSplits.put(blockNumber, nodes.get(nodeIndex));
             blockNumber++;
         }
 
@@ -117,7 +127,7 @@ public class BookKeeper
             throw new TException(e);
         }
         endBlock = setCorrectEndBlock(endBlock, fileLength, remotePath);
-        List<Location> blocksInfo = new ArrayList<>((int) (endBlock - startBlock));
+        List<BlockLocation> blockLocations = new ArrayList<>((int) (endBlock - startBlock));
         int blockSize = CacheConfig.getBlockSize(conf);
 
         for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
@@ -125,21 +135,21 @@ public class BookKeeper
             long split = (blockNum * blockSize) / splitSize;
 
             if (md.isBlockCached(blockNum)) {
-                blocksInfo.add(Location.CACHED);
+                blockLocations.add(new BlockLocation(Location.CACHED, blockSplits.get(split)));
                 cachedRequests++;
             }
             else {
                 if (localSplits.contains(split)) {
-                    blocksInfo.add(Location.LOCAL);
+                    blockLocations.add(new BlockLocation(Location.LOCAL, blockSplits.get(split)));
                     remoteRequests++;
                 }
                 else {
-                    blocksInfo.add(Location.NON_LOCAL);
+                    blockLocations.add(new BlockLocation(Location.NON_LOCAL, blockSplits.get(split)));
                 }
             }
         }
 
-        return blocksInfo;
+        return blockLocations;
     }
 
     private void initializeClusterManager(int clusterType)
@@ -181,7 +191,6 @@ public class BookKeeper
 
     @Override
     public void setAllCached(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock)
-            throws TException
     {
         FileMetadata md;
         md = fileMetadataCache.getIfPresent(remotePath);
@@ -208,8 +217,8 @@ public class BookKeeper
     public Map getCacheStats()
     {
         Map<String, Double> stats = new HashMap<String, Double>();
-        stats.put("Cache Hit Rate", ((double) cachedRequests / totalRequests));
-        stats.put("Cache Miss Rate", ((double) (totalRequests - cachedRequests) / totalRequests));
+        stats.put("Cache Hit Rate", ((double) cachedRequests / (cachedRequests + remoteRequests)));
+        stats.put("Cache Miss Rate", ((double) (remoteRequests) / (cachedRequests + remoteRequests)));
         stats.put("Cache Reads", ((double) cachedRequests));
         stats.put("Remote Reads", ((double) remoteRequests));
         stats.put("Non-Local Reads", ((double) (totalRequests - cachedRequests - remoteRequests)));
@@ -295,6 +304,30 @@ public class BookKeeper
                 })
                 .build();
     }
+
+   public DataRead readData(String path, long readStart, int length)
+   {
+       DataRead dataRead = new DataRead();
+       byte[] buffer = new byte[length];
+       int nread;
+       BookKeeperFactory bookKeeperFactory = new BookKeeperFactory(this);
+       CachingNativeS3FileSystem fs = null;
+       try {
+           fs = new CachingNativeS3FileSystem(bookKeeperFactory, new Path(path), conf);
+           FSDataInputStream inputStream = fs.open(new Path(path), length);
+           inputStream.seek(readStart);
+           nread = inputStream.read(buffer, 0, length);
+           dataRead.data = ByteBuffer.wrap(buffer, 0, nread);
+           dataRead.sizeRead = nread;
+           inputStream.close();
+           return dataRead;
+       }
+       catch (IOException e) {
+           e.printStackTrace();
+       }
+       return null;
+
+   }
 
     private static class CreateFileMetadataCallable
             implements Callable<FileMetadata>

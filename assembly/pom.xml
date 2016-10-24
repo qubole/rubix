@@ -48,6 +48,12 @@
             <artifactId>rubix-hadoop2FS</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.qubole.rubix</groupId>
+            <artifactId>rubix-tests</artifactId>
+        </dependency>
+
+
 
     </dependencies>
 

@@ -10,19 +10,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-package com.qubole.rubix.bookkeeper;
+package com.qubole.rubix.spi;
 
 /**
  * Created by sakshia on 27/9/16.
  */
 
-import com.qubole.rubix.spi.CacheConfig;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
-import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
-import org.apache.thrift.transport.TTransportException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +27,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Callable;
 
-public final class RetryingBookkeeperClient
+public class RetryingBookkeeperClient
         extends BookKeeperService.Client
         implements Closeable
 {
@@ -46,25 +42,14 @@ public final class RetryingBookkeeperClient
         this.maxRetries = maxRetries;
     }
 
-    public static RetryingBookkeeperClient createBookKeeperClient(Configuration conf)
-            throws TTransportException
-    {
-        TTransport transport;
-        transport = new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf));
-        transport.open();
-
-        RetryingBookkeeperClient retryingBookkeeperClient = new RetryingBookkeeperClient(transport, CacheConfig.getMaxRetries(conf));
-        return retryingBookkeeperClient;
-    }
-
     @Override
-    public List<Location> getCacheStatus(final String remotePath, final long fileLength, final long lastModified, final long startBlock, final long endBlock, final int clusterType)
+    public List<BlockLocation> getCacheStatus(final String remotePath, final long fileLength, final long lastModified, final long startBlock, final long endBlock, final int clusterType)
             throws TException
     {
-        return retryConnection(new Callable<List<Location>>()
+        return retryConnection(new Callable<List<BlockLocation>>()
         {
             @Override
-            public List<Location> call()
+            public List<BlockLocation> call()
                     throws TException
             {
                 return RetryingBookkeeperClient.super.getCacheStatus(remotePath, fileLength, lastModified, startBlock, endBlock, clusterType);
@@ -100,7 +85,7 @@ public final class RetryingBookkeeperClient
                 return callable.call();
             }
             catch (Exception e) {
-                LOG.info("Error while connecting" + e.getStackTrace().toString());
+                LOG.info("Error while connecting" + e.getStackTrace());
                 errors++;
             }
             if (transport.isOpen()) {

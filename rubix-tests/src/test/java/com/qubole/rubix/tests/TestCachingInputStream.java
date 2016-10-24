@@ -10,10 +10,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-package com.qubole.rubix.core;
+package com.qubole.rubix.tests;
 
-import com.qubole.rubix.bookkeeper.BookKeeperServer;
+import com.qubole.rubix.core.CachingFileSystemStats;
+import com.qubole.rubix.core.CachingInputStream;
+import com.qubole.rubix.core.DataGen;
+import com.qubole.rubix.core.LocalFSInputStream;
+import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.bookkeeper.BookKeeperServer;
 import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -71,6 +76,7 @@ public class TestCachingInputStream
         }
 
         createCachingStream(conf);
+
     }
 
     public void createCachingStream(Configuration conf)
@@ -87,7 +93,8 @@ public class TestCachingInputStream
         log.info("All set to test");
 
         // This should be after server comes up else client could not be created
-        inputStream = new CachingInputStream(fsDataInputStream, conf, backendPath, file.length(), file.lastModified(), new CachingFileSystemStats(), 64 * 1024 * 1024, ClusterType.TEST_CLUSTER_MANAGER);
+        inputStream = new CachingInputStream(fsDataInputStream, conf, backendPath, file.length(),file.lastModified(), new CachingFileSystemStats(), 64*1024*1024, ClusterType.TEST_CLUSTER_MANAGER, new BookKeeperFactory());
+
     }
 
     @AfterMethod
@@ -210,6 +217,7 @@ public class TestCachingInputStream
 
         readSize = inputStream.read(buffer, 100, 100);
         assertTrue("Did not get EOF", readSize == -1);
+
     }
 
     private void assertions(int readSize, int expectedReadSize, byte[] outputBuffer, String expectedOutput)

@@ -60,6 +60,7 @@ public class CacheConfig
     public static String dataCacheBookkeeperMaxThreadsConf = "hadoop.cache.data.bookkeeper.max-threads";
     private static String clientTimeoutConf = "hadoop.cache.data.client.timeout";
     private static String maxRetriesConf = "hadoop.cache.data.client.num-retries";
+    private static String bufferSizeConf = "hadoop.cache.data.buffer.size";
     static String fileCacheDirSuffixConf = "/fcache/";
     static int maxDisksConf = 5;
 
@@ -72,6 +73,7 @@ public class CacheConfig
     private static final int blockSize = 1 * 1024 * 1024; // 1MB
     private static int serverPort = 8899;
     private static int serverMaxThreads = Integer.MAX_VALUE;
+    public static int bufferSize = 10 * 1024 * 1024;
 
     private CacheConfig()
     {
@@ -142,6 +144,7 @@ public class CacheConfig
                         if (exists(dirPrefix + i)) {
                             File dir = new File(dirPrefix + i + fileCacheDirSuffixConf);
                             dir.mkdir();
+                            dir.setWritable(true, false);
                             dirPathMap.put(ndisks, dirPrefix + i);
                             ++ndisks;
                         }
@@ -189,6 +192,7 @@ public class CacheConfig
         String absLocation = getLocalDirFor(remotePath, conf) + relLocation;
         File parent = new File(absLocation);
         parent.mkdirs();
+        parent.setWritable(true, false);
         return absLocation;
     }
 
@@ -336,5 +340,10 @@ public class CacheConfig
     static void setCacheDataChosenColumns(Configuration c, int chosen)
     {
         c.setInt(DATA_CACHE_TABLE_COLS_CHOSEN, chosen);
+    }
+
+    public static int getBufferSize(Configuration c)
+    {
+        return c.getInt(bufferSizeConf, bufferSize);
     }
 }
