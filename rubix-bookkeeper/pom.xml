@@ -22,12 +22,6 @@
     </pluginRepositories>
 
     <dependencies>
-        <dependency>
-            <groupId>org.apache.thrift</groupId>
-            <artifactId>libthrift</artifactId>
-            <version>0.9.2</version>
-            <scope>provided</scope>
-        </dependency>
 
         <dependency>
             <groupId>commons-logging</groupId>

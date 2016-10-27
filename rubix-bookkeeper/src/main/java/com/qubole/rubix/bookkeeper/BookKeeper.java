@@ -309,48 +309,43 @@ public class BookKeeper
                 .build();
     }
 
-   public DataRead readData(String path, long readStart, int length)
+   public boolean readData(String path, int offset, int length)
+           throws TException
    {
        DataRead dataRead = new DataRead();
-       byte[] buffer = new byte[length];
+
+       int blockSize = CacheConfig.getBlockSize(conf);
+       byte[] buffer = new byte[blockSize];
+       Path p = new Path(path);
        int nread;
        BookKeeperFactory bookKeeperFactory = new BookKeeperFactory(this);
        CachingNativeS3FileSystem fs = null;
+       int startBlock = offset/blockSize;
        try {
            fs = new CachingNativeS3FileSystem(bookKeeperFactory, new Path(path), conf);
-           FSDataInputStream inputStream = fs.open(new Path(path), length);
-           inputStream.seek(readStart);
-           nread = inputStream.read(buffer, 0, length);
-           dataRead.data = ByteBuffer.wrap(buffer, 0, nread);
-           dataRead.sizeRead = nread;
+           FSDataInputStream inputStream = fs.open(new Path(path), blockSize);
+           long endBlock = ((offset + (length - 1)) / CacheConfig.getBlockSize(conf)) + 1;
+           int idx=0;
+           List<BlockLocation> blockLocations = getCacheStatus(path, fs.getLength(p), fs.getFileStatus(p).getModificationTime(), startBlock,endBlock, fs.getClusterManager().getClusterType().ordinal());
+           for (int blockNum = 0; blockNum < endBlock; blockNum++, idx++) {
+               if (blockLocations.get(idx).getLocation() == Location.LOCAL) {
+                   int readStart = blockNum * blockSize;
+                   inputStream.seek(readStart);
+                   nread = inputStream.read(buffer, readStart, blockSize);
+               }
+           }
            inputStream.close();
-           return dataRead;
+           return true;
        }
        catch (IOException e) {
            e.printStackTrace();
+           return false;
        }
-       return null;
-
    }
-    public void readData(ServerSocketChannel listener) {
-        ByteBuffer dst = ByteBuffer.allocate(4096);
-        int nread = 0;
-        long bytesread = 0;
-        while (nread != -1)  {
 
-            SocketChannel conn = null;
-            try {
-                conn = listener.accept();
-
-                FileChannel fc = new FileInputStream(fname).getChannel();
-                long start = System.currentTimeMillis();
-                long nsent = 0, curnset = 0;
-                curnset = fc.transferTo(0, fc.size(), conn);
-            }
-            catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+    public boolean readData(String path, long readStart)
+    {
+        //String remotePath, long fileLength, long lastModified, long startBlock, long endBlock, int clusterType
     }
 
 

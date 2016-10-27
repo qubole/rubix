@@ -57,7 +57,7 @@ public class BookKeeperFactory
     public SocketChannel createBookKeeperClient(String remoteNodeName, Configuration conf)
             throws TTransportException
     {
-        SocketAddress sad = new InetSocketAddress(remoteNodeName, CacheConfig.getServerPort(conf));
+        SocketAddress sad = new InetSocketAddress(remoteNodeName, 6666);
         SocketChannel sc = null;
         try {
             sc = SocketChannel.open();

@@ -88,6 +88,11 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
         this.clusterManager = clusterManager;
     }
 
+    public ClusterManager getClusterManager()
+    {
+        return this.clusterManager;
+    }
+
     public void setBookKeeper(BookKeeperFactory bookKeeperFactory, Configuration conf)
     {
         this.bookKeeperFactory = bookKeeperFactory;

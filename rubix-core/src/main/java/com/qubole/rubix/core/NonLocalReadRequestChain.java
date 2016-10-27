@@ -112,14 +112,17 @@ public class NonLocalReadRequestChain extends ReadRequestChain
             long bytesread = 0;
             while (nread != -1)  {
                 ByteBuffer dst = ByteBuffer.allocate(4096);
-                try {
-                    nread = sc.read(dst);
-                    bytesread += nread;
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    nread = -1;
+                if (sc.isConnected()) {
+                    try {
+
+                        nread = sc.read(dst);
+                        bytesread += nread;
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        nread = -1;
+                    }
+                    dst.rewind();
                 }
-                dst.rewind();
             }
         }
 
