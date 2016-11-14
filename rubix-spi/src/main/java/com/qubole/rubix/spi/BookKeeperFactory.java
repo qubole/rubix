@@ -54,28 +54,13 @@ public class BookKeeperFactory
         }
     }
 
-    public SocketChannel createBookKeeperClient(String remoteNodeName, Configuration conf)
-            throws TTransportException
+    public SocketChannel createTransferClient(String remoteNodeName, Configuration conf)
+            throws IOException
     {
-        SocketAddress sad = new InetSocketAddress(remoteNodeName, 6666);
-        SocketChannel sc = null;
-        try {
-            sc = SocketChannel.open();
-            sc.connect(sad);
-            sc.configureBlocking(true);
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-        }
+        SocketAddress sad = new InetSocketAddress(remoteNodeName, CacheConfig.getLocalServerPort(conf));
+        SocketChannel sc = SocketChannel.open();
+        sc.configureBlocking(true);
+        sc.socket().connect(sad, 60000); //timeout in ms
         return sc;
-
-        /*TTransport transport;
-        transport = new TSocket(remoteNodeName, CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf));
-        transport.open();
-
-        RetryingBookkeeperClient retryingBookkeeperClient = new RetryingBookkeeperClient(transport, CacheConfig.getMaxRetries(conf));
-        return retryingBookkeeperClient;
-    */
-
     }
 }

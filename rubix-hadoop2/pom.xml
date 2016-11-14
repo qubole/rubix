@@ -9,21 +9,11 @@
 
     <groupId>com.qubole.rubix</groupId>
     <artifactId>rubix-hadoop2</artifactId>
-    <packaging>pom</packaging>
-
-    <modules>
-        <module>rubix-hadoop2CM</module>
-        <module>rubix-hadoop2FS</module>
-    </modules>
 
     <properties>
         <main.basedir>${project.parent.basedir}</main.basedir>
     </properties>
     <dependencies>
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-        </dependency>
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
@@ -38,10 +28,35 @@
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
-            <version>2.2.4</version>
+            <version>2.7</version>
             <scope>provided</scope>
         </dependency>
-
+        <dependency>
+            <groupId>com.qubole.rubix</groupId>
+            <artifactId>rubix-spi</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>19.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.qubole.rubix</groupId>
+            <artifactId>rubix-spi</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-yarn-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.qubole.rubix</groupId>
+            <artifactId>rubix-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-aws</artifactId>
+            <version>2.6.0</version>
+        </dependency>
     </dependencies>
 
     <build>

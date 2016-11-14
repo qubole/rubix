@@ -88,11 +88,6 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
         this.clusterManager = clusterManager;
     }
 
-    public ClusterManager getClusterManager()
-    {
-        return this.clusterManager;
-    }
-
     public void setBookKeeper(BookKeeperFactory bookKeeperFactory, Configuration conf)
     {
         this.bookKeeperFactory = bookKeeperFactory;
@@ -129,7 +124,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
         return new FSDataInputStream(
                 new BufferedFSInputStream(
                         new CachingInputStream(inputStream, this, path, this.getConf(), statsMBean,
-                                               clusterManager.getSplitSize(), clusterManager.getClusterType(), bookKeeperFactory, fs),
+                                clusterManager.getClusterType(), bookKeeperFactory, fs),
                                                     CacheConfig.getBlockSize(getConf())));
     }
 
@@ -246,7 +241,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
                     String[] name = new String[]{nodes.get(nodeIndex)};
                     String[] host = new String[]{nodes.get(nodeIndex)};
                     blockLocations[blockNumber++] = new BlockLocation(name, host, i, end - i);
-                    log.info(String.format("BlockLocation %s %d %d %s totalHosts: %s", file.getPath().toString(), i, end - i, host[0], nodes.size()));
+                    log.debug(String.format("BlockLocation %s %d %d %s totalHosts: %s", file.getPath().toString(), i, end - i, host[0], nodes.size()));
                 }
 
                 return blockLocations;

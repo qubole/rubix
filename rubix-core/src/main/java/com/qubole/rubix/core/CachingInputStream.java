@@ -71,11 +71,10 @@ public class CachingInputStream
     private Configuration conf;
 
     private boolean strictMode = false;
-    private long splitSize;
     ClusterType clusterType;
     FileSystem remoteFileSystem;
 
-    public CachingInputStream(FSDataInputStream parentInputStream, FileSystem parentFs, Path backendPath, Configuration conf, CachingFileSystemStats statsMbean, long splitSize, ClusterType clusterType, BookKeeperFactory bookKeeperFactory, FileSystem remoteFileSystem)
+    public CachingInputStream(FSDataInputStream parentInputStream, FileSystem parentFs, Path backendPath, Configuration conf, CachingFileSystemStats statsMbean, ClusterType clusterType, BookKeeperFactory bookKeeperFactory, FileSystem remoteFileSystem)
             throws IOException
     {
         this.remotePath = backendPath.toString();
@@ -85,13 +84,11 @@ public class CachingInputStream
         initialize(parentInputStream,
                 conf, bookKeeperFactory);
         this.statsMbean = statsMbean;
-        this.splitSize = splitSize;
         this.clusterType = clusterType;
-
     }
 
     @VisibleForTesting
-    public CachingInputStream(FSDataInputStream parentInputStream, Configuration conf, Path backendPath, long size, long lastModified, CachingFileSystemStats statsMbean, long splitSize, ClusterType clusterType, BookKeeperFactory bookKeeperFactory)
+    public CachingInputStream(FSDataInputStream parentInputStream, Configuration conf, Path backendPath, long size, long lastModified, CachingFileSystemStats statsMbean, ClusterType clusterType, BookKeeperFactory bookKeeperFactory)
             throws IOException
     {
         this.remotePath = backendPath.toString();
@@ -99,7 +96,6 @@ public class CachingInputStream
         this.lastModified = lastModified;
         initialize(parentInputStream, conf, bookKeeperFactory);
         this.statsMbean = statsMbean;
-        this.splitSize = splitSize;
         this.clusterType = clusterType;
     }
 
@@ -193,6 +189,7 @@ public class CachingInputStream
                 length);
 
         log.debug("Executing Chains");
+
         // start read requests
         ImmutableList.Builder builder = ImmutableList.builder();
         int sizeRead = 0;
@@ -318,7 +315,7 @@ public class CachingInputStream
                     String remoteLocation = isCached.get(idx).getRemoteLocation();
                     log.debug(String.format("Sending block %d to NonLocalReadRequestChain to node : %s", blockNum, remoteLocation));
                     if (!nonLocalRequests.containsKey(remoteLocation)) {
-                        NonLocalReadRequestChain nonLocalReadRequestChain = new NonLocalReadRequestChain(remoteLocation, conf, remoteFileSystem, remotePath);
+                        NonLocalReadRequestChain nonLocalReadRequestChain = new NonLocalReadRequestChain(remoteLocation, fileSize, lastModified, conf, remoteFileSystem, remotePath, clusterType.ordinal());
                         nonLocalRequests.put(remoteLocation, nonLocalReadRequestChain);
                     }
                     nonLocalRequests.get(remoteLocation).addReadRequest(readRequest);

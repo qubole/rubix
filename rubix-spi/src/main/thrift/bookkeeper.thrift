@@ -14,13 +14,6 @@ struct BlockLocation {
     2: required string remoteLocation;
 }
 
-struct DataRead {
-    1: binary data
-    2: i32 sizeRead
-}
-
-
-
 service BookKeeperService
 {
     list<BlockLocation> getCacheStatus(1:string remotePath, 2:long fileLength, 3:long lastModified, 4:long startBlock, 5:long endBlock, 6:int clusterType)
@@ -29,5 +22,5 @@ service BookKeeperService
 
     map<string,double> getCacheStats()
 
-    DataRead readData(1:string path, 2:long readStart, 3:int length)
+    bool readData(1:string path, 2:long readStart, 3:int length, 4:long fileSize, 5:long lastModified, 6:int clusterType)
 }

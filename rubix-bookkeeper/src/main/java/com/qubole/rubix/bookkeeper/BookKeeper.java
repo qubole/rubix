@@ -23,14 +23,13 @@ import com.google.common.cache.Weigher;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import com.qubole.rubix.hadoop2.hadoop2CM.Hadoop2ClusterManager;
-import com.qubole.rubix.hadoop2.hadoop2FS.CachingNativeS3FileSystem;
+import com.qubole.rubix.hadoop2.Hadoop2ClusterManager;
+import com.qubole.rubix.hadoop2.CachingNativeS3FileSystem;
 import com.qubole.rubix.spi.BlockLocation;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
-import com.qubole.rubix.spi.DataRead;
 import com.qubole.rubix.spi.Location;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -40,14 +39,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.thrift.shaded.TException;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -98,7 +92,6 @@ public class BookKeeper
             return null;
         }
 
-        Set<Long> localSplits = new HashSet<>();
         Map<Long, String> blockSplits = new HashMap<>();
         long blockNumber = 0;
 
@@ -111,9 +104,6 @@ public class BookKeeper
             HashFunction hf = Hashing.md5();
             HashCode hc = hf.hashString(key, Charsets.UTF_8);
             int nodeIndex = Hashing.consistentHash(hc, nodeListSize);
-            if (nodeIndex == currentNodeIndex) {
-                localSplits.add(blockNumber);
-            }
             blockSplits.put(blockNumber, nodes.get(nodeIndex));
             blockNumber++;
         }
@@ -143,7 +133,7 @@ public class BookKeeper
                 cachedRequests++;
             }
             else {
-                if (localSplits.contains(split)) {
+                if (blockSplits.get(split).equalsIgnoreCase(nodes.get(currentNodeIndex))) {
                     blockLocations.add(new BlockLocation(Location.LOCAL, blockSplits.get(split)));
                     remoteRequests++;
                 }
@@ -195,6 +185,7 @@ public class BookKeeper
 
     @Override
     public void setAllCached(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock)
+            throws  TException
     {
         FileMetadata md;
         md = fileMetadataCache.getIfPresent(remotePath);
@@ -309,32 +300,35 @@ public class BookKeeper
                 .build();
     }
 
-   public boolean readData(String path, int offset, int length)
+    @Override
+   public boolean readData(String path, long offset, int length, long fileSize, long lastModified, int clusterType)
            throws TException
    {
-       DataRead dataRead = new DataRead();
-
        int blockSize = CacheConfig.getBlockSize(conf);
        byte[] buffer = new byte[blockSize];
-       Path p = new Path(path);
-       int nread;
        BookKeeperFactory bookKeeperFactory = new BookKeeperFactory(this);
        CachingNativeS3FileSystem fs = null;
-       int startBlock = offset/blockSize;
+       FSDataInputStream inputStream = null;
+       long startBlock = offset / blockSize;
+       long endBlock = ((offset + (length - 1)) / CacheConfig.getBlockSize(conf)) + 1;
        try {
-           fs = new CachingNativeS3FileSystem(bookKeeperFactory, new Path(path), conf);
-           FSDataInputStream inputStream = fs.open(new Path(path), blockSize);
-           long endBlock = ((offset + (length - 1)) / CacheConfig.getBlockSize(conf)) + 1;
-           int idx=0;
-           List<BlockLocation> blockLocations = getCacheStatus(path, fs.getLength(p), fs.getFileStatus(p).getModificationTime(), startBlock,endBlock, fs.getClusterManager().getClusterType().ordinal());
-           for (int blockNum = 0; blockNum < endBlock; blockNum++, idx++) {
+           int idx = 0;
+           List<BlockLocation> blockLocations = getCacheStatus(path, fileSize, lastModified, startBlock, endBlock, clusterType);
+
+           for (int blockNum = (int) startBlock; blockNum < endBlock; blockNum++, idx++) {
+               int readStart = blockNum * blockSize;
                if (blockLocations.get(idx).getLocation() == Location.LOCAL) {
-                   int readStart = blockNum * blockSize;
+                   if (fs == null) {
+                       fs = new CachingNativeS3FileSystem(bookKeeperFactory, new Path(path), conf);
+                       inputStream = fs.open(new Path(path), blockSize);
+                   }
                    inputStream.seek(readStart);
-                   nread = inputStream.read(buffer, readStart, blockSize);
+                   inputStream.read(buffer, 0, blockSize);
                }
            }
-           inputStream.close();
+           if (inputStream != null) {
+               inputStream.close();
+           }
            return true;
        }
        catch (IOException e) {
@@ -342,12 +336,6 @@ public class BookKeeper
            return false;
        }
    }
-
-    public boolean readData(String path, long readStart)
-    {
-        //String remotePath, long fileLength, long lastModified, long startBlock, long endBlock, int clusterType
-    }
-
 
     private static class CreateFileMetadataCallable
             implements Callable<FileMetadata>

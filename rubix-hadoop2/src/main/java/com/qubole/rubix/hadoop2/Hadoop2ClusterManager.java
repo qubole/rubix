@@ -10,7 +10,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-package com.qubole.rubix.hadoop2.hadoop2CM;
+package com.qubole.rubix.hadoop2;
 
 import com.google.common.base.Throwables;
 import com.google.common.cache.CacheBuilder;

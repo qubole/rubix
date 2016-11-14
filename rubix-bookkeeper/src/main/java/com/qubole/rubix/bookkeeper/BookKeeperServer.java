@@ -44,7 +44,6 @@ public class BookKeeperServer
     private BookKeeperServer()
     {}
 
-
     public static void main(String[] args)
     {
         conf = new Configuration();
@@ -52,16 +51,13 @@ public class BookKeeperServer
         Runnable bookKeeperServer = new Runnable() {
             public void run()
             {
-                BookKeeper bookKeeper = startServer(conf);
-                LocalTransferServer localTransferServer = new LocalTransferServer();
-                LocalTransferServer.mySetup(bookKeeper);
+                startServer(conf);
             }
         };
-
         new Thread(bookKeeperServer).run();
     }
 
-    public static BookKeeper startServer(Configuration conf)
+    public static void startServer(Configuration conf)
     {
         bookKeeper = new BookKeeper(conf);
         processor = new BookKeeperService.Processor(bookKeeper);
@@ -74,17 +70,12 @@ public class BookKeeperServer
                     .maxWorkerThreads(getServerMaxThreads(conf)));
 
             server.serve();
-            return bookKeeper;
         }
         catch (TTransportException e) {
             e.printStackTrace();
-            log.error(String.format("Error starting server %s", Throwables.getStackTraceAsString(e)));
+            log.error(String.format("Error starting BookKeeper server %s", Throwables.getStackTraceAsString(e)));
         }
     }
-
-
-
-
 
     public static void stopServer()
     {
@@ -100,6 +91,4 @@ public class BookKeeperServer
 
         return false;
     }
-
-
 }

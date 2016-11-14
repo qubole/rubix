@@ -10,10 +10,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-package com.qubole.rubix.hadoop2.hadoop2FS;
+package com.qubole.rubix.hadoop2;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.core.CachingFileSystem;
-import com.qubole.rubix.hadoop2.hadoop2CM.Hadoop2ClusterManager;
 import com.qubole.rubix.spi.ClusterManager;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
