@@ -35,6 +35,7 @@ import java.util.concurrent.Executors;
 /**
  * Created by sakshia on 26/10/16.
  */
+
 public class LocalTransferServer
 {
     private static Log log = LogFactory.getLog(LocalTransferServer.class.getName());
@@ -59,13 +60,11 @@ public class LocalTransferServer
 
     public static void stopServer()
     {
-        log.info("Stopping server");
         localServer.stop();
     }
 
     public static class LocalServer implements Runnable
     {
-        private volatile boolean shutdown = false;
         static ServerSocketChannel listener;
         Configuration conf;
 
@@ -78,12 +77,11 @@ public class LocalTransferServer
         public void run()
         {
             int port = CacheConfig.getLocalServerPort(conf);
-            InetSocketAddress listenAddr = new InetSocketAddress(port);
 
             ExecutorService threadPool = Executors.newCachedThreadPool();
             try {
                 listener = ServerSocketChannel.open();
-                listener.bind(listenAddr);
+                listener.bind(new InetSocketAddress(port));
                 log.info("Listening on port " + port);
                 while (true) {
                     SocketChannel clientSocket = listener.accept();
@@ -127,7 +125,7 @@ public class LocalTransferServer
         public void run()
         {
             try {
-                log.debug(" : Address - " + localTransferClient.getLocalAddress());
+                log.debug("Connected to node - " + localTransferClient.getLocalAddress());
                 BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
                 ByteBuffer dataInfo = ByteBuffer.allocate(1024);
 
@@ -144,10 +142,10 @@ public class LocalTransferServer
                 long fileSize = dataInfo.getLong();
                 long lastModified = dataInfo.getLong();
                 int clusterType = dataInfo.getInt();
-                int fileLength = dataInfo.getInt();
-                byte[] bytes = new byte[fileLength];
-                dataInfo.get(bytes);
-                String remotePath = new String(bytes);
+                int filePathLength = dataInfo.getInt();
+                byte[] fileBytes = new byte[filePathLength];
+                dataInfo.get(fileBytes);
+                String remotePath = new String(fileBytes);
                 bookKeeperClient = bookKeeperFactory.createBookKeeperClient(conf);
                 if (!bookKeeperClient.readData(remotePath, offset, readLength, fileSize, lastModified, clusterType)) {
                     localTransferClient.close();

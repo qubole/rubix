@@ -60,7 +60,7 @@ public class BookKeeperFactory
         SocketAddress sad = new InetSocketAddress(remoteNodeName, CacheConfig.getLocalServerPort(conf));
         SocketChannel sc = SocketChannel.open();
         sc.configureBlocking(true);
-        sc.socket().connect(sad, 60000); //timeout in ms
+        sc.socket().connect(sad, CacheConfig.getClientTimeout(conf));
         return sc;
     }
 }
