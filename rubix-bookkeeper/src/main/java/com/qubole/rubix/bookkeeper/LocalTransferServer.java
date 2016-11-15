@@ -127,7 +127,7 @@ public class LocalTransferServer
             try {
                 log.debug("Connected to node - " + localTransferClient.getLocalAddress());
                 BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
-                ByteBuffer dataInfo = ByteBuffer.allocate(1024);
+                ByteBuffer dataInfo = ByteBuffer.allocate(CacheConfig.getDataTransferBufferSize(conf));
 
                 int read = localTransferClient.read(dataInfo);
                 if (read == -1) {
@@ -146,8 +146,14 @@ public class LocalTransferServer
                 byte[] fileBytes = new byte[filePathLength];
                 dataInfo.get(fileBytes);
                 String remotePath = new String(fileBytes);
-                bookKeeperClient = bookKeeperFactory.createBookKeeperClient(conf);
-                if (!bookKeeperClient.readData(remotePath, offset, readLength, fileSize, lastModified, clusterType)) {
+                try {
+                    bookKeeperClient = bookKeeperFactory.createBookKeeperClient(conf);
+                    if (!bookKeeperClient.readData(remotePath, offset, readLength, fileSize, lastModified, clusterType)) {
+                        localTransferClient.close();
+                    }
+                }
+                catch (TException e) {
+                    log.info("Could not create BookKeeper client" + Throwables.getStackTraceAsString(e));
                     localTransferClient.close();
                 }
 
@@ -170,8 +176,9 @@ public class LocalTransferServer
                 fc.close();
                 localTransferClient.close();
             }
-            catch (IOException | TException e) {
+            catch (IOException e) {
                 try {
+                    e.printStackTrace();
                     localTransferClient.close();
                 }
                 catch (IOException e1) {

@@ -14,6 +14,7 @@ package com.qubole.rubix.core;
 
 import com.google.common.base.Throwables;
 import com.qubole.rubix.spi.BookKeeperFactory;
+import com.qubole.rubix.spi.CacheConfig;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -86,7 +87,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
 
         for (ReadRequest readRequest : readRequests) {
             int nread = 0;
-            ByteBuffer buf = ByteBuffer.allocate(1024);
+            ByteBuffer buf = ByteBuffer.allocate(CacheConfig.getDataTransferBufferSize(conf));
             /* order is: long : offset, int : readLength, long : fileSize, long : lastModified,
                 int : clusterType, int : filePathLength, String : filePath */
             buf.putLong(readRequest.getActualReadStart());
@@ -102,6 +103,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
                     transferClient.write(buf);
                 }
                 catch (IOException e) {
+                    e.printStackTrace();
                     transferClient.close();
                     return directReadRequest(readRequests.indexOf(readRequest));
                 }
@@ -118,13 +120,16 @@ public class NonLocalReadRequestChain extends ReadRequestChain
                         totalRead += nread;
                     }
                     catch (IOException e) {
+                        e.printStackTrace();
                         return directReadRequest(readRequests.indexOf(readRequest));
                     }
-                    dst.position(bytesread + readRequest.getDestBufferOffset());
                 }
                 if (nread == -1) {
+                    totalRead += 1;
+                    log.info("Error in Local Transfer Server");
                     return directReadRequest(readRequests.indexOf(readRequest));
                 }
+                dst.position(bytesread + readRequest.getDestBufferOffset());
             }
 
             transferClient.close();

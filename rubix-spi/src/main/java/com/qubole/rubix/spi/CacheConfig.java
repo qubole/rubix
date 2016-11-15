@@ -62,6 +62,7 @@ public class CacheConfig
     private static String maxRetriesConf = "hadoop.cache.data.client.num-retries";
     private static String bufferSizeConf = "hadoop.cache.data.buffer.size";
     public static String localServerPortConf = "hadoop.cache.data.local.server.port";
+    private static String dataTransferBufferSizeConf = "hadoop.cache.data.transfer.buffer.size";
     static String fileCacheDirSuffixConf = "/fcache/";
     static int maxDisksConf = 5;
 
@@ -75,6 +76,8 @@ public class CacheConfig
     private static int serverPort = 8899;
     private static int serverMaxThreads = Integer.MAX_VALUE;
     public static int bufferSize = 10 * 1024 * 1024;
+
+
     private CacheConfig()
     {
     }
@@ -350,5 +353,10 @@ public class CacheConfig
     public static int getLocalServerPort(Configuration conf)
     {
         return conf.getInt(localServerPortConf, 6666);
+    }
+
+    public static int getDataTransferBufferSize(Configuration conf)
+    {
+        return conf.getInt(dataTransferBufferSizeConf, 1024);
     }
 }
