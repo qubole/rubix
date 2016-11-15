@@ -54,8 +54,8 @@ NOTE: The master branch is not compatible with Presto and Hadoop1. Use RubiX ver
 	    All these jars are packaged in rubix-hadoop2.tar under assembly module.
 	    
 2. Configuration changes: Use following configs to start using RubiX:
-		fs.s3n.impl=com.qubole.rubix.hadoop2.hadoop2FS.CachingNativeS3FileSystem
-		fs.s3.impl=com.qubole.rubix.hadoop2.hadoop2FS.CachingNativeS3FileSystem
+		fs.s3n.impl=com.qubole.rubix.hadoop2.CachingNativeS3FileSystem
+		fs.s3.impl=com.qubole.rubix.hadoop2.CachingNativeS3FileSystem
 		
 3. Optional Configs for better Hadoop scheduling:
 
