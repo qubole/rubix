@@ -23,8 +23,8 @@ import com.google.common.cache.Weigher;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import com.qubole.rubix.hadoop2.Hadoop2ClusterManager;
 import com.qubole.rubix.hadoop2.CachingNativeS3FileSystem;
+import com.qubole.rubix.hadoop2.Hadoop2ClusterManager;
 import com.qubole.rubix.spi.BlockLocation;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
@@ -84,7 +84,6 @@ public class BookKeeper
             throws TException
     {
         initializeClusterManager(clusterType);
-
         if (nodeName == null) {
             log.error("Node name is null for Cluster Type" + ClusterType.findByValue(clusterType));
             return null;
@@ -131,7 +130,7 @@ public class BookKeeper
                 cachedRequests++;
             }
             else {
-                if (blockSplits.get(split).equalsIgnoreCase(nodes.get(currentNodeIndex))) {
+                if (currentNodeIndex != -1 && blockSplits.get(split).equalsIgnoreCase(nodes.get(currentNodeIndex))) {
                     blockLocations.add(new BlockLocation(Location.LOCAL, blockSplits.get(split)));
                     remoteRequests++;
                 }
@@ -183,7 +182,7 @@ public class BookKeeper
 
     @Override
     public void setAllCached(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock)
-            throws  TException
+            throws TException
     {
         FileMetadata md;
         md = fileMetadataCache.getIfPresent(remotePath);
