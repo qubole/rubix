@@ -20,6 +20,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.qubole.rubix.spi.ClusterManager;
+import com.qubole.rubix.spi.ClusterType;
 import io.airlift.http.client.FullJsonResponseHandler;
 import io.airlift.http.client.HttpClient;
 import io.airlift.http.client.HttpStatus;
@@ -166,6 +167,12 @@ public class PrestoClusterManager extends ClusterManager
     public List<String> getNodes()
     {
         return nodesSupplier.get();
+    }
+
+    @Override
+    public ClusterType getClusterType()
+    {
+        return ClusterType.PRESTO_CLUSTER_MANAGER;
     }
 
     private URI getNodeUri()

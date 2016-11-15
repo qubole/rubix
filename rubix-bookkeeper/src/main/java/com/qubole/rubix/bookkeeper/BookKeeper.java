@@ -23,8 +23,9 @@ import com.google.common.cache.Weigher;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import com.qubole.rubix.hadoop2.Hadoop2ClusterManager;
 import com.qubole.rubix.hadoop2.CachingNativeS3FileSystem;
+import com.qubole.rubix.hadoop2.Hadoop2ClusterManager;
+import com.qubole.rubix.presto.PrestoClusterManager;
 import com.qubole.rubix.spi.BlockLocation;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
@@ -51,6 +52,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import static com.qubole.rubix.spi.ClusterType.HADOOP2_CLUSTER_MANAGER;
+import static com.qubole.rubix.spi.ClusterType.PRESTO_CLUSTER_MANAGER;
 import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
 
 /**
@@ -157,17 +159,24 @@ public class BookKeeper
                         log.warn("Could not get nodeName", e);
                     }
 
-                    if (clusterType == HADOOP2_CLUSTER_MANAGER.ordinal()) {
-                        clusterManager = new Hadoop2ClusterManager();
-                        clusterManager.initialize(conf);
-                        nodes = clusterManager.getNodes();
-                        splitSize = clusterManager.getSplitSize();
-                    }
-                    else if (clusterType == TEST_CLUSTER_MANAGER.ordinal()) {
+                    if (clusterType == TEST_CLUSTER_MANAGER.ordinal()) {
                         nodes = new ArrayList<>();
                         nodes.add(nodeName);
                         splitSize = 64 * 1024 * 1024;
                     }
+                    else {
+                        if (clusterType == HADOOP2_CLUSTER_MANAGER.ordinal()) {
+                            clusterManager = new Hadoop2ClusterManager();
+                        }
+
+                        else if (clusterType == PRESTO_CLUSTER_MANAGER.ordinal()) {
+                            clusterManager = new PrestoClusterManager();
+                        }
+                        clusterManager.initialize(conf);
+                        nodes = clusterManager.getNodes();
+                        splitSize = clusterManager.getSplitSize();
+                    }
+
                     nodeListSize = nodes.size();
                     currentNodeIndex = nodes.indexOf(nodeName);
                 }
@@ -183,7 +192,7 @@ public class BookKeeper
 
     @Override
     public void setAllCached(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock)
-            throws  TException
+            throws TException
     {
         FileMetadata md;
         md = fileMetadataCache.getIfPresent(remotePath);
@@ -287,7 +296,7 @@ public class BookKeeper
                             }
                             //if file has been modified in cloud, its entry will be deleted due to "EXPLICIT"
                             log.warn("deleting entry for" + md.getRemotePath().toString() + " due to "
-                                             + notification.getCause());
+                                    + notification.getCause());
                             md.closeAndCleanup();
                         }
                         catch (IOException e) {
@@ -299,41 +308,41 @@ public class BookKeeper
     }
 
     @Override
-   public boolean readData(String path, long offset, int length, long fileSize, long lastModified, int clusterType)
-           throws TException
-   {
-       int blockSize = CacheConfig.getBlockSize(conf);
-       byte[] buffer = new byte[blockSize];
-       BookKeeperFactory bookKeeperFactory = new BookKeeperFactory(this);
-       CachingNativeS3FileSystem fs = null;
-       FSDataInputStream inputStream = null;
-       long startBlock = offset / blockSize;
-       long endBlock = ((offset + (length - 1)) / CacheConfig.getBlockSize(conf)) + 1;
-       try {
-           int idx = 0;
-           List<BlockLocation> blockLocations = getCacheStatus(path, fileSize, lastModified, startBlock, endBlock, clusterType);
+    public boolean readData(String path, long offset, int length, long fileSize, long lastModified, int clusterType)
+            throws TException
+    {
+        int blockSize = CacheConfig.getBlockSize(conf);
+        byte[] buffer = new byte[blockSize];
+        BookKeeperFactory bookKeeperFactory = new BookKeeperFactory(this);
+        CachingNativeS3FileSystem fs = null;
+        FSDataInputStream inputStream = null;
+        long startBlock = offset / blockSize;
+        long endBlock = ((offset + (length - 1)) / CacheConfig.getBlockSize(conf)) + 1;
+        try {
+            int idx = 0;
+            List<BlockLocation> blockLocations = getCacheStatus(path, fileSize, lastModified, startBlock, endBlock, clusterType);
 
-           for (int blockNum = (int) startBlock; blockNum < endBlock; blockNum++, idx++) {
-               int readStart = blockNum * blockSize;
-               if (blockLocations.get(idx).getLocation() == Location.LOCAL) {
-                   if (fs == null) {
-                       fs = new CachingNativeS3FileSystem(bookKeeperFactory, new Path(path), conf);
-                       inputStream = fs.open(new Path(path), blockSize);
-                   }
-                   inputStream.seek(readStart);
-                   inputStream.read(buffer, 0, blockSize);
-               }
-           }
-           if (inputStream != null) {
-               inputStream.close();
-           }
-           return true;
-       }
-       catch (IOException e) {
-           e.printStackTrace();
-           return false;
-       }
-   }
+            for (int blockNum = (int) startBlock; blockNum < endBlock; blockNum++, idx++) {
+                int readStart = blockNum * blockSize;
+                if (blockLocations.get(idx).getLocation() == Location.LOCAL) {
+                    if (fs == null) {
+                        fs = new CachingNativeS3FileSystem(bookKeeperFactory, new Path(path), conf);
+                        inputStream = fs.open(new Path(path), blockSize);
+                    }
+                    inputStream.seek(readStart);
+                    inputStream.read(buffer, 0, blockSize);
+                }
+            }
+            if (inputStream != null) {
+                inputStream.close();
+            }
+            return true;
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 
     private static class CreateFileMetadataCallable
             implements Callable<FileMetadata>
