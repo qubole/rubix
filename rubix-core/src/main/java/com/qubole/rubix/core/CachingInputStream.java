@@ -29,6 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSInputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -78,9 +79,10 @@ public class CachingInputStream
             throws IOException
     {
         this.remotePath = backendPath.toString();
-        this.fileSize = parentFs.getLength(backendPath);
+        FileStatus fileStatus = parentFs.getFileStatus(backendPath);
+        this.fileSize = fileStatus.getLen();
         this.remoteFileSystem = remoteFileSystem;
-        lastModified = parentFs.getFileStatus(backendPath).getModificationTime();
+        lastModified = fileStatus.getModificationTime();
         initialize(parentInputStream,
                 conf, bookKeeperFactory);
         this.statsMbean = statsMbean;
