@@ -86,7 +86,7 @@ public class BookKeeper
             throws TException
     {
         initializeClusterManager(clusterType);
-        log.info("ICM");
+
         if (nodeName == null) {
             log.error("Node name is null for Cluster Type" + ClusterType.findByValue(clusterType));
             return null;
@@ -117,7 +117,6 @@ public class BookKeeper
             }
         }
         catch (ExecutionException e) {
-            log.info("Error");
             log.error(String.format("Could not fetch Metadata for %s : %s", remotePath, Throwables.getStackTraceAsString(e)));
             throw new TException(e);
         }
@@ -134,7 +133,6 @@ public class BookKeeper
                 cachedRequests++;
             }
             else {
-                log.info(blockSplits.get(split) + " & " + nodes.get(currentNodeIndex));
                 if (currentNodeIndex != -1 && blockSplits.get(split).equalsIgnoreCase(nodes.get(currentNodeIndex))) {
                     blockLocations.add(new BlockLocation(Location.LOCAL, blockSplits.get(split)));
                     remoteRequests++;
@@ -187,7 +185,6 @@ public class BookKeeper
                     }
                     nodeListSize = nodes.size();
                     currentNodeIndex = nodes.indexOf(nodeName);
-                    log.info("Nodes size is: " + nodeListSize + " & nodes are: " + nodes);
                 }
                 else {
                     nodes = clusterManager.getNodes();
@@ -198,7 +195,6 @@ public class BookKeeper
             nodes = clusterManager.getNodes();
         }
 
-        log.info("Nodes size is: " + nodeListSize + " & nodes are: " + nodes);
     }
 
     @Override
@@ -335,7 +331,6 @@ public class BookKeeper
 
            for (int blockNum = (int) startBlock; blockNum < endBlock; blockNum++, idx++) {
                int readStart = blockNum * blockSize;
-               log.info("location is: " + blockLocations.get(idx).getLocation());
                if (blockLocations.get(idx).getLocation() == Location.LOCAL) {
                    if (fs == null) {
                        fs = new CachingNativeS3FileSystem(bookKeeperFactory, new Path(path), conf);

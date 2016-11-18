@@ -75,7 +75,6 @@ public class NonLocalReadRequestChain extends ReadRequestChain
         }
         checkState(isLocked, "Trying to execute Chain without locking");
         SocketChannel transferClient;
-        log.info("in NL 1");
         try {
             BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
             transferClient = bookKeeperFactory.createTransferClient(remoteNodeName, conf);
@@ -108,16 +107,13 @@ public class NonLocalReadRequestChain extends ReadRequestChain
                     return directReadRequest(readRequests.indexOf(readRequest));
                 }
             }
-            log.info("in NL 2");
             int bytesread = 0;
             ByteBuffer dst = ByteBuffer.wrap(readRequest.destBuffer, readRequest.getDestBufferOffset(), readRequest.destBuffer.length - readRequest.getDestBufferOffset());
-            log.info("Read length is: " + readRequest.getActualReadLength());
             while (bytesread != readRequest.getActualReadLength()) {
                 if (transferClient.isConnected()) {
                     try {
                         nread = transferClient.read(dst);
                         bytesread += nread;
-                        log.info("bytesread are: " + bytesread);
                         totalRead += nread;
                     }
                     catch (IOException e) {
