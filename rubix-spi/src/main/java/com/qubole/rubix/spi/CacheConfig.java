@@ -76,8 +76,6 @@ public class CacheConfig
     private static int serverPort = 8899;
     private static int serverMaxThreads = Integer.MAX_VALUE;
     public static int bufferSize = 10 * 1024 * 1024;
-
-
     private CacheConfig()
     {
     }

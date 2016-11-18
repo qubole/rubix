@@ -156,6 +156,7 @@ public class LocalTransferServer
                     log.info("Could not create BookKeeper client" + Throwables.getStackTraceAsString(e));
                     localTransferClient.close();
                 }
+                log.info("Got cache status in LTS");
 
                 String filename = CacheConfig.getLocalPath(remotePath, conf);
                 FileChannel fc = new FileInputStream(filename).getChannel();
@@ -163,12 +164,18 @@ public class LocalTransferServer
                 int lengthRemaining = readLength;
                 long position = offset;
                 int nread = 0;
+                log.info("Got 1 in LTS: " + filename + " size is " + fileSize);
                 while (nread < readLength) {
                     if (maxCount > lengthRemaining) {
                         maxCount = lengthRemaining;
                     }
+                    //log.info("Transferring: " + nread);
                     nread += fc.transferTo(position + nread, maxCount, localTransferClient);
                     lengthRemaining = readLength - nread;
+                    if (nread == 0) {
+                        localTransferClient.close();
+                    }
+                    //log.info("LR: " + lengthRemaining);
                 }
                 if (bookKeeperClient != null) {
                     bookKeeperClient.close();

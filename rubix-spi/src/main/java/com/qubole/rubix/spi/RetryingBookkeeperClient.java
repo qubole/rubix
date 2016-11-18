@@ -86,6 +86,7 @@ public class RetryingBookkeeperClient
             }
             catch (Exception e) {
                 LOG.info("Error while connecting");
+                e.printStackTrace();
                 errors++;
             }
             if (transport.isOpen()) {
