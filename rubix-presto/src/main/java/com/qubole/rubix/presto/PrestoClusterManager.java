@@ -34,7 +34,6 @@ import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Collections;
 import java.util.HashSet;
@@ -87,46 +86,46 @@ public class PrestoClusterManager extends ClusterManager
                             URL allNodesRequest = getNodeUrl();
                             URL failedNodesRequest = getFailedNodeUrl();
 
-                            HttpURLConnection httpcon = (HttpURLConnection) allNodesRequest.openConnection();
-                            httpcon.setConnectTimeout(500);
-                            httpcon.setRequestMethod("GET");
+                            HttpURLConnection allHttpCon = (HttpURLConnection) allNodesRequest.openConnection();
+                            allHttpCon.setConnectTimeout(500);
+                            allHttpCon.setRequestMethod("GET");
 
-                            int allNodesResponseCode = httpcon.getResponseCode();
+                            int allNodesResponseCode = allHttpCon.getResponseCode();
 
                             StringBuffer allResponse = new StringBuffer();
                             StringBuffer failedResponse = new StringBuffer();
 
                             if (allNodesResponseCode == HttpURLConnection.HTTP_OK) {
                                 isMaster = true;
-                                BufferedReader in = new BufferedReader(new InputStreamReader(httpcon.getInputStream()));
+                                BufferedReader in = new BufferedReader(new InputStreamReader(allHttpCon.getInputStream()));
                                 String inputLine = "";
                                 while ((inputLine = in.readLine()) != null) {
                                     allResponse.append(inputLine);
                                 }
                                 in.close();
-                                httpcon.disconnect();
+                                allHttpCon.disconnect();
                             }
                             else {
                                 log.info(String.format("v1/node failed with code: setting this node as worker "));
                                 isMaster = false;
-                                httpcon.disconnect();
+                                allHttpCon.disconnect();
                                 return ImmutableList.of();
                             }
 
-                            HttpURLConnection httpconf = (HttpURLConnection) failedNodesRequest.openConnection();
-                            httpconf.setConnectTimeout(500);
-                            httpconf.setRequestMethod("GET");
-                            int failedNodesResponseCode = httpconf.getResponseCode();
+                            HttpURLConnection failHttpConn = (HttpURLConnection) failedNodesRequest.openConnection();
+                            failHttpConn.setConnectTimeout(500);
+                            failHttpConn.setRequestMethod("GET");
+                            int failedNodesResponseCode = failHttpConn.getResponseCode();
                             // check on failed nodes
                             if (failedNodesResponseCode == HttpURLConnection.HTTP_OK) {
-                                BufferedReader in = new BufferedReader(new InputStreamReader(httpconf.getInputStream()));
+                                BufferedReader in = new BufferedReader(new InputStreamReader(failHttpConn.getInputStream()));
                                 String inputLine;
                                 while ((inputLine = in.readLine()) != null) {
                                     failedResponse.append(inputLine);
                                 }
                                 in.close();
                             }
-                            httpconf.disconnect();
+                            failHttpConn.disconnect();
                             Gson gson = new Gson();
                             Type type = new TypeToken<List<Stats>>() {}.getType();
 
