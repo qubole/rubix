@@ -96,7 +96,6 @@ public class LocalDataTransferServer
             }
             catch (IOException e) {
                 log.error(String.format("Error starting Local Transfer server %s", Throwables.getStackTraceAsString(e)));
-                e.printStackTrace();
             }
 
         }
@@ -107,7 +106,7 @@ public class LocalDataTransferServer
                 listener.close();
             }
             catch (IOException e) {
-                e.printStackTrace();
+                log.error(String.format("Error stopping Local Transfer server %s", Throwables.getStackTraceAsString(e)));
             }
         }
 
