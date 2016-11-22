@@ -24,7 +24,6 @@ import java.nio.channels.SocketChannel;
  */
 public class DataTransferClientHelper
 {
-
     private DataTransferClientHelper()
     {
     }
@@ -39,29 +38,27 @@ public class DataTransferClientHelper
         return sc;
     }
 
-    /* order is: long : offset, int : readLength, long : fileSize, long : lastModified,
-                int : clusterType, int : filePathLength, String : filePath */
+    /* order is: int : filePathLength, String : filePath, long : offset, int : readLength, long : fileSize, long : lastModified,
+                int : clusterType*/
 
     public static ByteBuffer writeHeaders(Configuration conf, DataTransferHeader header)
     {
         ByteBuffer buf = ByteBuffer.allocate(CacheConfig.getDataTransferBufferSize(conf));
+        buf.putInt(header.getFilePath().length());
+        buf.put(header.getFilePath().getBytes());
         buf.putLong(header.getOffset());
         buf.putInt(header.getReadLength());
         buf.putLong(header.getFileSize());
         buf.putLong(header.getLastModified());
         buf.putInt(header.getClusterType());
-        buf.putInt(header.getFilePath().length());
-        buf.put(header.getFilePath().getBytes());
         buf.flip();
         return buf;
     }
 
     public static DataTransferHeader readHeaders(ByteBuffer dataInfo)
     {
-        byte[] fileBytes = new byte[dataInfo.getInt(32)];
-        dataInfo.position(36);
+        byte[] fileBytes = new byte[dataInfo.getInt()];
         dataInfo.get(fileBytes);
-        dataInfo.rewind();
         String remotePath = new String(fileBytes);
         return new DataTransferHeader(dataInfo.getLong(), dataInfo.getInt(), dataInfo.getLong(),
                 dataInfo.getLong(), dataInfo.getInt(), remotePath);

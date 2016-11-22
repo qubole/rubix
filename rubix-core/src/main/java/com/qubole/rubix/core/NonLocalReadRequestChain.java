@@ -42,7 +42,6 @@ public class NonLocalReadRequestChain extends ReadRequestChain
     int directRead = 0;
     FileSystem remoteFileSystem;
     FSDataInputStream inputStream = null;
-    DataTransferClientHelper dataTransferClientHelper;
     int clusterType;
 
     private static final Log log = LogFactory.getLog(NonLocalReadRequestChain.class);
