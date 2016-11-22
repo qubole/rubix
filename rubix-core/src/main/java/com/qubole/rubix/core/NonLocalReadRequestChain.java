@@ -13,8 +13,8 @@
 package com.qubole.rubix.core;
 
 import com.google.common.base.Throwables;
-import com.qubole.rubix.spi.BookKeeperFactory;
-import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.DataTransferClientHelper;
+import com.qubole.rubix.spi.DataTransferHeader;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -42,6 +42,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
     int directRead = 0;
     FileSystem remoteFileSystem;
     FSDataInputStream inputStream = null;
+    DataTransferClientHelper dataTransferClientHelper;
     int clusterType;
 
     private static final Log log = LogFactory.getLog(NonLocalReadRequestChain.class);
@@ -74,67 +75,50 @@ public class NonLocalReadRequestChain extends ReadRequestChain
             return 0;
         }
         checkState(isLocked, "Trying to execute Chain without locking");
-        SocketChannel transferClient;
+        SocketChannel dataTransferClient;
 
         try {
-            BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
-            transferClient = bookKeeperFactory.createTransferClient(remoteNodeName, conf);
+            dataTransferClient = DataTransferClientHelper.createDataTransferClient(remoteNodeName, conf);
         }
         catch (Exception e) {
-            log.info("Could not create Transfer Client " + Throwables.getStackTraceAsString(e));
+            log.info("Could not create Data Transfer Client " + Throwables.getStackTraceAsString(e));
             return directReadRequest(0);
         }
 
         for (ReadRequest readRequest : readRequests) {
-            int nread = 0;
-            ByteBuffer buf = ByteBuffer.allocate(CacheConfig.getDataTransferBufferSize(conf));
-            /* order is: long : offset, int : readLength, long : fileSize, long : lastModified,
-                int : clusterType, int : filePathLength, String : filePath */
-            buf.putLong(readRequest.getActualReadStart());
-            buf.putInt(readRequest.getActualReadLength());
-            buf.putLong(fileSize);
-            buf.putLong(lastModified);
-            buf.putInt(clusterType);
-            buf.putInt(filePath.length());
-            buf.put(filePath.getBytes());
-            buf.flip();
-            if (transferClient.isConnected()) {
+            try {
+                int nread = 0;
+                ByteBuffer buf = DataTransferClientHelper.writeHeaders(conf, new DataTransferHeader(readRequest.getActualReadStart(),
+                        readRequest.getActualReadLength(), fileSize, lastModified, clusterType, filePath));
+
+                dataTransferClient.write(buf);
+                int bytesread = 0;
+                ByteBuffer dst = ByteBuffer.wrap(readRequest.destBuffer, readRequest.getDestBufferOffset(), readRequest.destBuffer.length - readRequest.getDestBufferOffset());
+
+                while (bytesread != readRequest.getActualReadLength()) {
+                    nread = dataTransferClient.read(dst);
+                    bytesread += nread;
+                    totalRead += nread;
+                    if (nread == -1) {
+                        totalRead += 1;
+                        throw new Exception("Error in Local Transfer Server");
+                    }
+                    dst.position(bytesread + readRequest.getDestBufferOffset());
+                }
+            }
+            catch (Exception e) {
+                log.info("Error reading data from node : " + remoteNodeName + Throwables.getStackTraceAsString(e));
+                return directReadRequest(readRequests.indexOf(readRequest));
+            }
+            finally {
                 try {
-                    transferClient.write(buf);
+                    dataTransferClient.close();
                 }
                 catch (IOException e) {
-                    e.printStackTrace();
-                    transferClient.close();
-                    return directReadRequest(readRequests.indexOf(readRequest));
+                    log.info("Error closing Data Transfer client : " + remoteNodeName + Throwables.getStackTraceAsString(e));
                 }
             }
-
-            int bytesread = 0;
-            ByteBuffer dst = ByteBuffer.wrap(readRequest.destBuffer, readRequest.getDestBufferOffset(), readRequest.destBuffer.length - readRequest.getDestBufferOffset());
-
-            while (bytesread != readRequest.getActualReadLength()) {
-                if (transferClient.isConnected()) {
-                    try {
-                        nread = transferClient.read(dst);
-                        bytesread += nread;
-                        totalRead += nread;
-                    }
-                    catch (IOException e) {
-                        e.printStackTrace();
-                        return directReadRequest(readRequests.indexOf(readRequest));
-                    }
-                }
-                if (nread == -1) {
-                    totalRead += 1;
-                    log.info("Error in Local Transfer Server");
-                    return directReadRequest(readRequests.indexOf(readRequest));
-                }
-                dst.position(bytesread + readRequest.getDestBufferOffset());
-            }
-
-            transferClient.close();
         }
-
         log.info(String.format("Read %d bytes internally from node %s", totalRead, remoteNodeName));
         return totalRead;
     }

@@ -12,7 +12,7 @@
  */
 package com.qubole.rubix.tests;
 
-import com.qubole.rubix.bookkeeper.LocalTransferServer;
+import com.qubole.rubix.bookkeeper.LocalDataTransferServer;
 import com.qubole.rubix.core.CachingFileSystemStats;
 import com.qubole.rubix.core.CachingInputStream;
 import com.qubole.rubix.core.DataGen;
@@ -69,7 +69,7 @@ public class TestCachingInputStream
         {
             public void run()
             {
-                LocalTransferServer.startServer(conf);
+                LocalDataTransferServer.startServer(conf);
             }
         };
         server.start();
@@ -113,7 +113,7 @@ public class TestCachingInputStream
     public void cleanup()
     {
         BookKeeperServer.stopServer();
-        LocalTransferServer.stopServer();
+        LocalDataTransferServer.stopServer();
         Configuration conf = new Configuration();
         inputStream.close();
         File file = new File(backendFileName);
