@@ -16,6 +16,7 @@ package com.qubole.rubix.spi;
  * Created by sakshia on 27/9/16.
  */
 
+import com.google.common.base.Throwables;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.transport.TTransport;
@@ -85,8 +86,7 @@ public class RetryingBookkeeperClient
                 return callable.call();
             }
             catch (Exception e) {
-                LOG.info("Error while connecting");
-                e.printStackTrace();
+                LOG.info("Error while connecting : " + Throwables.getStackTraceAsString(e));
                 errors++;
             }
             if (transport.isOpen()) {

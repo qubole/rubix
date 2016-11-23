@@ -74,6 +74,7 @@ public class CacheConfig
     private static final String dataCacheDirPrefixes = "/media/ephemeral";
     private static final int blockSize = 1 * 1024 * 1024; // 1MB
     private static int serverPort = 8899;
+    private static int localServerPort = 8898;
     private static int serverMaxThreads = Integer.MAX_VALUE;
     public static int bufferSize = 10 * 1024 * 1024;
     private CacheConfig()
@@ -343,6 +344,7 @@ public class CacheConfig
         c.setInt(DATA_CACHE_TABLE_COLS_CHOSEN, chosen);
     }
 
+    //bufferSize for reads in LocalTransferServer
     public static int getBufferSize(Configuration c)
     {
         return c.getInt(bufferSizeConf, bufferSize);
@@ -350,7 +352,7 @@ public class CacheConfig
 
     public static int getLocalServerPort(Configuration conf)
     {
-        return conf.getInt(localServerPortConf, 6666);
+        return conf.getInt(localServerPortConf, localServerPort);
     }
 
     public static int getDataTransferBufferSize(Configuration conf)

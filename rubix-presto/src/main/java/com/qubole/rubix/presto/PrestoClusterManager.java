@@ -87,7 +87,7 @@ public class PrestoClusterManager extends ClusterManager
                             URL failedNodesRequest = getFailedNodeUrl();
 
                             HttpURLConnection allHttpCon = (HttpURLConnection) allNodesRequest.openConnection();
-                            allHttpCon.setConnectTimeout(500);
+                            allHttpCon.setConnectTimeout(500); //ms
                             allHttpCon.setRequestMethod("GET");
 
                             int allNodesResponseCode = allHttpCon.getResponseCode();
@@ -113,7 +113,7 @@ public class PrestoClusterManager extends ClusterManager
                             }
 
                             HttpURLConnection failHttpConn = (HttpURLConnection) failedNodesRequest.openConnection();
-                            failHttpConn.setConnectTimeout(500);
+                            failHttpConn.setConnectTimeout(500);    //ms
                             failHttpConn.setRequestMethod("GET");
                             int failedNodesResponseCode = failHttpConn.getResponseCode();
                             // check on failed nodes
