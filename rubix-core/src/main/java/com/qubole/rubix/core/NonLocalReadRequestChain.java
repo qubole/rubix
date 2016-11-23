@@ -118,7 +118,6 @@ public class NonLocalReadRequestChain extends ReadRequestChain
                 }
             }
         }
-
         log.info(String.format("Read %d bytes internally from node %s", totalRead, remoteNodeName));
         return totalRead;
     }

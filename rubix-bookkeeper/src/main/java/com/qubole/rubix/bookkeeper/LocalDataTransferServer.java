@@ -158,7 +158,6 @@ public class LocalDataTransferServer
                     nread += fc.transferTo(position + nread, maxCount, localDataTransferClient);
                     lengthRemaining = readLength - nread;
                 }
-
                 if (bookKeeperClient != null) {
                     bookKeeperClient.close();
                 }
