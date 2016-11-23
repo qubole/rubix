@@ -89,6 +89,10 @@ public class BookKeeper
             return null;
         }
 
+        if (currentNodeIndex == -1) {
+            return null;
+        }
+
         Map<Long, String> blockSplits = new HashMap<>();
         long blockNumber = 0;
 
@@ -120,10 +124,6 @@ public class BookKeeper
         endBlock = setCorrectEndBlock(endBlock, fileLength, remotePath);
         List<BlockLocation> blockLocations = new ArrayList<>((int) (endBlock - startBlock));
         int blockSize = CacheConfig.getBlockSize(conf);
-
-        if (currentNodeIndex == -1) {
-            return null;
-        }
 
         for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
             totalRequests++;

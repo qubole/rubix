@@ -164,7 +164,7 @@ public class LocalDataTransferServer
                 fc.close();
             }
             catch (Exception e) {
-                log.info("Error in Local Data Transfer Server" + Throwables.getStackTraceAsString(e));
+                log.info("Error in Local Data Transfer Server: " + Throwables.getStackTraceAsString(e));
                 return;
             }
             finally {
@@ -172,7 +172,7 @@ public class LocalDataTransferServer
                     localDataTransferClient.close();
                 }
                 catch (IOException e) {
-                    log.info("Error in Local Data Transfer Server" + Throwables.getStackTraceAsString(e));
+                    log.info("Error in Local Data Transfer Server: " + Throwables.getStackTraceAsString(e));
                 }
             }
         }
