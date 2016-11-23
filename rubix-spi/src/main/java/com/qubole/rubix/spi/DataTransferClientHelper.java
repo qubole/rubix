@@ -1,4 +1,3 @@
-package com.qubole.rubix.spi;
 /**
  * Copyright (c) 2016. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
@@ -11,8 +10,9 @@ package com.qubole.rubix.spi;
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-import org.apache.hadoop.conf.Configuration;
+package com.qubole.rubix.spi;
 
+import org.apache.hadoop.conf.Configuration;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;

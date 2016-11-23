@@ -21,7 +21,6 @@ import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.thrift.shaded.TException;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -132,29 +131,18 @@ public class LocalDataTransferServer
 
                 int read = localDataTransferClient.read(dataInfo);
                 if (read == -1) {
-                    log.info("Could not read data from Non-local node");
-                    localDataTransferClient.close();
-                    return;
+                    throw new Exception("Could not read data from Non-local node");
                 }
                 dataInfo.flip();
 
                 DataTransferHeader header = DataTransferClientHelper.readHeaders(dataInfo);
-                long offset = header.offset;
-                int readLength = header.readLength;
-                String remotePath = header.filePath;
+                long offset = header.getOffset();
+                int readLength = header.getReadLength();
+                String remotePath = header.getFilePath();
 
-                try {
-                    bookKeeperClient = bookKeeperFactory.createBookKeeperClient(conf);
-                    if (!bookKeeperClient.readData(remotePath, offset, readLength, header.fileSize, header.lastModified, header.clusterType)) {
-                        log.info("Could not cache data required by non-local node");
-                        localDataTransferClient.close();
-                        return;
-                    }
-                }
-                catch (TException e) {
-                    log.info("Could not create BookKeeper client: " + Throwables.getStackTraceAsString(e));
-                    localDataTransferClient.close();
-                    return;
+                bookKeeperClient = bookKeeperFactory.createBookKeeperClient(conf);
+                if (!bookKeeperClient.readData(remotePath, offset, readLength, header.getFileSize(), header.getLastModified(), header.getClusterType())) {
+                    throw new Exception("Could not cache data required by non-local node");
                 }
 
                 String filename = CacheConfig.getLocalPath(remotePath, conf);
@@ -175,7 +163,7 @@ public class LocalDataTransferServer
                 }
                 fc.close();
             }
-            catch (IOException e) {
+            catch (Exception e) {
                 log.info("Error in Local Data Transfer Server" + Throwables.getStackTraceAsString(e));
                 return;
             }
