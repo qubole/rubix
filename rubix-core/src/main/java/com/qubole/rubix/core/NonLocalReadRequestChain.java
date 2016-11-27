@@ -12,7 +12,6 @@
  */
 package com.qubole.rubix.core;
 
-import com.google.common.base.Throwables;
 import com.qubole.rubix.spi.DataTransferClientHelper;
 import com.qubole.rubix.spi.DataTransferHeader;
 import org.apache.commons.logging.Log;
@@ -74,17 +73,16 @@ public class NonLocalReadRequestChain extends ReadRequestChain
             return 0;
         }
         checkState(isLocked, "Trying to execute Chain without locking");
-        SocketChannel dataTransferClient;
-
-        try {
-            dataTransferClient = DataTransferClientHelper.createDataTransferClient(remoteNodeName, conf);
-        }
-        catch (Exception e) {
-            log.info("Could not create Data Transfer Client " + Throwables.getStackTraceAsString(e));
-            return directReadRequest(0);
-        }
 
         for (ReadRequest readRequest : readRequests) {
+            SocketChannel dataTransferClient;
+            try {
+                dataTransferClient = DataTransferClientHelper.createDataTransferClient(remoteNodeName, conf);
+            }
+            catch (Exception e) {
+                log.info("Could not create Data Transfer Client ", e);
+                return directReadRequest(readRequests.indexOf(readRequest));
+            }
             try {
                 int nread = 0;
                 ByteBuffer buf = DataTransferClientHelper.writeHeaders(conf, new DataTransferHeader(readRequest.getActualReadStart(),
@@ -93,7 +91,6 @@ public class NonLocalReadRequestChain extends ReadRequestChain
                 dataTransferClient.write(buf);
                 int bytesread = 0;
                 ByteBuffer dst = ByteBuffer.wrap(readRequest.destBuffer, readRequest.getDestBufferOffset(), readRequest.destBuffer.length - readRequest.getDestBufferOffset());
-
                 while (bytesread != readRequest.getActualReadLength()) {
                     nread = dataTransferClient.read(dst);
                     bytesread += nread;
@@ -103,10 +100,10 @@ public class NonLocalReadRequestChain extends ReadRequestChain
                         throw new Exception("Error in Local Transfer Server");
                     }
                     dst.position(bytesread + readRequest.getDestBufferOffset());
-                }
+               }
             }
             catch (Exception e) {
-                log.info("Error reading data from node : " + remoteNodeName + Throwables.getStackTraceAsString(e));
+                log.info("Error reading data from node : " + remoteNodeName, e);
                 return directReadRequest(readRequests.indexOf(readRequest));
             }
             finally {
@@ -114,7 +111,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
                     dataTransferClient.close();
                 }
                 catch (IOException e) {
-                    log.info("Error closing Data Transfer client : " + remoteNodeName + Throwables.getStackTraceAsString(e));
+                    log.info("Error closing Data Transfer client : " + remoteNodeName, e);
                 }
             }
         }

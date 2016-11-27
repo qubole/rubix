@@ -38,7 +38,7 @@ public class DataGen
         return generateContent(1);
     }
 
-    static String getExpectedOutput(int size)
+    public static String getExpectedOutput(int size)
     {
         String expected = generateContent(2);
         return expected.substring(0, size);

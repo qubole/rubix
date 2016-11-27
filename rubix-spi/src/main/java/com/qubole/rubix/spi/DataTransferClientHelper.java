@@ -38,12 +38,18 @@ public class DataTransferClientHelper
         return sc;
     }
 
-    /* order is: int : filePathLength, String : filePath, long : offset, int : readLength, long : fileSize, long : lastModified,
-                int : clusterType*/
+    /* order is:
+    int : filePathLength
+    String : filePath
+    long : offset
+    int : readLength
+    long : fileSize
+    long : lastModified
+    int : clusterType */
 
     public static ByteBuffer writeHeaders(Configuration conf, DataTransferHeader header)
     {
-        ByteBuffer buf = ByteBuffer.allocate(CacheConfig.getDataTransferBufferSize(conf));
+        ByteBuffer buf = ByteBuffer.allocate(CacheConfig.getMaxHeaderSize(conf));
         buf.putInt(header.getFilePath().length());
         buf.put(header.getFilePath().getBytes());
         buf.putLong(header.getOffset());

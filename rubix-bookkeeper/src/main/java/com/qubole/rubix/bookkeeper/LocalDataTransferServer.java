@@ -12,7 +12,6 @@
  */
 package com.qubole.rubix.bookkeeper;
 
-import com.google.common.base.Throwables;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.DataTransferClientHelper;
@@ -78,7 +77,6 @@ public class LocalDataTransferServer
         public void run()
         {
             int port = CacheConfig.getLocalServerPort(conf);
-
             ExecutorService threadPool = Executors.newCachedThreadPool();
             try {
                 listener = ServerSocketChannel.open();
@@ -86,7 +84,7 @@ public class LocalDataTransferServer
                 log.info("Listening on port " + port);
                 while (true) {
                     SocketChannel clientSocket = listener.accept();
-                    ClientServiceThread cliThread = new ClientServiceThread(clientSocket);
+                    ClientServiceThread cliThread = new ClientServiceThread(clientSocket, conf);
                     threadPool.execute(cliThread);
                 }
             }
@@ -94,7 +92,7 @@ public class LocalDataTransferServer
                 log.info("Stopping Local Transfer server");
             }
             catch (IOException e) {
-                log.error(String.format("Error starting Local Transfer server %s", Throwables.getStackTraceAsString(e)));
+                log.error(String.format("Error starting Local Transfer server %s", e));
             }
 
         }
@@ -105,7 +103,7 @@ public class LocalDataTransferServer
                 listener.close();
             }
             catch (IOException e) {
-                log.error(String.format("Error stopping Local Transfer server %s", Throwables.getStackTraceAsString(e)));
+                log.error(String.format("Error stopping Local Transfer server %s", e));
             }
         }
 
@@ -116,10 +114,12 @@ public class LocalDataTransferServer
     {
         SocketChannel localDataTransferClient;
         RetryingBookkeeperClient bookKeeperClient;
+        Configuration conf;
 
-        ClientServiceThread(SocketChannel s)
+        ClientServiceThread(SocketChannel s, Configuration conf)
         {
             localDataTransferClient = s;
+            this.conf = conf;
         }
 
         public void run()
@@ -127,7 +127,7 @@ public class LocalDataTransferServer
             try {
                 log.debug("Connected to node - " + localDataTransferClient.getLocalAddress());
                 BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
-                ByteBuffer dataInfo = ByteBuffer.allocate(CacheConfig.getDataTransferBufferSize(conf));
+                ByteBuffer dataInfo = ByteBuffer.allocate(CacheConfig.getMaxHeaderSize(conf));
 
                 int read = localDataTransferClient.read(dataInfo);
                 if (read == -1) {
@@ -144,11 +144,11 @@ public class LocalDataTransferServer
                 if (!bookKeeperClient.readData(remotePath, offset, readLength, header.getFileSize(), header.getLastModified(), header.getClusterType())) {
                     throw new Exception("Could not cache data required by non-local node");
                 }
-
                 String filename = CacheConfig.getLocalPath(remotePath, conf);
                 FileChannel fc = new FileInputStream(filename).getChannel();
-                int maxCount = CacheConfig.getBufferSize(conf);
+                int maxCount = CacheConfig.getLocalTransferBufferSize(conf);
                 int lengthRemaining = readLength;
+
                 long position = offset;
                 int nread = 0;
                 while (nread < readLength) {
@@ -164,7 +164,13 @@ public class LocalDataTransferServer
                 fc.close();
             }
             catch (Exception e) {
-                log.info("Error in Local Data Transfer Server: " + Throwables.getStackTraceAsString(e));
+                try {
+                    localDataTransferClient.close();
+                }
+                catch (IOException e1) {
+                    e1.printStackTrace();
+                }
+                log.info("Error in Local Data Transfer Server: ", e);
                 return;
             }
             finally {
@@ -172,7 +178,7 @@ public class LocalDataTransferServer
                     localDataTransferClient.close();
                 }
                 catch (IOException e) {
-                    log.info("Error in Local Data Transfer Server: " + Throwables.getStackTraceAsString(e));
+                    log.info("Error in Local Data Transfer Server: ", e);
                 }
             }
         }
