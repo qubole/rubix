@@ -23,7 +23,7 @@ import com.google.common.cache.Weigher;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import com.qubole.rubix.hadoop2.CachingNativeS3FileSystem;
+import com.qubole.rubix.core.CachingFileSystem;
 import com.qubole.rubix.hadoop2.Hadoop2ClusterManager;
 import com.qubole.rubix.spi.BlockLocation;
 import com.qubole.rubix.spi.BookKeeperFactory;
@@ -35,6 +35,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.thrift.shaded.TException;
 
@@ -124,6 +125,8 @@ public class BookKeeper
         endBlock = setCorrectEndBlock(endBlock, fileLength, remotePath);
         List<BlockLocation> blockLocations = new ArrayList<>((int) (endBlock - startBlock));
         int blockSize = CacheConfig.getBlockSize(conf);
+
+        //TODO: Store Node indices too, i.e. split to nodeIndex map and compare indices here instead of strings(nodenames).
 
         for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
             totalRequests++;
@@ -224,41 +227,59 @@ public class BookKeeper
     //using localTransferServer.
     // If the data is not already cached, remoteReadRequest for that block is sent and data is cached.
 
-    //TODO : buffer is initialized everytime readData is called and it contains garbage value which is not required. Also, getCacheStatus is called twice.
+    //TODO : buffer is initialized everytime readData is called and it contains garbage value which is not required.
+     // We cannot make it static because the variable is used in remoteReadRequestChain to write (cache) data to files.
+    // So, it has to store the correct value in each thread. getCacheStatus is called twice.
     @Override
-    public boolean readData(String path, long offset, int length, long fileSize, long lastModified, int clusterType)
+    public boolean readData(String remotePath, long offset, int length, long fileSize, long lastModified, int clusterType)
             throws TException
     {
         int blockSize = CacheConfig.getBlockSize(conf);
         byte[] buffer = new byte[blockSize];
         BookKeeperFactory bookKeeperFactory = new BookKeeperFactory(this);
-        CachingNativeS3FileSystem fs = null;
+        FileSystem fs = null;
         FSDataInputStream inputStream = null;
+        Path path = new Path(remotePath);
         long startBlock = offset / blockSize;
         long endBlock = ((offset + (length - 1)) / CacheConfig.getBlockSize(conf)) + 1;
         try {
             int idx = 0;
-            List<BlockLocation> blockLocations = getCacheStatus(path, fileSize, lastModified, startBlock, endBlock, clusterType);
+            List<BlockLocation> blockLocations = getCacheStatus(remotePath, fileSize, lastModified, startBlock, endBlock, clusterType);
 
             for (int blockNum = (int) startBlock; blockNum < endBlock; blockNum++, idx++) {
                 int readStart = blockNum * blockSize;
+                log.debug(" blockLocation is: " + blockLocations.get(idx).getLocation());
                 if (blockLocations.get(idx).getLocation() != Location.CACHED) {
                     if (fs == null) {
-                        fs = new CachingNativeS3FileSystem(bookKeeperFactory, new Path(path), conf);
-                        inputStream = fs.open(new Path(path), blockSize);
+                        fs = path.getFileSystem(conf);
+                        fs.initialize(path.toUri(), conf);
+                        if (CachingFileSystem.class.isAssignableFrom(fs.getClass())) {
+                            ((CachingFileSystem) fs).setBookKeeper(bookKeeperFactory, conf);
+                        }
+                        else {
+                            throw new Exception("Not a subclass of CachingFileSystem");
+                        }
+                        inputStream = fs.open(path, blockSize);
                     }
                     inputStream.seek(readStart);
                     inputStream.read(buffer, 0, blockSize);
                 }
             }
-            if (inputStream != null) {
-                inputStream.close();
-            }
             return true;
         }
-        catch (IOException e) {
+        catch (Exception e) {
             log.info("Could not cache data: " + Throwables.getStackTraceAsString(e));
             return false;
+        }
+        finally {
+            if (inputStream != null) {
+                try {
+                    inputStream.close();
+                }
+                catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
     }
 
