@@ -40,7 +40,6 @@ public class NonLocalReadRequestChain extends ReadRequestChain
     int totalRead = 0;
     int directRead = 0;
     FileSystem remoteFileSystem;
-    FSDataInputStream inputStream = null;
     int clusterType;
 
     private static final Log log = LogFactory.getLog(NonLocalReadRequestChain.class);
@@ -123,13 +122,14 @@ public class NonLocalReadRequestChain extends ReadRequestChain
     private int directReadRequest(int index)
             throws Exception
     {
-        inputStream = remoteFileSystem.open(new Path(filePath));
+        FSDataInputStream inputStream = remoteFileSystem.open(new Path(filePath));
         DirectReadRequestChain readChain = new DirectReadRequestChain(inputStream);
         for (ReadRequest readRequest : readRequests.subList(index, readRequests.size())) {
             readChain.addReadRequest(readRequest);
         }
         readChain.lock();
         directRead = readChain.call();
+        inputStream.close();
         return (totalRead + directRead);
     }
 }
