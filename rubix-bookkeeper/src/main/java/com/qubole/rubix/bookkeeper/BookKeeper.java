@@ -253,6 +253,7 @@ public class BookKeeper
                     if (fs == null) {
                         fs = path.getFileSystem(conf);
                         fs.initialize(path.toUri(), conf);
+
                         if (CachingFileSystem.class.isAssignableFrom(fs.getClass())) {
                             ((CachingFileSystem) fs).setBookKeeper(bookKeeperFactory, conf);
                         }

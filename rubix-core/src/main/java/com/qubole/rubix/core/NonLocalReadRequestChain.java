@@ -96,7 +96,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
                     bytesread += nread;
                     totalRead += nread;
                     if (nread == -1) {
-                        totalRead += 1;
+                        totalRead -= bytesread;
                         throw new Exception("Error in Local Transfer Server");
                     }
                     dst.position(bytesread + readRequest.getDestBufferOffset());
@@ -108,6 +108,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
             }
             finally {
                 try {
+                    log.info(String.format("Read %d bytes internally from node %s", totalRead, remoteNodeName));
                     dataTransferClient.close();
                 }
                 catch (IOException e) {
@@ -115,7 +116,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
                 }
             }
         }
-        log.info(String.format("Read %d bytes internally from node %s", totalRead, remoteNodeName));
+
         return totalRead;
     }
 

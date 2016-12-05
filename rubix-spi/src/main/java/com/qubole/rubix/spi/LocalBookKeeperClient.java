@@ -32,7 +32,6 @@ public class LocalBookKeeperClient
     public LocalBookKeeperClient(TTransport transport, BookKeeperService.Iface bookKeeper)
     {
         super(transport, 1);
-        log.info("creating localbkc");
         this.bookKeeper = bookKeeper;
     }
 

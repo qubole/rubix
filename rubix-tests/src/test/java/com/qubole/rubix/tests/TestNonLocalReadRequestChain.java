@@ -31,6 +31,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -48,6 +50,7 @@ public class TestNonLocalReadRequestChain
     Path backendPath = new Path("testfile:/" + backendFileName);
     File backendFile = new File(backendFileName);
     final Configuration conf = new Configuration();
+    Thread localDataTransferServer;
 
     NonLocalReadRequestChain nonLocalReadRequestChain;
     private static final Log log = LogFactory.getLog(TestNonLocalReadRequestChain.class);
@@ -60,14 +63,13 @@ public class TestNonLocalReadRequestChain
         conf.setInt(CacheConfig.dataCacheBookkeeperPortConf, 3456);
         conf.setInt(CacheConfig.localServerPortConf, 2222);
         conf.setInt(CacheConfig.blockSizeConf, blockSize);
-        Thread server = new Thread()
+        localDataTransferServer = new Thread()
         {
             public void run()
             {
                 LocalDataTransferServer.startServer(conf);
             }
         };
-        server.start();
         Thread thread = new Thread()
         {
             public void run()
@@ -85,31 +87,53 @@ public class TestNonLocalReadRequestChain
         // Populate File
         DataGen.populateFile(backendFileName);
 
+        //set class for filepath beginning with testfile
         conf.setClass("fs.testfile.impl", TestCachingFileSystem.class, FileSystem.class);
-        nonLocalReadRequestChain = new NonLocalReadRequestChain("localhost", backendFile.length(), backendFile.lastModified(), conf, null, backendPath.toString(), ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+        TestCachingFileSystem fs = new TestCachingFileSystem();
+        fs.initialize(null, conf);
+        nonLocalReadRequestChain = new NonLocalReadRequestChain("localhost", backendFile.length(), backendFile.lastModified(), conf, fs, backendPath.toString(), ClusterType.TEST_CLUSTER_MANAGER.ordinal());
     }
 
     @Test
-    private void testRead()
+    private void testRemoteRead()
             throws Exception
     {
         BasicConfigurator.configure();
-        byte[] buffer = new byte[900];
+        localDataTransferServer.start();
+        test();
+    }
+
+    @Test
+    private void testDirectRead()
+            throws Exception
+    {
+        BasicConfigurator.configure();
+        test();
+    }
+
+    @Test
+    private void testDirectRead2()
+            throws Exception
+    {
+        localDataTransferServer.start();
+        BookKeeperServer.stopServer();
+        test();
+    }
+
+    public void test()
+            throws Exception
+    {
+        Logger.getRootLogger().setLevel(Level.INFO);
+        byte[] buffer = new byte[350];
 
         ReadRequest[] readRequests = {
                 new ReadRequest(0, 100, 50, 100, buffer, 0, backendFile.length()),
                 new ReadRequest(200, 300, 200, 300, buffer, 50, backendFile.length()),
                 new ReadRequest(400, 500, 400, 500, buffer, 150, backendFile.length()),
                 new ReadRequest(600, 700, 600, 700, buffer, 250, backendFile.length()),
-                new ReadRequest(800, 900, 800, 900, buffer, 350, backendFile.length()),
-                new ReadRequest(1000, 1100, 1000, 1100, buffer, 450, backendFile.length()),
-                new ReadRequest(1200, 1300, 1200, 1300, buffer, 550, backendFile.length()),
-                new ReadRequest(1400, 1500, 1400, 1500, buffer, 650, backendFile.length()),
-                new ReadRequest(1600, 1700, 1600, 1700, buffer, 750, backendFile.length()),
-                new ReadRequest(1800, 1900, 1800, 1850, buffer, 850, backendFile.length())
-        };
+                };
 
-        //2. send non-local readrequest
+        //1. send non-local readrequest
         for (ReadRequest rr : readRequests) {
             nonLocalReadRequestChain.addReadRequest(rr);
         }
@@ -119,11 +143,12 @@ public class TestNonLocalReadRequestChain
         // 2. Execute and verify that buffer has right data
         int readSize = nonLocalReadRequestChain.call();
 
-        assertTrue("Wrong amount of data read " + readSize + " was expecting " + 900, readSize == 900);
+        assertTrue("Wrong amount of data read " + readSize + " was expecting " + 350, readSize == 350);
         String output = new String(buffer, Charset.defaultCharset());
-        String expectedOutput = DataGen.getExpectedOutput(1000).substring(50, 950);
+        String expectedOutput = DataGen.getExpectedOutput(1000).substring(50, 400);
         assertTrue("Wrong data read, expected\n" + expectedOutput + "\nBut got\n" + output, expectedOutput.equals(output));
- }
+
+    }
 
     @AfterMethod
     public void cleanup()

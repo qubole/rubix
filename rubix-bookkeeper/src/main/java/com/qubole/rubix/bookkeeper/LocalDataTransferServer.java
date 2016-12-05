@@ -60,7 +60,9 @@ public class LocalDataTransferServer
 
     public static void stopServer()
     {
-        localServer.stop();
+        if (localServer != null) {
+            localServer.stop();
+        }
     }
 
     public static class LocalServer implements Runnable
@@ -148,8 +150,11 @@ public class LocalDataTransferServer
                 FileChannel fc = new FileInputStream(filename).getChannel();
                 int maxCount = CacheConfig.getLocalTransferBufferSize(conf);
                 int lengthRemaining = readLength;
-
                 long position = offset;
+                if (fc.size() < readLength) {
+                    fc.close();
+                    throw new Exception("File size is smaller than requested read");
+                }
                 int nread = 0;
                 while (nread < readLength) {
                     if (maxCount > lengthRemaining) {
@@ -164,12 +169,6 @@ public class LocalDataTransferServer
                 fc.close();
             }
             catch (Exception e) {
-                try {
-                    localDataTransferClient.close();
-                }
-                catch (IOException e1) {
-                    e1.printStackTrace();
-                }
                 log.info("Error in Local Data Transfer Server: ", e);
                 return;
             }
