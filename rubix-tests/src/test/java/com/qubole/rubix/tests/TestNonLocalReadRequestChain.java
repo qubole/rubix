@@ -98,7 +98,6 @@ public class TestNonLocalReadRequestChain
     private void testRemoteRead()
             throws Exception
     {
-        BasicConfigurator.configure();
         localDataTransferServer.start();
         test();
     }
@@ -107,7 +106,6 @@ public class TestNonLocalReadRequestChain
     private void testDirectRead()
             throws Exception
     {
-        BasicConfigurator.configure();
         test();
     }
 
