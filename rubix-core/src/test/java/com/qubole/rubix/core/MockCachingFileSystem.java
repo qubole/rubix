@@ -30,10 +30,10 @@ import java.net.URI;
  * Created by sakshia on 25/11/16.
  */
 
-public class TestCachingFileSystem
+public class MockCachingFileSystem
         extends CachingFileSystem<RawLocalFileSystem>
 {
-    private static final Log log = LogFactory.getLog(TestCachingFileSystem.class);
+    private static final Log log = LogFactory.getLog(MockCachingFileSystem.class);
     Configuration conf;
 
     @Override

@@ -22,7 +22,7 @@ import com.qubole.rubix.bookkeeper.LocalDataTransferServer;
 import com.qubole.rubix.core.DataGen;
 import com.qubole.rubix.core.NonLocalReadRequestChain;
 import com.qubole.rubix.core.ReadRequest;
-import com.qubole.rubix.core.TestCachingFileSystem;
+import com.qubole.rubix.core.MockCachingFileSystem;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
@@ -30,7 +30,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.testng.annotations.AfterMethod;
@@ -88,10 +87,10 @@ public class TestNonLocalReadRequestChain
         DataGen.populateFile(backendFileName);
 
         //set class for filepath beginning with testfile
-        conf.setClass("fs.testfile.impl", TestCachingFileSystem.class, FileSystem.class);
-        TestCachingFileSystem fs = new TestCachingFileSystem();
+        conf.setClass("fs.testfile.impl", MockCachingFileSystem.class, FileSystem.class);
+        MockCachingFileSystem fs = new MockCachingFileSystem();
         fs.initialize(null, conf);
-        nonLocalReadRequestChain = new NonLocalReadRequestChain("localhost", backendFile.length(), backendFile.lastModified(), conf, fs, backendPath.toString(), ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+        nonLocalReadRequestChain = new NonLocalReadRequestChain("localhost", backendFile.length(), backendFile.lastModified(), conf, fs, backendPath.toString(), ClusterType.TEST_CLUSTER_MANAGER.ordinal(), false);
     }
 
     @Test
@@ -99,6 +98,11 @@ public class TestNonLocalReadRequestChain
             throws Exception
     {
         localDataTransferServer.start();
+        while (!LocalDataTransferServer.isServerUp()) {
+            Thread.sleep(200);
+            log.info("Waiting for Local Data Transfer Server to come up");
+        }
+        nonLocalReadRequestChain.strictMode = true;
         test();
     }
 
@@ -106,6 +110,7 @@ public class TestNonLocalReadRequestChain
     private void testDirectRead()
             throws Exception
     {
+        nonLocalReadRequestChain.strictMode = false;
         test();
     }
 
@@ -115,6 +120,11 @@ public class TestNonLocalReadRequestChain
     {
         localDataTransferServer.start();
         BookKeeperServer.stopServer();
+        while (!LocalDataTransferServer.isServerUp()) {
+            Thread.sleep(200);
+            log.info("Waiting for Local Data Transfer Server to come up");
+        }
+        nonLocalReadRequestChain.strictMode = false;
         test();
     }
 

@@ -12,6 +12,8 @@
  */
 package com.qubole.rubix.bookkeeper;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Throwables;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.DataTransferClientHelper;
@@ -65,6 +67,16 @@ public class LocalDataTransferServer
         }
     }
 
+    @VisibleForTesting
+    public static boolean isServerUp()
+    {
+        if (localServer != null) {
+            return localServer.isAlive();
+        }
+
+        return false;
+    }
+
     public static class LocalServer implements Runnable
     {
         static ServerSocketChannel listener;
@@ -97,6 +109,11 @@ public class LocalDataTransferServer
                 log.error(String.format("Error starting Local Transfer server %s", e));
             }
 
+        }
+
+        public boolean isAlive()
+        {
+            return listener.isOpen();
         }
 
         public void stop()
@@ -142,10 +159,17 @@ public class LocalDataTransferServer
                 int readLength = header.getReadLength();
                 String remotePath = header.getFilePath();
 
-                bookKeeperClient = bookKeeperFactory.createBookKeeperClient(conf);
+                try {
+                    this.bookKeeperClient = bookKeeperFactory.createBookKeeperClient(conf);
+                }
+                catch (Exception e) {
+                    throw new Exception("Could not create BookKeeper Client " + Throwables.getStackTraceAsString(e));
+                }
+
                 if (!bookKeeperClient.readData(remotePath, offset, readLength, header.getFileSize(), header.getLastModified(), header.getClusterType())) {
                     throw new Exception("Could not cache data required by non-local node");
                 }
+
                 String filename = CacheConfig.getLocalPath(remotePath, conf);
                 FileChannel fc = new FileInputStream(filename).getChannel();
                 int maxCount = CacheConfig.getLocalTransferBufferSize(conf);
@@ -169,7 +193,12 @@ public class LocalDataTransferServer
                 fc.close();
             }
             catch (Exception e) {
-                log.info("Error in Local Data Transfer Server: ", e);
+                try {
+                    log.warn("Error in Local Data Transfer Server for client: " + localDataTransferClient.getLocalAddress(), e);
+                }
+                catch (IOException e1) {
+                    log.warn("Error in Local Data Transfer Server for client: ", e);
+                }
                 return;
             }
             finally {

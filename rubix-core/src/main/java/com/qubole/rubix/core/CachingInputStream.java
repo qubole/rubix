@@ -317,7 +317,7 @@ public class CachingInputStream
                     String remoteLocation = isCached.get(idx).getRemoteLocation();
                     log.debug(String.format("Sending block %d to NonLocalReadRequestChain to node : %s", blockNum, remoteLocation));
                     if (!nonLocalRequests.containsKey(remoteLocation)) {
-                        NonLocalReadRequestChain nonLocalReadRequestChain = new NonLocalReadRequestChain(remoteLocation, fileSize, lastModified, conf, remoteFileSystem, remotePath, clusterType.ordinal());
+                        NonLocalReadRequestChain nonLocalReadRequestChain = new NonLocalReadRequestChain(remoteLocation, fileSize, lastModified, conf, remoteFileSystem, remotePath, clusterType.ordinal(), strictMode);
                         nonLocalRequests.put(remoteLocation, nonLocalReadRequestChain);
                     }
                     nonLocalRequests.get(remoteLocation).addReadRequest(readRequest);

@@ -12,6 +12,7 @@
  */
 package com.qubole.rubix.core;
 
+import com.google.common.base.Throwables;
 import com.qubole.rubix.spi.DataTransferClientHelper;
 import com.qubole.rubix.spi.DataTransferHeader;
 import org.apache.commons.logging.Log;
@@ -41,10 +42,11 @@ public class NonLocalReadRequestChain extends ReadRequestChain
     int directRead = 0;
     FileSystem remoteFileSystem;
     int clusterType;
+    public boolean strictMode;
 
     private static final Log log = LogFactory.getLog(NonLocalReadRequestChain.class);
 
-    public NonLocalReadRequestChain(String remoteLocation, long fileSize, long lastModified, Configuration conf, FileSystem remoteFileSystem, String remotePath, int clusterType)
+    public NonLocalReadRequestChain(String remoteLocation, long fileSize, long lastModified, Configuration conf, FileSystem remoteFileSystem, String remotePath, int clusterType, boolean strictMode)
     {
         this.remoteNodeName = remoteLocation;
         this.remoteFileSystem = remoteFileSystem;
@@ -53,6 +55,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
         this.fileSize = fileSize;
         this.conf = conf;
         this.clusterType = clusterType;
+        this.strictMode = strictMode;
     }
 
     public ReadRequestChainStats getStats()
@@ -79,8 +82,13 @@ public class NonLocalReadRequestChain extends ReadRequestChain
                 dataTransferClient = DataTransferClientHelper.createDataTransferClient(remoteNodeName, conf);
             }
             catch (Exception e) {
-                log.info("Could not create Data Transfer Client ", e);
-                return directReadRequest(readRequests.indexOf(readRequest));
+                log.warn("Could not create Data Transfer Client ", e);
+                if (strictMode) {
+                    throw Throwables.propagate(e);
+                }
+                else {
+                    return directReadRequest(readRequests.indexOf(readRequest));
+                }
             }
             try {
                 int nread = 0;
@@ -96,14 +104,19 @@ public class NonLocalReadRequestChain extends ReadRequestChain
                     totalRead += nread;
                     if (nread == -1) {
                         totalRead -= bytesread;
-                        throw new Exception("Error in Local Transfer Server");
+                        throw new Exception("Error reading from Local Transfer Server");
                     }
                     dst.position(bytesread + readRequest.getDestBufferOffset());
                }
             }
             catch (Exception e) {
                 log.info("Error reading data from node : " + remoteNodeName, e);
-                return directReadRequest(readRequests.indexOf(readRequest));
+                if (strictMode) {
+                    throw Throwables.propagate(e);
+                }
+                else {
+                    return directReadRequest(readRequests.indexOf(readRequest));
+                }
             }
             finally {
                 try {

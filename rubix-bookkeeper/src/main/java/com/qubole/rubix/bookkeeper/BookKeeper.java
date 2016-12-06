@@ -269,7 +269,7 @@ public class BookKeeper
             return true;
         }
         catch (Exception e) {
-            log.info("Could not cache data: " + Throwables.getStackTraceAsString(e));
+            log.warn("Could not cache data: " + Throwables.getStackTraceAsString(e));
             return false;
         }
         finally {
