@@ -25,7 +25,10 @@ import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.qubole.rubix.core.CachingFileSystem;
 import com.qubole.rubix.hadoop2.Hadoop2ClusterManager;
+<<<<<<< HEAD
 import com.qubole.rubix.presto.PrestoClusterManager;
+=======
+>>>>>>> master
 import com.qubole.rubix.spi.BlockLocation;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
@@ -87,7 +90,6 @@ public class BookKeeper
             throws TException
     {
         initializeClusterManager(clusterType);
-
         if (nodeName == null) {
             log.error("Node name is null for Cluster Type" + ClusterType.findByValue(clusterType));
             return null;
@@ -282,9 +284,12 @@ public class BookKeeper
                     inputStream.read(buffer, 0, blockSize);
                 }
             }
+<<<<<<< HEAD
             if (inputStream != null) {
                 inputStream.close();
             }
+=======
+>>>>>>> master
             return true;
         }
         catch (Exception e) {
