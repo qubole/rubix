@@ -33,19 +33,19 @@ public class DataGen
         return stringBuilder.toString();
     }
 
-    static String generateContent()
+    public static String generateContent()
     {
         return generateContent(1);
     }
 
-    static String getExpectedOutput(int size)
+    public static String getExpectedOutput(int size)
     {
         String expected = generateContent(2);
         return expected.substring(0, size);
     }
 
 
-    static void populateFile(String filename)
+    public static void populateFile(String filename)
             throws IOException
     {
         PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(filename, false)));

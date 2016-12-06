@@ -23,14 +23,21 @@ import com.google.common.cache.Weigher;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import com.qubole.rubix.hadoop2.hadoop2CM.Hadoop2ClusterManager;
+import com.qubole.rubix.core.CachingFileSystem;
+import com.qubole.rubix.hadoop2.Hadoop2ClusterManager;
+import com.qubole.rubix.spi.BlockLocation;
+import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
+import com.qubole.rubix.spi.Location;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.thrift.TException;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.thrift.shaded.TException;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,10 +45,8 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -53,7 +58,7 @@ import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
  * Created by stagra on 12/2/16.
  */
 public class BookKeeper
-        implements com.qubole.rubix.bookkeeper.BookKeeperService.Iface
+        implements com.qubole.rubix.spi.BookKeeperService.Iface
 {
     private static Cache<String, FileMetadata> fileMetadataCache;
     private static ClusterManager clusterManager = null;
@@ -76,17 +81,20 @@ public class BookKeeper
     }
 
     @Override
-    public List<com.qubole.rubix.bookkeeper.Location> getCacheStatus(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock, int clusterType)
+    public List<BlockLocation> getCacheStatus(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock, int clusterType)
             throws TException
     {
         initializeClusterManager(clusterType);
-
         if (nodeName == null) {
             log.error("Node name is null for Cluster Type" + ClusterType.findByValue(clusterType));
             return null;
         }
 
-        Set<Long> localSplits = new HashSet<>();
+        if (currentNodeIndex == -1) {
+            return null;
+        }
+
+        Map<Long, String> blockSplits = new HashMap<>();
         long blockNumber = 0;
 
         for (long i = 0; i < fileLength; i = i + splitSize) {
@@ -98,9 +106,7 @@ public class BookKeeper
             HashFunction hf = Hashing.md5();
             HashCode hc = hf.hashString(key, Charsets.UTF_8);
             int nodeIndex = Hashing.consistentHash(hc, nodeListSize);
-            if (nodeIndex == currentNodeIndex) {
-                localSplits.add(blockNumber);
-            }
+            blockSplits.put(blockNumber, nodes.get(nodeIndex));
             blockNumber++;
         }
 
@@ -117,29 +123,30 @@ public class BookKeeper
             throw new TException(e);
         }
         endBlock = setCorrectEndBlock(endBlock, fileLength, remotePath);
-        List<Location> blocksInfo = new ArrayList<>((int) (endBlock - startBlock));
+        List<BlockLocation> blockLocations = new ArrayList<>((int) (endBlock - startBlock));
         int blockSize = CacheConfig.getBlockSize(conf);
+
+        //TODO: Store Node indices too, i.e. split to nodeIndex map and compare indices here instead of strings(nodenames).
 
         for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
             totalRequests++;
             long split = (blockNum * blockSize) / splitSize;
-
             if (md.isBlockCached(blockNum)) {
-                blocksInfo.add(Location.CACHED);
+                blockLocations.add(new BlockLocation(Location.CACHED, blockSplits.get(split)));
                 cachedRequests++;
             }
             else {
-                if (localSplits.contains(split)) {
-                    blocksInfo.add(Location.LOCAL);
+                if (blockSplits.get(split).equalsIgnoreCase(nodes.get(currentNodeIndex))) {
+                    blockLocations.add(new BlockLocation(Location.LOCAL, blockSplits.get(split)));
                     remoteRequests++;
                 }
                 else {
-                    blocksInfo.add(Location.NON_LOCAL);
+                    blockLocations.add(new BlockLocation(Location.NON_LOCAL, blockSplits.get(split)));
                 }
             }
         }
 
-        return blocksInfo;
+        return blockLocations;
     }
 
     private void initializeClusterManager(int clusterType)
@@ -208,12 +215,73 @@ public class BookKeeper
     public Map getCacheStats()
     {
         Map<String, Double> stats = new HashMap<String, Double>();
-        stats.put("Cache Hit Rate", ((double) cachedRequests / totalRequests));
-        stats.put("Cache Miss Rate", ((double) (totalRequests - cachedRequests) / totalRequests));
+        stats.put("Cache Hit Rate", ((double) cachedRequests / (cachedRequests + remoteRequests)));
+        stats.put("Cache Miss Rate", ((double) (remoteRequests) / (cachedRequests + remoteRequests)));
         stats.put("Cache Reads", ((double) cachedRequests));
         stats.put("Remote Reads", ((double) remoteRequests));
         stats.put("Non-Local Reads", ((double) (totalRequests - cachedRequests - remoteRequests)));
         return stats;
+    }
+
+    //This method is to ensure that data required by another node is cached before it is read by that node
+    //using localTransferServer.
+    // If the data is not already cached, remoteReadRequest for that block is sent and data is cached.
+
+    //TODO : buffer is initialized everytime readData is called and it contains garbage value which is not required.
+     // We cannot make it static because the variable is used in remoteReadRequestChain to write (cache) data to files.
+    // So, it has to store the correct value in each thread. getCacheStatus is called twice.
+    @Override
+    public boolean readData(String remotePath, long offset, int length, long fileSize, long lastModified, int clusterType)
+            throws TException
+    {
+        int blockSize = CacheConfig.getBlockSize(conf);
+        byte[] buffer = new byte[blockSize];
+        BookKeeperFactory bookKeeperFactory = new BookKeeperFactory(this);
+        FileSystem fs = null;
+        FSDataInputStream inputStream = null;
+        Path path = new Path(remotePath);
+        long startBlock = offset / blockSize;
+        long endBlock = ((offset + (length - 1)) / CacheConfig.getBlockSize(conf)) + 1;
+        try {
+            int idx = 0;
+            List<BlockLocation> blockLocations = getCacheStatus(remotePath, fileSize, lastModified, startBlock, endBlock, clusterType);
+
+            for (int blockNum = (int) startBlock; blockNum < endBlock; blockNum++, idx++) {
+                int readStart = blockNum * blockSize;
+                log.debug(" blockLocation is: " + blockLocations.get(idx).getLocation());
+                if (blockLocations.get(idx).getLocation() != Location.CACHED) {
+                    if (fs == null) {
+                        fs = path.getFileSystem(conf);
+                        fs.initialize(path.toUri(), conf);
+
+                        if (CachingFileSystem.class.isAssignableFrom(fs.getClass())) {
+                            ((CachingFileSystem) fs).setBookKeeper(bookKeeperFactory, conf);
+                        }
+                        else {
+                            throw new Exception("Not a subclass of CachingFileSystem");
+                        }
+                        inputStream = fs.open(path, blockSize);
+                    }
+                    inputStream.seek(readStart);
+                    inputStream.read(buffer, 0, blockSize);
+                }
+            }
+            return true;
+        }
+        catch (Exception e) {
+            log.warn("Could not cache data: " + Throwables.getStackTraceAsString(e));
+            return false;
+        }
+        finally {
+            if (inputStream != null) {
+                try {
+                    inputStream.close();
+                }
+                catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
     private long setCorrectEndBlock(long endBlock, long fileLength, String remotePath)

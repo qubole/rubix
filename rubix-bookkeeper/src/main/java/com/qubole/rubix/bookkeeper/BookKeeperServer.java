@@ -14,14 +14,15 @@ package com.qubole.rubix.bookkeeper;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
+import com.qubole.rubix.spi.BookKeeperService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.thrift.server.TServer;
-import org.apache.thrift.server.TThreadPoolServer;
-import org.apache.thrift.transport.TServerSocket;
-import org.apache.thrift.transport.TServerTransport;
-import org.apache.thrift.transport.TTransportException;
+import org.apache.thrift.shaded.server.TServer;
+import org.apache.thrift.shaded.server.TThreadPoolServer;
+import org.apache.thrift.shaded.transport.TServerSocket;
+import org.apache.thrift.shaded.transport.TServerTransport;
+import org.apache.thrift.shaded.transport.TTransportException;
 
 import static com.qubole.rubix.spi.CacheConfig.getServerMaxThreads;
 import static com.qubole.rubix.spi.CacheConfig.getServerPort;
@@ -41,8 +42,7 @@ public class BookKeeperServer
     private static Log log = LogFactory.getLog(BookKeeperServer.class.getName());
 
     private BookKeeperServer()
-    {
-    }
+    {}
 
     public static void main(String[] args)
     {
@@ -54,7 +54,6 @@ public class BookKeeperServer
                 startServer(conf);
             }
         };
-
         new Thread(bookKeeperServer).run();
     }
 
@@ -74,7 +73,7 @@ public class BookKeeperServer
         }
         catch (TTransportException e) {
             e.printStackTrace();
-            log.error(String.format("Error starting server %s", Throwables.getStackTraceAsString(e)));
+            log.error(String.format("Error starting BookKeeper server %s", Throwables.getStackTraceAsString(e)));
         }
     }
 

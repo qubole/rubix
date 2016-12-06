@@ -10,11 +10,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-package com.qubole.rubix.core;
+package com.qubole.rubix.tests;
 
-import com.qubole.rubix.bookkeeper.BookKeeperServer;
+import com.qubole.rubix.bookkeeper.LocalDataTransferServer;
+import com.qubole.rubix.core.CachingFileSystemStats;
+import com.qubole.rubix.core.CachingInputStream;
+import com.qubole.rubix.core.DataGen;
+import com.qubole.rubix.core.LocalFSInputStream;
+import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.bookkeeper.BookKeeperServer;
 import com.qubole.rubix.spi.ClusterType;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -23,6 +30,7 @@ import org.apache.hadoop.fs.Path;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+
 
 import java.io.File;
 import java.io.IOException;
@@ -44,16 +52,27 @@ public class TestCachingInputStream
 
     CachingInputStream inputStream;
 
-    private static final Log log = LogFactory.getLog(TestCachingInputStream.class);
+    private static final Log log = LogFactory.getLog(TestCachingInputStream.class.getName());
+
 
     @BeforeMethod
     public void setup()
             throws IOException, InterruptedException
     {
+
         final Configuration conf = new Configuration();
 
         conf.setBoolean(CacheConfig.DATA_CACHE_STRICT_MODE, true);
         conf.setInt(CacheConfig.dataCacheBookkeeperPortConf, 3456);
+        conf.setInt(CacheConfig.localServerPortConf, 2222);
+        Thread server = new Thread()
+        {
+            public void run()
+            {
+                LocalDataTransferServer.startServer(conf);
+            }
+        };
+        server.start();
         Thread thread = new Thread()
         {
             public void run()
@@ -69,8 +88,8 @@ public class TestCachingInputStream
             Thread.sleep(200);
             log.info("Waiting for BookKeeper Server to come up");
         }
-
         createCachingStream(conf);
+
     }
 
     public void createCachingStream(Configuration conf)
@@ -84,16 +103,17 @@ public class TestCachingInputStream
         LocalFSInputStream localFSInputStream = new LocalFSInputStream(backendFileName);
         FSDataInputStream fsDataInputStream = new FSDataInputStream(localFSInputStream);
         conf.setInt(CacheConfig.blockSizeConf, blockSize);
-        log.info("All set to test");
 
         // This should be after server comes up else client could not be created
-        inputStream = new CachingInputStream(fsDataInputStream, conf, backendPath, file.length(), file.lastModified(), new CachingFileSystemStats(), 64 * 1024 * 1024, ClusterType.TEST_CLUSTER_MANAGER);
+        inputStream = new CachingInputStream(fsDataInputStream, conf, backendPath, file.length(),file.lastModified(), new CachingFileSystemStats(), ClusterType.TEST_CLUSTER_MANAGER, new BookKeeperFactory(), null);
+
     }
 
     @AfterMethod
     public void cleanup()
     {
         BookKeeperServer.stopServer();
+        LocalDataTransferServer.stopServer();
         Configuration conf = new Configuration();
         inputStream.close();
         File file = new File(backendFileName);
@@ -136,7 +156,6 @@ public class TestCachingInputStream
     public void testChunkCachingAndEviction()
             throws IOException, InterruptedException
     {
-
         // 1. Seek and read some data
         testCachingHelper();
 
@@ -210,6 +229,7 @@ public class TestCachingInputStream
 
         readSize = inputStream.read(buffer, 100, 100);
         assertTrue("Did not get EOF", readSize == -1);
+
     }
 
     private void assertions(int readSize, int expectedReadSize, byte[] outputBuffer, String expectedOutput)

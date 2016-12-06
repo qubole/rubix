@@ -58,6 +58,7 @@
         <module>rubix-core</module>
         <module>rubix-presto</module>
         <module>rubix-hadoop1</module>
+        <module>rubix-tests</module>
         <module>assembly</module>
     </modules>
 
@@ -93,23 +94,15 @@
                 <version>${project.version}</version>
             </dependency>
 
-
-            <dependency>
-                <groupId>com.qubole.rubix</groupId>
-                <artifactId>rubix-hadoop2FS</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-
-            <dependency>
-                <groupId>com.qubole.rubix</groupId>
-                <artifactId>rubix-hadoop2CM</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
             <dependency>
                 <groupId>com.qubole.rubix</groupId>
                 <artifactId>rubix-spi</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.qubole.rubix</groupId>
+                <artifactId>rubix-tests</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

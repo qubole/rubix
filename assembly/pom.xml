@@ -40,13 +40,14 @@
 
         <dependency>
             <groupId>com.qubole.rubix</groupId>
-            <artifactId>rubix-hadoop2CM</artifactId>
+            <artifactId>rubix-hadoop2</artifactId>
         </dependency>
 
         <dependency>
             <groupId>com.qubole.rubix</groupId>
-            <artifactId>rubix-hadoop2FS</artifactId>
+            <artifactId>rubix-tests</artifactId>
         </dependency>
+
 
 
     </dependencies>
