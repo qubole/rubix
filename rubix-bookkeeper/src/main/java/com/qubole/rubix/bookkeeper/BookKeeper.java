@@ -281,9 +281,6 @@ public class BookKeeper
                     inputStream.read(buffer, 0, blockSize);
                 }
             }
-            if (inputStream != null) {
-                inputStream.close();
-            }
             return true;
         }
         catch (Exception e) {
