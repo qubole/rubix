@@ -200,7 +200,6 @@ public class BookKeeper
         else {
             nodes = clusterManager.getNodes();
         }
-
     }
 
     @Override
@@ -270,6 +269,7 @@ public class BookKeeper
                     if (fs == null) {
                         fs = path.getFileSystem(conf);
                         fs.initialize(path.toUri(), conf);
+
                         if (CachingFileSystem.class.isAssignableFrom(fs.getClass())) {
                             ((CachingFileSystem) fs).setBookKeeper(bookKeeperFactory, conf);
                         }
@@ -282,10 +282,13 @@ public class BookKeeper
                     inputStream.read(buffer, 0, blockSize);
                 }
             }
+            if (inputStream != null) {
+                inputStream.close();
+            }
             return true;
         }
         catch (Exception e) {
-            log.info("Could not cache data: " + Throwables.getStackTraceAsString(e));
+            log.warn("Could not cache data: " + Throwables.getStackTraceAsString(e));
             return false;
         }
         finally {

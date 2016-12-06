@@ -41,12 +41,12 @@ public class NonLocalReadRequestChain extends ReadRequestChain
     int totalRead = 0;
     int directRead = 0;
     FileSystem remoteFileSystem;
-    FSDataInputStream inputStream = null;
     int clusterType;
+    public boolean strictMode = false;
 
     private static final Log log = LogFactory.getLog(NonLocalReadRequestChain.class);
 
-    public NonLocalReadRequestChain(String remoteLocation, long fileSize, long lastModified, Configuration conf, FileSystem remoteFileSystem, String remotePath, int clusterType)
+    public NonLocalReadRequestChain(String remoteLocation, long fileSize, long lastModified, Configuration conf, FileSystem remoteFileSystem, String remotePath, int clusterType, boolean strictMode)
     {
         this.remoteNodeName = remoteLocation;
         this.remoteFileSystem = remoteFileSystem;
@@ -55,6 +55,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
         this.fileSize = fileSize;
         this.conf = conf;
         this.clusterType = clusterType;
+        this.strictMode = strictMode;
     }
 
     public ReadRequestChainStats getStats()
@@ -74,17 +75,21 @@ public class NonLocalReadRequestChain extends ReadRequestChain
             return 0;
         }
         checkState(isLocked, "Trying to execute Chain without locking");
-        SocketChannel dataTransferClient;
-
-        try {
-            dataTransferClient = DataTransferClientHelper.createDataTransferClient(remoteNodeName, conf);
-        }
-        catch (Exception e) {
-            log.info("Could not create Data Transfer Client " + Throwables.getStackTraceAsString(e));
-            return directReadRequest(0);
-        }
 
         for (ReadRequest readRequest : readRequests) {
+            SocketChannel dataTransferClient;
+            try {
+                dataTransferClient = DataTransferClientHelper.createDataTransferClient(remoteNodeName, conf);
+            }
+            catch (Exception e) {
+                log.warn("Could not create Data Transfer Client ", e);
+                if (strictMode) {
+                    throw Throwables.propagate(e);
+                }
+                else {
+                    return directReadRequest(readRequests.indexOf(readRequest));
+                }
+            }
             try {
                 int nread = 0;
                 ByteBuffer buf = DataTransferClientHelper.writeHeaders(conf, new DataTransferHeader(readRequest.getActualReadStart(),
@@ -93,45 +98,51 @@ public class NonLocalReadRequestChain extends ReadRequestChain
                 dataTransferClient.write(buf);
                 int bytesread = 0;
                 ByteBuffer dst = ByteBuffer.wrap(readRequest.destBuffer, readRequest.getDestBufferOffset(), readRequest.destBuffer.length - readRequest.getDestBufferOffset());
-
                 while (bytesread != readRequest.getActualReadLength()) {
                     nread = dataTransferClient.read(dst);
                     bytesread += nread;
                     totalRead += nread;
                     if (nread == -1) {
-                        totalRead += 1;
-                        throw new Exception("Error in Local Transfer Server");
+                        totalRead -= bytesread;
+                        throw new Exception("Error reading from Local Transfer Server");
                     }
                     dst.position(bytesread + readRequest.getDestBufferOffset());
-                }
+               }
             }
             catch (Exception e) {
-                log.info("Error reading data from node : " + remoteNodeName + Throwables.getStackTraceAsString(e));
-                return directReadRequest(readRequests.indexOf(readRequest));
+                log.info("Error reading data from node : " + remoteNodeName, e);
+                if (strictMode) {
+                    throw Throwables.propagate(e);
+                }
+                else {
+                    return directReadRequest(readRequests.indexOf(readRequest));
+                }
             }
             finally {
                 try {
+                    log.info(String.format("Read %d bytes internally from node %s", totalRead, remoteNodeName));
                     dataTransferClient.close();
                 }
                 catch (IOException e) {
-                    log.info("Error closing Data Transfer client : " + remoteNodeName + Throwables.getStackTraceAsString(e));
+                    log.info("Error closing Data Transfer client : " + remoteNodeName, e);
                 }
             }
         }
-        log.info(String.format("Read %d bytes internally from node %s", totalRead, remoteNodeName));
+
         return totalRead;
     }
 
     private int directReadRequest(int index)
             throws Exception
     {
-        inputStream = remoteFileSystem.open(new Path(filePath));
+        FSDataInputStream inputStream = remoteFileSystem.open(new Path(filePath));
         DirectReadRequestChain readChain = new DirectReadRequestChain(inputStream);
         for (ReadRequest readRequest : readRequests.subList(index, readRequests.size())) {
             readChain.addReadRequest(readRequest);
         }
         readChain.lock();
         directRead = readChain.call();
+        inputStream.close();
         return (totalRead + directRead);
     }
 }
