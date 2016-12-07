@@ -94,22 +94,34 @@ public class PrestoClusterManager extends ClusterManager
 
                             StringBuffer allResponse = new StringBuffer();
                             StringBuffer failedResponse = new StringBuffer();
-
-                            if (allNodesResponseCode == HttpURLConnection.HTTP_OK) {
-                                isMaster = true;
-                                BufferedReader in = new BufferedReader(new InputStreamReader(allHttpCon.getInputStream()));
-                                String inputLine = "";
-                                while ((inputLine = in.readLine()) != null) {
-                                    allResponse.append(inputLine);
+                            try {
+                                if (allNodesResponseCode == HttpURLConnection.HTTP_OK) {
+                                    isMaster = true;
+                                    BufferedReader in = new BufferedReader(new InputStreamReader(allHttpCon.getInputStream()));
+                                    String inputLine = "";
+                                    try {
+                                        while ((inputLine = in.readLine()) != null) {
+                                            allResponse.append(inputLine);
+                                        }
+                                    }
+                                    catch (IOException e) {
+                                        throw new IOException(e);
+                                    }
+                                    finally {
+                                        in.close();
+                                    }
                                 }
-                                in.close();
-                                allHttpCon.disconnect();
+                                else {
+                                    log.info(String.format("v1/node failed with code: setting this node as worker "));
+                                    isMaster = false;
+                                    return ImmutableList.of();
+                                }
                             }
-                            else {
-                                log.info(String.format("v1/node failed with code: setting this node as worker "));
-                                isMaster = false;
+                            catch (IOException e) {
+                                throw new IOException(e);
+                            }
+                            finally {
                                 allHttpCon.disconnect();
-                                return ImmutableList.of();
                             }
 
                             HttpURLConnection failHttpConn = (HttpURLConnection) failedNodesRequest.openConnection();
@@ -117,15 +129,30 @@ public class PrestoClusterManager extends ClusterManager
                             failHttpConn.setRequestMethod("GET");
                             int failedNodesResponseCode = failHttpConn.getResponseCode();
                             // check on failed nodes
-                            if (failedNodesResponseCode == HttpURLConnection.HTTP_OK) {
-                                BufferedReader in = new BufferedReader(new InputStreamReader(failHttpConn.getInputStream()));
-                                String inputLine;
-                                while ((inputLine = in.readLine()) != null) {
-                                    failedResponse.append(inputLine);
+                            try {
+                                if (failedNodesResponseCode == HttpURLConnection.HTTP_OK) {
+                                    BufferedReader in = new BufferedReader(new InputStreamReader(failHttpConn.getInputStream()));
+                                    String inputLine;
+                                    try {
+                                        while ((inputLine = in.readLine()) != null) {
+                                            failedResponse.append(inputLine);
+                                        }
+                                    }
+                                    catch (IOException e) {
+                                        throw new IOException(e);
+                                    }
+                                    finally {
+                                        in.close();
+                                    }
                                 }
-                                in.close();
                             }
-                            failHttpConn.disconnect();
+                            catch (IOException e) {
+                                throw new IOException(e);
+                            }
+                            finally {
+                                failHttpConn.disconnect();
+                            }
+
                             Gson gson = new Gson();
                             Type type = new TypeToken<List<Stats>>() {}.getType();
 
@@ -167,15 +194,10 @@ public class PrestoClusterManager extends ClusterManager
 
     @Override
     public boolean isMaster()
+            throws ExecutionException
     {
         // issue get on nodesSupplier to ensure that isMaster is set correctly
-        //nodesSupplier.get();
-        try {
-            nodesCache.get("nodeList");
-        }
-        catch (ExecutionException e) {
-            e.printStackTrace();
-        }
+        nodesCache.get("nodeList");
         return isMaster;
     }
 

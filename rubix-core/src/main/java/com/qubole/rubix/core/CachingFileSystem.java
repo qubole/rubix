@@ -41,6 +41,7 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.net.URI;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 import static com.qubole.rubix.spi.CacheConfig.skipCache;
 /**
@@ -210,8 +211,14 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
     @Override
     public BlockLocation[] getFileBlockLocations(FileStatus file, long start, long len) throws IOException
     {
-        if (!clusterManager.isMaster() || cacheSkipped) {
-            // If in worker node, blockLocation does not matter
+        try {
+            if (!clusterManager.isMaster() || cacheSkipped) {
+                // If in worker node, blockLocation does not matter
+                return fs.getFileBlockLocations(file, start, len);
+            }
+        }
+        catch (ExecutionException e) {
+            log.info("Could not find whether node is Master");
             return fs.getFileBlockLocations(file, start, len);
         }
 

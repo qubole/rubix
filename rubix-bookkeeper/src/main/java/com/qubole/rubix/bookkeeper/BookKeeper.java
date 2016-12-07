@@ -175,6 +175,7 @@ public class BookKeeper
                         }
 
                         else if (clusterType == PRESTO_CLUSTER_MANAGER.ordinal()) {
+                            //Presto needs to store hostAddress in nodename
                             try {
                                 nodeName = InetAddress.getLocalHost().getHostAddress();
                             }

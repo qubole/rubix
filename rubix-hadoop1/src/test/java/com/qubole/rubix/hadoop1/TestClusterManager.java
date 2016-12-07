@@ -29,6 +29,7 @@ import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 import static org.testng.AssertJUnit.assertFalse;
 import static org.testng.AssertJUnit.assertTrue;
@@ -43,7 +44,7 @@ public class TestClusterManager
 
     @Test
     public void testGetNodes()
-            throws IOException
+            throws IOException, ExecutionException
     {
         HttpServer server = startServer(true);
         ClusterManager cm = getHadoop1ClusterManager();
@@ -61,7 +62,7 @@ public class TestClusterManager
 
     @Test
     public void testIsMasterOnWorker()
-            throws IOException
+            throws IOException, ExecutionException
     {
         HttpServer server = startServer(false);
         ClusterManager cm = getHadoop1ClusterManager();

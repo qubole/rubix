@@ -15,6 +15,7 @@ package com.qubole.rubix.spi;
 import org.apache.hadoop.conf.Configuration;
 
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Created by stagra on 14/1/16.
@@ -57,7 +58,8 @@ public abstract class ClusterManager
         return nodeRefreshTime;
     }
 
-    public abstract boolean isMaster();
+    public abstract boolean isMaster()
+            throws ExecutionException;
 
     // Nodes format as per the note above
     // Should return sorted list
