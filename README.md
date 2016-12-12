@@ -25,7 +25,9 @@ List of things to be done to use RubiX are:
 	To use RubiX, you need to place the appropriate jars in the classpath and configure Engines to use RubiX filesystem to access the cloud store. Sections below show how to get started on RubiX with supported plugins.
 
 2. Start the BookKeeper server and LocalDataTransfer server. It can be started via `hadoop jar` command, e.g.: 
-> export HADOOP_CUSTOM_OVERRIDES='fs.s3n.impl=Y29tLnF1Ym9sZS5ydWJpeC5oYWRvb3AyLkNhY2hpbmdOYXRpdmVTM0ZpbGVTeXN0ZW0=!fs.s3.impl=Y29tLnF1Ym9sZS5ydWJpeC5oYWRvb3AyLkNhY2hpbmdOYXRpdmVTM0ZpbGVTeXN0ZW0=!'
+> Set filesystem in hadoop configs. For example, for com.rubix.hadoop2.CachingNativeS3FileSystem, we use the following: (Base-64 encoding)
+
+			> export HADOOP_CUSTOM_OVERRIDES='fs.s3n.impl=Y29tLnF1Ym9sZS5ydWJpeC5oYWRvb3AyLkNhY2hpbmdOYXRpdmVTM0ZpbGVTeXN0ZW0=!fs.s3.impl=Y29tLnF1Ym9sZS5ydWJpeC5oYWRvb3AyLkNhY2hpbmdOYXRpdmVTM0ZpbGVTeXN0ZW0=!'
 
 	>	hadoop jar rubix-bookkeeper-*.jar com.qubole.rubix.bookkeeper.BookKeeperServer
 	
