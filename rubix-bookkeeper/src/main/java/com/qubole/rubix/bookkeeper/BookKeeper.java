@@ -92,7 +92,7 @@ public class BookKeeper
             return null;
         }
 
-        if (currentNodeIndex == -1) {
+        if (currentNodeIndex == -1 || nodes == null) {
             return null;
         }
 

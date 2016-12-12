@@ -208,12 +208,11 @@ public class PrestoClusterManager extends ClusterManager
     @Override
     public List<String> getNodes()
     {
-        //return nodesSupplier.get();
         try {
             return nodesCache.get("nodeList");
         }
         catch (ExecutionException e) {
-            e.printStackTrace();
+            log.info("Error fetching node list : ", e);
         }
         return null;
     }

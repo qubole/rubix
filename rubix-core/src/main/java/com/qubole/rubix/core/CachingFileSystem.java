@@ -224,6 +224,10 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
 
         List<String> nodes = clusterManager.getNodes();
 
+        if (nodes == null) {
+            return fs.getFileBlockLocations(file, start, len);
+        }
+
         if (file == null) {
             return null;
         }
