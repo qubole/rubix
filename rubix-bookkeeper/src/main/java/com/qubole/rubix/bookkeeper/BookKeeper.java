@@ -25,6 +25,7 @@ import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.qubole.rubix.core.CachingFileSystem;
 import com.qubole.rubix.hadoop2.Hadoop2ClusterManager;
+import com.qubole.rubix.presto.PrestoClusterManager;
 import com.qubole.rubix.spi.BlockLocation;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
@@ -52,6 +53,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import static com.qubole.rubix.spi.ClusterType.HADOOP2_CLUSTER_MANAGER;
+import static com.qubole.rubix.spi.ClusterType.PRESTO_CLUSTER_MANAGER;
 import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
 
 /**
@@ -90,7 +92,7 @@ public class BookKeeper
             return null;
         }
 
-        if (currentNodeIndex == -1) {
+        if (currentNodeIndex == -1 || nodes == null) {
             return null;
         }
 
@@ -162,16 +164,30 @@ public class BookKeeper
                         log.warn("Could not get nodeName", e);
                     }
 
-                    if (clusterType == HADOOP2_CLUSTER_MANAGER.ordinal()) {
-                        clusterManager = new Hadoop2ClusterManager();
-                        clusterManager.initialize(conf);
-                        nodes = clusterManager.getNodes();
-                        splitSize = clusterManager.getSplitSize();
-                    }
-                    else if (clusterType == TEST_CLUSTER_MANAGER.ordinal()) {
+                    if (clusterType == TEST_CLUSTER_MANAGER.ordinal()) {
                         nodes = new ArrayList<>();
                         nodes.add(nodeName);
                         splitSize = 64 * 1024 * 1024;
+                    }
+                    else {
+                        if (clusterType == HADOOP2_CLUSTER_MANAGER.ordinal()) {
+                            clusterManager = new Hadoop2ClusterManager();
+                        }
+
+                        else if (clusterType == PRESTO_CLUSTER_MANAGER.ordinal()) {
+                            //Presto needs to store hostAddress in nodename
+                            try {
+                                nodeName = InetAddress.getLocalHost().getHostAddress();
+                            }
+                            catch (UnknownHostException e) {
+                                e.printStackTrace();
+                                log.warn("Could not get nodeName", e);
+                            }
+                            clusterManager = new PrestoClusterManager();
+                        }
+                        clusterManager.initialize(conf);
+                        nodes = clusterManager.getNodes();
+                        splitSize = clusterManager.getSplitSize();
                     }
                     nodeListSize = nodes.size();
                     currentNodeIndex = nodes.indexOf(nodeName);

@@ -12,38 +12,38 @@
  */
 package com.qubole.rubix.presto;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.reflect.TypeToken;
+import com.google.gson.Gson;
 import com.qubole.rubix.spi.ClusterManager;
-import io.airlift.http.client.FullJsonResponseHandler;
-import io.airlift.http.client.HttpClient;
-import io.airlift.http.client.HttpStatus;
-import io.airlift.http.client.Request;
-import io.airlift.http.client.jetty.JettyHttpClient;
-import io.airlift.log.Logger;
+import com.qubole.rubix.spi.ClusterType;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.lang.reflect.Type;
+import java.net.HttpURLConnection;
 import java.net.InetAddress;
+import java.net.MalformedURLException;
 import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.UnknownHostException;
+import java.net.URL;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
-import static io.airlift.http.client.FullJsonResponseHandler.createFullJsonResponseHandler;
-import static io.airlift.http.client.Request.Builder.prepareGet;
-import static io.airlift.json.JsonCodec.listJsonCodec;
 
 /**
  * Created by stagra on 14/1/16.
@@ -52,109 +52,152 @@ public class PrestoClusterManager extends ClusterManager
 {
     private boolean isMaster = true;
     private int serverPort = 8081;
-    private String serverAddress = "http://localhost";
+    private String serverAddress = "localhost";
+    static LoadingCache<String, List<String>> nodesCache;
 
-    private Supplier<List<String>> nodesSupplier;
-
-    private static final Logger log = Logger.get(PrestoClusterManager.class);
+    private Log log = LogFactory.getLog(PrestoClusterManager.class);
 
     public static String serverPortConf = "caching.fs.presto-server-port";
+    public static String serverAddressConf = "master.hostname";
 
     // Safe to use single instance of HttpClient since Supplier.get() provides synchronization
-    private static HttpClient httpClient = new JettyHttpClient();
-
     @Override
     public void initialize(Configuration conf)
     {
         super.initialize(conf);
         this.serverPort = conf.getInt(serverPortConf, serverPort);
-
-        nodesSupplier = Suppliers.memoizeWithExpiration(new Supplier<List<String>>() {
-            @Override
-            public List<String> get()
-            {
-                if (!isMaster) {
-                    // First time all nodes start assuming themselves as master and down the line figure out their role
-                    // Next time onwards, only master will be fetching the list of nodes
-                    return ImmutableList.of();
-                }
-
-                try {
-                    List<Stats> allNodes;
-                    List<Stats> failedNodes = ImmutableList.of();
-
-                    Request allNodesRequest = prepareGet()
-                            .setUri(getNodeUri())
-                            .build();
-
-                    Request failedNodesRequest = prepareGet()
-                            .setUri(getFailedNodeUri())
-                            .build();
-
-                    Future allNodesFuture = httpClient.executeAsync(allNodesRequest, createFullJsonResponseHandler(listJsonCodec(Stats.class)));
-                    Future failedNodesFuture = httpClient.executeAsync(failedNodesRequest, createFullJsonResponseHandler(listJsonCodec(Stats.class)));
-
-                    FullJsonResponseHandler.JsonResponse allNodesResponse = (FullJsonResponseHandler.JsonResponse) allNodesFuture.get();
-                    if (allNodesResponse.getStatusCode() == HttpStatus.OK.code()) {
-                        isMaster = true;
-                        if (!allNodesResponse.hasValue()) {
-                            // Empty result set => server up and only master node running, return localhost has the only node
-                            // Do not need to consider failed nodes list as 1node cluster and server is up since it replied to allNodesRequest
-                            return ImmutableList.of(InetAddress.getLocalHost().getHostName());
+        this.serverAddress = conf.get(serverAddressConf, serverAddress);
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        nodesCache = CacheBuilder.newBuilder()
+                .refreshAfterWrite(getNodeRefreshTime(), TimeUnit.SECONDS)
+                .build(CacheLoader.asyncReloading(new CacheLoader<String, List<String>>()
+                {
+                    @Override
+                    public List<String> load(String s)
+                            throws Exception
+                    {
+                        if (!isMaster) {
+                            // First time all nodes start assuming themselves as master and down the line figure out their role
+                            // Next time onwards, only master will be fetching the list of nodes
+                            return ImmutableList.of();
                         }
-                        else {
-                            allNodes = (List<Stats>) allNodesResponse.getValue();
+
+                        try {
+                            URL allNodesRequest = getNodeUrl();
+                            URL failedNodesRequest = getFailedNodeUrl();
+
+                            HttpURLConnection allHttpCon = (HttpURLConnection) allNodesRequest.openConnection();
+                            allHttpCon.setConnectTimeout(500); //ms
+                            allHttpCon.setRequestMethod("GET");
+
+                            int allNodesResponseCode = allHttpCon.getResponseCode();
+
+                            StringBuffer allResponse = new StringBuffer();
+                            StringBuffer failedResponse = new StringBuffer();
+                            try {
+                                if (allNodesResponseCode == HttpURLConnection.HTTP_OK) {
+                                    isMaster = true;
+                                    BufferedReader in = new BufferedReader(new InputStreamReader(allHttpCon.getInputStream()));
+                                    String inputLine = "";
+                                    try {
+                                        while ((inputLine = in.readLine()) != null) {
+                                            allResponse.append(inputLine);
+                                        }
+                                    }
+                                    catch (IOException e) {
+                                        throw new IOException(e);
+                                    }
+                                    finally {
+                                        in.close();
+                                    }
+                                }
+                                else {
+                                    log.info(String.format("v1/node failed with code: setting this node as worker "));
+                                    isMaster = false;
+                                    return ImmutableList.of();
+                                }
+                            }
+                            catch (IOException e) {
+                                throw new IOException(e);
+                            }
+                            finally {
+                                allHttpCon.disconnect();
+                            }
+
+                            HttpURLConnection failHttpConn = (HttpURLConnection) failedNodesRequest.openConnection();
+                            failHttpConn.setConnectTimeout(500);    //ms
+                            failHttpConn.setRequestMethod("GET");
+                            int failedNodesResponseCode = failHttpConn.getResponseCode();
+                            // check on failed nodes
+                            try {
+                                if (failedNodesResponseCode == HttpURLConnection.HTTP_OK) {
+                                    BufferedReader in = new BufferedReader(new InputStreamReader(failHttpConn.getInputStream()));
+                                    String inputLine;
+                                    try {
+                                        while ((inputLine = in.readLine()) != null) {
+                                            failedResponse.append(inputLine);
+                                        }
+                                    }
+                                    catch (IOException e) {
+                                        throw new IOException(e);
+                                    }
+                                    finally {
+                                        in.close();
+                                    }
+                                }
+                            }
+                            catch (IOException e) {
+                                throw new IOException(e);
+                            }
+                            finally {
+                                failHttpConn.disconnect();
+                            }
+
+                            Gson gson = new Gson();
+                            Type type = new TypeToken<List<Stats>>() {}.getType();
+
+                            List<Stats> allNodes = gson.fromJson(allResponse.toString(), type);
+                            List<Stats> failedNodes = gson.fromJson(failedResponse.toString(), type);
+                            if (allNodes.isEmpty()) {
+                                // Empty result set => server up and only master node running, return localhost has the only node
+                                // Do not need to consider failed nodes list as 1node cluster and server is up since it replied to allNodesRequest
+                                return ImmutableList.of(InetAddress.getLocalHost().getHostName());
+                            }
+
+                            if (failedNodes.isEmpty()) {
+                                failedNodes = ImmutableList.of();
+                                //return ImmutableList.of(InetAddress.getLocalHost().getHostName());
+                            }
+
+                            // keep only the healthy nodes
+                            allNodes.removeAll(failedNodes);
+
+                            Set<String> hosts = new HashSet<String>();
+
+                            for (Stats node : allNodes) {
+                                hosts.add(node.getUri().getHost());
+                            }
+                            if (hosts.isEmpty()) {
+                                // case of master only cluster
+                                hosts.add(InetAddress.getLocalHost().getHostName());
+                            }
+                            List<String> hostList = Lists.newArrayList(hosts.toArray(new String[0]));
+                            Collections.sort(hostList);
+                            return hostList;
+                        }
+                        catch (IOException e) {
+                            throw Throwables.propagate(e);
                         }
                     }
-                    else {
-                        log.info(String.format("v1/node failed with code: %d setting this node as worker ", allNodesResponse.getStatusCode()));
-                        isMaster = false;
-                        return ImmutableList.of();
-                    }
-
-                    // check on failed nodes
-                    FullJsonResponseHandler.JsonResponse failedNodesResponse = (FullJsonResponseHandler.JsonResponse) failedNodesFuture.get();
-                    if (failedNodesResponse.getStatusCode() == HttpStatus.OK.code()) {
-                        if (!failedNodesResponse.hasValue()) {
-                            failedNodes = ImmutableList.of();
-                            //return ImmutableList.of(InetAddress.getLocalHost().getHostName());
-                        }
-                        else {
-                            failedNodes = (List<Stats>) failedNodesResponse.getValue();
-                        }
-                    }
-
-                    // keep only the healthy nodes
-                    allNodes.removeAll(failedNodes);
-
-                    Set<String> hosts = new HashSet<String>();
-
-                    for (Stats node : allNodes) {
-                        hosts.add(node.getUri().getHost());
-                        log.debug(String.format("Node: %s", node.getUri()));
-                    }
-
-                    if (hosts.isEmpty()) {
-                        // case of master only cluster
-                        hosts.add(InetAddress.getLocalHost().getHostName());
-                    }
-
-                    List<String> hostList = Lists.newArrayList(hosts.toArray(new String[0]));
-                    Collections.sort(hostList);
-                    return hostList;
-                }
-                catch (InterruptedException | ExecutionException | URISyntaxException | UnknownHostException e) {
-                    throw Throwables.propagate(e);
-                }
-            }
-        }, 10, TimeUnit.SECONDS);
+                }, executor));
     }
 
     @Override
     public boolean isMaster()
+            throws ExecutionException
     {
         // issue get on nodesSupplier to ensure that isMaster is set correctly
-        nodesSupplier.get();
+        nodesCache.get("nodeList");
         return isMaster;
     }
 
@@ -165,19 +208,31 @@ public class PrestoClusterManager extends ClusterManager
     @Override
     public List<String> getNodes()
     {
-        return nodesSupplier.get();
+        try {
+            return nodesCache.get("nodeList");
+        }
+        catch (ExecutionException e) {
+            log.info("Error fetching node list : ", e);
+        }
+        return null;
     }
 
-    private URI getNodeUri()
-            throws URISyntaxException
+    @Override
+    public ClusterType getClusterType()
     {
-        return new URI(serverAddress + ":" + serverPort + "/v1/node");
+        return ClusterType.PRESTO_CLUSTER_MANAGER;
     }
 
-    private URI getFailedNodeUri()
-            throws URISyntaxException
+    private URL getNodeUrl()
+            throws MalformedURLException
     {
-        return new URI(serverAddress + ":" + serverPort + "/v1/node/failed");
+        return new URL("http://" + serverAddress + ":" + serverPort + "/v1/node");
+    }
+
+    private URL getFailedNodeUrl()
+            throws MalformedURLException
+    {
+        return new URL("http://" + serverAddress + ":" + serverPort + "/v1/node/failed");
     }
 
     public static class Stats
@@ -185,15 +240,16 @@ public class PrestoClusterManager extends ClusterManager
         URI uri;
         String lastResponseTime;
 
-        @JsonCreator
-        public Stats(@JsonProperty("uri") URI uri,
-                @JsonProperty("lastResponseTime") String lastResponseTime)
+        public Stats()
+        {
+        }
+
+        public Stats(URI uri, String lastResponseTime)
         {
             this.uri = uri;
             this.lastResponseTime = lastResponseTime;
         }
 
-        @JsonProperty
         public URI getUri()
         {
             return uri;
@@ -204,7 +260,7 @@ public class PrestoClusterManager extends ClusterManager
             this.uri = uri;
         }
 
-        @JsonProperty String getLastResponseTime()
+        String getLastResponseTime()
         {
             return lastResponseTime;
         }

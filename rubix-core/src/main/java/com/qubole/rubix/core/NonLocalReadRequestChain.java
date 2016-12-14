@@ -42,7 +42,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
     int directRead = 0;
     FileSystem remoteFileSystem;
     int clusterType;
-    public boolean strictMode;
+    public boolean strictMode = false;
 
     private static final Log log = LogFactory.getLog(NonLocalReadRequestChain.class);
 

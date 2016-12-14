@@ -18,9 +18,14 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.gson.Gson;
 import com.google.common.reflect.TypeToken;
+import com.google.gson.Gson;
 import com.qubole.rubix.spi.ClusterManager;
+import com.qubole.rubix.spi.ClusterType;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -36,12 +41,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
-import com.qubole.rubix.spi.ClusterType;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 /**
  * Created by sakshia on 28/7/16.
@@ -142,14 +141,10 @@ public class Hadoop2ClusterManager
 
     @Override
     public boolean isMaster()
+            throws ExecutionException
     {
         // issue get on nodesSupplier to ensure that isMaster is set correctly
-        try {
-            nodesCache.get("nodeList");
-        }
-        catch (ExecutionException e) {
-            e.printStackTrace();
-        }
+        nodesCache.get("nodeList");
         return isMaster;
     }
 

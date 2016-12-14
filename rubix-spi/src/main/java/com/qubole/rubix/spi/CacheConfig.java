@@ -62,7 +62,7 @@ public class CacheConfig
     private static String maxRetriesConf = "hadoop.cache.data.client.num-retries";
     private static String localTransferBufferSizeConf = "hadoop.cache.data.buffer.size";
     public static String localServerPortConf = "hadoop.cache.data.local.server.port";
-    private static String dataMaxHeaderSizeConf = "hadoop.cache.data.transfer.buffer.size";
+    private static String dataMaxHeaderSizeConf = "hadoop.cache.data.transfer.header.size";
     static String fileCacheDirSuffixConf = "/fcache/";
     static int maxDisksConf = 5;
 

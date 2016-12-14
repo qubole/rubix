@@ -16,7 +16,8 @@ import com.qubole.rubix.spi.ClusterManager;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
-import io.airlift.log.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.testng.annotations.Test;
 
@@ -35,7 +36,7 @@ import static org.testng.AssertJUnit.assertTrue;
 @Test(singleThreaded = true)
 public class TestClusterManager
 {
-    private static final Logger log = Logger.get(TestClusterManager.class);
+    private Log log = LogFactory.getLog(TestClusterManager.class);
 
     @Test
     /*
