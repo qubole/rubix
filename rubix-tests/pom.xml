@@ -21,7 +21,6 @@
         <dependency>
             <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-core</artifactId>
-            <type>test-jar</type>
             <scope>test</scope>
             <version>0.2.3-SNAPSHOT</version>
         </dependency>
@@ -67,6 +66,16 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <systemPropertyVariables>
+                        <log4j.configuration>file:${project.build.testOutputDirectory}/log4j-surefire.properties</log4j.configuration>
+                    </systemPropertyVariables>
+                </configuration>
             </plugin>
         </plugins>
     </build>

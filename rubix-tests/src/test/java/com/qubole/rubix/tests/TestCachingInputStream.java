@@ -48,7 +48,7 @@ public class TestCachingInputStream
 {
     int blockSize = 100;
     String backendFileName = "/tmp/backendFile";
-    Path backendPath = new Path("file://" + backendFileName);
+    Path backendPath = new Path("file://" + backendFileName.substring(1));
 
     CachingInputStream inputStream;
 
@@ -65,6 +65,7 @@ public class TestCachingInputStream
         conf.setBoolean(CacheConfig.DATA_CACHE_STRICT_MODE, true);
         conf.setInt(CacheConfig.dataCacheBookkeeperPortConf, 3456);
         conf.setInt(CacheConfig.localServerPortConf, 2222);
+        conf.set("hadoop.cache.data.dirprefix.list", "/tmp/ephemeral");
         Thread server = new Thread()
         {
             public void run()
@@ -89,6 +90,7 @@ public class TestCachingInputStream
             log.info("Waiting for BookKeeper Server to come up");
         }
         createCachingStream(conf);
+        log.info("BackendPath: " + backendPath);
 
     }
 
@@ -103,7 +105,6 @@ public class TestCachingInputStream
         LocalFSInputStream localFSInputStream = new LocalFSInputStream(backendFileName);
         FSDataInputStream fsDataInputStream = new FSDataInputStream(localFSInputStream);
         conf.setInt(CacheConfig.blockSizeConf, blockSize);
-
         // This should be after server comes up else client could not be created
         inputStream = new CachingInputStream(fsDataInputStream, conf, backendPath, file.length(),file.lastModified(), new CachingFileSystemStats(), ClusterType.TEST_CLUSTER_MANAGER, new BookKeeperFactory(), null);
 
@@ -185,6 +186,7 @@ public class TestCachingInputStream
         //6. Close existing stream and start a new one to get the new lastModifiedDate of backend file
         inputStream.close();
         Configuration conf = new Configuration();
+        conf.set("hadoop.cache.data.dirprefix.list", "/tmp/ephemeral");
         createCachingStream(conf);
         log.info("New stream started");
 

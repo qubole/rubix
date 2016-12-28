@@ -62,6 +62,7 @@ public class TestNonLocalReadRequestChain
         conf.setInt(CacheConfig.dataCacheBookkeeperPortConf, 3456);
         conf.setInt(CacheConfig.localServerPortConf, 2222);
         conf.setInt(CacheConfig.blockSizeConf, blockSize);
+        conf.set("hadoop.cache.data.dirprefix.list", "/tmp/ephemeral");
         localDataTransferServer = new Thread()
         {
             public void run()
