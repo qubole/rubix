@@ -26,6 +26,13 @@
         </dependency>
         <dependency>
             <groupId>com.qubole.rubix</groupId>
+            <artifactId>rubix-core</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+            <version>0.2.3-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-bookkeeper</artifactId>
             <scope>test</scope>
         </dependency>
