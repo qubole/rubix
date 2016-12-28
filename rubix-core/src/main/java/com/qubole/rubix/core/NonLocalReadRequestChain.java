@@ -62,7 +62,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
     {
         return new ReadRequestChainStats()
                 .setNonLocalReads(requests)
-                .setRequestedRead(totalRead + directRead)
+                .setRequestedRead(directRead)
                 .setNonLocalDataRead(totalRead);
     }
 

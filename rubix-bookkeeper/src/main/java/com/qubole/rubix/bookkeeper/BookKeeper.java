@@ -274,7 +274,7 @@ public class BookKeeper
                             ((CachingFileSystem) fs).setBookKeeper(bookKeeperFactory, conf);
                         }
                         else {
-                            throw new Exception("Not a subclass of CachingFileSystem");
+                            throw new Exception(String.format("%s Not a subclass of CachingFileSystem", fs.getClass()));
                         }
                         inputStream = fs.open(path, blockSize);
                     }

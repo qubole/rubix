@@ -27,7 +27,7 @@ import java.util.concurrent.ExecutionException;
  */
 public abstract class ClusterManager
 {
-    private long splitSize = 64 * 1024 * 1024; // 64MB
+    private long splitSize = 256 * 1024 * 1024; // 256MB
 
     private int nodeRefreshTime = 10; //sec
 
