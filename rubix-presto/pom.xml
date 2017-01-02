@@ -29,6 +29,7 @@
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-common</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.facebook.presto</groupId>
@@ -92,23 +93,23 @@
                         <configuration>
                             <artifactSet>
                                 <includes>
-                                    <include>io.airlift:http-client</include>
-                                    <include>org.eclipse.jetty:*</include>
+                                    <include>com.google.code.gson:gson</include>
+                                    <include>org.apache.httpcomponents:httpclient</include>
                                     <include>com.google.guava:guava</include>
                                 </includes>
                             </artifactSet>
                             <relocations>
                                 <relocation>
-                                    <pattern>io.airlift.http.client</pattern>
-                                    <shadedPattern>io.airlift.shaded.http.client</shadedPattern>
+                                    <pattern>org.apache.http</pattern>
+                                    <shadedPattern>org.apache.http.shaded</shadedPattern>
                                 </relocation>
                                 <relocation>
                                     <pattern>org.eclipse</pattern>
                                     <shadedPattern>io.eclipse.shaded</shadedPattern>
                                 </relocation>
                                 <relocation>
-                                    <pattern>com.google.common</pattern>
-                                    <shadedPattern>com.google.common.shaded</shadedPattern>
+                                    <pattern>com.google</pattern>
+                                    <shadedPattern>com.google.shaded</shadedPattern>
                                     <excludes>
                                         <exclude>com.google.common.reflect</exclude>
                                     </excludes>
