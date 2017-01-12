@@ -161,12 +161,11 @@ public class PrestoClusterManager extends ClusterManager
                             if (allNodes.isEmpty()) {
                                 // Empty result set => server up and only master node running, return localhost has the only node
                                 // Do not need to consider failed nodes list as 1node cluster and server is up since it replied to allNodesRequest
-                                return ImmutableList.of(InetAddress.getLocalHost().getHostName());
+                                return ImmutableList.of(InetAddress.getLocalHost().getHostAddress());
                             }
 
                             if (failedNodes.isEmpty()) {
                                 failedNodes = ImmutableList.of();
-                                //return ImmutableList.of(InetAddress.getLocalHost().getHostName());
                             }
 
                             // keep only the healthy nodes
@@ -179,7 +178,7 @@ public class PrestoClusterManager extends ClusterManager
                             }
                             if (hosts.isEmpty()) {
                                 // case of master only cluster
-                                hosts.add(InetAddress.getLocalHost().getHostName());
+                                hosts.add(InetAddress.getLocalHost().getHostAddress());
                             }
                             List<String> hostList = Lists.newArrayList(hosts.toArray(new String[0]));
                             Collections.sort(hostList);
