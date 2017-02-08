@@ -79,6 +79,7 @@ public class CachingInputStream
 
     private static DirectBufferPool bufferPool = new DirectBufferPool();
     private ByteBuffer directWriteBuffer = null;
+    private ByteBuffer directReadBuffer = null;
 
     public CachingInputStream(FSDataInputStream parentInputStream, FileSystem parentFs, Path backendPath, Configuration conf, CachingFileSystemStats statsMbean, ClusterType clusterType, BookKeeperFactory bookKeeperFactory, FileSystem remoteFileSystem)
             throws IOException
@@ -319,8 +320,16 @@ public class CachingInputStream
                     }
                 }
                 if (cachedReadRequestChain == null) {
-                    cachedReadRequestChain = new CachedReadRequestChain(localFileForReading);
+                    if (directReadBuffer == null) {
+                        synchronized (readRequest) {
+                            if (directReadBuffer == null) {
+                                directReadBuffer = bufferPool.getBuffer(1048576);
+                            }
+                        }
+                    }
+                    cachedReadRequestChain = new CachedReadRequestChain(localFileForReading, directReadBuffer);
                 }
+
                 cachedReadRequestChain.addReadRequest(readRequest);
             }
             else {

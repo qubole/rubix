@@ -12,11 +12,16 @@
  */
 package com.qubole.rubix.core;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Throwables;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 
 import static com.google.common.base.Preconditions.checkState;
 
@@ -25,14 +30,30 @@ import static com.google.common.base.Preconditions.checkState;
  */
 public class CachedReadRequestChain extends ReadRequestChain
 {
-    private final RandomAccessFile fileToRead;
+    private final FileChannel fileChannel;
     private int read = 0; // data read
+
+    private ByteBuffer directBuffer;
 
     private static final Log log = LogFactory.getLog(CachedReadRequestChain.class);
 
+    public CachedReadRequestChain(RandomAccessFile fileToRead, ByteBuffer buffer)
+    {
+        try {
+            FileInputStream fis = new FileInputStream(fileToRead.getFD());
+            fileChannel = fis.getChannel();
+        }
+        catch (IOException e) {
+            log.error("Unable to open file channel", e);
+            throw Throwables.propagate(e);
+        }
+        directBuffer = buffer;
+    }
+
+    @VisibleForTesting
     public CachedReadRequestChain(RandomAccessFile fileToRead)
     {
-        this.fileToRead = fileToRead;
+        this(fileToRead, ByteBuffer.allocate(1024));
     }
 
     public Integer call()
@@ -48,18 +69,25 @@ public class CachedReadRequestChain extends ReadRequestChain
 
         checkState(isLocked, "Trying to execute Chain without locking");
         for (ReadRequest readRequest : readRequests) {
-            fileToRead.seek(readRequest.getActualReadStart());
             int nread = 0;
+            int leftToRead = readRequest.getActualReadLength();
             while (nread < readRequest.getActualReadLength()) {
-                int nbytes = fileToRead.read(readRequest.getDestBuffer(), readRequest.getDestBufferOffset() + nread, readRequest.getActualReadLength() - nread);
-                log.debug(String.format("CachedFileRead copied data from %d of length %d at buffer offset %d",
-                        readRequest.getActualReadStart(),
-                        readRequest.getActualReadLength() - nread,
-                        readRequest.getDestBufferOffset() + nread));
-                if (nbytes < 0) {
+                int readInThisCycle = Math.min(leftToRead, directBuffer.capacity());
+                int nbytes = fileChannel.read(directBuffer, readRequest.getActualReadStart() + nread);
+
+                if (nbytes <= 0) {
                     break;
                 }
+                directBuffer.position(0);
+                directBuffer.get(readRequest.getDestBuffer(), readRequest.getDestBufferOffset() + nread, Math.min(readInThisCycle, nbytes));
+                directBuffer.clear();
+
+                leftToRead -= nbytes;
                 nread += nbytes;
+                log.debug(String.format("CachedFileRead copied data from %d of length %d at buffer offset %d",
+                        readRequest.getActualReadStart() + nread,
+                        nbytes,
+                        readRequest.getDestBufferOffset() + nread));
             }
             read += nread;
         }

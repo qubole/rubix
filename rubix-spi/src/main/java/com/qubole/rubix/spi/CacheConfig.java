@@ -63,6 +63,7 @@ public class CacheConfig
     private static String localTransferBufferSizeConf = "hadoop.cache.data.buffer.size";
     public static String localServerPortConf = "hadoop.cache.data.local.server.port";
     private static String dataMaxHeaderSizeConf = "hadoop.cache.data.transfer.header.size";
+    private static String diskReadBufferSize = "hadoop.cache.data.disk.read.buffer.size";
     static String fileCacheDirSuffixConf = "/fcache/";
     static int maxDisksConf = 5;
 
@@ -77,6 +78,7 @@ public class CacheConfig
     private static int localServerPort = 8898;
     private static int serverMaxThreads = Integer.MAX_VALUE;
     public static int localTransferbufferSize = 10 * 1024 * 1024;
+    public static int diskReadBufferSizeDefault = 1024 * 1024;
 
     private CacheConfig()
     {
