@@ -32,11 +32,13 @@ import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.DirectBufferPool;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -74,6 +76,9 @@ public class CachingInputStream
     private boolean strictMode = false;
     ClusterType clusterType;
     FileSystem remoteFileSystem;
+
+    private static DirectBufferPool bufferPool = new DirectBufferPool();
+    private ByteBuffer readBuffer = null;
 
     public CachingInputStream(FSDataInputStream parentInputStream, FileSystem parentFs, Path backendPath, Configuration conf, CachingFileSystemStats statsMbean, ClusterType clusterType, BookKeeperFactory bookKeeperFactory, FileSystem remoteFileSystem)
             throws IOException
@@ -308,8 +313,16 @@ public class CachingInputStream
             else if (isCached.get(idx).getLocation() == Location.CACHED) {
                 log.debug(String.format("Sending cached block %d to cachedReadRequestChain", blockNum));
                 if (cachedReadRequestChain == null) {
-                    cachedReadRequestChain = new CachedReadRequestChain(localFileForReading);
+                    if (readBuffer == null) {
+                        synchronized (readRequest) {
+                            if (readBuffer == null) {
+                                readBuffer = bufferPool.getBuffer(1048576);
+                            }
+                        }
+                    }
+                    cachedReadRequestChain = new CachedReadRequestChain(localFileForReading, readBuffer);
                 }
+
                 cachedReadRequestChain.addReadRequest(readRequest);
             }
             else {
