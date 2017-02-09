@@ -32,11 +32,13 @@ import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.DirectBufferPool;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -74,6 +76,9 @@ public class CachingInputStream
     private boolean strictMode = false;
     ClusterType clusterType;
     FileSystem remoteFileSystem;
+
+    private static DirectBufferPool bufferPool = new DirectBufferPool();
+    private ByteBuffer directBuffer = null;
 
     public CachingInputStream(FSDataInputStream parentInputStream, FileSystem parentFs, Path backendPath, Configuration conf, CachingFileSystemStats statsMbean, ClusterType clusterType, BookKeeperFactory bookKeeperFactory, FileSystem remoteFileSystem)
             throws IOException
@@ -325,7 +330,14 @@ public class CachingInputStream
                 else {
                     log.debug(String.format("Sending block %d to remoteReadRequestChain", blockNum));
                     if (remoteReadRequestChain == null) {
-                        remoteReadRequestChain = new RemoteReadRequestChain(inputStream, localPath);
+                        if (directBuffer == null) {
+                            synchronized (readRequest) {
+                                if (directBuffer == null) {
+                                    directBuffer = bufferPool.getBuffer(1048576);
+                                }
+                            }
+                        }
+                        remoteReadRequestChain = new RemoteReadRequestChain(inputStream, localFileForReading, directBuffer);
                     }
                     remoteReadRequestChain.addReadRequest(readRequest);
                 }

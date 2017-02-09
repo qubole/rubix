@@ -12,6 +12,7 @@
  */
 package com.qubole.rubix.core;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
@@ -20,9 +21,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.nio.MappedByteBuffer;
+import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -36,8 +38,9 @@ public class RemoteReadRequestChain
         extends ReadRequestChain
 {
     final FSDataInputStream inputStream;
-    final String localFilename;
+    final FileChannel fileChannel;
 
+    private ByteBuffer directBuffer;
     private int totalPrefixRead = 0;
     private int totalSuffixRead = 0;
     private int totalRequestedRead = 0;
@@ -45,10 +48,23 @@ public class RemoteReadRequestChain
 
     private static final Log log = LogFactory.getLog(RemoteReadRequestChain.class);
 
-    public RemoteReadRequestChain(FSDataInputStream inputStream, String localFile)
+    public RemoteReadRequestChain(FSDataInputStream inputStream, RandomAccessFile localFile, ByteBuffer directBuffer)
     {
         this.inputStream = inputStream;
-        this.localFilename = localFile;
+        try {
+            this.fileChannel = new FileOutputStream(localFile.getFD()).getChannel();
+        }
+        catch (IOException e) {
+            log.error("Unable to open randomAccessFile channel", e);
+            throw Throwables.propagate(e);
+        }
+        this.directBuffer = directBuffer;
+    }
+
+    @VisibleForTesting
+    public RemoteReadRequestChain(FSDataInputStream inputStream, RandomAccessFile randomAccessFile)
+    {
+        this(inputStream, randomAccessFile, ByteBuffer.allocate(100));
     }
 
     public Integer call()
@@ -61,77 +77,47 @@ public class RemoteReadRequestChain
             return 0;
         }
 
-        RandomAccessFile localFile = null;
-        FileChannel fc = null;
-
         try {
-            localFile = new RandomAccessFile(localFilename, "rw");
-            fc = localFile.getChannel();
             for (ReadRequest readRequest : readRequests) {
                 log.debug(String.format("Executing ReadRequest: [%d, %d, %d, %d, %d]", readRequest.getBackendReadStart(), readRequest.getBackendReadEnd(), readRequest.getActualReadStart(), readRequest.getActualReadEnd(), readRequest.getDestBufferOffset()));
-                inputStream.seek(readRequest.backendReadStart);
-                MappedByteBuffer mbuf = fc.map(FileChannel.MapMode.READ_WRITE, readRequest.backendReadStart, readRequest.getBackendReadLength());
-                log.debug(String.format("Mapped file from %d till length %d", readRequest.backendReadStart, readRequest.getBackendReadLength()));
-                /*
-                 * MappedByteBuffer does not provide backing byte array, so cannot write directly to it via FSDataOutputStream.read
-                 * Instead, download to normal destination buffer (+offset buffer to get block boundaries) and then copy to MappedByteBuffer
-                 */
-
-                int prefixBufferLength = (int) (readRequest.getActualReadStart() - readRequest.getBackendReadStart());
-                int suffixBufferLength = (int) (readRequest.getBackendReadEnd() - readRequest.getActualReadEnd());
-                log.debug(String.format("PrefixLength: %d SuffixLength: %d", prefixBufferLength, suffixBufferLength));
-
-                // TODO: use single byte buffer for all three streams
-                /* TODO: also GC cost can be lowered by shared buffer pool, a small one.
-                    IOUtils.copyLarge method. A single 4kB byte buffer can be used to copy whole file
-
-                  */
-                if (prefixBufferLength > 0) {
-                    byte[] prefixBuffer = new byte[prefixBufferLength];
-                    log.debug(String.format("Trying to Read %d bytes into prefix buffer", prefixBufferLength));
-                    totalPrefixRead += readAndCopy(prefixBuffer, 0, mbuf, prefixBufferLength);
-                    log.debug(String.format("Read %d bytes into prefix buffer", prefixBufferLength));
-                }
+                inputStream.seek(readRequest.actualReadStart);
                 log.debug(String.format("Trying to Read %d bytes into destination buffer", readRequest.getActualReadLength()));
-                int readBytes = readAndCopy(readRequest.getDestBuffer(), readRequest.destBufferOffset, mbuf, readRequest.getActualReadLength());
+                //Avoid writing partial blocks into cache.
+                boolean writeIntoCache = !isPrefixOrSuffixBlock(readRequest);
+                int readBytes = readAndCopy(readRequest.getDestBuffer(), readRequest.destBufferOffset, readRequest.getActualReadLength(), readRequest.getActualReadStart(), writeIntoCache);
                 totalRequestedRead += readBytes;
-                log.debug(String.format("Read %d bytes into destination buffer", readBytes));
-                if (suffixBufferLength > 0) {
-                    // If already in reading actually required data we get a eof, then there should not have been a suffix request
-                    checkState(readBytes == readRequest.getActualReadLength(), "Acutal read less than required, still requested for suffix");
-                    byte[] suffixBuffer = new byte[suffixBufferLength];
-                    log.debug(String.format("Trying to Read %d bytes into suffix buffer", suffixBufferLength));
-                    totalSuffixRead += readAndCopy(suffixBuffer, 0, mbuf, suffixBufferLength);
-                    log.debug(String.format("Read %d bytes into suffix buffer", suffixBufferLength));
-                }
             }
         }
         finally {
-            if (fc != null) {
-                fc.close();
-            }
-            if (localFile != null) {
-                localFile.close();
+            if (fileChannel != null) {
+                fileChannel.close();
             }
         }
-        log.info(String.format("Read %d bytes from remote file, added %d to destination buffer", totalPrefixRead + totalRequestedRead + totalSuffixRead, totalRequestedRead));
         return totalRequestedRead;
     }
 
-    private int readAndCopy(byte[] destBuffer, int destBufferOffset, MappedByteBuffer localFileBuffer, int length)
+    private int readAndCopy(byte[] destBuffer, int destBufferOffset, int length, long rs, boolean writeIntoCache)
             throws IOException
     {
         int nread = 0;
         while (nread < length) {
             int nbytes = inputStream.read(destBuffer, destBufferOffset + nread, length - nread);
             if (nbytes < 0) {
-                return nread;
+                break;
             }
             nread += nbytes;
         }
-        long start = System.nanoTime();
-        localFileBuffer.put(destBuffer, destBufferOffset, length);
-        warmupPenalty += System.nanoTime() - start;
+        log.debug(String.format("Read %d bytes into destination buffer", nread));
+        if (writeIntoCache) {
+//            assertTrue("Wrong amount of bytes read from inputStream. Should've read the whole block", nread == length);
+            long start = System.nanoTime();
+            directBuffer.position(0);
+            directBuffer.put(destBuffer, destBufferOffset, nread);
+            directBuffer.position(0);
+            int nwritten = fileChannel.write(directBuffer, rs);
+            log.debug(String.format("Cached data from %d to %d", rs, rs + nwritten));
+            warmupPenalty += System.nanoTime() - start;
+        }
         return nread;
     }
 
@@ -152,13 +138,20 @@ public class RemoteReadRequestChain
             BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
             RetryingBookkeeperClient client = bookKeeperFactory.createBookKeeperClient(conf);
             for (ReadRequest readRequest : readRequests) {
-                client.setAllCached(remotePath, fileSize, lastModified, toBlock(readRequest.getBackendReadStart(), blockSize), toBlock(readRequest.getBackendReadEnd() - 1, blockSize) + 1);
+                if (!isPrefixOrSuffixBlock(readRequest)) {
+                    client.setAllCached(remotePath, fileSize, lastModified, toBlock(readRequest.getBackendReadStart(), blockSize), toBlock(readRequest.getBackendReadEnd() - 1, blockSize) + 1);
+                }
             }
             client.close();
         }
         catch (Exception e) {
             log.info("Could not update BookKeeper about newly cached blocks: " + Throwables.getStackTraceAsString(e));
         }
+    }
+
+    private boolean isPrefixOrSuffixBlock(ReadRequest readRequest)
+    {
+        return (readRequest.actualReadStart != readRequest.backendReadStart) || (readRequest.actualReadEnd != readRequest.backendReadEnd);
     }
 
     private long toBlock(long pos, int blockSize)
