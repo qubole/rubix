@@ -35,7 +35,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.DirectBufferPool;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
@@ -60,6 +59,7 @@ public class CachingInputStream
     private long nextReadBlock;
     private int blockSize;
     private RandomAccessFile localFileForReading = null;
+    private RandomAccessFile localFileForWriting = null;
     private CachingFileSystemStats statsMbean;
 
     private static ListeningExecutorService readService = MoreExecutors.listeningDecorator(Executors.newCachedThreadPool());
@@ -78,7 +78,7 @@ public class CachingInputStream
     FileSystem remoteFileSystem;
 
     private static DirectBufferPool bufferPool = new DirectBufferPool();
-    private ByteBuffer directBuffer = null;
+    private ByteBuffer directWriteBuffer = null;
 
     public CachingInputStream(FSDataInputStream parentInputStream, FileSystem parentFs, Path backendPath, Configuration conf, CachingFileSystemStats statsMbean, ClusterType clusterType, BookKeeperFactory bookKeeperFactory, FileSystem remoteFileSystem)
             throws IOException
@@ -123,23 +123,19 @@ public class CachingInputStream
         this.inputStream = checkNotNull(parentInputStream, "ParentInputStream is null");
         this.blockSize = CacheConfig.getBlockSize(conf);
         this.localPath = CacheConfig.getLocalPath(remotePath, conf);
-        try {
-            this.localFileForReading = new RandomAccessFile(localPath, "r");
-        }
-        catch (FileNotFoundException e) {
-            log.info("Creating local file " + localPath);
-            File file = new File(localPath);
+
+        File file = new File(localPath);
+        if (!file.exists()) {
             try {
                 file.createNewFile();
-                file.setReadable(true, false);
-                file.setWritable(true, false);
-                this.localFileForReading = new RandomAccessFile(file, "rw");
             }
-            catch (IOException e1) {
-                log.error("Error in creating local file " + localPath, e1);
+            catch (IOException e) {
+                log.error("Error in creating local file " + localPath, e);
                 // reset bookkeeper client so that we take direct route
                 this.bookKeeperClient = null;
             }
+            file.setReadable(true, false);
+            file.setWritable(true, false);
         }
     }
 
@@ -312,6 +308,16 @@ public class CachingInputStream
 
             else if (isCached.get(idx).getLocation() == Location.CACHED) {
                 log.debug(String.format("Sending cached block %d to cachedReadRequestChain", blockNum));
+                if (localFileForReading == null) {
+                    try {
+                        this.localFileForReading = new RandomAccessFile(localPath, "rw");
+                    }
+                    catch (IOException e) {
+                        log.error("Unable to open randomAccessFile channel in R mode", e);
+                        // reset bookkeeper client so that we take direct route
+                        this.bookKeeperClient = null;
+                    }
+                }
                 if (cachedReadRequestChain == null) {
                     cachedReadRequestChain = new CachedReadRequestChain(localFileForReading);
                 }
@@ -329,15 +335,26 @@ public class CachingInputStream
                 }
                 else {
                     log.debug(String.format("Sending block %d to remoteReadRequestChain", blockNum));
+                    if (localFileForWriting == null) {
+                        try {
+                            this.localFileForWriting = new RandomAccessFile(localPath, "rw");
+                        }
+                        catch (IOException e) {
+                            log.error("Unable to open randomAccessFile channel in RW mode", e);
+                            // reset bookkeeper client so that we take direct route
+                            this.bookKeeperClient = null;
+                        }
+                    }
+
                     if (remoteReadRequestChain == null) {
-                        if (directBuffer == null) {
+                        if (directWriteBuffer == null) {
                             synchronized (readRequest) {
-                                if (directBuffer == null) {
-                                    directBuffer = bufferPool.getBuffer(1048576);
+                                if (directWriteBuffer == null) {
+                                    directWriteBuffer = bufferPool.getBuffer(1048576);
                                 }
                             }
                         }
-                        remoteReadRequestChain = new RemoteReadRequestChain(inputStream, localFileForReading, directBuffer);
+                        remoteReadRequestChain = new RemoteReadRequestChain(inputStream, localFileForWriting, directWriteBuffer);
                     }
                     remoteReadRequestChain.addReadRequest(readRequest);
                 }
@@ -381,6 +398,9 @@ public class CachingInputStream
             inputStream.close();
             if (localFileForReading != null) {
                 localFileForReading.close();
+            }
+            if (localFileForWriting != null) {
+                localFileForWriting.close();
             }
             if (bookKeeperClient != null) {
                 bookKeeperClient.close();

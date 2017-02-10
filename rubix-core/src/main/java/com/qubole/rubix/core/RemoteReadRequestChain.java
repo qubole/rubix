@@ -55,7 +55,7 @@ public class RemoteReadRequestChain
             this.fileChannel = new FileOutputStream(localFile.getFD()).getChannel();
         }
         catch (IOException e) {
-            log.error("Unable to open randomAccessFile channel", e);
+            log.error("Unable to open File Channel", e);
             throw Throwables.propagate(e);
         }
         this.directBuffer = directBuffer;
@@ -77,26 +77,19 @@ public class RemoteReadRequestChain
             return 0;
         }
 
-        try {
-            for (ReadRequest readRequest : readRequests) {
-                log.debug(String.format("Executing ReadRequest: [%d, %d, %d, %d, %d]", readRequest.getBackendReadStart(), readRequest.getBackendReadEnd(), readRequest.getActualReadStart(), readRequest.getActualReadEnd(), readRequest.getDestBufferOffset()));
-                inputStream.seek(readRequest.actualReadStart);
-                log.debug(String.format("Trying to Read %d bytes into destination buffer", readRequest.getActualReadLength()));
-                //Avoid writing partial blocks into cache.
-                boolean writeIntoCache = !isPrefixOrSuffixBlock(readRequest);
-                int readBytes = readAndCopy(readRequest.getDestBuffer(), readRequest.destBufferOffset, readRequest.getActualReadLength(), readRequest.getActualReadStart(), writeIntoCache);
-                totalRequestedRead += readBytes;
-            }
-        }
-        finally {
-            if (fileChannel != null) {
-                fileChannel.close();
-            }
+        for (ReadRequest readRequest : readRequests) {
+            log.debug(String.format("Executing ReadRequest: [%d, %d, %d, %d, %d]", readRequest.getBackendReadStart(), readRequest.getBackendReadEnd(), readRequest.getActualReadStart(), readRequest.getActualReadEnd(), readRequest.getDestBufferOffset()));
+            inputStream.seek(readRequest.actualReadStart);
+            log.debug(String.format("Trying to Read %d bytes into destination buffer", readRequest.getActualReadLength()));
+            //Avoid writing partial blocks into cache.
+            boolean writeIntoCache = !isPrefixOrSuffixBlock(readRequest);
+            int readBytes = readAndCopy(readRequest.getDestBuffer(), readRequest.destBufferOffset, readRequest.getActualReadLength(), readRequest.getActualReadStart(), writeIntoCache);
+            totalRequestedRead += readBytes;
         }
         return totalRequestedRead;
     }
 
-    private int readAndCopy(byte[] destBuffer, int destBufferOffset, int length, long rs, boolean writeIntoCache)
+    private int readAndCopy(byte[] destBuffer, int destBufferOffset, int length, long actualReadStart, boolean writeIntoCache)
             throws IOException
     {
         int nread = 0;
@@ -111,11 +104,18 @@ public class RemoteReadRequestChain
         if (writeIntoCache) {
 //            assertTrue("Wrong amount of bytes read from inputStream. Should've read the whole block", nread == length);
             long start = System.nanoTime();
-            directBuffer.position(0);
-            directBuffer.put(destBuffer, destBufferOffset, nread);
-            directBuffer.position(0);
-            int nwritten = fileChannel.write(directBuffer, rs);
-            log.debug(String.format("Cached data from %d to %d", rs, rs + nwritten));
+            int leftToRead = nread;
+            int readSoFar = 0;
+            while (leftToRead > 0) {
+                int readInThisCycle = Math.min(leftToRead, directBuffer.capacity());
+                directBuffer.position(0);
+                directBuffer.put(destBuffer, destBufferOffset + readSoFar, readInThisCycle);
+                directBuffer.flip();
+                int writtenInThisCycle = fileChannel.write(directBuffer, actualReadStart + readSoFar);
+                readSoFar += writtenInThisCycle;
+                leftToRead -= writtenInThisCycle;
+            }
+            log.debug(String.format("Cached data from %d to %d", actualReadStart, actualReadStart + readSoFar));
             warmupPenalty += System.nanoTime() - start;
         }
         return nread;
