@@ -125,7 +125,7 @@ public class CachingInputStream
         this.inputStream = checkNotNull(parentInputStream, "ParentInputStream is null");
         this.blockSize = CacheConfig.getBlockSize(conf);
         this.localPath = CacheConfig.getLocalPath(remotePath, conf);
-        this.diskReadBufferSize= CacheConfig.getDiskReadBufferSizeDefault(conf);
+        this.diskReadBufferSize = CacheConfig.getDiskReadBufferSizeDefault(conf);
         File file = new File(localPath);
         if (!file.exists()) {
             try {

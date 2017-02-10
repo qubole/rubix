@@ -84,8 +84,9 @@ public class CacheConfig
     {
     }
 
-    public static int getDiskReadBufferSizeDefault(Configuration conf) {
-        return conf.getInt(diskReadBufferSizeConf,diskReadBufferSizeDefault);
+    public static int getDiskReadBufferSizeDefault(Configuration conf)
+    {
+        return conf.getInt(diskReadBufferSizeConf, diskReadBufferSizeDefault);
     }
 
     public static int getCacheDataExpiration(Configuration conf)

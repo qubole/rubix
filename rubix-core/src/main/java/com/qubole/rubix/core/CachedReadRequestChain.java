@@ -30,7 +30,7 @@ import static com.google.common.base.Preconditions.checkState;
  */
 public class CachedReadRequestChain extends ReadRequestChain
 {
-    private final FileChannel fileChannel;
+    private FileChannel fileChannel = null;
     private int read = 0; // data read
 
     private ByteBuffer directBuffer;
@@ -56,6 +56,12 @@ public class CachedReadRequestChain extends ReadRequestChain
         this(fileToRead, ByteBuffer.allocate(1024));
     }
 
+    @VisibleForTesting
+    public CachedReadRequestChain()
+    {
+        //Dummy constructor for testing #testConsequtiveRequest method.
+    }
+
     public Integer call()
             throws IOException
     {
@@ -71,24 +77,25 @@ public class CachedReadRequestChain extends ReadRequestChain
         for (ReadRequest readRequest : readRequests) {
             int nread = 0;
             int leftToRead = readRequest.getActualReadLength();
+            log.info(String.format("Processing readrequest %d-%d, length %d", readRequest.actualReadStart, readRequest.actualReadEnd, leftToRead));
             while (nread < readRequest.getActualReadLength()) {
                 int readInThisCycle = Math.min(leftToRead, directBuffer.capacity());
-                int nbytes = fileChannel.read(directBuffer, readRequest.getActualReadStart() + nread);
 
+                directBuffer.position(0);
+                int nbytes = fileChannel.read(directBuffer, readRequest.getActualReadStart() + nread);
                 if (nbytes <= 0) {
                     break;
                 }
-                directBuffer.position(0);
-                directBuffer.get(readRequest.getDestBuffer(), readRequest.getDestBufferOffset() + nread, Math.min(readInThisCycle, nbytes));
-                directBuffer.clear();
-
-                leftToRead -= nbytes;
-                nread += nbytes;
-                log.debug(String.format("CachedFileRead copied data from %d of length %d at buffer offset %d",
-                        readRequest.getActualReadStart() + nread,
-                        nbytes,
-                        readRequest.getDestBufferOffset() + nread));
+                directBuffer.flip();
+                int transferBytes = Math.min(readInThisCycle, nbytes);
+                directBuffer.get(readRequest.getDestBuffer(), readRequest.getDestBufferOffset() + nread, transferBytes);
+                leftToRead -= transferBytes;
+                nread += transferBytes;
             }
+            log.info(String.format("CachedFileRead copied data [%d - %d] at buffer offset %d",
+                    readRequest.getActualReadStart(),
+                    readRequest.getActualReadStart() + nread,
+                    readRequest.getDestBufferOffset()));
             read += nread;
         }
         log.info(String.format("Read %d bytes from cached file", read));

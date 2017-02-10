@@ -153,7 +153,6 @@ public class TestRemoteReadRequestChain
                 filledBufferOffset += 100;
             }
         }
-        System.out.println("Read from cache " + readSize);
         localFileInputStream.close();
         log.debug("READ: \n" + new String(filledBuffer, Charset.defaultCharset()));
         assertTrue("Wrong amount of data read from localFile " + readSize, readSize == expectedCacheOutput.length());
