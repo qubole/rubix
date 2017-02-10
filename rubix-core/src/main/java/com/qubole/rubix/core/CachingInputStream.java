@@ -80,6 +80,7 @@ public class CachingInputStream
     private static DirectBufferPool bufferPool = new DirectBufferPool();
     private ByteBuffer directWriteBuffer = null;
     private ByteBuffer directReadBuffer = null;
+    private int diskReadBufferSize;
 
     public CachingInputStream(FSDataInputStream parentInputStream, FileSystem parentFs, Path backendPath, Configuration conf, CachingFileSystemStats statsMbean, ClusterType clusterType, BookKeeperFactory bookKeeperFactory, FileSystem remoteFileSystem)
             throws IOException
@@ -124,7 +125,7 @@ public class CachingInputStream
         this.inputStream = checkNotNull(parentInputStream, "ParentInputStream is null");
         this.blockSize = CacheConfig.getBlockSize(conf);
         this.localPath = CacheConfig.getLocalPath(remotePath, conf);
-
+        this.diskReadBufferSize= CacheConfig.getDiskReadBufferSizeDefault(conf);
         File file = new File(localPath);
         if (!file.exists()) {
             try {
@@ -323,7 +324,7 @@ public class CachingInputStream
                     if (directReadBuffer == null) {
                         synchronized (readRequest) {
                             if (directReadBuffer == null) {
-                                directReadBuffer = bufferPool.getBuffer(1048576);
+                                directReadBuffer = bufferPool.getBuffer(diskReadBufferSize);
                             }
                         }
                     }
@@ -359,7 +360,7 @@ public class CachingInputStream
                         if (directWriteBuffer == null) {
                             synchronized (readRequest) {
                                 if (directWriteBuffer == null) {
-                                    directWriteBuffer = bufferPool.getBuffer(1048576);
+                                    directWriteBuffer = bufferPool.getBuffer(diskReadBufferSize);
                                 }
                             }
                         }
