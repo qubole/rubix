@@ -280,9 +280,9 @@ public class CachingInputStream
                 break;
             }
 
-            if (backendReadEnd >= fileSize) {
-                backendReadEnd = fileSize;
-            }
+//            if (backendReadEnd >= fileSize) {
+//                backendReadEnd = fileSize;
+//            }
             long actualReadStart = (blockNum == nextReadBlock ? nextReadPosition : backendReadStart);
             long actualReadEnd = (blockNum == (endBlock - 1) ? (nextReadPosition + length) : backendReadEnd);
             if (actualReadEnd >= fileSize) {
@@ -364,7 +364,7 @@ public class CachingInputStream
                                 }
                             }
                         }
-                        remoteReadRequestChain = new RemoteReadRequestChain(inputStream, localFileForWriting, directWriteBuffer);
+                        remoteReadRequestChain = new RemoteReadRequestChain(inputStream, localFileForWriting, directWriteBuffer, blockSize);
                     }
                     remoteReadRequestChain.addReadRequest(readRequest);
                 }

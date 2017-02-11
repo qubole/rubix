@@ -77,7 +77,7 @@ public class CachedReadRequestChain extends ReadRequestChain
         for (ReadRequest readRequest : readRequests) {
             int nread = 0;
             int leftToRead = readRequest.getActualReadLength();
-            log.info(String.format("Processing readrequest %d-%d, length %d", readRequest.actualReadStart, readRequest.actualReadEnd, leftToRead));
+            log.debug(String.format("Processing readrequest %d-%d, length %d", readRequest.actualReadStart, readRequest.actualReadEnd, leftToRead));
             while (nread < readRequest.getActualReadLength()) {
                 int readInThisCycle = Math.min(leftToRead, directBuffer.capacity());
 
@@ -92,7 +92,7 @@ public class CachedReadRequestChain extends ReadRequestChain
                 leftToRead -= transferBytes;
                 nread += transferBytes;
             }
-            log.info(String.format("CachedFileRead copied data [%d - %d] at buffer offset %d",
+            log.debug(String.format("CachedFileRead copied data [%d - %d] at buffer offset %d",
                     readRequest.getActualReadStart(),
                     readRequest.getActualReadStart() + nread,
                     readRequest.getDestBufferOffset()));
