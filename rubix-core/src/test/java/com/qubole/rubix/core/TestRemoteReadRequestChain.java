@@ -55,7 +55,7 @@ public class TestRemoteReadRequestChain
         fsDataInputStream = new FSDataInputStream(localFSInputStream);
         randomAccessFile = new RandomAccessFile(localFileName,"rw");
 
-        remoteReadRequestChain = new RemoteReadRequestChain(fsDataInputStream, randomAccessFile, 100);
+        remoteReadRequestChain = new RemoteReadRequestChain(fsDataInputStream, randomAccessFile);
     }
 
     @Test
@@ -104,43 +104,11 @@ public class TestRemoteReadRequestChain
         // Expected output is 50a100c100e....100q50s
         String generatedTestData = DataGen.getExpectedOutput(1000);
         String expectedBufferOutput = generatedTestData.substring(50, 950);
-        String expectedCacheOutput = generatedTestData.substring(100, 900);
         testRead(readRequests,
                 buffer,
                 expectedBufferOutput,
-                expectedCacheOutput);
+                generatedTestData);
     }
-
-
-//    @Test
-//    public void testBlockCaching()
-//            throws IOException
-//    {
-//        byte[] buffer = new byte[1000];
-//        ReadRequest[] readRequests = {
-//                new ReadRequest(0, 200, 50, 200, buffer, 0, backendFile.length()),
-//                new ReadRequest(300, 800, 300, 800, buffer, 150, backendFile.length()),
-//                new ReadRequest(1500, 1900, 1500, 1850, buffer, 650, backendFile.length())
-//        };
-//
-//        String generatedTestData = DataGen.getExpectedOutput(1000);
-//        String expectedCacheOutput = generatedTestData.substring(100);
-//
-//        for (ReadRequest rr : readRequests) {
-//            remoteReadRequestChain.addReadRequest(rr);
-//        }
-//        remoteReadRequestChain.lock();
-//        remoteReadRequestChain.call();
-//        String actualBufferOutput = new String(buffer, Charset.defaultCharset());
-//        assertTrue("Wrong data read, expected\n" + generatedTestData + "\nBut got\n" + actualBufferOutput, generatedTestData.equals(actualBufferOutput));
-//
-//        byte[] filledBuffer = new byte[expectedCacheOutput.length()];
-//        FileInputStream localFileInputStream = new FileInputStream(new File(localFileName));
-//        localFileInputStream.read(filledBuffer, 300, 500);
-//        localFileInputStream.read(filledBuffer, 1400, 400);
-//        String actualCacheOutput = new String(filledBuffer, Charset.defaultCharset());
-//        assertTrue("Wrong data read in local randomAccessFile, expected\n" + expectedCacheOutput + "\nBut got\n" + actualCacheOutput, expectedCacheOutput.equals(actualCacheOutput));
-//    }
 
     private void testRead(ReadRequest[] readRequests,
             byte[] buffer,
@@ -172,7 +140,7 @@ public class TestRemoteReadRequestChain
         for (int i = 1; i < 20; i++)
         {
             //Expect a hole also in the case of partial prefix and suffix blocks.
-            if (i % 2 == 0 || (!expectedBufferOutput.equals(expectedCacheOutput) && (i==1 || i==19))) {
+            if (i % 2 == 0) {
                 // empty buffer
                 localFileInputStream.read(emptyBuffer, 0, 100);
                 for (int j = 0; j < 100; j++) {

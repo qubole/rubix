@@ -91,6 +91,7 @@ public class CachedReadRequestChain extends ReadRequestChain
                 directBuffer.get(readRequest.getDestBuffer(), readRequest.getDestBufferOffset() + nread, transferBytes);
                 leftToRead -= transferBytes;
                 nread += transferBytes;
+                directBuffer.clear();
             }
             log.debug(String.format("CachedFileRead copied data [%d - %d] at buffer offset %d",
                     readRequest.getActualReadStart(),

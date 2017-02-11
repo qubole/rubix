@@ -279,10 +279,9 @@ public class CachingInputStream
                 log.debug("Reached EOF, returning");
                 break;
             }
-
-//            if (backendReadEnd >= fileSize) {
-//                backendReadEnd = fileSize;
-//            }
+            if (backendReadEnd >= fileSize) {
+                backendReadEnd = fileSize;
+            }
             long actualReadStart = (blockNum == nextReadBlock ? nextReadPosition : backendReadStart);
             long actualReadEnd = (blockNum == (endBlock - 1) ? (nextReadPosition + length) : backendReadEnd);
             if (actualReadEnd >= fileSize) {
@@ -364,7 +363,8 @@ public class CachingInputStream
                                 }
                             }
                         }
-                        remoteReadRequestChain = new RemoteReadRequestChain(inputStream, localFileForWriting, directWriteBuffer, blockSize);
+                        byte[] affixBuffer = new byte[blockSize];
+                        remoteReadRequestChain = new RemoteReadRequestChain(inputStream, localFileForWriting, directWriteBuffer, affixBuffer);
                     }
                     remoteReadRequestChain.addReadRequest(readRequest);
                 }
