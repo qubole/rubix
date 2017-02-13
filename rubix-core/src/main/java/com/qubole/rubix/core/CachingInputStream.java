@@ -80,6 +80,7 @@ public class CachingInputStream
     private static DirectBufferPool bufferPool = new DirectBufferPool();
     private ByteBuffer directWriteBuffer = null;
     private ByteBuffer directReadBuffer = null;
+    private byte[] affixBuffer;
     private int diskReadBufferSize;
 
     public CachingInputStream(FSDataInputStream parentInputStream, FileSystem parentFs, Path backendPath, Configuration conf, CachingFileSystemStats statsMbean, ClusterType clusterType, BookKeeperFactory bookKeeperFactory, FileSystem remoteFileSystem)
@@ -311,7 +312,7 @@ public class CachingInputStream
                 log.debug(String.format("Sending cached block %d to cachedReadRequestChain", blockNum));
                 if (localFileForReading == null) {
                     try {
-                        this.localFileForReading = new RandomAccessFile(localPath, "rw");
+                        this.localFileForReading = new RandomAccessFile(localPath, "r");
                     }
                     catch (IOException e) {
                         log.error("Unable to open randomAccessFile channel in R mode", e);
@@ -319,17 +320,22 @@ public class CachingInputStream
                         this.bookKeeperClient = null;
                     }
                 }
-                if (cachedReadRequestChain == null) {
-                    if (directReadBuffer == null) {
-                        synchronized (readRequest) {
-                            if (directReadBuffer == null) {
-                                directReadBuffer = bufferPool.getBuffer(diskReadBufferSize);
-                            }
-                        }
-                    }
-                    cachedReadRequestChain = new CachedReadRequestChain(localFileForReading, directReadBuffer);
+                if (directReadBuffer == null) {
+                    directReadBuffer = bufferPool.getBuffer(diskReadBufferSize);
                 }
-
+                if (cachedReadRequestChain == null) {
+                    try {
+                        cachedReadRequestChain = new CachedReadRequestChain(localFileForReading, directReadBuffer);
+                    }
+                    catch (IOException e) {
+                        log.error("Unable to open file channel in R mode", e);
+                        // reset bookkeeper client so that we take direct route
+                        this.bookKeeperClient = null;
+                        isCached = null;
+                        idx--;
+                        blockNum--;
+                    }
+                }
                 cachedReadRequestChain.addReadRequest(readRequest);
             }
             else {
@@ -344,27 +350,36 @@ public class CachingInputStream
                 }
                 else {
                     log.debug(String.format("Sending block %d to remoteReadRequestChain", blockNum));
-                    if (localFileForWriting == null) {
-                        try {
+                    try {
+                        if (localFileForWriting == null) {
                             this.localFileForWriting = new RandomAccessFile(localPath, "rw");
                         }
-                        catch (IOException e) {
-                            log.error("Unable to open randomAccessFile channel in RW mode", e);
-                            // reset bookkeeper client so that we take direct route
-                            this.bookKeeperClient = null;
-                        }
+                    }
+                    catch (IOException e) {
+                        log.error("Unable to open randomAccessFile channel in RW mode", e);
+                        // reset bookkeeper client so that we take direct route
+                        this.bookKeeperClient = null;
                     }
 
-                    if (remoteReadRequestChain == null) {
-                        if (directWriteBuffer == null) {
-                            synchronized (readRequest) {
-                                if (directWriteBuffer == null) {
-                                    directWriteBuffer = bufferPool.getBuffer(diskReadBufferSize);
-                                }
-                            }
+                    if (directWriteBuffer == null) {
+                        directWriteBuffer = bufferPool.getBuffer(diskReadBufferSize);
+                    }
+                    if (affixBuffer == null) {
+                        affixBuffer = new byte[blockSize];
+                    }
+
+                    try {
+                        if (remoteReadRequestChain == null) {
+                            remoteReadRequestChain = new RemoteReadRequestChain(inputStream, localFileForWriting, directWriteBuffer, affixBuffer);
                         }
-                        byte[] affixBuffer = new byte[blockSize];
-                        remoteReadRequestChain = new RemoteReadRequestChain(inputStream, localFileForWriting, directWriteBuffer, affixBuffer);
+                    }
+                    catch (IOException e) {
+                        log.error("Unable to obtain open file channel ", e);
+                        // reset bookkeeper client so that we take direct route
+                        this.bookKeeperClient = null;
+                        isCached = null;
+                        idx--;
+                        blockNum--;
                     }
                     remoteReadRequestChain.addReadRequest(readRequest);
                 }

@@ -38,20 +38,16 @@ public class CachedReadRequestChain extends ReadRequestChain
     private static final Log log = LogFactory.getLog(CachedReadRequestChain.class);
 
     public CachedReadRequestChain(RandomAccessFile fileToRead, ByteBuffer buffer)
+            throws IOException
     {
-        try {
-            FileInputStream fis = new FileInputStream(fileToRead.getFD());
-            fileChannel = fis.getChannel();
-        }
-        catch (IOException e) {
-            log.error("Unable to open file channel", e);
-            throw Throwables.propagate(e);
-        }
+        FileInputStream fis = new FileInputStream(fileToRead.getFD());
+        fileChannel = fis.getChannel();
         directBuffer = buffer;
     }
 
     @VisibleForTesting
     public CachedReadRequestChain(RandomAccessFile fileToRead)
+            throws IOException
     {
         this(fileToRead, ByteBuffer.allocate(1024));
     }
@@ -80,8 +76,7 @@ public class CachedReadRequestChain extends ReadRequestChain
             log.debug(String.format("Processing readrequest %d-%d, length %d", readRequest.actualReadStart, readRequest.actualReadEnd, leftToRead));
             while (nread < readRequest.getActualReadLength()) {
                 int readInThisCycle = Math.min(leftToRead, directBuffer.capacity());
-
-                directBuffer.position(0);
+                directBuffer.clear();
                 int nbytes = fileChannel.read(directBuffer, readRequest.getActualReadStart() + nread);
                 if (nbytes <= 0) {
                     break;
@@ -91,7 +86,6 @@ public class CachedReadRequestChain extends ReadRequestChain
                 directBuffer.get(readRequest.getDestBuffer(), readRequest.getDestBufferOffset() + nread, transferBytes);
                 leftToRead -= transferBytes;
                 nread += transferBytes;
-                directBuffer.clear();
             }
             log.debug(String.format("CachedFileRead copied data [%d - %d] at buffer offset %d",
                     readRequest.getActualReadStart(),
