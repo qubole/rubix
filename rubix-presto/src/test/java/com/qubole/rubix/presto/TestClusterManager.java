@@ -34,7 +34,8 @@ import static org.testng.AssertJUnit.assertTrue;
  */
 
 @Test(singleThreaded = true)
-public class TestClusterManager
+public class
+TestClusterManager
 {
     private Log log = LogFactory.getLog(TestClusterManager.class);
 
@@ -75,7 +76,7 @@ public class TestClusterManager
         log.info("Got nodes: " + nodes);
 
         assertTrue("Should have added localhost in list", nodes.size() == 1);
-        assertTrue("Not added right hostname", nodes.get(0).equals(InetAddress.getLocalHost().getHostName()));
+        assertTrue("Not added right hostname", nodes.get(0).equals(InetAddress.getLocalHost().getHostAddress()));
         server.stop(0);
     }
 

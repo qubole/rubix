@@ -135,7 +135,7 @@ public class RemoteReadRequestChain
     private int copyIntoCache(byte[] destBuffer, int destBufferOffset, int length, long cacheReadStart)
             throws IOException
     {
-        log.debug(String.format("Trying to copy [%d - %d] bytes from destination buffer offset %d", cacheReadStart, cacheReadStart + length, destBufferOffset));
+        log.debug(String.format("Trying to copy [%d - %d] bytes into cache from destination buffer offset %d", cacheReadStart, cacheReadStart + length, destBufferOffset));
         long start = System.nanoTime();
         int leftToRead = length;
         int readSoFar = 0;
