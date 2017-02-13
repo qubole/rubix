@@ -72,8 +72,7 @@ public class BookKeeper
     private Configuration conf;
     private static Integer lock = 1;
     private List<String> nodes;
-    static int currentNodeIndex = -1;
-    static int nodeListSize;
+    int currentNodeIndex = -1;
     static long splitSize;
 
     public BookKeeper(Configuration conf)
@@ -107,7 +106,7 @@ public class BookKeeper
             String key = remotePath + i + end;
             HashFunction hf = Hashing.md5();
             HashCode hc = hf.hashString(key, Charsets.UTF_8);
-            int nodeIndex = Hashing.consistentHash(hc, nodeListSize);
+            int nodeIndex = Hashing.consistentHash(hc, nodes.size());
             blockSplits.put(blockNumber, nodes.get(nodeIndex));
             blockNumber++;
         }
@@ -153,15 +152,15 @@ public class BookKeeper
 
     private void initializeClusterManager(int clusterType)
     {
-        if (clusterManager == null || currentNodeIndex == -1) {
+        if (clusterManager == null) {
             synchronized (lock) {
-                if (clusterManager == null || currentNodeIndex == -1) {
+                if (clusterManager == null) {
                     try {
                         nodeName = InetAddress.getLocalHost().getCanonicalHostName();
                     }
                     catch (UnknownHostException e) {
-                        e.printStackTrace();
                         log.warn("Could not get nodeName", e);
+                        return;
                     }
 
                     if (clusterType == TEST_CLUSTER_MANAGER.ordinal()) {
@@ -180,8 +179,8 @@ public class BookKeeper
                                 nodeName = InetAddress.getLocalHost().getHostAddress();
                             }
                             catch (UnknownHostException e) {
-                                e.printStackTrace();
                                 log.warn("Could not get nodeName", e);
+                                return;
                             }
                             clusterManager = new PrestoClusterManager();
                         }
@@ -189,17 +188,12 @@ public class BookKeeper
                         nodes = clusterManager.getNodes();
                         splitSize = clusterManager.getSplitSize();
                     }
-                    nodeListSize = nodes.size();
-                    currentNodeIndex = nodes.indexOf(nodeName);
-                }
-                else {
-                    nodes = clusterManager.getNodes();
                 }
             }
         }
-        else {
-            nodes = clusterManager.getNodes();
-        }
+
+        nodes = clusterManager.getNodes();
+        currentNodeIndex = nodes.indexOf(nodeName);
     }
 
     @Override
