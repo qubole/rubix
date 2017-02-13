@@ -310,31 +310,24 @@ public class CachingInputStream
 
             else if (isCached.get(idx).getLocation() == Location.CACHED) {
                 log.debug(String.format("Sending cached block %d to cachedReadRequestChain", blockNum));
-                if (localFileForReading == null) {
-                    try {
+                try {
+                    if (localFileForReading == null) {
                         this.localFileForReading = new RandomAccessFile(localPath, "r");
                     }
-                    catch (IOException e) {
-                        log.error("Unable to open randomAccessFile channel in R mode", e);
-                        // reset bookkeeper client so that we take direct route
-                        this.bookKeeperClient = null;
+                    if (directReadBuffer == null) {
+                        directReadBuffer = bufferPool.getBuffer(diskReadBufferSize);
                     }
-                }
-                if (directReadBuffer == null) {
-                    directReadBuffer = bufferPool.getBuffer(diskReadBufferSize);
-                }
-                if (cachedReadRequestChain == null) {
-                    try {
+                    if (cachedReadRequestChain == null) {
                         cachedReadRequestChain = new CachedReadRequestChain(localFileForReading, directReadBuffer);
                     }
-                    catch (IOException e) {
-                        log.error("Unable to open file channel in R mode", e);
-                        // reset bookkeeper client so that we take direct route
-                        this.bookKeeperClient = null;
-                        isCached = null;
-                        idx--;
-                        blockNum--;
-                    }
+                }
+                catch (IOException e) {
+                    log.error("Unable to open file channel in R mode", e);
+                    // reset bookkeeper client so that we take direct route
+                    this.bookKeeperClient = null;
+                    isCached = null;
+                    idx--;
+                    blockNum--;
                 }
                 cachedReadRequestChain.addReadRequest(readRequest);
             }
@@ -354,27 +347,18 @@ public class CachingInputStream
                         if (localFileForWriting == null) {
                             this.localFileForWriting = new RandomAccessFile(localPath, "rw");
                         }
-                    }
-                    catch (IOException e) {
-                        log.error("Unable to open randomAccessFile channel in RW mode", e);
-                        // reset bookkeeper client so that we take direct route
-                        this.bookKeeperClient = null;
-                    }
-
-                    if (directWriteBuffer == null) {
-                        directWriteBuffer = bufferPool.getBuffer(diskReadBufferSize);
-                    }
-                    if (affixBuffer == null) {
-                        affixBuffer = new byte[blockSize];
-                    }
-
-                    try {
+                        if (directWriteBuffer == null) {
+                            directWriteBuffer = bufferPool.getBuffer(diskReadBufferSize);
+                        }
+                        if (affixBuffer == null) {
+                            affixBuffer = new byte[blockSize];
+                        }
                         if (remoteReadRequestChain == null) {
                             remoteReadRequestChain = new RemoteReadRequestChain(inputStream, localFileForWriting, directWriteBuffer, affixBuffer);
                         }
                     }
                     catch (IOException e) {
-                        log.error("Unable to obtain open file channel ", e);
+                        log.error("Unable to obtain open file channel in RW mode", e);
                         // reset bookkeeper client so that we take direct route
                         this.bookKeeperClient = null;
                         isCached = null;
