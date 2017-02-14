@@ -92,6 +92,7 @@ public class BookKeeper
         }
 
         if (currentNodeIndex == -1 || nodes == null) {
+            log.error("Initialization not done");
             return null;
         }
 
@@ -191,6 +192,9 @@ public class BookKeeper
                         splitSize = clusterManager.getSplitSize();
                     }
                 }
+            }
+            if (nodes == null || nodes.size() == 0 || currentNodeIndex == -1) {
+                log.error(String.format("Could not initialize cluster nodes=%s nodeName=%s currentNodeIndex=%d", nodes, nodeName, currentNodeIndex));
             }
         }
 
