@@ -18,8 +18,6 @@ import org.testng.annotations.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
 import static com.qubole.rubix.core.DataGen.getExpectedOutput;
@@ -57,14 +55,12 @@ public class TestCachedReadRequestChain
                 new ReadRequest(1800, 1900, 1800, 1900, buffer, 900, file.length())
         };
 
-        RandomAccessFile raf = new RandomAccessFile(file, "r");
-        CachedReadRequestChain cachedReadRequestChain = new CachedReadRequestChain(raf);
+        CachedReadRequestChain cachedReadRequestChain = new CachedReadRequestChain(filename);
         for (ReadRequest rr : readRequests) {
             cachedReadRequestChain.addReadRequest(rr);
         }
         cachedReadRequestChain.lock();
         int readSize = cachedReadRequestChain.call();
-        raf.close();
 
         assertTrue("Wrong amount of data read " + readSize, readSize == 1000);
         String output = new String(buffer, Charset.defaultCharset());

@@ -58,7 +58,6 @@ public class CachingInputStream
     private long nextReadPosition;
     private long nextReadBlock;
     private int blockSize;
-    private RandomAccessFile localFileForReading = null;
     private RandomAccessFile localFileForWriting = null;
     private CachingFileSystemStats statsMbean;
 
@@ -311,14 +310,11 @@ public class CachingInputStream
             else if (isCached.get(idx).getLocation() == Location.CACHED) {
                 log.debug(String.format("Sending cached block %d to cachedReadRequestChain", blockNum));
                 try {
-                    if (localFileForReading == null) {
-                        this.localFileForReading = new RandomAccessFile(localPath, "r");
-                    }
                     if (directReadBuffer == null) {
-                        directReadBuffer = bufferPool.getBuffer(diskReadBufferSize);
+                        directReadBuffer = bufferPool.getBuffer(8 * 1024);
                     }
                     if (cachedReadRequestChain == null) {
-                        cachedReadRequestChain = new CachedReadRequestChain(localFileForReading, directReadBuffer);
+                        cachedReadRequestChain = new CachedReadRequestChain(localPath, directReadBuffer);
                     }
                 }
                 catch (IOException e) {
@@ -348,7 +344,7 @@ public class CachingInputStream
                             this.localFileForWriting = new RandomAccessFile(localPath, "rw");
                         }
                         if (directWriteBuffer == null) {
-                            directWriteBuffer = bufferPool.getBuffer(diskReadBufferSize);
+                            directWriteBuffer = bufferPool.getBuffer(8 * 1024);
                         }
                         if (affixBuffer == null) {
                             affixBuffer = new byte[blockSize];
@@ -405,9 +401,6 @@ public class CachingInputStream
     {
         try {
             inputStream.close();
-            if (localFileForReading != null) {
-                localFileForReading.close();
-            }
             if (localFileForWriting != null) {
                 localFileForWriting.close();
             }

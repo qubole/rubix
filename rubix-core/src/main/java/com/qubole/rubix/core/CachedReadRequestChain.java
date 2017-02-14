@@ -30,22 +30,24 @@ import static com.google.common.base.Preconditions.checkState;
 public class CachedReadRequestChain extends ReadRequestChain
 {
     private FileChannel fileChannel = null;
+    private RandomAccessFile raf;
     private int read = 0; // data read
 
     private ByteBuffer directBuffer;
 
     private static final Log log = LogFactory.getLog(CachedReadRequestChain.class);
 
-    public CachedReadRequestChain(RandomAccessFile fileToRead, ByteBuffer buffer)
+    public CachedReadRequestChain(String fileToRead, ByteBuffer buffer)
             throws IOException
     {
-        FileInputStream fis = new FileInputStream(fileToRead.getFD());
+        this.raf = new RandomAccessFile(fileToRead, "r");
+        FileInputStream fis = new FileInputStream(raf.getFD());
         fileChannel = fis.getChannel();
         directBuffer = buffer;
     }
 
     @VisibleForTesting
-    public CachedReadRequestChain(RandomAccessFile fileToRead)
+    public CachedReadRequestChain(String fileToRead)
             throws IOException
     {
         this(fileToRead, ByteBuffer.allocate(1024));
@@ -93,6 +95,8 @@ public class CachedReadRequestChain extends ReadRequestChain
             read += nread;
         }
         log.info(String.format("Read %d bytes from cached file", read));
+        fileChannel.close();
+        raf.close();
         return read;
     }
 
