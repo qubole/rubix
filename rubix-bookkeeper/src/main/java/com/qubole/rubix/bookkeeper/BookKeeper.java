@@ -167,6 +167,8 @@ public class BookKeeper
                         nodes = new ArrayList<>();
                         nodes.add(nodeName);
                         splitSize = 64 * 1024 * 1024;
+                        currentNodeIndex = 0;
+                        return;
                     }
                     else {
                         if (clusterType == HADOOP2_CLUSTER_MANAGER.ordinal()) {
