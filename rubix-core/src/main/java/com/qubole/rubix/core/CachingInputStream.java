@@ -396,9 +396,23 @@ public class CachingInputStream
         this.nextReadBlock = this.nextReadPosition / blockSize;
     }
 
+    private void returnBuffers()
+    {
+        if (directWriteBuffer != null) {
+            bufferPool.returnBuffer(directWriteBuffer);
+            directWriteBuffer = null;
+        }
+
+        if (directReadBuffer != null) {
+            bufferPool.returnBuffer(directReadBuffer);
+            directReadBuffer = null;
+        }
+    }
+
     @Override
     public void close()
     {
+        returnBuffers();
         try {
             inputStream.close();
             if (localFileForWriting != null) {
