@@ -78,7 +78,7 @@ public class CacheConfig
     private static int localServerPort = 8898;
     private static int serverMaxThreads = Integer.MAX_VALUE;
     public static int localTransferbufferSize = 10 * 1024 * 1024;
-    public static final int diskReadBufferSizeDefault = 1024 * 1024;
+    public static final int diskReadBufferSizeDefault = 1024;
 
     private CacheConfig()
     {

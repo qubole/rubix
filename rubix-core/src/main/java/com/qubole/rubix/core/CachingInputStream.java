@@ -37,6 +37,8 @@ import org.apache.hadoop.util.DirectBufferPool;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryUsage;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
@@ -81,6 +83,7 @@ public class CachingInputStream
     private ByteBuffer directReadBuffer = null;
     private byte[] affixBuffer;
     private int diskReadBufferSize;
+    private static int readFuncCalls = 0;
 
     public CachingInputStream(FSDataInputStream parentInputStream, FileSystem parentFs, Path backendPath, Configuration conf, CachingFileSystemStats statsMbean, ClusterType clusterType, BookKeeperFactory bookKeeperFactory, FileSystem remoteFileSystem)
             throws IOException
@@ -179,6 +182,9 @@ public class CachingInputStream
             throws IOException
     {
         log.debug(String.format("Got Read, currentPos: %d currentBlock: %d bufferOffset: %d length: %d", nextReadPosition, nextReadBlock, offset, length));
+        log.info(String.format("Read method is invoked for %d times", readFuncCalls));
+        log.info(getJVMHeapInfo());
+
         if (nextReadPosition >= fileSize) {
             log.debug("Already at eof, returning");
             return -1;
@@ -425,5 +431,17 @@ public class CachingInputStream
         catch (IOException e) {
             throw Throwables.propagate(e);
         }
+    }
+
+    public String getJVMHeapInfo()
+    {
+        StringBuilder ret = new StringBuilder();
+        ret.append("##### Memory utilization statistics [MB] ##### \n");
+        MemoryUsage heapMemoryUsage = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+        MemoryUsage nonHeapMemoryUsage = ManagementFactory.getMemoryMXBean().getNonHeapMemoryUsage();
+        ret.append("Heap Memory Usage: " + (heapMemoryUsage.getUsed() / 1048576) + "/" + (heapMemoryUsage.getMax() / 1048576) + " MB");
+        ret.append("NonHeap Memory Usage: " + (nonHeapMemoryUsage.getUsed() / 1048576) + "/"+ (nonHeapMemoryUsage.getMax() / 1048576) + " MB");
+
+        return ret.toString();
     }
 }
