@@ -26,6 +26,8 @@ import com.qubole.rubix.spi.Location;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.pool2.ObjectPool;
+import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSInputStream;
@@ -82,6 +84,8 @@ public class CachingInputStream
     private ByteBuffer directReadBuffer = null;
     private byte[] affixBuffer;
     private int diskReadBufferSize;
+
+    private static ObjectPool<ReadRequest> readRequestPool = new GenericObjectPool<>(new ReadRequestFactory());
 
     public CachingInputStream(FSDataInputStream parentInputStream, FileSystem parentFs, Path backendPath, Configuration conf, CachingFileSystemStats statsMbean, ClusterType clusterType, BookKeeperFactory bookKeeperFactory, FileSystem remoteFileSystem)
             throws IOException
@@ -230,6 +234,15 @@ public class CachingInputStream
                 for (ReadRequestChain readRequestChain : readRequestChains) {
                     readRequestChain.updateCacheStatus(remotePath, fileSize, lastModified, blockSize, conf);
                     stats = stats.add(readRequestChain.getStats());
+
+                    try {
+                        for (ReadRequest readRequest : readRequestChain.readRequests) {
+                            readRequestPool.returnObject(readRequest);
+                        }
+                    }
+                    catch (Exception e) {
+                        log.error("Unable to return readrequest", e);
+                    }
                 }
                 statsMbean.addReadRequestChainStats(stats);
             }
@@ -245,9 +258,9 @@ public class CachingInputStream
     }
 
     private List<ReadRequestChain> setupReadRequestChains(byte[] buffer,
-            int offset,
-            long endBlock,
-            int length)
+                                                          int offset,
+                                                          long endBlock,
+                                                          int length)
     {
         DirectReadRequestChain directReadRequestChain = null;
         RemoteReadRequestChain remoteReadRequestChain = null;
@@ -290,14 +303,19 @@ public class CachingInputStream
             }
             int bufferOffest = offset + lengthAlreadyConsidered;
 
-            ReadRequest readRequest = new ReadRequest(backendReadStart,
-                    backendReadEnd,
-                    actualReadStart,
-                    actualReadEnd,
-                    buffer,
-                    bufferOffest,
-                    fileSize);
-
+            ReadRequest readRequest = null;
+            try {
+                 readRequest = getReadRequestFromPool(backendReadStart,
+                        backendReadEnd,
+                        actualReadStart,
+                        actualReadEnd,
+                        buffer,
+                        bufferOffest);
+            }
+            catch (Exception e) {
+                //This should never occur
+                log.error("Unable to create readrequest", e);
+            }
             lengthAlreadyConsidered += readRequest.getActualReadLength();
 
             if (isCached == null) {
@@ -393,6 +411,19 @@ public class CachingInputStream
             }
         }
         return chainedReadRequestChainBuilder.build();
+    }
+
+    private ReadRequest getReadRequestFromPool(long backendReadStart, long backendReadEnd, long actualReadStart, long actualReadEnd, byte[] buffer, int bufferOffest)
+                throws Exception
+    {
+        ReadRequest readRequest = readRequestPool.borrowObject();
+        readRequest.setActualReadStart(actualReadStart);
+        readRequest.setActualReadEnd(actualReadEnd);
+        readRequest.setBackendReadStart(backendReadStart);
+        readRequest.setBackendReadEnd(backendReadEnd);
+        readRequest.setDestBuffer(buffer);
+        readRequest.setDestBufferOffset(bufferOffest);
+        return readRequest;
     }
 
     private void setNextReadBlock()
