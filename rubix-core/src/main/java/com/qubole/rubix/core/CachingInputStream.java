@@ -85,6 +85,7 @@ public class CachingInputStream
     private byte[] affixBuffer;
     private int diskReadBufferSize;
 
+    //TODO : Close this somewhere?
     private static ObjectPool<ReadRequest> readRequestPool = new SoftReferenceObjectPool<>(new ReadRequestFactory());
 
     public CachingInputStream(FSDataInputStream parentInputStream, FileSystem parentFs, Path backendPath, Configuration conf, CachingFileSystemStats statsMbean, ClusterType clusterType, BookKeeperFactory bookKeeperFactory, FileSystem remoteFileSystem)
@@ -236,6 +237,14 @@ public class CachingInputStream
                 for (ReadRequestChain readRequestChain : readRequestChains) {
                     readRequestChain.updateCacheStatus(remotePath, fileSize, lastModified, blockSize, conf);
                     stats = stats.add(readRequestChain.getStats());
+                    try {
+                        for (ReadRequest readRequest : readRequestChain.readRequests) {
+                            readRequestPool.returnObject(readRequest);
+                        }
+                    }
+                    catch (Exception e) {
+                        log.error("Unable to return borrowed readrequest object", e);
+                    }
                 }
                 statsMbean.addReadRequestChainStats(stats);
             }

@@ -70,13 +70,13 @@ public class DirectReadRequestChain extends ReadRequestChain
             }
             totalRead += nread;
 
-            try {
-                readRequestPool.returnObject(readRequest);
-            }
-            catch (Exception e) {
-                //Suppress the error.
-                log.error("Unable to return borrowed readrequest object", e);
-            }
+//            try {
+//                readRequestPool.returnObject(readRequest);
+//            }
+//            catch (Exception e) {
+//                //Suppress the error.
+//                log.error("Unable to return borrowed readrequest object", e);
+//            }
         }
         log.info(String.format("Read %d bytes directly from remote, no caching", totalRead));
         return totalRead;

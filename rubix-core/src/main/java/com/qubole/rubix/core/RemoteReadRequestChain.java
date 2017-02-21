@@ -113,14 +113,14 @@ public class RemoteReadRequestChain
                 copyIntoCache(affixBuffer, 0, suffixBufferLength, readRequest.actualReadEnd);
                 log.debug(String.format("Copied %d suffix bytes into cache", suffixBufferLength));
             }
-
-            try {
-                readRequestPool.returnObject(readRequest);
-            }
-            catch (Exception e) {
-                //Suppress the error.
-                log.error("Unable to return borrowed readrequest object", e);
-            }
+//
+//            try {
+//                readRequestPool.returnObject(readRequest);
+//            }
+//            catch (Exception e) {
+//                //Suppress the error.
+//                log.error("Unable to return borrowed readrequest object", e);
+//            }
         }
         log.info(String.format("Read %d bytes from remote file, added %d to destination buffer", totalPrefixRead + totalRequestedRead + totalSuffixRead, totalRequestedRead));
         return totalRequestedRead;

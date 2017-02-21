@@ -96,13 +96,13 @@ public class CachedReadRequestChain extends ReadRequestChain
                     readRequest.getDestBufferOffset()));
             read += nread;
 
-            try {
-                readRequestPool.returnObject(readRequest);
-            }
-            catch (Exception e) {
-                //Suppress the error.
-                log.error("Unable to return borrowed readrequest object", e);
-            }
+//            try {
+//                readRequestPool.returnObject(readRequest);
+//            }
+//            catch (Exception e) {
+//                //Suppress the error.
+//                log.error("Unable to return borrowed readrequest object", e);
+//            }
         }
         log.info(String.format("Read %d bytes from cached file", read));
         return read;
