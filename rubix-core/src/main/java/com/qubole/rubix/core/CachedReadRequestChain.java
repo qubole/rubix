@@ -15,6 +15,7 @@ package com.qubole.rubix.core;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.pool2.ObjectPool;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -32,23 +33,26 @@ public class CachedReadRequestChain extends ReadRequestChain
     private FileChannel fileChannel = null;
     private int read = 0; // data read
 
+    ObjectPool<ReadRequest> readRequestPool;
+
     private ByteBuffer directBuffer;
 
     private static final Log log = LogFactory.getLog(CachedReadRequestChain.class);
 
-    public CachedReadRequestChain(RandomAccessFile fileToRead, ByteBuffer buffer)
+    public CachedReadRequestChain(RandomAccessFile fileToRead, ObjectPool<ReadRequest> readRequestPool, ByteBuffer buffer)
             throws IOException
     {
         FileInputStream fis = new FileInputStream(fileToRead.getFD());
         fileChannel = fis.getChannel();
-        directBuffer = buffer;
+        this.readRequestPool = readRequestPool;
+        this.directBuffer = buffer;
     }
 
     @VisibleForTesting
-    public CachedReadRequestChain(RandomAccessFile fileToRead)
+    public CachedReadRequestChain(RandomAccessFile fileToRead, ObjectPool<ReadRequest> readRequestPool)
             throws IOException
     {
-        this(fileToRead, ByteBuffer.allocate(1024));
+        this(fileToRead, readRequestPool, ByteBuffer.allocate(1024));
     }
 
     @VisibleForTesting
@@ -91,6 +95,14 @@ public class CachedReadRequestChain extends ReadRequestChain
                     readRequest.getActualReadStart() + nread,
                     readRequest.getDestBufferOffset()));
             read += nread;
+
+            try {
+                readRequestPool.returnObject(readRequest);
+            }
+            catch (Exception e) {
+                //Suppress the error.
+                log.error("Unable to return borrowed readrequest object", e);
+            }
         }
         log.info(String.format("Read %d bytes from cached file", read));
         return read;

@@ -14,6 +14,8 @@ package com.qubole.rubix.core;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.pool2.ObjectPool;
+import org.apache.commons.pool2.impl.SoftReferenceObjectPool;
 import org.testng.annotations.Test;
 
 import java.io.File;
@@ -32,6 +34,7 @@ import static org.testng.AssertJUnit.assertTrue;
 public class TestCachedReadRequestChain
 {
     private static final Log log = LogFactory.getLog(TestCachedReadRequestChain.class);
+    private static ObjectPool<ReadRequest> readRequestPool = new SoftReferenceObjectPool<>(new ReadRequestFactory());
 
     @Test
     public void testCachedReadRequestChain()
@@ -41,7 +44,6 @@ public class TestCachedReadRequestChain
         populateFile(filename);
 
         File file = new File(filename);
-
 
         byte[] buffer = new byte[1000];
         ReadRequest[] readRequests = {
@@ -58,7 +60,7 @@ public class TestCachedReadRequestChain
         };
 
         RandomAccessFile raf = new RandomAccessFile(file, "r");
-        CachedReadRequestChain cachedReadRequestChain = new CachedReadRequestChain(raf);
+        CachedReadRequestChain cachedReadRequestChain = new CachedReadRequestChain(raf, readRequestPool);
         for (ReadRequest rr : readRequests) {
             cachedReadRequestChain.addReadRequest(rr);
         }

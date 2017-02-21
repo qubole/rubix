@@ -14,6 +14,7 @@ package com.qubole.rubix.core;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.pool2.ObjectPool;
 import org.apache.hadoop.fs.FSDataInputStream;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -26,13 +27,15 @@ import static com.google.common.base.Preconditions.checkState;
 public class DirectReadRequestChain extends ReadRequestChain
 {
     FSDataInputStream inputStream;
+    ObjectPool<ReadRequest> readRequestPool;
     int totalRead = 0;
 
     private static final Log log = LogFactory.getLog(DirectReadRequestChain.class);
 
-    public DirectReadRequestChain(FSDataInputStream inputStream)
+    public DirectReadRequestChain(FSDataInputStream inputStream, ObjectPool<ReadRequest> readRequestPool)
     {
         this.inputStream = inputStream;
+        this.readRequestPool = readRequestPool;
     }
 
     @Override
@@ -66,6 +69,14 @@ public class DirectReadRequestChain extends ReadRequestChain
                 nread += nbytes;
             }
             totalRead += nread;
+
+            try {
+                readRequestPool.returnObject(readRequest);
+            }
+            catch (Exception e) {
+                //Suppress the error.
+                log.error("Unable to return borrowed readrequest object", e);
+            }
         }
         log.info(String.format("Read %d bytes directly from remote, no caching", totalRead));
         return totalRead;

@@ -18,6 +18,7 @@ import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.pool2.ObjectPool;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 
@@ -40,6 +41,8 @@ public class RemoteReadRequestChain
     final FSDataInputStream inputStream;
     final FileChannel fileChannel;
 
+    ObjectPool<ReadRequest> readRequestPool;
+
     private ByteBuffer directBuffer;
     private byte[] affixBuffer;
     private int totalPrefixRead = 0;
@@ -50,21 +53,22 @@ public class RemoteReadRequestChain
 
     private static final Log log = LogFactory.getLog(RemoteReadRequestChain.class);
 
-    public RemoteReadRequestChain(FSDataInputStream inputStream, RandomAccessFile localFile, ByteBuffer directBuffer, byte[] affixBuffer)
+    public RemoteReadRequestChain(FSDataInputStream inputStream, RandomAccessFile localFile, ObjectPool<ReadRequest> readRequestPool, ByteBuffer directBuffer, byte[] affixBuffer)
             throws IOException
     {
         this.inputStream = inputStream;
         this.fileChannel = new FileOutputStream(localFile.getFD()).getChannel();
         this.directBuffer = directBuffer;
+        this.readRequestPool = readRequestPool;
         this.affixBuffer = affixBuffer;
         this.blockSize = affixBuffer.length;
     }
 
     @VisibleForTesting
-    public RemoteReadRequestChain(FSDataInputStream inputStream, RandomAccessFile randomAccessFile)
+    public RemoteReadRequestChain(FSDataInputStream inputStream, RandomAccessFile randomAccessFile, ObjectPool<ReadRequest> readRequestPool)
             throws IOException
     {
-        this(inputStream, randomAccessFile, ByteBuffer.allocate(100), new byte[100]);
+        this(inputStream, randomAccessFile, readRequestPool, ByteBuffer.allocate(100), new byte[100]);
     }
 
     public Integer call()
@@ -108,6 +112,14 @@ public class RemoteReadRequestChain
                 log.debug(String.format("Read %d bytes into suffix buffer", suffixBufferLength));
                 copyIntoCache(affixBuffer, 0, suffixBufferLength, readRequest.actualReadEnd);
                 log.debug(String.format("Copied %d suffix bytes into cache", suffixBufferLength));
+            }
+
+            try {
+                readRequestPool.returnObject(readRequest);
+            }
+            catch (Exception e) {
+                //Suppress the error.
+                log.error("Unable to return borrowed readrequest object", e);
             }
         }
         log.info(String.format("Read %d bytes from remote file, added %d to destination buffer", totalPrefixRead + totalRequestedRead + totalSuffixRead, totalRequestedRead));

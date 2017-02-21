@@ -27,7 +27,7 @@ import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.pool2.ObjectPool;
-import org.apache.commons.pool2.impl.GenericObjectPool;
+import org.apache.commons.pool2.impl.SoftReferenceObjectPool;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSInputStream;
@@ -85,7 +85,7 @@ public class CachingInputStream
     private byte[] affixBuffer;
     private int diskReadBufferSize;
 
-    private static ObjectPool<ReadRequest> readRequestPool = new GenericObjectPool<>(new ReadRequestFactory());
+    private static ObjectPool<ReadRequest> readRequestPool = new SoftReferenceObjectPool<>(new ReadRequestFactory());
 
     public CachingInputStream(FSDataInputStream parentInputStream, FileSystem parentFs, Path backendPath, Configuration conf, CachingFileSystemStats statsMbean, ClusterType clusterType, BookKeeperFactory bookKeeperFactory, FileSystem remoteFileSystem)
             throws IOException
@@ -192,12 +192,14 @@ public class CachingInputStream
         // Get the last block
         final long endBlock = ((nextReadPosition + (length - 1)) / blockSize) + 1; // this block will not be read
 
+        log.debug(String.format("Before allocation idle %d, active %d", readRequestPool.getNumIdle(), readRequestPool.getNumActive()));
         // Create read requests
         final List<ReadRequestChain> readRequestChains = setupReadRequestChains(buffer,
                 offset,
                 endBlock,
                 length);
 
+        log.debug(String.format("After allocation idle %d, active %d", readRequestPool.getNumIdle(), readRequestPool.getNumActive()));
         log.debug("Executing Chains");
 
         // start read requests
@@ -234,15 +236,6 @@ public class CachingInputStream
                 for (ReadRequestChain readRequestChain : readRequestChains) {
                     readRequestChain.updateCacheStatus(remotePath, fileSize, lastModified, blockSize, conf);
                     stats = stats.add(readRequestChain.getStats());
-
-                    try {
-                        for (ReadRequest readRequest : readRequestChain.readRequests) {
-                            readRequestPool.returnObject(readRequest);
-                        }
-                    }
-                    catch (Exception e) {
-                        log.error("Unable to return readrequest", e);
-                    }
                 }
                 statsMbean.addReadRequestChainStats(stats);
             }
@@ -310,7 +303,8 @@ public class CachingInputStream
                         actualReadStart,
                         actualReadEnd,
                         buffer,
-                        bufferOffest);
+                        bufferOffest,
+                        fileSize);
             }
             catch (Exception e) {
                 //This should never occur
@@ -321,7 +315,7 @@ public class CachingInputStream
             if (isCached == null) {
                 log.debug(String.format("Sending block %d to DirectReadRequestChain", blockNum));
                 if (directReadRequestChain == null) {
-                    directReadRequestChain = new DirectReadRequestChain(inputStream);
+                    directReadRequestChain = new DirectReadRequestChain(inputStream, readRequestPool);
                 }
                 directReadRequestChain.addReadRequest(readRequest);
             }
@@ -336,7 +330,7 @@ public class CachingInputStream
                         directReadBuffer = bufferPool.getBuffer(diskReadBufferSize);
                     }
                     if (cachedReadRequestChain == null) {
-                        cachedReadRequestChain = new CachedReadRequestChain(localFileForReading, directReadBuffer);
+                        cachedReadRequestChain = new CachedReadRequestChain(localFileForReading, readRequestPool, directReadBuffer);
                     }
                 }
                 catch (IOException e) {
@@ -372,7 +366,7 @@ public class CachingInputStream
                             affixBuffer = new byte[blockSize];
                         }
                         if (remoteReadRequestChain == null) {
-                            remoteReadRequestChain = new RemoteReadRequestChain(inputStream, localFileForWriting, directWriteBuffer, affixBuffer);
+                            remoteReadRequestChain = new RemoteReadRequestChain(inputStream, localFileForWriting, readRequestPool, directWriteBuffer, affixBuffer);
                         }
                     }
                     catch (IOException e) {
@@ -413,7 +407,7 @@ public class CachingInputStream
         return chainedReadRequestChainBuilder.build();
     }
 
-    private ReadRequest getReadRequestFromPool(long backendReadStart, long backendReadEnd, long actualReadStart, long actualReadEnd, byte[] buffer, int bufferOffest)
+    private ReadRequest getReadRequestFromPool(long backendReadStart, long backendReadEnd, long actualReadStart, long actualReadEnd, byte[] buffer, int bufferOffest, long fileSize)
                 throws Exception
     {
         ReadRequest readRequest = readRequestPool.borrowObject();
@@ -423,6 +417,7 @@ public class CachingInputStream
         readRequest.setBackendReadEnd(backendReadEnd);
         readRequest.setDestBuffer(buffer);
         readRequest.setDestBufferOffset(bufferOffest);
+        readRequest.setBackendFileSize(fileSize);
         return readRequest;
     }
 

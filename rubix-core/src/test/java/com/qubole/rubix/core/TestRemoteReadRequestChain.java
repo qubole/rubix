@@ -14,6 +14,8 @@ package com.qubole.rubix.core;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.pool2.ObjectPool;
+import org.apache.commons.pool2.impl.SoftReferenceObjectPool;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -33,6 +35,8 @@ import static org.testng.AssertJUnit.assertTrue;
 public class TestRemoteReadRequestChain
 {
     FSDataInputStream fsDataInputStream;
+    private static ObjectPool<ReadRequest> readRequestPool = new SoftReferenceObjectPool<>(new ReadRequestFactory());
+
 
     String backendFileName = "/tmp/testRemoteReadRequestChainBackendFile";
     File backendFile = new File(backendFileName);
@@ -55,7 +59,7 @@ public class TestRemoteReadRequestChain
         fsDataInputStream = new FSDataInputStream(localFSInputStream);
         randomAccessFile = new RandomAccessFile(localFileName,"rw");
 
-        remoteReadRequestChain = new RemoteReadRequestChain(fsDataInputStream, randomAccessFile);
+        remoteReadRequestChain = new RemoteReadRequestChain(fsDataInputStream, randomAccessFile, readRequestPool);
     }
 
     @Test
