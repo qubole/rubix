@@ -37,8 +37,6 @@ import org.apache.hadoop.util.DirectBufferPool;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryUsage;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
