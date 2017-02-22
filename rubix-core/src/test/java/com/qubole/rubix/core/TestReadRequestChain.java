@@ -14,6 +14,8 @@ package com.qubole.rubix.core;
 
 import org.testng.annotations.Test;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.List;
 
 import static org.testng.AssertJUnit.assertTrue;
@@ -28,7 +30,7 @@ public class TestReadRequestChain
     {
         ReadRequest rr1 = new ReadRequest(0, 1024, 0, 1024, null, 0, 2048);
         ReadRequest rr2 = new ReadRequest(1024, 2048, 1024, 2048, null, 1024, 2048);
-        CachedReadRequestChain chain = new CachedReadRequestChain(null);
+        CachedReadRequestChain chain = new CachedReadRequestChain();
         chain.addReadRequest(rr1);
         chain.addReadRequest(rr2);
 
