@@ -66,13 +66,6 @@ public class CachedReadRequestChain extends ReadRequestChain
         // rather should be retried and eventually read from backend
         Thread.currentThread().setName(threadName);
 
-        try {
-            Thread.sleep(100L);
-        }
-        catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
         if (readRequests.size() == 0) {
             return 0;
         }

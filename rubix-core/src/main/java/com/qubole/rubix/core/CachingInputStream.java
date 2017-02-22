@@ -83,7 +83,6 @@ public class CachingInputStream
     private ByteBuffer directReadBuffer = null;
     private byte[] affixBuffer;
     private int diskReadBufferSize;
-    private static int readFuncCalls = 0;
 
     public CachingInputStream(FSDataInputStream parentInputStream, FileSystem parentFs, Path backendPath, Configuration conf, CachingFileSystemStats statsMbean, ClusterType clusterType, BookKeeperFactory bookKeeperFactory, FileSystem remoteFileSystem)
             throws IOException
@@ -182,8 +181,6 @@ public class CachingInputStream
             throws IOException
     {
         log.debug(String.format("Got Read, currentPos: %d currentBlock: %d bufferOffset: %d length: %d", nextReadPosition, nextReadBlock, offset, length));
-        log.info(String.format("Read method is invoked for %d times", readFuncCalls));
-        log.info(getJVMHeapInfo());
 
         if (nextReadPosition >= fileSize) {
             log.debug("Already at eof, returning");
@@ -317,7 +314,7 @@ public class CachingInputStream
                 log.debug(String.format("Sending cached block %d to cachedReadRequestChain", blockNum));
                 try {
                     if (directReadBuffer == null) {
-                        directReadBuffer = bufferPool.getBuffer(8 * 1024);
+                        directReadBuffer = bufferPool.getBuffer(diskReadBufferSize);
                     }
                     if (cachedReadRequestChain == null) {
                         cachedReadRequestChain = new CachedReadRequestChain(localPath, directReadBuffer);
@@ -350,7 +347,7 @@ public class CachingInputStream
                             this.localFileForWriting = new RandomAccessFile(localPath, "rw");
                         }
                         if (directWriteBuffer == null) {
-                            directWriteBuffer = bufferPool.getBuffer(8 * 1024);
+                            directWriteBuffer = bufferPool.getBuffer(diskReadBufferSize);
                         }
                         if (affixBuffer == null) {
                             affixBuffer = new byte[blockSize];
@@ -431,17 +428,5 @@ public class CachingInputStream
         catch (IOException e) {
             throw Throwables.propagate(e);
         }
-    }
-
-    public String getJVMHeapInfo()
-    {
-        StringBuilder ret = new StringBuilder();
-        ret.append("##### Memory utilization statistics [MB] ##### \n");
-        MemoryUsage heapMemoryUsage = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
-        MemoryUsage nonHeapMemoryUsage = ManagementFactory.getMemoryMXBean().getNonHeapMemoryUsage();
-        ret.append("Heap Memory Usage: " + (heapMemoryUsage.getUsed() / 1048576) + "/" + (heapMemoryUsage.getMax() / 1048576) + " MB");
-        ret.append("NonHeap Memory Usage: " + (nonHeapMemoryUsage.getUsed() / 1048576) + "/"+ (nonHeapMemoryUsage.getMax() / 1048576) + " MB");
-
-        return ret.toString();
     }
 }
