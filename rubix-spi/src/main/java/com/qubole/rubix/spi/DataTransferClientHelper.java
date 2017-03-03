@@ -33,6 +33,7 @@ public class DataTransferClientHelper
     {
         SocketAddress sad = new InetSocketAddress(remoteNodeName, CacheConfig.getLocalServerPort(conf));
         SocketChannel sc = SocketChannel.open();
+        sc.socket().setSoTimeout(CacheConfig.getSocketReadTimeOutDefault(conf));
         sc.configureBlocking(true);
         sc.socket().connect(sad, CacheConfig.getClientTimeout(conf));
         return sc;
