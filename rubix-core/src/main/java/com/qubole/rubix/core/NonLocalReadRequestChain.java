@@ -23,7 +23,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SocketChannel;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -43,7 +47,6 @@ public class NonLocalReadRequestChain extends ReadRequestChain
     FileSystem remoteFileSystem;
     int clusterType;
     public boolean strictMode = false;
-
     private static final Log log = LogFactory.getLog(NonLocalReadRequestChain.class);
 
     public NonLocalReadRequestChain(String remoteLocation, long fileSize, long lastModified, Configuration conf, FileSystem remoteFileSystem, String remotePath, int clusterType, boolean strictMode)
@@ -92,6 +95,15 @@ public class NonLocalReadRequestChain extends ReadRequestChain
             }
             try {
                 int nread = 0;
+
+                /*
+                SocketChannels does not support timeouts when used directly, because timeout is used only by streams.
+                We get this working by wrapping it in ReadableByteChannel.
+                Ref - https://technfun.wordpress.com/2009/01/29/networking-in-java-non-blocking-nio-blocking-nio-and-io/
+                 */
+                InputStream inStream = dataTransferClient.socket().getInputStream();
+                ReadableByteChannel wrappedChannel = Channels.newChannel(inStream);
+
                 ByteBuffer buf = DataTransferClientHelper.writeHeaders(conf, new DataTransferHeader(readRequest.getActualReadStart(),
                         readRequest.getActualReadLength(), fileSize, lastModified, clusterType, filePath));
 
@@ -99,7 +111,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
                 int bytesread = 0;
                 ByteBuffer dst = ByteBuffer.wrap(readRequest.destBuffer, readRequest.getDestBufferOffset(), readRequest.destBuffer.length - readRequest.getDestBufferOffset());
                 while (bytesread != readRequest.getActualReadLength()) {
-                    nread = dataTransferClient.read(dst);
+                    nread = wrappedChannel.read(dst);
                     bytesread += nread;
                     totalRead += nread;
                     if (nread == -1) {
@@ -108,6 +120,16 @@ public class NonLocalReadRequestChain extends ReadRequestChain
                     }
                     dst.position(bytesread + readRequest.getDestBufferOffset());
                }
+            }
+            catch (SocketTimeoutException e) {
+                if (strictMode) {
+                    log.error(remoteNodeName + ": socket read timed out.");
+                    throw Throwables.propagate(e);
+                }
+                else {
+                    log.info(remoteNodeName + ": socket read timed out. Using direct reads");
+                    return directReadRequest(readRequests.indexOf(readRequest));
+                }
             }
             catch (Exception e) {
                 log.info("Error reading data from node : " + remoteNodeName, e);
