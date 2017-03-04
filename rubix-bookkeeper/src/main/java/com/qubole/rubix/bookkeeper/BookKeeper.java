@@ -23,11 +23,11 @@ import com.google.common.cache.Weigher;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import com.qubole.rubix.core.CachingFileSystem;
+import com.qubole.rubix.core.ReadRequest;
+import com.qubole.rubix.core.RemoteReadRequestChain;
 import com.qubole.rubix.hadoop2.Hadoop2ClusterManager;
 import com.qubole.rubix.presto.PrestoClusterManager;
 import com.qubole.rubix.spi.BlockLocation;
-import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
@@ -44,6 +44,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -199,7 +200,7 @@ public class BookKeeper
         }
 
         nodes = clusterManager.getNodes();
-        currentNodeIndex = nodes.indexOf(nodeName);
+        currentNodeIndex = nodes.indexOf(nodeName) == -1 ? currentNodeIndex : nodes.indexOf(nodeName);
         if (nodes == null || nodes.size() == 0 || currentNodeIndex == -1) {
             log.error(String.format("Could not initialize cluster nodes=%s nodeName=%s currentNodeIndex=%d", nodes, nodeName, currentNodeIndex));
             // mark clusterManager null so that some
@@ -256,7 +257,8 @@ public class BookKeeper
     {
         int blockSize = CacheConfig.getBlockSize(conf);
         byte[] buffer = new byte[blockSize];
-        BookKeeperFactory bookKeeperFactory = new BookKeeperFactory(this);
+        ByteBuffer byteBuffer = null;
+        String localPath = CacheConfig.getLocalPath(remotePath, conf);
         FileSystem fs = null;
         FSDataInputStream inputStream = null;
         Path path = new Path(remotePath);
@@ -270,20 +272,25 @@ public class BookKeeper
                 int readStart = blockNum * blockSize;
                 log.debug(" blockLocation is: " + blockLocations.get(idx).getLocation() + " for path " + remotePath + " offset " + offset + " length " + length);
                 if (blockLocations.get(idx).getLocation() != Location.CACHED) {
+                    if (byteBuffer == null) {
+                        byteBuffer = ByteBuffer.allocateDirect(CacheConfig.getDiskReadBufferSizeDefault(conf));
+                    }
+
                     if (fs == null) {
                         fs = path.getFileSystem(conf);
                         fs.initialize(path.toUri(), conf);
 
-                        if (CachingFileSystem.class.isAssignableFrom(fs.getClass())) {
-                            ((CachingFileSystem) fs).setBookKeeper(bookKeeperFactory, conf);
-                        }
-                        else {
-                            throw new Exception(String.format("%s Not a subclass of CachingFileSystem", fs.getClass()));
-                        }
                         inputStream = fs.open(path, blockSize);
                     }
-                    inputStream.seek(readStart);
-                    inputStream.read(buffer, 0, blockSize);
+
+                    // Cache the data
+                    // Ue RRRC directly instead of creating instance of CachingFS as in certain circumstances, CachingFS could
+                    // send this request to NonLocalRRC which would be wrong as that would not cache it on disk
+                    RemoteReadRequestChain remoteReadRequestChain = new RemoteReadRequestChain(inputStream, localPath, byteBuffer, buffer);
+                    remoteReadRequestChain.addReadRequest(new ReadRequest(readStart, readStart + blockSize, readStart, readStart + blockSize, buffer, 0, fileSize));
+                    remoteReadRequestChain.lock();
+                    remoteReadRequestChain.call();
+                    remoteReadRequestChain.updateCacheStatus(remotePath, fileSize, lastModified, blockSize, conf);
                 }
             }
             return true;
