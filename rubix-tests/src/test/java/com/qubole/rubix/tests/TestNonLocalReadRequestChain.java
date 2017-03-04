@@ -50,7 +50,6 @@ public class TestNonLocalReadRequestChain
     File backendFile = new File(backendFileName);
     final Configuration conf = new Configuration();
     Thread localDataTransferServer;
-    Thread bookKeeperServer;
 
     NonLocalReadRequestChain nonLocalReadRequestChain;
     private static final Log log = LogFactory.getLog(TestNonLocalReadRequestChain.class);
@@ -64,14 +63,6 @@ public class TestNonLocalReadRequestChain
         conf.setInt(CacheConfig.localServerPortConf, 2222);
         conf.setInt(CacheConfig.blockSizeConf, blockSize);
         conf.set("hadoop.cache.data.dirprefix.list", "/tmp/ephemeral");
-        bookKeeperServer = new Thread()
-        {
-            public void run()
-            {
-                BookKeeperServer.startServer(conf);
-            }
-        };
-
         localDataTransferServer = new Thread()
         {
             public void run()
@@ -79,22 +70,19 @@ public class TestNonLocalReadRequestChain
                 LocalDataTransferServer.startServer(conf);
             }
         };
-
-        bookKeeperServer.start();
-        localDataTransferServer.start();
-
+        Thread thread = new Thread()
+        {
+            public void run()
+            {
+                BookKeeperServer.startServer(conf);
+            }
+        };
+        thread.start();
 
         while (!BookKeeperServer.isServerUp()) {
             Thread.sleep(200);
             log.info("Waiting for BookKeeper Server to come up");
         }
-        log.info("BookKepper Server started");
-
-        while (!LocalDataTransferServer.isServerUp()) {
-            Thread.sleep(200);
-            log.info("Waiting for Local Data Transfer Server to come up");
-        }
-        log.info("Local Data Transfer Server started");
 
         // Populate File
         DataGen.populateFile(backendFileName);
@@ -110,21 +98,13 @@ public class TestNonLocalReadRequestChain
     private void testRemoteRead()
             throws Exception
     {
-         nonLocalReadRequestChain.strictMode = true;
+        localDataTransferServer.start();
+        while (!LocalDataTransferServer.isServerUp()) {
+            Thread.sleep(200);
+            log.info("Waiting for Local Data Transfer Server to come up");
+        }
+        nonLocalReadRequestChain.strictMode = true;
         test();
-    }
-
-    @Test
-    private void testSocketReadTimeOut()
-            throws Exception
-    {
-        nonLocalReadRequestChain.strictMode = false;
-        //Set timeout to a very low value ex: 10ms.
-        conf.setInt(CacheConfig.socketReadTimeOutConf, 10);
-        test();
-        //Verify whether "socket read timed out. Using direct reads" is present in output.
-        //Expected to read 0 bytes via non local reads and 350 bytes via direct read.
-        //TODO: Change test method and add proper unit tests in future.
     }
 
     @Test
@@ -139,12 +119,15 @@ public class TestNonLocalReadRequestChain
     private void testDirectRead2()
             throws Exception
     {
+        localDataTransferServer.start();
         BookKeeperServer.stopServer();
+        while (!LocalDataTransferServer.isServerUp()) {
+            Thread.sleep(200);
+            log.info("Waiting for Local Data Transfer Server to come up");
+        }
         nonLocalReadRequestChain.strictMode = false;
         test();
     }
-
-
 
     public void test()
             throws Exception

@@ -22,7 +22,6 @@ import org.testng.annotations.Test;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.nio.charset.Charset;
 
 import static org.testng.AssertJUnit.assertTrue;
@@ -40,7 +39,6 @@ public class TestRemoteReadRequestChain
     String localFileName = "/tmp/testRemoteReadRequestChainLocalFile";
 
     RemoteReadRequestChain remoteReadRequestChain;
-    RandomAccessFile randomAccessFile;
 
     private static final Log log = LogFactory.getLog(TestRemoteReadRequestChain.class);
 
@@ -53,9 +51,8 @@ public class TestRemoteReadRequestChain
 
         LocalFSInputStream localFSInputStream = new LocalFSInputStream(backendFileName);
         fsDataInputStream = new FSDataInputStream(localFSInputStream);
-        randomAccessFile = new RandomAccessFile(localFileName,"rw");
 
-        remoteReadRequestChain = new RemoteReadRequestChain(fsDataInputStream, randomAccessFile);
+        remoteReadRequestChain = new RemoteReadRequestChain(fsDataInputStream, localFileName);
     }
 
     @Test
@@ -164,7 +161,6 @@ public class TestRemoteReadRequestChain
             throws IOException
     {
         fsDataInputStream.close();
-        randomAccessFile.close();
         backendFile.delete();
         File localFile = new File(localFileName);
         localFile.delete();

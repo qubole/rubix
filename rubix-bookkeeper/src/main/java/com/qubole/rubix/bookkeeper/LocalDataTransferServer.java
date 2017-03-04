@@ -158,7 +158,7 @@ public class LocalDataTransferServer
                 long offset = header.getOffset();
                 int readLength = header.getReadLength();
                 String remotePath = header.getFilePath();
-
+                log.debug(String.format("Trying to read from %s at offset %d and length %d for client %s", remotePath, offset, readLength, localDataTransferClient.getRemoteAddress()));
                 try {
                     this.bookKeeperClient = bookKeeperFactory.createBookKeeperClient(conf);
                 }
@@ -191,10 +191,11 @@ public class LocalDataTransferServer
                     bookKeeperClient.close();
                 }
                 fc.close();
+                log.debug(String.format("Done reading %d from %s at offset %d and length %d for client %s", nread, remotePath, offset, readLength, localDataTransferClient.getRemoteAddress()));
             }
             catch (Exception e) {
                 try {
-                    log.warn("Error in Local Data Transfer Server for client: " + localDataTransferClient.getLocalAddress(), e);
+                    log.warn("Error in Local Data Transfer Server for client: " + localDataTransferClient.getRemoteAddress(), e);
                 }
                 catch (IOException e1) {
                     log.warn("Error in Local Data Transfer Server for client: ", e);

@@ -153,9 +153,10 @@ public class BookKeeper
 
     private void initializeClusterManager(int clusterType)
     {
-        if (clusterManager == null) {
+        if (this.clusterManager == null) {
+            ClusterManager clusterManager = null;
             synchronized (lock) {
-                if (clusterManager == null) {
+                if (this.clusterManager == null) {
                     try {
                         nodeName = InetAddress.getLocalHost().getCanonicalHostName();
                     }
@@ -188,8 +189,11 @@ public class BookKeeper
                             clusterManager = new PrestoClusterManager();
                         }
                         clusterManager.initialize(conf);
+                        // set the global clusterManager only after it is inited
+                        this.clusterManager = clusterManager;
                         nodes = clusterManager.getNodes();
                         splitSize = clusterManager.getSplitSize();
+                        currentNodeIndex = nodes.indexOf(nodeName);
                     }
                 }
             }
@@ -264,7 +268,7 @@ public class BookKeeper
 
             for (int blockNum = (int) startBlock; blockNum < endBlock; blockNum++, idx++) {
                 int readStart = blockNum * blockSize;
-                log.debug(" blockLocation is: " + blockLocations.get(idx).getLocation());
+                log.debug(" blockLocation is: " + blockLocations.get(idx).getLocation() + " for path " + remotePath + " offset " + offset + " length " + length);
                 if (blockLocations.get(idx).getLocation() != Location.CACHED) {
                     if (fs == null) {
                         fs = path.getFileSystem(conf);
@@ -292,6 +296,7 @@ public class BookKeeper
             if (inputStream != null) {
                 try {
                     inputStream.close();
+                    fs.close();
                 }
                 catch (IOException e) {
                     e.printStackTrace();

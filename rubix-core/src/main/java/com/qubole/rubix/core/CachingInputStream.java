@@ -36,7 +36,6 @@ import org.apache.hadoop.util.DirectBufferPool;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
@@ -58,7 +57,6 @@ public class CachingInputStream
     private long nextReadPosition;
     private long nextReadBlock;
     private int blockSize;
-    private RandomAccessFile localFileForWriting = null;
     private CachingFileSystemStats statsMbean;
 
     private static ListeningExecutorService readService = MoreExecutors.listeningDecorator(Executors.newCachedThreadPool());
@@ -341,9 +339,6 @@ public class CachingInputStream
                 else {
                     log.debug(String.format("Sending block %d to remoteReadRequestChain", blockNum));
                     try {
-                        if (localFileForWriting == null) {
-                            this.localFileForWriting = new RandomAccessFile(localPath, "rw");
-                        }
                         if (directWriteBuffer == null) {
                             directWriteBuffer = bufferPool.getBuffer(diskReadBufferSize);
                         }
@@ -351,7 +346,7 @@ public class CachingInputStream
                             affixBuffer = new byte[blockSize];
                         }
                         if (remoteReadRequestChain == null) {
-                            remoteReadRequestChain = new RemoteReadRequestChain(inputStream, localFileForWriting, directWriteBuffer, affixBuffer);
+                            remoteReadRequestChain = new RemoteReadRequestChain(inputStream, localPath, directWriteBuffer, affixBuffer);
                         }
                     }
                     catch (IOException e) {
@@ -416,9 +411,6 @@ public class CachingInputStream
         returnBuffers();
         try {
             inputStream.close();
-            if (localFileForWriting != null) {
-                localFileForWriting.close();
-            }
             if (bookKeeperClient != null) {
                 bookKeeperClient.close();
             }
