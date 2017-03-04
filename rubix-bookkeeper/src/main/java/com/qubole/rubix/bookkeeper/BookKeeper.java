@@ -191,19 +191,19 @@ public class BookKeeper
                         clusterManager.initialize(conf);
                         // set the global clusterManager only after it is inited
                         this.clusterManager = clusterManager;
-                        nodes = clusterManager.getNodes();
                         splitSize = clusterManager.getSplitSize();
-                        currentNodeIndex = nodes.indexOf(nodeName);
                     }
                 }
             }
-            if (nodes == null || nodes.size() == 0 || currentNodeIndex == -1) {
-                log.error(String.format("Could not initialize cluster nodes=%s nodeName=%s currentNodeIndex=%d", nodes, nodeName, currentNodeIndex));
-            }
+
         }
 
         nodes = clusterManager.getNodes();
         currentNodeIndex = nodes.indexOf(nodeName);
+        if (nodes == null || nodes.size() == 0 || currentNodeIndex == -1) {
+            log.error(String.format("Could not initialize cluster nodes=%s nodeName=%s currentNodeIndex=%d", nodes, nodeName, currentNodeIndex));
+            // mark clusterManager null so that some
+        }
     }
 
     @Override

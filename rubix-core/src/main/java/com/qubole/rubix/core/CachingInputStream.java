@@ -176,6 +176,18 @@ public class CachingInputStream
     public int read(byte[] buffer, int offset, int length)
             throws IOException
     {
+        try {
+            return readInternal(buffer, offset, length);
+        }
+        catch (Exception e) {
+            log.error(String.format("Failed to read from rubix for file %s position %d length %d. Falling back to remote", localPath, nextReadPosition, length), e);
+            inputStream.seek(nextReadPosition);
+            return inputStream.read(buffer, offset, length);
+        }
+    }
+
+    private int readInternal(byte[] buffer, int offset, int length)
+    {
         log.debug(String.format("Got Read, currentPos: %d currentBlock: %d bufferOffset: %d length: %d", nextReadPosition, nextReadBlock, offset, length));
 
         if (nextReadPosition >= fileSize) {
