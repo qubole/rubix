@@ -43,6 +43,13 @@ public class LocalBookKeeperClient
     }
 
     @Override
+    public void setAllCached(final String remotePath, final long fileLength, final long lastModified, final long startBlock, final long endBlock)
+            throws TException
+    {
+        bookKeeper.setAllCached(remotePath, fileLength, lastModified, startBlock, endBlock);
+    }
+
+    @Override
     public void close()
             throws IOException
     {

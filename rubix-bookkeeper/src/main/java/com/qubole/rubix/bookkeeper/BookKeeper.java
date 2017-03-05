@@ -28,6 +28,7 @@ import com.qubole.rubix.core.RemoteReadRequestChain;
 import com.qubole.rubix.hadoop2.Hadoop2ClusterManager;
 import com.qubole.rubix.presto.PrestoClusterManager;
 import com.qubole.rubix.spi.BlockLocation;
+import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
@@ -139,7 +140,7 @@ public class BookKeeper
                 cachedRequests++;
             }
             else {
-                if (blockSplits.get(split).equalsIgnoreCase(nodes.get(currentNodeIndex))) {
+                if (blockSplits.get(split).equalsIgnoreCase(nodeName)) {
                     blockLocations.add(new BlockLocation(Location.LOCAL, blockSplits.get(split)));
                     remoteRequests++;
                 }
@@ -286,7 +287,7 @@ public class BookKeeper
                     // Cache the data
                     // Ue RRRC directly instead of creating instance of CachingFS as in certain circumstances, CachingFS could
                     // send this request to NonLocalRRC which would be wrong as that would not cache it on disk
-                    RemoteReadRequestChain remoteReadRequestChain = new RemoteReadRequestChain(inputStream, localPath, byteBuffer, buffer);
+                    RemoteReadRequestChain remoteReadRequestChain = new RemoteReadRequestChain(inputStream, localPath, byteBuffer, buffer, new BookKeeperFactory(this));
                     remoteReadRequestChain.addReadRequest(new ReadRequest(readStart, readStart + blockSize, readStart, readStart + blockSize, buffer, 0, fileSize));
                     remoteReadRequestChain.lock();
                     remoteReadRequestChain.call();

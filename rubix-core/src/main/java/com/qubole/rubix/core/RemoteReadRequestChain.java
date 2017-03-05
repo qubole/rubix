@@ -47,6 +47,8 @@ public class RemoteReadRequestChain
     private long warmupPenalty = 0;
     private int blockSize = 0;
 
+    private BookKeeperFactory bookKeeperFactory;
+
     private static final Log log = LogFactory.getLog(RemoteReadRequestChain.class);
 
     private String localFile;
@@ -54,11 +56,22 @@ public class RemoteReadRequestChain
     public RemoteReadRequestChain(FSDataInputStream inputStream, String localfile, ByteBuffer directBuffer, byte[] affixBuffer)
             throws IOException
     {
+        this(inputStream,
+                localfile,
+                directBuffer,
+                affixBuffer,
+                new BookKeeperFactory());
+    }
+
+    public RemoteReadRequestChain(FSDataInputStream inputStream, String localfile, ByteBuffer directBuffer, byte[] affixBuffer, BookKeeperFactory bookKeeperFactory)
+            throws IOException
+    {
         this.inputStream = inputStream;
         this.directBuffer = directBuffer;
         this.affixBuffer = affixBuffer;
         this.blockSize = affixBuffer.length;
         this.localFile = localfile;
+        this.bookKeeperFactory = bookKeeperFactory;
     }
 
     @VisibleForTesting
@@ -169,7 +182,6 @@ public class RemoteReadRequestChain
     public void updateCacheStatus(String remotePath, long fileSize, long lastModified, int blockSize, Configuration conf)
     {
         try {
-            BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
             RetryingBookkeeperClient client = bookKeeperFactory.createBookKeeperClient(conf);
             for (ReadRequest readRequest : readRequests) {
                 client.setAllCached(remotePath, fileSize, lastModified, toBlock(readRequest.getBackendReadStart()), toBlock(readRequest.getBackendReadEnd() - 1) + 1);
