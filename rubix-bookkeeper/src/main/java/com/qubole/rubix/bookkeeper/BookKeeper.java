@@ -23,6 +23,7 @@ import com.google.common.cache.Weigher;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
+import com.google.common.util.concurrent.Striped;
 import com.qubole.rubix.core.ReadRequest;
 import com.qubole.rubix.core.RemoteReadRequestChain;
 import com.qubole.rubix.hadoop2.Hadoop2ClusterManager;
@@ -53,6 +54,7 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
 
 import static com.qubole.rubix.spi.ClusterType.HADOOP2_CLUSTER_MANAGER;
 import static com.qubole.rubix.spi.ClusterType.PRESTO_CLUSTER_MANAGER;
@@ -76,6 +78,12 @@ public class BookKeeper
     private List<String> nodes;
     int currentNodeIndex = -1;
     static long splitSize;
+
+    // Striped locks are used to prevent race condition between create and delete of FileMetadata
+    // E.g. FileMetadata was being deleted due to SIZE based eviction and another thread access same file leading to
+    // a parallel create of FileMetadata for same file. If locking is not done, we might end up with new Metadata reading
+    // stale data
+    static Striped<Lock> stripes = Striped.lock(20000);
 
     public BookKeeper(Configuration conf)
     {
@@ -381,9 +389,32 @@ public class BookKeeper
                                 }
                             }
                             //if file has been modified in cloud, its entry will be deleted due to "EXPLICIT"
-                            log.warn("deleting entry for" + md.getRemotePath().toString() + " due to "
-                                             + notification.getCause());
-                            md.closeAndCleanup();
+                            Lock lock = stripes.get(md.getRemotePath());
+                            boolean reissueRemove = false;
+                            try {
+                                lock.lock();
+                                if (fileMetadataCache.getIfPresent(md.getRemotePath()) != null) {
+                                    // It means that another thread raced and created an entry, give up on deletion
+                                    md.close();
+
+                                    // If we came here with EXPLICIT removal, we should try again to remove the files as
+                                    // data would be stale
+                                    if (notification.getCause() == RemovalCause.EXPLICIT) {
+                                        reissueRemove = true;
+                                    }
+                                }
+                                else {
+                                    log.warn("deleting entry for" + md.getRemotePath().toString() + " due to "
+                                            + notification.getCause());
+                                    md.closeAndCleanup();
+                                }
+                            }
+                            finally {
+                                lock.unlock();
+                                if (reissueRemove) {
+                                    fileMetadataCache.invalidate(md.getRemotePath());
+                                }
+                            }
                         }
                         catch (IOException e) {
                             throw Throwables.propagate(e);
@@ -412,7 +443,14 @@ public class BookKeeper
         public FileMetadata call()
                 throws Exception
         {
-            return new FileMetadata(path, fileLength, lastModified, conf);
+            Lock lock = stripes.get(path);
+            try {
+                lock.lock();
+                return new FileMetadata(path, fileLength, lastModified, conf);
+            }
+            finally {
+                lock.unlock();
+            }
         }
     }
 
