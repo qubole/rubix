@@ -179,6 +179,9 @@ public class CachingInputStream
         try {
             return readInternal(buffer, offset, length);
         }
+        catch (InterruptedException e) {
+            throw Throwables.propagate(e);
+        }
         catch (Exception e) {
             log.error(String.format("Failed to read from rubix for file %s position %d length %d. Falling back to remote", localPath, nextReadPosition, length), e);
             inputStream.seek(nextReadPosition);
@@ -206,6 +209,7 @@ public class CachingInputStream
     }
 
     private int readInternal(byte[] buffer, int offset, int length)
+            throws ExecutionException, InterruptedException
     {
         log.debug(String.format("Got Read, currentPos: %d currentBlock: %d bufferOffset: %d length: %d", nextReadPosition, nextReadBlock, offset, length));
 
@@ -235,16 +239,9 @@ public class CachingInputStream
         }
 
         List<ListenableFuture<Integer>> futures = builder.build();
-        try {
-            for (ListenableFuture<Integer> future : futures) {
-                sizeRead += future.get();
-            }
-        }
-        catch (InterruptedException e) {
-            throw Throwables.propagate(e);
-        }
-        catch (ExecutionException e) {
-            throw Throwables.propagate(e);
+        for (ListenableFuture<Integer> future : futures) {
+            // exceptions handled in caller
+            sizeRead += future.get();
         }
 
         // mark all read blocks cached
