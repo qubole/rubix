@@ -279,7 +279,16 @@ public class PrestoClusterManager extends ClusterManager
                 return false;
             }
             Stats o = (Stats) other;
-            return uri.equals(o.getUri()) && lastResponseTime.equals(o.getLastResponseTime());
+
+            if (!uri.equals(o.getUri())) {
+                return false;
+            }
+
+            if (lastResponseTime != null && o.getLastResponseTime() != null) {
+                return lastResponseTime.equals(o.getLastResponseTime());
+            }
+
+            return lastResponseTime == o.getLastResponseTime();
         }
 
         @Override
