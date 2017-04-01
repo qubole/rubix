@@ -343,6 +343,7 @@ public class CachingInputStream
                     if (cachedReadRequestChain == null) {
                         cachedReadRequestChain = new CachedReadRequestChain(localPath, directReadBuffer);
                     }
+                    cachedReadRequestChain.addReadRequest(readRequest);
                 }
                 catch (IOException e) {
                     log.error("Unable to open file channel in R mode", e);
@@ -352,7 +353,6 @@ public class CachingInputStream
                     idx--;
                     blockNum--;
                 }
-                cachedReadRequestChain.addReadRequest(readRequest);
             }
             else {
                 if (isCached.get(idx).getLocation() == Location.NON_LOCAL) {

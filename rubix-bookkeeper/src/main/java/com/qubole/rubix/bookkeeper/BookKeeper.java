@@ -372,6 +372,9 @@ public class BookKeeper
                                 // On next get() on cache, fileMetadata.getOccupiedSize will return size occupied on disk
                                 md.close();
                                 log.info("Evicting " + md.getRemotePath().toString() + " due to " + notification.getCause());
+
+                                // re-enter to have entry as per new size
+                                reEnterPath(md, conf);
                                 return;
                             }
 
@@ -385,6 +388,8 @@ public class BookKeeper
                                     // still havent utilized the allowed space so do not delete the backing file
                                     md.close();
                                     log.warn("Evicting " + md.getRemotePath().toString() + " due to " + notification.getCause());
+                                    // re-enter to have entry as per new size
+                                    reEnterPath(md, conf);
                                     return;
                                 }
                             }
@@ -396,6 +401,7 @@ public class BookKeeper
                                 if (fileMetadataCache.getIfPresent(md.getRemotePath()) != null) {
                                     // It means that another thread raced and created an entry, give up on deletion
                                     md.close();
+                                    // no need reEnterPath, other thread already has done it
 
                                     // If we came here with EXPLICIT removal, we should try again to remove the files as
                                     // data would be stale
@@ -422,6 +428,18 @@ public class BookKeeper
                     }
                 })
                 .build();
+    }
+
+    private static void reEnterPath(FileMetadata md, Configuration conf)
+    {
+        try {
+            log.info("Adding " + md.getRemotePath());
+            fileMetadataCache.get(md.getRemotePath(),
+                    new CreateFileMetadataCallable(md.getRemotePath(), md.getFileSize(), md.getLastModified(), conf));
+        }
+        catch (ExecutionException e) {
+            log.warn("Could not re-enter " + md.getRemotePath());
+        }
     }
 
     private static class CreateFileMetadataCallable
