@@ -53,6 +53,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 
@@ -78,6 +80,8 @@ public class BookKeeper
     private List<String> nodes;
     int currentNodeIndex = -1;
     static long splitSize;
+
+    static ExecutorService removalService = Executors.newCachedThreadPool();
 
     // Striped locks are used to prevent race condition between create and delete of FileMetadata
     // E.g. FileMetadata was being deleted due to SIZE based eviction and another thread access same file leading to
@@ -362,69 +366,75 @@ public class BookKeeper
                 .removalListener(new RemovalListener<String, FileMetadata>()
                 {
                     public void onRemoval(
-                            RemovalNotification<String, FileMetadata> notification)
+                            final RemovalNotification<String, FileMetadata> notification)
                     {
-                        try {
-                            FileMetadata md = notification.getValue();
-                            if (notification.getCause() == RemovalCause.EXPIRED) {
-                                // This is to workaround the static weighing of Guava Cache, logic goes like this:
-                                // We evict aggressively but do not delete backing data unless running out of space
-                                // On next get() on cache, fileMetadata.getOccupiedSize will return size occupied on disk
-                                md.close();
-                                log.info("Evicting " + md.getRemotePath().toString() + " due to " + notification.getCause());
+                        removalService.submit(new Callable<Void>() {
+                            public Void call()
+                            {
+                                try {
+                                    FileMetadata md = notification.getValue();
+                                    if (notification.getCause() == RemovalCause.EXPIRED) {
+                                        // This is to workaround the static weighing of Guava Cache, logic goes like this:
+                                        // We evict aggressively but do not delete backing data unless running out of space
+                                        // On next get() on cache, fileMetadata.getOccupiedSize will return size occupied on disk
+                                        md.close();
+                                        log.info("Evicting " + md.getRemotePath().toString() + " due to " + notification.getCause());
 
-                                // re-enter to have entry as per new size
-                                reEnterPath(md, conf);
-                                return;
-                            }
+                                        // re-enter to have entry as per new size
+                                        reEnterPath(md, conf);
+                                        return null;
+                                    }
 
-                            if (notification.getCause() == RemovalCause.SIZE) {
-                                // Here also we wont delete unless very close to disk full
-                                long free = 0;
-                                for (int d = 0; d < CacheConfig.numDisks(conf); d++) {
-                                    free += new File(CacheConfig.getDirPath(conf, d)).getUsableSpace();
-                                }
-                                if (free > total * 1.0 * (100.0 - CacheConfig.getCacheDataFullnessPercentage(conf) / 100)) {
-                                    // still havent utilized the allowed space so do not delete the backing file
-                                    md.close();
-                                    log.warn("Evicting " + md.getRemotePath().toString() + " due to " + notification.getCause());
-                                    // re-enter to have entry as per new size
-                                    reEnterPath(md, conf);
-                                    return;
-                                }
-                            }
-                            //if file has been modified in cloud, its entry will be deleted due to "EXPLICIT"
-                            Lock lock = stripes.get(md.getRemotePath());
-                            boolean reissueRemove = false;
-                            try {
-                                lock.lock();
-                                if (fileMetadataCache.getIfPresent(md.getRemotePath()) != null) {
-                                    // It means that another thread raced and created an entry, give up on deletion
-                                    md.close();
-                                    // no need reEnterPath, other thread already has done it
+                                    if (notification.getCause() == RemovalCause.SIZE) {
+                                        // Here also we wont delete unless very close to disk full
+                                        long free = 0;
+                                        for (int d = 0; d < CacheConfig.numDisks(conf); d++) {
+                                            free += new File(CacheConfig.getDirPath(conf, d)).getUsableSpace();
+                                        }
+                                        if (free > total * 1.0 * (100.0 - CacheConfig.getCacheDataFullnessPercentage(conf) / 100)) {
+                                            // still havent utilized the allowed space so do not delete the backing file
+                                            md.close();
+                                            log.warn("Evicting " + md.getRemotePath().toString() + " due to " + notification.getCause());
+                                            // re-enter to have entry as per new size
+                                            reEnterPath(md, conf);
+                                            return null;
+                                        }
+                                    }
+                                    //if file has been modified in cloud, its entry will be deleted due to "EXPLICIT"
+                                    Lock lock = stripes.get(md.getRemotePath());
+                                    boolean reissueRemove = false;
+                                    try {
+                                        lock.lock();
+                                        if (fileMetadataCache.getIfPresent(md.getRemotePath()) != null) {
+                                            // It means that another thread raced and created an entry, give up on deletion
+                                            md.close();
+                                            // no need reEnterPath, other thread already has done it
 
-                                    // If we came here with EXPLICIT removal, we should try again to remove the files as
-                                    // data would be stale
-                                    if (notification.getCause() == RemovalCause.EXPLICIT) {
-                                        reissueRemove = true;
+                                            // If we came here with EXPLICIT removal, we should try again to remove the files as
+                                            // data would be stale
+                                            if (notification.getCause() == RemovalCause.EXPLICIT) {
+                                                reissueRemove = true;
+                                            }
+                                        }
+                                        else {
+                                            log.warn("deleting entry for" + md.getRemotePath().toString() + " due to "
+                                                    + notification.getCause());
+                                            md.closeAndCleanup();
+                                        }
+                                    }
+                                    finally {
+                                        lock.unlock();
+                                        if (reissueRemove) {
+                                            fileMetadataCache.invalidate(md.getRemotePath());
+                                        }
                                     }
                                 }
-                                else {
-                                    log.warn("deleting entry for" + md.getRemotePath().toString() + " due to "
-                                            + notification.getCause());
-                                    md.closeAndCleanup();
+                                catch (IOException e) {
+                                    throw Throwables.propagate(e);
                                 }
+                                return null;
                             }
-                            finally {
-                                lock.unlock();
-                                if (reissueRemove) {
-                                    fileMetadataCache.invalidate(md.getRemotePath());
-                                }
-                            }
-                        }
-                        catch (IOException e) {
-                            throw Throwables.propagate(e);
-                        }
+                    });
                     }
                 })
                 .build();
