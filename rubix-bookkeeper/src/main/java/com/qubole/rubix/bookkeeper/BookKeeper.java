@@ -281,8 +281,8 @@ public class BookKeeper
             int idx = 0;
             List<BlockLocation> blockLocations = getCacheStatus(remotePath, fileSize, lastModified, startBlock, endBlock, clusterType);
 
-            for (int blockNum = (int) startBlock; blockNum < endBlock; blockNum++, idx++) {
-                int readStart = blockNum * blockSize;
+            for (long blockNum = startBlock; blockNum < endBlock; blockNum++, idx++) {
+                long readStart = blockNum * blockSize;
                 log.debug(" blockLocation is: " + blockLocations.get(idx).getLocation() + " for path " + remotePath + " offset " + offset + " length " + length);
                 if (blockLocations.get(idx).getLocation() != Location.CACHED) {
                     if (byteBuffer == null) {
