@@ -65,13 +65,14 @@ public class CacheConfig
     private static String dataMaxHeaderSizeConf = "hadoop.cache.data.transfer.header.size";
     private static String diskReadBufferSizeConf = "hadoop.cache.data.disk.read.buffer.size";
     public static String socketReadTimeOutConf = "hadoop.cache.network.socket.read.timeout";
+    private static String diskMonitorIntervalConf = "hadoop.cache.disk.monitor.interval";
     static String fileCacheDirSuffixConf = "/fcache/";
     static int maxDisksConf = 5;
 
     // default values
     private static final int dataCacheExpiry = Integer.MAX_VALUE;
     // Keepnig this low to workaround the Guava Cache static weighing limitation
-    private static final int dataCacheExpiryAfterWrite = 30; //In sec
+    private static final int dataCacheExpiryAfterWrite = Integer.MAX_VALUE; // In seconds, inifinite by default
     private static final int dataCacheFullness = 80; // percent
     private static final String dataCacheDirPrefixes = "/media/ephemeral";
     private static final int blockSize = 1 * 1024 * 1024; // 1MB
@@ -81,6 +82,8 @@ public class CacheConfig
     public static int localTransferbufferSize = 10 * 1024 * 1024;
     public static final int diskReadBufferSizeDefault = 1024;
     public static int socketReadTimeOutDefault = 30000; // In milliseconds.
+    private static int diskMonitorInterval = 10; // in seconds
+
     private CacheConfig()
     {
     }
@@ -372,5 +375,10 @@ public class CacheConfig
     public static int getMaxHeaderSize(Configuration conf)
     {
         return conf.getInt(dataMaxHeaderSizeConf, 1024);
+    }
+
+    public static int getDiskMonitorInterval(Configuration conf)
+    {
+        return conf.getInt(diskMonitorIntervalConf, diskMonitorInterval);
     }
 }

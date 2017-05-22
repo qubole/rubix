@@ -13,7 +13,12 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.cache.Cache;
+import com.google.common.cache.RemovalCause;
+import com.google.common.util.concurrent.Striped;
 import com.qubole.rubix.spi.CacheConfig;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
 import java.io.File;
@@ -21,8 +26,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
+import java.util.concurrent.locks.Lock;
 
-import static com.qubole.rubix.bookkeeper.utils.DiskUtils.getActualSize;
 import static com.qubole.rubix.spi.CacheConfig.getBlockSize;
 
 /**
@@ -40,6 +45,18 @@ public class FileMetadata
     private FileChannel mdFileChannel;
     private MappedByteBufferBitmap blockBitmap;
 
+    // Striped locks are used to prevent race condition between create and delete of FileMetadata
+    // E.g. FileMetadata was being deleted due to SIZE based eviction and another thread access same file leading to
+    // a parallel create of FileMetadata for same file. If locking is not done, we might end up with new Metadata reading
+    // stale data
+    static Striped<Lock> stripes = Striped.lock(20000);
+
+    private static Log log = LogFactory.getLog(FileMetadata.class.getName());
+
+    public FileMetadata()
+    {
+    }
+
     public FileMetadata(String remotePath, long fileLength, long lastModified, Configuration conf)
             throws IOException
     {
@@ -49,22 +66,29 @@ public class FileMetadata
         localPath = CacheConfig.getLocalPath(remotePath, conf);
         mdFilePath = CacheConfig.getMDFile(remotePath, conf);
 
-        try {
-            mdFile = new RandomAccessFile(mdFilePath, "rw");
-        }
-        catch (FileNotFoundException e) {
-            File file = new File(mdFilePath);
-            file.createNewFile();
-            file.setWritable(true, false);
-            file.setReadable(true, false);
-            mdFile = new RandomAccessFile(file, "rw");
-        }
-        mdFileChannel = mdFile.getChannel();
-
         int bitsRequired = (int) Math.ceil((double) size / getBlockSize(conf)); //numBlocks
         int bitmapFileSizeBytes = (int) Math.ceil((double) bitsRequired / 8);
 
-        blockBitmap = new MappedByteBufferBitmap(mdFileChannel.map(FileChannel.MapMode.READ_WRITE, 0, bitmapFileSizeBytes));
+        Lock lock = stripes.get(getRemotePath());
+        try {
+            lock.lock();
+            try {
+                mdFile = new RandomAccessFile(mdFilePath, "rw");
+            }
+            catch (FileNotFoundException e) {
+                File file = new File(mdFilePath);
+                file.createNewFile();
+                file.setWritable(true, false);
+                file.setReadable(true, false);
+                mdFile = new RandomAccessFile(file, "rw");
+            }
+            mdFileChannel = mdFile.getChannel();
+
+            blockBitmap = new MappedByteBufferBitmap(mdFileChannel.map(FileChannel.MapMode.READ_WRITE, 0, bitmapFileSizeBytes));
+        }
+        finally {
+            lock.unlock();
+        }
     }
 
     public boolean isBlockCached(long blockNumber)
@@ -77,53 +101,18 @@ public class FileMetadata
         blockBitmap.set((int) blockNumber);
     }
 
-    public void close()
+    public void closeAndCleanup(RemovalCause cause, Cache cache)
             throws IOException
     {
+        log.info("Evicting " + getRemotePath().toString() + " due to " + cause);
         mdFileChannel.close();
         mdFile.close();
-    }
-
-    public void closeAndCleanup()
-            throws IOException
-    {
-        close();
-        deleteFiles();
-    }
-
-    public String getLocalPath()
-    {
-        return localPath;
-    }
-
-    public long getFileSize()
-    {
-        return size;
+        deleteFiles(cause, cache);
     }
 
     public long getLastModified()
     {
         return lastModified;
-    }
-
-    /*
-     * This method returns the actual occupied size of data file on disk
-     * If file is not present yet, it will return the full file size
-     */
-    public long getOccupiedSize()
-    {
-        long size;
-        try {
-            size = getActualSize(localPath);
-        }
-        catch (IOException | NumberFormatException e) {
-            // if any error then use the remote file's size
-            // error can happen when it is the first time and file does not exist locally
-            // or some issue in getting actual size
-            size = this.size;
-        }
-
-        return size;
     }
 
     @VisibleForTesting
@@ -137,12 +126,37 @@ public class FileMetadata
         return remotePath;
     }
 
-    private void deleteFiles()
+    // Assumption: this is called after the FileMetadata has been removed from cache
+    // E.g. in RemovalListener
+    private void deleteFiles(RemovalCause cause, Cache cache)
     {
-        File mdFile = new File(mdFilePath);
-        mdFile.delete();
+        Lock lock = stripes.get(getRemotePath());
+        try {
+            lock.lock();
+            if (cache.getIfPresent(getRemotePath()) != null) {
+                // It means that another thread raced and created an entry, give up on deletion
 
-        File localFile = new File(localPath);
-        localFile.delete();
+                // But if removal was EXPLICIT then we want to delete data in any case e.g. file changed in source
+                // Delete data in that case
+                if (!cause.equals(RemovalCause.EXPLICIT)) {
+                    return;
+                }
+            }
+
+            File mdFile = new File(mdFilePath);
+            mdFile.delete();
+
+            File localFile = new File(localPath);
+            localFile.delete();
+        }
+        finally {
+            lock.unlock();
+        }
+    }
+
+    public int getWeight(Configuration conf)
+    {
+        // normal entries have no weight
+        return 0;
     }
 }
