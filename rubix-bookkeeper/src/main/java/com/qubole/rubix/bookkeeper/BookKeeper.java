@@ -16,14 +16,12 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.RemovalCause;
 import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.cache.Weigher;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import com.google.common.util.concurrent.Striped;
 import com.qubole.rubix.core.ReadRequest;
 import com.qubole.rubix.core.RemoteReadRequestChain;
 import com.qubole.rubix.hadoop2.Hadoop2ClusterManager;
@@ -53,10 +51,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Lock;
 
 import static com.qubole.rubix.spi.ClusterType.HADOOP2_CLUSTER_MANAGER;
 import static com.qubole.rubix.spi.ClusterType.PRESTO_CLUSTER_MANAGER;
@@ -80,14 +75,6 @@ public class BookKeeper
     private List<String> nodes;
     int currentNodeIndex = -1;
     static long splitSize;
-
-    static ExecutorService removalService = Executors.newCachedThreadPool();
-
-    // Striped locks are used to prevent race condition between create and delete of FileMetadata
-    // E.g. FileMetadata was being deleted due to SIZE based eviction and another thread access same file leading to
-    // a parallel create of FileMetadata for same file. If locking is not done, we might end up with new Metadata reading
-    // stale data
-    static Striped<Lock> stripes = Striped.lock(20000);
 
     public BookKeeper(Configuration conf)
     {
@@ -343,113 +330,47 @@ public class BookKeeper
             avail += new File(CacheConfig.getDirPath(conf, d)).getUsableSpace();
         }
         avail = avail / 1024 / 1024;
-        final long total = avail;
         log.info("total free space " + avail + "MB");
+
+        // In corner cases evictions might not make enough space for new entries
+        // To minimize those cases, consider available space lower than actual
+        final long total = (long) (0.95 * avail);
+
         fileMetadataCache = CacheBuilder.newBuilder()
                 .weigher(new Weigher<String, FileMetadata>()
                 {
                     @Override
                     public int weigh(String key, FileMetadata md)
                     {
-                        // weights are in MB to avoid overflowing due to large files
-                        // This is not accurate, we are placing weight as whole filesize
-                        // Rather it should be dynamic and should be equal to size of file data cached
-                        // But guava needs weight fixed at init
-                        // TODO: find a way to set weight accurately and get away from current workaround
-                        int weight = (int) (md.getOccupiedSize() / 1024 / 1024);
-                        log.info("weighing key " + key + " as " + weight);
-                        return weight;
+                        return md.getWeight(conf);
                     }
                 })
-                .maximumWeight((long) (avail * 1.0 * CacheConfig.getCacheDataFullnessPercentage(conf) / 100.0))
+                .maximumWeight((long) (total * 1.0 * CacheConfig.getCacheDataFullnessPercentage(conf) / 100.0))
                 .expireAfterWrite(CacheConfig.getCacheDataExpirationAfterWrite(conf), TimeUnit.SECONDS)
                 .removalListener(new RemovalListener<String, FileMetadata>()
                 {
-                    public void onRemoval(
-                            final RemovalNotification<String, FileMetadata> notification)
+                    public void onRemoval(final RemovalNotification<String, FileMetadata> notification)
                     {
-                        removalService.submit(new Callable<Void>() {
-                            public Void call()
-                            {
-                                try {
-                                    FileMetadata md = notification.getValue();
-                                    if (notification.getCause() == RemovalCause.EXPIRED) {
-                                        // This is to workaround the static weighing of Guava Cache, logic goes like this:
-                                        // We evict aggressively but do not delete backing data unless running out of space
-                                        // On next get() on cache, fileMetadata.getOccupiedSize will return size occupied on disk
-                                        md.close();
-                                        log.info("Evicting " + md.getRemotePath().toString() + " due to " + notification.getCause());
-
-                                        // re-enter to have entry as per new size
-                                        reEnterPath(md, conf);
-                                        return null;
-                                    }
-
-                                    if (notification.getCause() == RemovalCause.SIZE) {
-                                        // Here also we wont delete unless very close to disk full
-                                        long free = 0;
-                                        for (int d = 0; d < CacheConfig.numDisks(conf); d++) {
-                                            free += new File(CacheConfig.getDirPath(conf, d)).getUsableSpace();
-                                        }
-                                        if (free > total * 1.0 * (100.0 - CacheConfig.getCacheDataFullnessPercentage(conf) / 100)) {
-                                            // still havent utilized the allowed space so do not delete the backing file
-                                            md.close();
-                                            log.warn("Evicting " + md.getRemotePath().toString() + " due to " + notification.getCause());
-                                            // re-enter to have entry as per new size
-                                            reEnterPath(md, conf);
-                                            return null;
-                                        }
-                                    }
-                                    //if file has been modified in cloud, its entry will be deleted due to "EXPLICIT"
-                                    Lock lock = stripes.get(md.getRemotePath());
-                                    boolean reissueRemove = false;
-                                    try {
-                                        lock.lock();
-                                        if (fileMetadataCache.getIfPresent(md.getRemotePath()) != null) {
-                                            // It means that another thread raced and created an entry, give up on deletion
-                                            md.close();
-                                            // no need reEnterPath, other thread already has done it
-
-                                            // If we came here with EXPLICIT removal, we should try again to remove the files as
-                                            // data would be stale
-                                            if (notification.getCause() == RemovalCause.EXPLICIT) {
-                                                reissueRemove = true;
-                                            }
-                                        }
-                                        else {
-                                            log.warn("deleting entry for" + md.getRemotePath().toString() + " due to "
-                                                    + notification.getCause());
-                                            md.closeAndCleanup();
-                                        }
-                                    }
-                                    finally {
-                                        lock.unlock();
-                                        if (reissueRemove) {
-                                            fileMetadataCache.invalidate(md.getRemotePath());
-                                        }
-                                    }
-                                }
-                                catch (IOException e) {
-                                    throw Throwables.propagate(e);
-                                }
-                                return null;
-                            }
-                    });
+                        FileMetadata md = notification.getValue();
+                        try {
+                            md.closeAndCleanup(notification.getCause(), fileMetadataCache);
+                        }
+                        catch (IOException e) {
+                            log.warn("Could not cleanup FileMetadata for " + notification.getKey(), e);
+                        }
                     }
                 })
                 .build();
     }
 
-    private static void reEnterPath(FileMetadata md, Configuration conf)
+    public void invalidateEntry(String key)
     {
-        try {
-            log.info("Adding " + md.getRemotePath());
-            fileMetadataCache.get(md.getRemotePath(),
-                    new CreateFileMetadataCallable(md.getRemotePath(), md.getFileSize(), md.getLastModified(), conf));
-        }
-        catch (ExecutionException e) {
-            log.warn("Could not re-enter " + md.getRemotePath());
-        }
+        fileMetadataCache.invalidate(key);
+    }
+
+    public FileMetadata getEntry(String key, Callable<FileMetadata> callable) throws ExecutionException
+    {
+        return fileMetadataCache.get(key, callable);
     }
 
     private static class CreateFileMetadataCallable
@@ -471,14 +392,7 @@ public class BookKeeper
         public FileMetadata call()
                 throws Exception
         {
-            Lock lock = stripes.get(path);
-            try {
-                lock.lock();
-                return new FileMetadata(path, fileLength, lastModified, conf);
-            }
-            finally {
-                lock.unlock();
-            }
+            return new FileMetadata(path, fileLength, lastModified, conf);
         }
     }
 
