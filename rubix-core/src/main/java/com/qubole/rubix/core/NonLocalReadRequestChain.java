@@ -47,6 +47,9 @@ public class NonLocalReadRequestChain extends ReadRequestChain
     FileSystem remoteFileSystem;
     int clusterType;
     public boolean strictMode = false;
+
+    DirectReadRequestChain directReadChain = null; // Used when Non Local Requests fail
+
     private static final Log log = LogFactory.getLog(NonLocalReadRequestChain.class);
 
     public NonLocalReadRequestChain(String remoteLocation, long fileSize, long lastModified, Configuration conf, FileSystem remoteFileSystem, String remotePath, int clusterType, boolean strictMode)
@@ -80,6 +83,9 @@ public class NonLocalReadRequestChain extends ReadRequestChain
         checkState(isLocked, "Trying to execute Chain without locking");
 
         for (ReadRequest readRequest : readRequests) {
+            if (cancelled) {
+                propagateCancel(this.getClass().getName());
+            }
             SocketChannel dataTransferClient;
             try {
                 dataTransferClient = DataTransferClientHelper.createDataTransferClient(remoteNodeName, conf);
@@ -154,17 +160,27 @@ public class NonLocalReadRequestChain extends ReadRequestChain
         return totalRead;
     }
 
+    @Override
+    public void cancel()
+    {
+        super.cancel();
+        if (directReadChain != null) {
+            directReadChain.cancel();
+        }
+    }
+
     private int directReadRequest(int index)
             throws Exception
     {
         FSDataInputStream inputStream = remoteFileSystem.open(new Path(filePath));
-        DirectReadRequestChain readChain = new DirectReadRequestChain(inputStream);
+        directReadChain = new DirectReadRequestChain(inputStream);
         for (ReadRequest readRequest : readRequests.subList(index, readRequests.size())) {
-            readChain.addReadRequest(readRequest);
+            directReadChain.addReadRequest(readRequest);
         }
-        readChain.lock();
-        directRead = readChain.call();
+        directReadChain.lock();
+        directRead = directReadChain.call();
         inputStream.close();
+        directReadChain = null;
         return (totalRead + directRead);
     }
 }

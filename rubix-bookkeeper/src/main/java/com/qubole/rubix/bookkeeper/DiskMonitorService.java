@@ -120,7 +120,7 @@ public class DiskMonitorService extends AbstractScheduledService
         }
 
         @Override
-        public void setBlockCached(long blockNumber)
+        public boolean setBlocksCached(long start, long end)
         {
             throw new UnsupportedOperationException("Got a setBLockCached request for Disk_Usage FileMetadata entry ");
         }

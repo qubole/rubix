@@ -94,6 +94,9 @@ public class RemoteReadRequestChain
         FileChannel fileChannel = new FileOutputStream(new RandomAccessFile(localFile, "rw").getFD()).getChannel();
         try {
             for (ReadRequest readRequest : readRequests) {
+                if (cancelled) {
+                    propagateCancel(this.getClass().getName());
+                }
                 log.debug(String.format("Executing ReadRequest: [%d, %d, %d, %d, %d]", readRequest.getBackendReadStart(), readRequest.getBackendReadEnd(), readRequest.getActualReadStart(), readRequest.getActualReadEnd(), readRequest.getDestBufferOffset()));
                 inputStream.seek(readRequest.backendReadStart);
 

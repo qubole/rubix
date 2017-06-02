@@ -53,6 +53,14 @@ public class ChainedReadRequestChain
         return stats;
     }
 
+    @Override
+    public void cancel()
+    {
+        for (ReadRequestChain readRequestChain : readRequestChains) {
+            readRequestChain.cancel();
+        }
+    }
+
     public void updateCacheStatus(String remotePath, long fileSize, long lastModified, int blockSize, Configuration conf)
     {
         for (ReadRequestChain readRequestChain : readRequestChains) {

@@ -25,7 +25,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.nio.channels.FileChannel;
 import java.util.concurrent.locks.Lock;
 
 import static com.qubole.rubix.spi.CacheConfig.getBlockSize;
@@ -41,14 +40,11 @@ public class FileMetadata
     private long size;
     private long lastModified;
 
-    private RandomAccessFile mdFile;
-    private FileChannel mdFileChannel;
-    private MappedByteBufferBitmap blockBitmap;
+    private boolean needsRefresh = true;
 
-    // Striped locks are used to prevent race condition between create and delete of FileMetadata
-    // E.g. FileMetadata was being deleted due to SIZE based eviction and another thread access same file leading to
-    // a parallel create of FileMetadata for same file. If locking is not done, we might end up with new Metadata reading
-    // stale data
+    int bitmapFileSizeBytes;
+    ByteBufferBitmap blockBitmap;
+
     static Striped<Lock> stripes = Striped.lock(20000);
 
     private static Log log = LogFactory.getLog(FileMetadata.class.getName());
@@ -67,13 +63,30 @@ public class FileMetadata
         mdFilePath = CacheConfig.getMDFile(remotePath, conf);
 
         int bitsRequired = (int) Math.ceil((double) size / getBlockSize(conf)); //numBlocks
-        int bitmapFileSizeBytes = (int) Math.ceil((double) bitsRequired / 8);
+        bitmapFileSizeBytes = (int) Math.ceil((double) bitsRequired / 8);
 
-        Lock lock = stripes.get(getRemotePath());
+        /*
+         * Caution: Do no call refreshBitmap in constructor as it breaks the assumptions in delete path and it could
+         * cause race conditions
+         */
+    }
+
+    public void setNeedsRefresh()
+    {
+        needsRefresh = true;
+    }
+
+    public void refreshBitmap()
+            throws IOException
+    {
+        byte[] bytes = new byte[bitmapFileSizeBytes];
+        RandomAccessFile mdFile;
+        Lock lock = stripes.get(remotePath);
         try {
             lock.lock();
             try {
                 mdFile = new RandomAccessFile(mdFilePath, "rw");
+                mdFile.readFully(bytes, 0, (int) mdFile.length());
             }
             catch (FileNotFoundException e) {
                 File file = new File(mdFilePath);
@@ -81,32 +94,76 @@ public class FileMetadata
                 file.setWritable(true, false);
                 file.setReadable(true, false);
                 mdFile = new RandomAccessFile(file, "rw");
+                mdFile.setLength(bitmapFileSizeBytes);
             }
-            mdFileChannel = mdFile.getChannel();
-
-            blockBitmap = new MappedByteBufferBitmap(mdFileChannel.map(FileChannel.MapMode.READ_WRITE, 0, bitmapFileSizeBytes));
+            mdFile.close();
         }
         finally {
             lock.unlock();
         }
+        blockBitmap = new ByteBufferBitmap(bytes);
+        needsRefresh = false;
     }
 
     public boolean isBlockCached(long blockNumber)
+            throws IOException
     {
+        if (needsRefresh) {
+            refreshBitmap();
+        }
         return blockBitmap.isSet((int) blockNumber);
     }
 
-    public void setBlockCached(long blockNumber)
+    private void setBlockCached(long blockNumber)
+            throws IOException
     {
+        if (needsRefresh) {
+            refreshBitmap();
+        }
+
         blockBitmap.set((int) blockNumber);
+    }
+
+    // Returns true if backing mdfile is updated
+    public synchronized boolean setBlocksCached(long startBlock, long endBlock)
+            throws IOException
+    {
+        for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
+            setBlockCached(blockNum);
+        }
+
+        // update mdfile
+        try {
+            RandomAccessFile mdFile = new RandomAccessFile(mdFilePath, "rw");
+            mdFile.write(blockBitmap.getBytes());
+            mdFile.close();
+        }
+        catch (FileNotFoundException e) {
+            // it is possible that file is deleted by an old CacheEviction event after this FileMetadata entry was made. See 3.1.2 comment above
+            // refresh
+            log.error("Could not update mdfile for " + remotePath + ". Trying again", e);
+            try {
+                refreshBitmap();
+            }
+            catch (IOException e1) {
+                // Inconsistent state, reset bitmap to prevent unknown issues
+                blockBitmap = new ByteBufferBitmap(new byte[bitmapFileSizeBytes]);
+                log.error("Could not refresh mdfile in second try for " + remotePath, e);
+            }
+            log.warn("Updated mdfile successfully for " + remotePath);
+        }
+        catch (IOException e) {
+            log.error("Could not update mdfile for " + remotePath, e);
+            return false;
+        }
+
+        return true;
     }
 
     public void closeAndCleanup(RemovalCause cause, Cache cache)
             throws IOException
     {
-        log.info("Evicting " + getRemotePath().toString() + " due to " + cause);
-        mdFileChannel.close();
-        mdFile.close();
+        log.warn("Evicting " + getRemotePath().toString() + " due to " + cause);
         deleteFiles(cause, cache);
     }
 
@@ -128,20 +185,20 @@ public class FileMetadata
 
     // Assumption: this is called after the FileMetadata has been removed from cache
     // E.g. in RemovalListener
-    private void deleteFiles(RemovalCause cause, Cache cache)
+    private void deleteFiles(RemovalCause cause, Cache<String, FileMetadata> cache)
     {
+        /*
+         * Cases of races when thread T1 trying to add new entry to cache and T2 is removing deleting data for same
+         * 1. T2 DeleteFiles |in parallel to| T1 Create FileMetada : Safe, T1 will create new mdfile and start from blank state
+         * 2. T2 DeleteFiles |in parallel to| T1 added entry to cache: Safe, T1 still did not load mdfile.
+         * 3. T2 DeleteFiles |in parallel to| T1 refreshBitmap:
+         *          3.1. T2 gets lock first -> deletes data -> T1 refreshes (maybe twice as T2 sets needsRfresh): => Safe
+         *          3.2. T1 refreshes -> T2 deletes -> T2 sets needsRefresh => next T1 operation refreshes
+         *                          One operation on T1 would fail in read in RRC but CachingInputStream will handle failure
+         */
         Lock lock = stripes.get(getRemotePath());
         try {
             lock.lock();
-            if (cache.getIfPresent(getRemotePath()) != null) {
-                // It means that another thread raced and created an entry, give up on deletion
-
-                // But if removal was EXPLICIT then we want to delete data in any case e.g. file changed in source
-                // Delete data in that case
-                if (!cause.equals(RemovalCause.EXPLICIT)) {
-                    return;
-                }
-            }
 
             File mdFile = new File(mdFilePath);
             mdFile.delete();
@@ -151,6 +208,11 @@ public class FileMetadata
         }
         finally {
             lock.unlock();
+        }
+
+        FileMetadata newEntry = cache.getIfPresent(getRemotePath());
+        if (newEntry != null) {
+            newEntry.setNeedsRefresh();
         }
     }
 

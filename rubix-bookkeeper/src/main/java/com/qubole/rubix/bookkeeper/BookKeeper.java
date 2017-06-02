@@ -131,22 +131,27 @@ public class BookKeeper
 
         //TODO: Store Node indices too, i.e. split to nodeIndex map and compare indices here instead of strings(nodenames).
 
-        for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
-            totalRequests++;
-            long split = (blockNum * blockSize) / splitSize;
-            if (md.isBlockCached(blockNum)) {
-                blockLocations.add(new BlockLocation(Location.CACHED, blockSplits.get(split)));
-                cachedRequests++;
-            }
-            else {
-                if (blockSplits.get(split).equalsIgnoreCase(nodeName)) {
-                    blockLocations.add(new BlockLocation(Location.LOCAL, blockSplits.get(split)));
-                    remoteRequests++;
+        try {
+            for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
+                totalRequests++;
+                long split = (blockNum * blockSize) / splitSize;
+                if (md.isBlockCached(blockNum)) {
+                    blockLocations.add(new BlockLocation(Location.CACHED, blockSplits.get(split)));
+                    cachedRequests++;
                 }
                 else {
-                    blockLocations.add(new BlockLocation(Location.NON_LOCAL, blockSplits.get(split)));
+                    if (blockSplits.get(split).equalsIgnoreCase(nodeName)) {
+                        blockLocations.add(new BlockLocation(Location.LOCAL, blockSplits.get(split)));
+                        remoteRequests++;
+                    }
+                    else {
+                        blockLocations.add(new BlockLocation(Location.NON_LOCAL, blockSplits.get(split)));
+                    }
                 }
             }
+        }
+        catch (IOException e) {
+            throw new TException(e);
         }
 
         return blockLocations;
@@ -225,10 +230,11 @@ public class BookKeeper
         }
         endBlock = setCorrectEndBlock(endBlock, fileLength, remotePath);
 
-        synchronized (md) {
-            for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
-                md.setBlockCached(blockNum);
-            }
+        try {
+            md.setBlocksCached(startBlock, endBlock);
+        }
+        catch (IOException e) {
+            throw new TException(e);
         }
     }
 

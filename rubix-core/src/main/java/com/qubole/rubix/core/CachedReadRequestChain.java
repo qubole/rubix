@@ -72,6 +72,9 @@ public class CachedReadRequestChain extends ReadRequestChain
 
         checkState(isLocked, "Trying to execute Chain without locking");
         for (ReadRequest readRequest : readRequests) {
+            if (cancelled) {
+                propagateCancel(this.getClass().getName());
+            }
             int nread = 0;
             int leftToRead = readRequest.getActualReadLength();
             log.debug(String.format("Processing readrequest %d-%d, length %d", readRequest.actualReadStart, readRequest.actualReadEnd, leftToRead));

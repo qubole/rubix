@@ -17,6 +17,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -33,6 +34,7 @@ public abstract class ReadRequestChain implements Callable<Integer>
     List<ReadRequest> readRequests = new ArrayList<ReadRequest>();
     ReadRequest lastRequest = null;
     boolean isLocked = false;
+    boolean cancelled = false;
 
     protected String threadName;
     protected long requests = 0;
@@ -94,5 +96,24 @@ public abstract class ReadRequestChain implements Callable<Integer>
     public void updateCacheStatus(String remotePath, long fileSize, long lastModified, int blockSize, Configuration conf)
     {
         // no-op by default
+    }
+
+    public void cancel()
+    {
+        cancelled = true;
+    }
+
+    protected void propagateCancel(String className)
+            throws IOException
+    {
+        throw new CancelledException(className + " Cancelled");
+    }
+
+    private class CancelledException extends IOException
+    {
+        public CancelledException(String message)
+        {
+            super(message);
+        }
     }
 }

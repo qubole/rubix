@@ -12,26 +12,24 @@
  */
 package com.qubole.rubix.bookkeeper;
 
-import java.nio.MappedByteBuffer;
-
 /**
  * Created by stagra on 29/12/15.
  */
 
 // This class provides bitmap semantics over MappeByteBuffer
-public class MappedByteBufferBitmap
+public class ByteBufferBitmap
 {
-    final MappedByteBuffer mbuf;
+    final byte[] bytes;
 
-    public MappedByteBufferBitmap(MappedByteBuffer mbuf)
+    public ByteBufferBitmap(byte[] bytes)
     {
-        this.mbuf = mbuf;
+        this.bytes = bytes;
     }
 
     // keeping idx in int as mbuf.get can take only Int. And Integer.MAX_VALUE large enough to keep us safe for big files
     public boolean isSet(int idx)
     {
-        byte containerByte = mbuf.get(idx / 8);
+        byte containerByte = bytes[(idx / 8)];
         int offset = idx % 8;
         if (((containerByte & (1 << offset)) != 0)) {
             return true;
@@ -42,20 +40,20 @@ public class MappedByteBufferBitmap
 
     public void set(int idx)
     {
-        byte containerByte = mbuf.get(idx / 8);
+        byte containerByte = bytes[(idx / 8)];
         int offset = idx % 8;
-        mbuf.put(idx / 8, (byte) (containerByte | (1 << offset)));
+        bytes[(idx / 8)] = (byte) (containerByte | (1 << offset));
     }
 
     public void unset(int idx)
     {
-        byte containerByte = mbuf.get(idx / 8);
+        byte containerByte = bytes[(idx / 8)];
         int offset = idx % 8;
-        mbuf.put(idx / 8, (byte) (containerByte & ~(1 << offset)));
+        bytes[(idx / 8)] = (byte) (containerByte & ~(1 << offset));
     }
 
-    public MappedByteBuffer getMappedByteBuffer()
+    public byte[] getBytes()
     {
-        return mbuf;
+        return bytes;
     }
 }

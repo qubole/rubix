@@ -56,6 +56,9 @@ public class DirectReadRequestChain extends ReadRequestChain
         checkState(isLocked, "Trying to execute Chain without locking");
 
         for (ReadRequest readRequest : readRequests) {
+            if (cancelled) {
+                propagateCancel(this.getClass().getName());
+            }
             inputStream.seek(readRequest.actualReadStart);
             int nread = 0;
             while (nread < readRequest.getActualReadLength()) {

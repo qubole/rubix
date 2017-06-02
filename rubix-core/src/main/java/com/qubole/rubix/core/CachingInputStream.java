@@ -209,7 +209,8 @@ public class CachingInputStream
     }
 
     private int readInternal(byte[] buffer, int offset, int length)
-            throws ExecutionException, InterruptedException
+            throws InterruptedException, ExecutionException
+
     {
         log.debug(String.format("Got Read, currentPos: %d currentBlock: %d bufferOffset: %d length: %d", nextReadPosition, nextReadBlock, offset, length));
 
@@ -241,7 +242,15 @@ public class CachingInputStream
         List<ListenableFuture<Integer>> futures = builder.build();
         for (ListenableFuture<Integer> future : futures) {
             // exceptions handled in caller
-            sizeRead += future.get();
+            try {
+                sizeRead += future.get();
+            }
+            catch (ExecutionException | InterruptedException e) {
+                for (ReadRequestChain readRequestChain : readRequestChains) {
+                    readRequestChain.cancel();
+                }
+                throw e;
+            }
         }
 
         // mark all read blocks cached
