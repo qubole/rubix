@@ -20,7 +20,7 @@
         <dependency>
             <groupId>org.apache.thrift</groupId>
             <artifactId>libthrift</artifactId>
-            <version>0.9.2</version>
+            <version>0.9.3</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
@@ -74,9 +74,10 @@
             <plugin>
                 <groupId>org.apache.thrift.tools</groupId>
                 <artifactId>maven-thrift-plugin</artifactId>
-                <version>0.1.10</version>
+                <version>0.1.11</version>
                 <configuration>
                     <thriftExecutable>/usr/local/bin/thrift</thriftExecutable>
+                    <generator>java</generator>
                 </configuration>
                 <executions>
                     <execution>
@@ -102,7 +103,7 @@
                         <configuration>
                             <artifactSet>
                                 <includes>
-                                    -<include>org.apache.thrift:libthrift</include>
+                                    <include>org.apache.thrift:libthrift</include>
                                     <include>com.google.guava:guava</include>
                                 </includes>
                             </artifactSet>
@@ -123,10 +124,4 @@
             </plugin>
         </plugins>
     </build>
-    <pluginRepositories>
-        <pluginRepository>
-            <id>dtrott</id>
-            <url>http://maven.davidtrott.com/repository</url>
-        </pluginRepository>
-    </pluginRepositories>
 </project>

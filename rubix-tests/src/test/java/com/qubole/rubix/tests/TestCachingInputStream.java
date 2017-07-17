@@ -27,9 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
+import org.testng.annotations.*;
 
 
 import java.io.File;
@@ -37,6 +35,8 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Arrays;
 
 import static org.testng.AssertJUnit.assertTrue;
@@ -47,13 +47,28 @@ import static org.testng.AssertJUnit.assertTrue;
 public class TestCachingInputStream
 {
     int blockSize = 100;
-    String backendFileName = "/tmp/backendFile";
+    private final static String testDirectoryPrefix = System.getProperty("java.io.tmpdir") + "TestCachingInputStream/";
+    String backendFileName = testDirectoryPrefix + "backendFile";
     Path backendPath = new Path("file://" + backendFileName.substring(1));
 
     CachingInputStream inputStream;
 
+    private final static String testDirectory = testDirectoryPrefix + "dir0";
+
     private static final Log log = LogFactory.getLog(TestCachingInputStream.class.getName());
 
+    @BeforeClass
+    public static void setupClass() throws IOException {
+        log.info(testDirectory);
+        Files.createDirectories(Paths.get(testDirectory));
+    }
+
+    @AfterClass
+    public static void tearDownClass() throws IOException {
+        log.info("Deleting files in " + testDirectory);
+        Files.walkFileTree(Paths.get(testDirectory), new DeleteFileVisitor());
+        Files.deleteIfExists(Paths.get(testDirectory));
+    }
 
     @BeforeMethod
     public void setup()
@@ -65,7 +80,7 @@ public class TestCachingInputStream
         conf.setBoolean(CacheConfig.DATA_CACHE_STRICT_MODE, true);
         conf.setInt(CacheConfig.dataCacheBookkeeperPortConf, 3456);
         conf.setInt(CacheConfig.localServerPortConf, 2222);
-        conf.set("hadoop.cache.data.dirprefix.list", "/tmp/ephemeral");
+        conf.set(CacheConfig.dataCacheDirprefixesConf, testDirectoryPrefix + "dir");
         Thread server = new Thread()
         {
             public void run()
@@ -116,6 +131,7 @@ public class TestCachingInputStream
         BookKeeperServer.stopServer();
         LocalDataTransferServer.stopServer();
         Configuration conf = new Configuration();
+        conf.set(CacheConfig.dataCacheDirprefixesConf, testDirectoryPrefix + "dir");
         inputStream.close();
         File file = new File(backendFileName);
         file.delete();
@@ -186,7 +202,7 @@ public class TestCachingInputStream
         //6. Close existing stream and start a new one to get the new lastModifiedDate of backend file
         inputStream.close();
         Configuration conf = new Configuration();
-        conf.set("hadoop.cache.data.dirprefix.list", "/tmp/ephemeral");
+        conf.set(CacheConfig.dataCacheDirprefixesConf, testDirectoryPrefix + "dir");
         createCachingStream(conf);
         log.info("New stream started");
 

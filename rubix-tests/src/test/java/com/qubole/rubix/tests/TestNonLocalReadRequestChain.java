@@ -32,27 +32,44 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
+import org.testng.annotations.*;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 import static org.testng.AssertJUnit.assertTrue;
 
 public class TestNonLocalReadRequestChain
 {
     int blockSize = 100;
-    String backendFileName = "/tmp/backendFile";
+    private final static String testDirectoryPrefix = System.getProperty("java.io.tmpdir") + "TestNonLocalReadRequestChain/";
+    String backendFileName = testDirectoryPrefix + "backendFile";
     Path backendPath = new Path("testfile:/" + backendFileName);
     File backendFile = new File(backendFileName);
     final Configuration conf = new Configuration();
     Thread localDataTransferServer;
 
+    private final static String testDirectory = testDirectoryPrefix + "dir0";
+
     NonLocalReadRequestChain nonLocalReadRequestChain;
     private static final Log log = LogFactory.getLog(TestNonLocalReadRequestChain.class);
+
+    @BeforeClass
+    public static void setupClass() throws IOException {
+      log.info(testDirectory);
+      Files.createDirectories(Paths.get(testDirectory));
+    }
+
+
+    @AfterClass
+    public static void tearDownClass() throws IOException {
+      log.info("Deleting files in " + testDirectory);
+      Files.walkFileTree(Paths.get(testDirectory), new DeleteFileVisitor());
+      Files.deleteIfExists(Paths.get(testDirectory));
+    }
 
     @BeforeMethod
     public void setup()
@@ -62,7 +79,7 @@ public class TestNonLocalReadRequestChain
         conf.setInt(CacheConfig.dataCacheBookkeeperPortConf, 3456);
         conf.setInt(CacheConfig.localServerPortConf, 2222);
         conf.setInt(CacheConfig.blockSizeConf, blockSize);
-        conf.set("hadoop.cache.data.dirprefix.list", "/tmp/ephemeral");
+        conf.set(CacheConfig.dataCacheDirprefixesConf, testDirectoryPrefix + "dir");
         localDataTransferServer = new Thread()
         {
             public void run()

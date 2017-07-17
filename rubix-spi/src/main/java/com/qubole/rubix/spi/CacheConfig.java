@@ -18,6 +18,8 @@ import com.google.common.base.Suppliers;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
@@ -83,6 +85,8 @@ public class CacheConfig
     public static final int diskReadBufferSizeDefault = 1024;
     public static int socketReadTimeOutDefault = 30000; // In milliseconds.
     private static int diskMonitorInterval = 10; // in seconds
+
+    private static final Log log = LogFactory.getLog(CacheConfig.class.getName());
 
     private CacheConfig()
     {
@@ -160,6 +164,7 @@ public class CacheConfig
                 List<String> dirPrefixList = getDirPrefixList(conf);
                 for (String dirPrefix : dirPrefixList) {
                     for (int i = 0; i < maxDisksConf; ++i) {
+                        log.info("Checking " + dirPrefix + i);
                         if (exists(dirPrefix + i)) {
                             File dir = new File(dirPrefix + i + fileCacheDirSuffixConf);
                             dir.mkdir();
