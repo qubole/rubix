@@ -81,9 +81,21 @@ presto:default> select * from jmx.jmx."rubix:name=stats";
 
 ### Building
 
-mvn clean install
+#### Setup Thrift
+Note that you will need thrift-0.9.3 installed
 
-> Note that you will need thrift-0.9.0 installed
+    # Mac OS X/Brew instructions
+    
+    ## Installs thrift 0.10.0
+    brew install thrift
+    
+    ### Install thrift 0.9.3
+    brew unlink thrift
+    brew install https://raw.githubusercontent.com/Homebrew/homebrew-core/9d524e4850651cfedd64bc0740f1379b533f607d/Formula/thrift.rb
+
+#### Compile and install
+    mvn clean install
+
 
 ### Need Help?
 You can post your queries to https://groups.google.com/forum/#!forum/rubix-users
