@@ -106,8 +106,7 @@ public class LocalDataTransferServer
                 log.info("Stopping Local Transfer server");
             }
             catch (IOException e) {
-                log.error(String.format("Error starting Local Transfer server %s", e), e);
-                e.printStackTrace();
+                log.error(String.format("Error starting Local Transfer server %s", e));
             }
 
         }

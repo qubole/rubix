@@ -164,7 +164,7 @@ public class CacheConfig
                 List<String> dirPrefixList = getDirPrefixList(conf);
                 for (String dirPrefix : dirPrefixList) {
                     for (int i = 0; i < maxDisksConf; ++i) {
-                        log.info("Checking " + dirPrefix + i);
+                        log.debug("Checking " + dirPrefix + i);
                         if (exists(dirPrefix + i)) {
                             File dir = new File(dirPrefix + i + fileCacheDirSuffixConf);
                             dir.mkdir();
