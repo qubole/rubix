@@ -96,6 +96,13 @@ Note that you will need thrift-0.9.3 installed
 #### Compile and install
     mvn clean install
 
-
+#### Generate RPM
+    mvn clean package -Prpm,default
+    
+    ## rpm and rpmbuild is required
+    ## To install rpm on Mac OS X
+    brew install rpm
+    
+RPM is created in _rubix-rpm/target/rpm/qubole-rubix/RPMS/noarch/_    
 ### Need Help?
 You can post your queries to https://groups.google.com/forum/#!forum/rubix-users
