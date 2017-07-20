@@ -60,6 +60,7 @@
         <module>rubix-hadoop1</module>
         <module>rubix-tests</module>
         <module>assembly</module>
+        <module>rubix-rpm</module>
     </modules>
 
     <dependencyManagement>

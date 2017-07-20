@@ -47,9 +47,6 @@
             <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-tests</artifactId>
         </dependency>
-
-
-
     </dependencies>
 
     <profiles>
@@ -115,7 +112,6 @@
                                     </descriptors>
                                 </configuration>
                             </execution>
-
                         </executions>
                     </plugin>
                 </plugins>
