@@ -115,17 +115,18 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
     public FSDataInputStream open(Path path, int bufferSize)
             throws IOException
     {
-        FSDataInputStream inputStream = fs.open(path, bufferSize);
+        FSDataInputStream inputStream = null;
 
         if (skipCache(path, getConf())) {
+            inputStream = fs.open(path, bufferSize);
             cacheSkipped = true;
             return inputStream;
         }
 
         return new FSDataInputStream(
                 new BufferedFSInputStream(
-                        new CachingInputStream(inputStream, this, path, this.getConf(), statsMBean,
-                                clusterManager.getClusterType(), bookKeeperFactory, fs),
+                        new CachingInputStream(this, path, this.getConf(), statsMBean,
+                                clusterManager.getClusterType(), bookKeeperFactory, fs, bufferSize),
                                                     CacheConfig.getBlockSize(getConf())));
     }
 

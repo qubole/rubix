@@ -43,7 +43,6 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
 /**
@@ -79,34 +78,43 @@ public class CachingInputStream
     private ByteBuffer directReadBuffer = null;
     private byte[] affixBuffer;
     private int diskReadBufferSize;
+    private int bufferSize;
 
-    public CachingInputStream(FSDataInputStream parentInputStream, FileSystem parentFs, Path backendPath, Configuration conf, CachingFileSystemStats statsMbean, ClusterType clusterType, BookKeeperFactory bookKeeperFactory, FileSystem remoteFileSystem)
-            throws IOException
+    public CachingInputStream(FileSystem parentFs, Path backendPath, Configuration conf,
+                              CachingFileSystemStats statsMbean, ClusterType clusterType,
+                              BookKeeperFactory bookKeeperFactory, FileSystem remoteFileSystem,
+                              int bufferSize) throws IOException
     {
         this.remotePath = backendPath.toString();
         FileStatus fileStatus = parentFs.getFileStatus(backendPath);
         this.fileSize = fileStatus.getLen();
         this.remoteFileSystem = remoteFileSystem;
         lastModified = fileStatus.getModificationTime();
-        initialize(parentInputStream,
-                conf, bookKeeperFactory);
+        initialize(conf, bookKeeperFactory);
         this.statsMbean = statsMbean;
         this.clusterType = clusterType;
+        this.bufferSize = bufferSize;
     }
 
     @VisibleForTesting
-    public CachingInputStream(FSDataInputStream parentInputStream, Configuration conf, Path backendPath, long size, long lastModified, CachingFileSystemStats statsMbean, ClusterType clusterType, BookKeeperFactory bookKeeperFactory, FileSystem remoteFileSystem)
-            throws IOException
+    public CachingInputStream(FSDataInputStream inputStream, Configuration conf, Path backendPath,
+                              long size, long lastModified, CachingFileSystemStats statsMbean,
+                              ClusterType clusterType, BookKeeperFactory bookKeeperFactory,
+                              FileSystem remoteFileSystem)
+              throws IOException
     {
+        this.inputStream = inputStream;
         this.remotePath = backendPath.toString();
         this.fileSize = size;
         this.lastModified = lastModified;
-        initialize(parentInputStream, conf, bookKeeperFactory);
+        initialize(conf, bookKeeperFactory);
         this.statsMbean = statsMbean;
         this.clusterType = clusterType;
+        this.remoteFileSystem = remoteFileSystem;
+        this.bufferSize = bufferSize;
     }
 
-    private void initialize(FSDataInputStream parentInputStream, Configuration conf, BookKeeperFactory bookKeeperFactory)
+    private void initialize(Configuration conf, BookKeeperFactory bookKeeperFactory)
     {
         this.conf = conf;
         this.strictMode = CacheConfig.isStrictMode(conf);
@@ -120,7 +128,6 @@ public class CachingInputStream
             log.warn("Could not create BookKeeper Client " + Throwables.getStackTraceAsString(e));
             bookKeeperClient = null;
         }
-        this.inputStream = checkNotNull(parentInputStream, "ParentInputStream is null");
         this.blockSize = CacheConfig.getBlockSize(conf);
         this.localPath = CacheConfig.getLocalPath(remotePath, conf);
         this.diskReadBufferSize = CacheConfig.getDiskReadBufferSizeDefault(conf);
@@ -137,6 +144,14 @@ public class CachingInputStream
             file.setReadable(true, false);
             file.setWritable(true, false);
         }
+    }
+
+    private FSDataInputStream getParentDataInputStream() throws IOException
+    {
+        if (inputStream == null) {
+            inputStream = remoteFileSystem.open(new Path(remotePath), bufferSize);
+        }
+        return inputStream;
     }
 
     @Override
@@ -184,7 +199,7 @@ public class CachingInputStream
         }
         catch (Exception e) {
             log.error(String.format("Failed to read from rubix for file %s position %d length %d. Falling back to remote", localPath, nextReadPosition, length), e);
-            inputStream.seek(nextReadPosition);
+            getParentDataInputStream().seek(nextReadPosition);
             int read = readFullyDirect(buffer, offset, length);
             if (read > 0) {
                 nextReadPosition += read;
@@ -199,7 +214,7 @@ public class CachingInputStream
     {
         int nread = 0;
         while (nread < length) {
-            int nbytes = inputStream.read(buffer, offset + nread, length - nread);
+            int nbytes = getParentDataInputStream().read(buffer, offset + nread, length - nread);
             if (nbytes < 0) {
                 return nread;
             }
@@ -209,7 +224,7 @@ public class CachingInputStream
     }
 
     private int readInternal(byte[] buffer, int offset, int length)
-            throws InterruptedException, ExecutionException
+            throws IOException, InterruptedException, ExecutionException
 
     {
         log.debug(String.format("Got Read, currentPos: %d currentBlock: %d bufferOffset: %d length: %d", nextReadPosition, nextReadBlock, offset, length));
@@ -282,7 +297,7 @@ public class CachingInputStream
     private List<ReadRequestChain> setupReadRequestChains(byte[] buffer,
             int offset,
             long endBlock,
-            int length)
+            int length) throws IOException
     {
         DirectReadRequestChain directReadRequestChain = null;
         RemoteReadRequestChain remoteReadRequestChain = null;
@@ -338,7 +353,7 @@ public class CachingInputStream
             if (isCached == null) {
                 log.debug(String.format("Sending block %d to DirectReadRequestChain", blockNum));
                 if (directReadRequestChain == null) {
-                    directReadRequestChain = new DirectReadRequestChain(inputStream);
+                    directReadRequestChain = new DirectReadRequestChain(getParentDataInputStream());
                 }
                 directReadRequestChain.addReadRequest(readRequest);
             }
@@ -383,7 +398,7 @@ public class CachingInputStream
                             affixBuffer = new byte[blockSize];
                         }
                         if (remoteReadRequestChain == null) {
-                            remoteReadRequestChain = new RemoteReadRequestChain(inputStream, localPath, directWriteBuffer, affixBuffer);
+                            remoteReadRequestChain = new RemoteReadRequestChain(getParentDataInputStream(), localPath, directWriteBuffer, affixBuffer);
                         }
                     }
                     catch (IOException e) {
@@ -447,7 +462,9 @@ public class CachingInputStream
     {
         returnBuffers();
         try {
-            inputStream.close();
+            if (inputStream != null) {
+                inputStream.close();
+            }
             if (bookKeeperClient != null) {
                 bookKeeperClient.close();
             }

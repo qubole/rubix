@@ -54,9 +54,10 @@ public class MockCachingFileSystem
         LocalFSInputStream inputStream = new LocalFSInputStream(localPath);
         return new FSDataInputStream(
                 new BufferedFSInputStream(
-                        new CachingInputStream(new FSDataInputStream(inputStream), conf, path, file.length(), file.lastModified(),  new CachingFileSystemStats(),
-                                ClusterType.TEST_CLUSTER_MANAGER, bookKeeperFactory, this),
-                        CacheConfig.getBlockSize(conf)));
+                        new CachingInputStream(new FSDataInputStream(inputStream), conf, path, file.length(),
+                            file.lastModified(),  new CachingFileSystemStats(),
+                            ClusterType.TEST_CLUSTER_MANAGER, bookKeeperFactory, this),
+                    CacheConfig.getBlockSize(conf)));
     }
 
     @Override
