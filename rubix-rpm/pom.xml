@@ -71,6 +71,7 @@
                         <configuration>
                             <name>qubole-rubix</name>
                             <copyright>2015, Qubole</copyright>
+                            <architecture>x86_64</architecture>
                             <group>Applications/Databases</group>
                             <description>RPM Package for Rubix (https://github.com/qubole/rubix</description>
                             <mappings>
@@ -89,19 +90,43 @@
                                     <artifact/>
                                 </mapping>
                                 <mapping>
-                                    <directory>${app.home}/conf</directory>
-                                    <!-- <configuration>true</configuration>
+                                    <directory>${app.home}/bin</directory>
+                                    <filemode>755</filemode>
                                     <sources>
                                         <source>
-                                            <location>${project.build.outputDirectory}/app.properties</location>
-                                            <destination>app.sample.properties</destination>
+                                            <location>src/main/resources/rpm/init.d/rubix.service</location>
                                         </source>
-                                    </sources>-->
+                                    </sources>
                                 </mapping>
                                 <mapping>
-                                    <directory>${app.home}/logs</directory>
+                                    <directory>/etc/rubix/</directory>
+                                    <configuration>true</configuration>
+                                    <sources>
+                                        <source>
+                                            <location>src/main/resources/rpm/config/log4j.properties</location>
+                                        </source>
+                                        <source>
+                                            <location>src/main/resources/rpm/config/log4j_lds.properties</location>
+                                        </source>
+                                    </sources>
+                                </mapping>
+                                <mapping>
+                                    <directory>/var/log/rubix/</directory>
+                                    <filemode>755</filemode>
+                                    <username>ec2-user</username>
+                                    <groupname>ec2-user</groupname>
+                                </mapping>
+                                <mapping>
+                                    <directory>/var/run/rubix/</directory>
+                                    <filemode>755</filemode>
+                                    <username>ec2-user</username>
+                                    <groupname>ec2-user</groupname>
                                 </mapping>
                             </mappings>
+                            <postinstallScriptlet>
+                                <scriptFile>src/main/resources/rpm/scripts/postinst</scriptFile>
+                                <fileEncoding>utf-8</fileEncoding>
+                            </postinstallScriptlet>
                         </configuration>
                     </plugin>
                 </plugins>

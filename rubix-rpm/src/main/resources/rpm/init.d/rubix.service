@@ -1,0 +1,70 @@
+#!/bin/bash -e
+
+d=`dirname $0`
+d=`cd "$d"; pwd`
+
+RUN_DIR=/var/run/rubix
+PID_FILE=${RUN_DIR}/bks.pid
+PID_FILE_2=${RUN_DIR}/lts.pid
+MONITRC_FILE=/etc/monit.d/bks.cfg
+LOG4J_FILE=/etc/rubix/log4j.properties
+LOG4J_FILE_LDS=/etc/rubix/log4j_lds.properties
+
+LOG_DIR=/var/logs/rubix
+LOG_FILE=${LOG_DIR}/bks.log
+LOG_FILE_LDS=${LOG_DIR}/lds.log
+
+# increase mmap system limit
+sudo sysctl -w vm.max_map_count=200000
+
+usage() {
+  echo "Usage: $0"
+  echo "$1"
+  echo "start and stop the Cache BookKeeper Server."
+  echo "$0 [start|stop]"
+  exit $2
+}
+
+start() {
+  export HADOOP_OPTS="-Dlog4j.configuration=file://${LOG4J_FILE}"
+  # Set the fs impls as CachingNativeS3FileSystem for book-keeper. HADOOP_CUSTOM_OVERRIDES are the best bet to do this without affecting all hadoop jobs
+  # HADDOP_CUSTOM_OVERRIDES are Qubole specific and the values is '!' separated key=value pair with value base64 encoded
+  # We also disable filesystem cache
+  export HADOOP_CUSTOM_OVERRIDES='fs.s3.impl.disable.cache=dHJ1ZQ==!fs.s3n.impl.disable.cache=dHJ1ZQ==!'
+  ulimit -n 100000
+  nohup /usr/lib/hadoop2/bin/hadoop jar /usr/lib/rubix/lib/rubix-bookkeeper-*.jar com.qubole.rubix.bookkeeper.BookKeeperServer &
+
+  PID=$!
+  echo $PID > ${PID_FILE}
+
+  echo "Starting Cache BookKeeper server with pid `cat ${PID_FILE}`"
+  export HADOOP_OPTS="-Dlog4j.configuration=file://${LOG4J_FILE_LDS}"
+  nohup /usr/lib/hadoop2/bin/hadoop jar /usr/lib/rubix/lib/rubix-bookkeeper-*.jar com.qubole.rubix.bookkeeper.LocalDataTransferServer &
+  PIDL=$!
+  echo $PIDL > ${PID_FILE_2}
+  echo "Starting Local Transfer server with pid $PIDL"
+  sleep 1
+}
+
+stop() {
+  kill -9 `cat ${PID_FILE}`
+  kill -9 `cat ${PID_FILE_2}`
+  rm -f ${PID_FILE}
+  rm -f ${PID_FILE_2}
+}
+
+restart() {
+  stop
+  start
+}
+cmd=$1
+
+case "$cmd" in
+  start) start;;
+  stop) stop;;
+  restart) restart;;
+  help) usage "" 0;;
+  *) usage "ERROR: Incorrect arguments" 1;;
+esac
+
+exit 0;
