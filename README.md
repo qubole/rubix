@@ -21,9 +21,9 @@ RubiX has two components: a BookKeeper server and a FileSystem implementation th
 
 List of things to be done to use RubiX are:
 
-1. Start the BookKeeper server. It can be started via `hadoop jar` command, e.g.:   
-	hadoop jar rubix-bookkeeper-0.2.11.jar com.qubole.rubix.bookkeeper.LocalDataTransferServer  
-	hadoop jar rubix-bookkeeper-0.2.11.jar com.qubole.rubix.bookkeeper.BookKeeperServer  
+1. Start the BookKeeper server and the LocalDataTransfer server. It can be started via `hadoop jar` command, e.g.:   
+>	hadoop jar rubix-bookkeeper-0.2.11.jar com.qubole.rubix.bookkeeper.LocalDataTransferServer  
+>	hadoop jar rubix-bookkeeper-0.2.11.jar com.qubole.rubix.bookkeeper.BookKeeperServer  
 
 2. Engine side changes:   
 	To use RubiX, you need to place the appropriate jars in the classpath and configure Engines to use RubiX filesystem to access the cloud store. Sections below show how to get started on RubiX with supported plugins
