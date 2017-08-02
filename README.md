@@ -11,8 +11,9 @@ thereby improving performance.
 
 ### Supported Engines and Cloud Stores
 
-- Presto: Amazon S3 is supported
-- Hadoop-1: Any engine using hadoop-1, e.g. Hive can utilize RubiX. Amazon S3 is supported
+- Presto: Amazon S3  
+- Spark: Amazon S3  
+- Hadoop-1: Any engine using hadoop-2, e.g. Hive can utilize RubiX. Amazon S3 is supported  
 
 ###  How to use it
 
@@ -21,7 +22,8 @@ RubiX has two components: a BookKeeper server and a FileSystem implementation th
 List of things to be done to use RubiX are:
 
 1. Start the BookKeeper server. It can be started via `hadoop jar` command, e.g.:   
->	hadoop jar rubix-bookkeeper-1.0.jar com.qubole.rubix.bookkeeper.BookKeeperServer
+>	hadoop jar rubix-bookkeeper-0.2.11.jar com.qubole.rubix.bookkeeper.BookKeeperServer  
+>	hadoop jar rubix-bookkeeper-0.2.11.jar com.qubole.rubix.bookkeeper.LocalDataTransferServer
 
 2. Engine side changes:   
 	To use RubiX, you need to place the appropriate jars in the classpath and configure Engines to use RubiX filesystem to access the cloud store. Sections below show how to get started on RubiX with supported plugins
@@ -42,6 +44,17 @@ List of things to be done to use RubiX are:
 2. Configuration changes: Use following configs to start using RubiX   
 		fs.s3n.impl=com.qubole.rubix.hadoop1.CachingNativeS3FileSystem   
 		fs.s3.impl=com.qubole.rubix.hadoop1.CachingNativeS3FileSystem   
+
+##### Using Rubix with Spark  
+
+1. Add the Rubix jars to Driver and Executor classpaths and use the rubix implementation for hadoop.fs.s3 and hadoop.fs.s3n.  
+	--conf spark.hadoop.fs.s3.impl=com.qubole.rubix.hadoop2.CachingNativeS3FileSystem  
+	--conf spark.hadoop.fs.s3n.impl=com.qubole.rubix.hadoop2.CachingNativeS3FileSystem  
+	--conf spark.driver.extraClassPath=/usr/lib/hadoop2/share/hadoop/common/lib/rubix-core-0.2.2.jar,/usr/lib/hadoop2/share/hadoop/common/lib/rubix-hadoop2-0.2.2.jar,/usr/lib/hadoop2/share/hadoop/common/lib/rubix-bookkeeper-0.2.2.jar  
+	--conf spark.executor.extraClassPath=/usr/lib/hadoop2/share/hadoop/common/lib/rubix-core-0.2.2.jar,/usr/lib/hadoop2/share/hadoop/common/lib/rubix-hadoop2-0.2.2.jar,/usr/lib/hadoop2/share/hadoop/common/lib/rubix-bookkeeper-0.2.2.jar  
+2. Start/Re-start the Spark Application.  
+
+
 
 ### Configurations
 
