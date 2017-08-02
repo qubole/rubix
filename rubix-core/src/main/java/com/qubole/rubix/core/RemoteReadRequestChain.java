@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.io.File;
 
 import static com.google.common.base.Preconditions.checkState;
 
@@ -91,7 +92,18 @@ public class RemoteReadRequestChain
             return 0;
         }
 
-        FileChannel fileChannel = new FileOutputStream(new RandomAccessFile(localFile, "rw").getFD()).getChannel();
+
+        // Issue-53 : Open file with the right permissions
+        File file = new File(localFile);
+
+        if (!file.exists()){
+            file.createNewFile();
+            file.setWritable(true, false);
+            file.setReadable(true, false);
+        }
+
+
+        FileChannel fileChannel = new FileOutputStream(new RandomAccessFile(file, "rw").getFD()).getChannel();
         try {
             for (ReadRequest readRequest : readRequests) {
                 if (cancelled) {
