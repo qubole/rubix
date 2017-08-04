@@ -13,6 +13,7 @@
     <properties>
         <app.home>/usr/lib/rubix</app.home>
         <project.build.sourceEncoding>utf-8</project.build.sourceEncoding>
+        <main.basedir>${project.parent.basedir}</main.basedir>
     </properties>
 
     <dependencies>
