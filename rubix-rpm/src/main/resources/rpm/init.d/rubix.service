@@ -27,10 +27,7 @@ usage() {
 
 start() {
   export HADOOP_OPTS="-Dlog4j.configuration=file://${LOG4J_FILE}"
-  # Set the fs impls as CachingNativeS3FileSystem for book-keeper. HADOOP_CUSTOM_OVERRIDES are the best bet to do this without affecting all hadoop jobs
-  # HADDOP_CUSTOM_OVERRIDES are Qubole specific and the values is '!' separated key=value pair with value base64 encoded
-  # We also disable filesystem cache
-  export HADOOP_CUSTOM_OVERRIDES='fs.s3.impl.disable.cache=dHJ1ZQ==!fs.s3n.impl.disable.cache=dHJ1ZQ==!'
+  # Set the fs impls as CachingNativeS3FileSystem for book-keeper. 
   ulimit -n 100000
   nohup /usr/lib/hadoop2/bin/hadoop jar /usr/lib/rubix/lib/rubix-bookkeeper-*.jar com.qubole.rubix.bookkeeper.BookKeeperServer &
 
