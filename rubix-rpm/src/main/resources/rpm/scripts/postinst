@@ -1,0 +1,1 @@
+cp /usr/lib/rubix/bin/rubix.service /etc/init.d
