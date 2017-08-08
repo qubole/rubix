@@ -68,6 +68,7 @@ public class CacheConfig
     private static String diskReadBufferSizeConf = "hadoop.cache.data.disk.read.buffer.size";
     public static String socketReadTimeOutConf = "hadoop.cache.network.socket.read.timeout";
     private static String diskMonitorIntervalConf = "hadoop.cache.disk.monitor.interval";
+    private static String parallelWarmupEnable = "hadoop.cache.parallel.warmup";
     static String fileCacheDirSuffixConf = "/fcache/";
     static int maxDisksConf = 5;
 
@@ -385,5 +386,10 @@ public class CacheConfig
     public static int getDiskMonitorInterval(Configuration conf)
     {
         return conf.getInt(diskMonitorIntervalConf, diskMonitorInterval);
+    }
+
+    public static boolean isParallelWarmupEnabled(Configuration conf)
+    {
+        return conf.getBoolean(parallelWarmupEnable, true);
     }
 }

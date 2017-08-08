@@ -199,6 +199,7 @@ public class RemoteReadRequestChain
         try {
             RetryingBookkeeperClient client = bookKeeperFactory.createBookKeeperClient(conf);
             for (ReadRequest readRequest : readRequests) {
+                log.debug("Setting cached from : " + toBlock(readRequest.getBackendReadStart()) + " block to : " + (toBlock(readRequest.getBackendReadEnd() - 1) + 1));
                 client.setAllCached(remotePath, fileSize, lastModified, toBlock(readRequest.getBackendReadStart()), toBlock(readRequest.getBackendReadEnd() - 1) + 1);
             }
             client.close();

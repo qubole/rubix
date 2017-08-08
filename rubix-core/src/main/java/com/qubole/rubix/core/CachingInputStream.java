@@ -111,7 +111,6 @@ public class CachingInputStream
         this.statsMbean = statsMbean;
         this.clusterType = clusterType;
         this.remoteFileSystem = remoteFileSystem;
-        this.bufferSize = bufferSize;
     }
 
     private void initialize(Configuration conf, BookKeeperFactory bookKeeperFactory)
@@ -236,6 +235,7 @@ public class CachingInputStream
 
         // Get the last block
         final long endBlock = ((nextReadPosition + (length - 1)) / blockSize) + 1; // this block will not be read
+        log.debug("End block : " + endBlock);
 
         // Create read requests
         final List<ReadRequestChain> readRequestChains = setupReadRequestChains(buffer,
@@ -278,6 +278,7 @@ public class CachingInputStream
             {
                 ReadRequestChainStats stats = new ReadRequestChainStats();
                 for (ReadRequestChain readRequestChain : readRequestChains) {
+                    log.debug("Updating cache for " + readRequestChain.toString());
                     readRequestChain.updateCacheStatus(remotePath, fileSize, lastModified, blockSize, conf);
                     stats = stats.add(readRequestChain.getStats());
                 }
@@ -302,6 +303,7 @@ public class CachingInputStream
         DirectReadRequestChain directReadRequestChain = null;
         RemoteReadRequestChain remoteReadRequestChain = null;
         CachedReadRequestChain cachedReadRequestChain = null;
+        RemoteFetchRequestChain remoteFetchRequestChain = null;
         Map<String, NonLocalReadRequestChain> nonLocalRequests = new HashMap<>();
         ImmutableList.Builder chainedReadRequestChainBuilder = ImmutableList.builder();
 
@@ -389,27 +391,49 @@ public class CachingInputStream
                     nonLocalRequests.get(remoteLocation).addReadRequest(readRequest);
                 }
                 else {
-                    log.debug(String.format("Sending block %d to remoteReadRequestChain", blockNum));
-                    try {
-                        if (directWriteBuffer == null) {
-                            directWriteBuffer = bufferPool.getBuffer(diskReadBufferSize);
-                        }
-                        if (affixBuffer == null) {
-                            affixBuffer = new byte[blockSize];
-                        }
-                        if (remoteReadRequestChain == null) {
-                            remoteReadRequestChain = new RemoteReadRequestChain(getParentDataInputStream(), localPath, directWriteBuffer, affixBuffer);
-                        }
+                    if (directWriteBuffer == null) {
+                        directWriteBuffer = bufferPool.getBuffer(diskReadBufferSize);
                     }
-                    catch (IOException e) {
-                        log.error("Unable to obtain open file channel in RW mode", e);
-                        // reset bookkeeper client so that we take direct route
-                        this.bookKeeperClient = null;
-                        isCached = null;
-                        idx--;
-                        blockNum--;
+                    if (CacheConfig.isParallelWarmupEnabled(conf)) {
+                        log.debug(String.format("Sending block %d to remoteFetchRequestChain", blockNum));
+                        try {
+                            if (directReadRequestChain == null) {
+                                directReadRequestChain = new DirectReadRequestChain(getParentDataInputStream());
+                            }
+                            if (remoteFetchRequestChain == null) {
+                                FSDataInputStream inputStream = remoteFileSystem.open(new Path(remotePath), CacheConfig.getBlockSize(conf));
+                                remoteFetchRequestChain = new RemoteFetchRequestChain(inputStream, localPath, directWriteBuffer, conf);
+                            }
+                        } catch (IOException e) {
+                            log.error("Unable to obtain open file channel in RW mode", e);
+                            // reset bookkeeper client so that we take direct route
+                            this.bookKeeperClient = null;
+                            isCached = null;
+                            idx--;
+                            blockNum--;
+                        }
+                        directReadRequestChain.addReadRequest(readRequest);
+                        remoteFetchRequestChain.addReadRequest(readRequest.clone());
                     }
-                    remoteReadRequestChain.addReadRequest(readRequest);
+                    else {
+                        log.debug(String.format("Sending block %d to remoteReadRequestChain", blockNum));
+                        try {
+                            if (affixBuffer == null) {
+                                affixBuffer = new byte[blockSize];
+                            }
+                            if (remoteReadRequestChain == null) {
+                                remoteReadRequestChain = new RemoteReadRequestChain(getParentDataInputStream(), localPath, directWriteBuffer, affixBuffer);
+                            }
+                        } catch (IOException e) {
+                            log.error("Unable to obtain open file channel in RW mode", e);
+                            // reset bookkeeper client so that we take direct route
+                            this.bookKeeperClient = null;
+                            isCached = null;
+                            idx--;
+                            blockNum--;
+                        }
+                        remoteReadRequestChain.addReadRequest(readRequest);
+                    }
                 }
             }
         }
@@ -418,17 +442,26 @@ public class CachingInputStream
             chainedReadRequestChainBuilder.add(cachedReadRequestChain);
         }
 
-        if (directReadRequestChain != null ||
-                remoteReadRequestChain != null) {
+        if (!CacheConfig.isParallelWarmupEnabled(conf)) {
+          if (directReadRequestChain != null ||
+              remoteReadRequestChain != null) {
             ChainedReadRequestChain shared = new ChainedReadRequestChain();
             if (remoteReadRequestChain != null) {
-                shared.addReadRequestChain(remoteReadRequestChain);
+              shared.addReadRequestChain(remoteReadRequestChain);
             }
 
             if (directReadRequestChain != null) {
-                shared.addReadRequestChain(directReadRequestChain);
+              shared.addReadRequestChain(directReadRequestChain);
             }
             chainedReadRequestChainBuilder.add(shared);
+          }
+        } else {
+          if (remoteFetchRequestChain != null) {
+            ChainedReadRequestChain shared = new ChainedReadRequestChain();
+            shared.addReadRequestChain(remoteFetchRequestChain);
+            shared.addReadRequestChain(directReadRequestChain);
+            chainedReadRequestChainBuilder.add(shared);
+          }
         }
 
         if (!nonLocalRequests.isEmpty()) {

@@ -26,6 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -37,6 +38,8 @@ import org.testng.annotations.BeforeClass;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -53,7 +56,7 @@ public class TestCachingInputStream
     int blockSize = 100;
     private final static String testDirectoryPrefix = System.getProperty("java.io.tmpdir") + "TestCachingInputStream/";
     String backendFileName = testDirectoryPrefix + "backendFile";
-    Path backendPath = new Path("file://" + backendFileName.substring(1));
+    Path backendPath = new Path("file:///" + backendFileName.substring(1));
 
     CachingInputStream inputStream;
 
@@ -76,7 +79,7 @@ public class TestCachingInputStream
 
     @BeforeMethod
     public void setup()
-            throws IOException, InterruptedException
+            throws IOException, InterruptedException, URISyntaxException
     {
 
         final Configuration conf = new Configuration();
@@ -114,7 +117,7 @@ public class TestCachingInputStream
     }
 
     public void createCachingStream(Configuration conf)
-            throws InterruptedException, IOException
+            throws InterruptedException, IOException, URISyntaxException
     {
         conf.setBoolean(CacheConfig.DATA_CACHE_STRICT_MODE, true);
         conf.setInt(CacheConfig.dataCacheBookkeeperPortConf, 3456);
@@ -127,7 +130,7 @@ public class TestCachingInputStream
         // This should be after server comes up else client could not be created
         inputStream = new CachingInputStream(fsDataInputStream, conf, backendPath, file.length(),
             file.lastModified(), new CachingFileSystemStats(), ClusterType.TEST_CLUSTER_MANAGER,
-            new BookKeeperFactory(), null);
+            new BookKeeperFactory(), FileSystem.get(new URI(backendFileName), conf));
 
     }
 
@@ -151,7 +154,7 @@ public class TestCachingInputStream
 
     @Test
     public void testCaching()
-            throws IOException
+            throws IOException, InterruptedException
     {
         // 1. Seek and read
         testCachingHelper();
@@ -159,6 +162,9 @@ public class TestCachingInputStream
         // 2. Delete backend file
         File file = new File(backendFileName);
         file.delete();
+        log.info("Deleting the backendfile");
+
+        Thread.sleep(3000);
 
         // 3. Read the same data to ensure that data read from cache correctly
         testCachingHelper();
@@ -177,7 +183,7 @@ public class TestCachingInputStream
 
     @Test
     public void testChunkCachingAndEviction()
-            throws IOException, InterruptedException
+            throws IOException, InterruptedException, URISyntaxException
     {
         // 1. Seek and read some data
         testCachingHelper();
