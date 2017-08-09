@@ -92,16 +92,13 @@ public class RemoteReadRequestChain
             return 0;
         }
 
-
         // Issue-53 : Open file with the right permissions
         File file = new File(localFile);
-
-        if (!file.exists()){
+        if (!file.exists()) {
             file.createNewFile();
             file.setWritable(true, false);
             file.setReadable(true, false);
         }
-
 
         FileChannel fileChannel = new FileOutputStream(new RandomAccessFile(file, "rw").getFD()).getChannel();
         try {
