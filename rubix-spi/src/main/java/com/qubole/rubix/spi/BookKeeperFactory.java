@@ -37,15 +37,19 @@ public class BookKeeperFactory
             throws TTransportException
     {
         if (bookKeeper == null) {
-            TTransport transport;
-            transport = new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf));
-            transport.open();
-            RetryingBookkeeperClient retryingBookkeeperClient = new RetryingBookkeeperClient(transport, CacheConfig.getMaxRetries(conf));
-            return retryingBookkeeperClient;
+            return createBookKeeperClient("localhost", conf);
         }
         else {
             TTransport transport = null;
             return new LocalBookKeeperClient(transport, bookKeeper);
         }
+    }
+
+    public RetryingBookkeeperClient createBookKeeperClient(String host, Configuration conf) throws TTransportException
+    {
+        TTransport transport = new TSocket(host, CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf));
+        transport.open();
+        RetryingBookkeeperClient retryingBookkeeperClient = new RetryingBookkeeperClient(transport, CacheConfig.getMaxRetries(conf));
+        return retryingBookkeeperClient;
     }
 }
