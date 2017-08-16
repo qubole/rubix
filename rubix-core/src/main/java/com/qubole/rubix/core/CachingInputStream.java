@@ -457,10 +457,8 @@ public class CachingInputStream
           }
         } else {
           if (remoteFetchRequestChain != null) {
-            ChainedReadRequestChain shared = new ChainedReadRequestChain();
-            shared.addReadRequestChain(remoteFetchRequestChain);
-            shared.addReadRequestChain(directReadRequestChain);
-            chainedReadRequestChainBuilder.add(shared);
+            chainedReadRequestChainBuilder.add(remoteFetchRequestChain);
+            chainedReadRequestChainBuilder.add(directReadRequestChain);
           }
         }
 
