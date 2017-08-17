@@ -97,6 +97,9 @@
                                         <source>
                                             <location>src/main/resources/rpm/init.d/rubix.service</location>
                                         </source>
+                                        <source>
+                                            <location>src/main/resources/rpm/scripts/configure.py</location>
+                                        </source>
                                     </sources>
                                 </mapping>
                                 <mapping>
