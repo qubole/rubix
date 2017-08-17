@@ -47,6 +47,7 @@ public class BookKeeperServer
     public static void main(String[] args)
     {
         conf = new Configuration();
+
         Runnable bookKeeperServer = new Runnable() {
             public void run()
             {
