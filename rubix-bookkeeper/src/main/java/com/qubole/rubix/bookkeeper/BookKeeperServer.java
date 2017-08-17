@@ -18,7 +18,6 @@ import com.qubole.rubix.spi.BookKeeperService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.thrift.shaded.server.TServer;
 import org.apache.thrift.shaded.server.TThreadPoolServer;
 import org.apache.thrift.shaded.transport.TServerSocket;
@@ -48,8 +47,6 @@ public class BookKeeperServer
     public static void main(String[] args)
     {
         conf = new Configuration();
-        conf.addResource(new YarnConfiguration());
-
         Runnable bookKeeperServer = new Runnable() {
             public void run()
             {
