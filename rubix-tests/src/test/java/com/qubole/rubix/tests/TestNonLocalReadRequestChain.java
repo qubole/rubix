@@ -51,8 +51,8 @@ public class TestNonLocalReadRequestChain
     int blockSize = 100;
     private final static String testDirectoryPrefix = System.getProperty("java.io.tmpdir") + "TestNonLocalReadRequestChain/";
     String backendFileName = testDirectoryPrefix + "backendFile";
-    Path backendPath = new Path("testfile:/" + backendFileName);
-    File backendFile = new File(backendFileName);
+    Path backendPath = new Path("file:///" + backendFileName.substring(1));
+    File backendFile = null;
     final Configuration conf = new Configuration();
     Thread localDataTransferServer;
 
@@ -107,11 +107,10 @@ public class TestNonLocalReadRequestChain
 
         // Populate File
         DataGen.populateFile(backendFileName);
+        backendFile = new File(backendFileName);
 
-        //set class for filepath beginning with testfile
-        conf.setClass("fs.testfile.impl", MockCachingFileSystem.class, FileSystem.class);
         MockCachingFileSystem fs = new MockCachingFileSystem();
-        fs.initialize(null, conf);
+        fs.initialize(fs.getUri(), conf);
         nonLocalReadRequestChain = new NonLocalReadRequestChain("localhost", backendFile.length(), backendFile.lastModified(), conf, fs, backendPath.toString(), ClusterType.TEST_CLUSTER_MANAGER.ordinal(), false);
     }
 

@@ -32,7 +32,6 @@ import static com.google.common.base.Preconditions.checkState;
 
 public class RemoteFetchRequestChain extends ReadRequestChain
 {
-
   private FSDataInputStream inputStream;
   private String localFile;
   private BookKeeperFactory bookKeeperFactory;
@@ -44,8 +43,9 @@ public class RemoteFetchRequestChain extends ReadRequestChain
 
   private static final Log log = LogFactory.getLog(RemoteFetchRequestChain.class);
 
-
-  public RemoteFetchRequestChain(FSDataInputStream inputStream, String localfile, ByteBuffer directBuffer, Configuration conf) throws IOException {
+  public RemoteFetchRequestChain(FSDataInputStream inputStream, String localfile, ByteBuffer directBuffer,
+                                 Configuration conf) throws IOException
+  {
     this.inputStream = inputStream;
     this.localFile = localfile;
     this.conf = conf;
@@ -54,7 +54,8 @@ public class RemoteFetchRequestChain extends ReadRequestChain
     this.directBuffer = directBuffer;
   }
 
-  public Integer call() throws IOException {
+  public Integer call() throws IOException
+  {
     Thread.currentThread().setName(threadName);
     checkState(isLocked, "Trying to execute Chain without locking");
 
@@ -83,12 +84,14 @@ public class RemoteFetchRequestChain extends ReadRequestChain
         totalRequestedRead += readBytes;
       }
       return 0;
-    } finally {
+    }
+    finally {
       fileChannel.close();
     }
   }
 
-  private int copyIntoCache(FileChannel fileChannel, int length, long cacheReadStart) throws IOException {
+  private int copyIntoCache(FileChannel fileChannel, int length, long cacheReadStart) throws IOException
+  {
     long start = System.nanoTime();
     int nread = 0;
     byte[] buffer = new byte[CacheConfig.getDiskReadBufferSizeDefault(conf)];
@@ -96,8 +99,9 @@ public class RemoteFetchRequestChain extends ReadRequestChain
       //log.info("Reading data Offset: " + nread + " of length : " + (length - nread));
       int nbytes = inputStream.read(buffer, nread, length - nread);
       //log.info("Read data : " + nbytes);
-      if (nbytes < 0)
+      if (nbytes < 0) {
         break;
+      }
 
       directBuffer.clear();
       directBuffer.put(buffer, nread, nbytes);
@@ -139,5 +143,4 @@ public class RemoteFetchRequestChain extends ReadRequestChain
   {
     return pos / blockSize;
   }
-
 }

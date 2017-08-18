@@ -162,9 +162,6 @@ public class TestCachingInputStream
         // 2. Delete backend file
         File file = new File(backendFileName);
         file.delete();
-        log.info("Deleting the backendfile");
-
-        Thread.sleep(3000);
 
         // 3. Read the same data to ensure that data read from cache correctly
         testCachingHelper();
