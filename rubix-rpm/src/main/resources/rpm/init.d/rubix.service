@@ -14,6 +14,9 @@ LOG_DIR=/var/logs/rubix
 LOG_FILE=${LOG_DIR}/bks.log
 LOG_FILE_LDS=${LOG_DIR}/lds.log
 
+PRESTO_HOME=/usr/lib/presto
+HADOOP_HOME=/usr/lib/hadoop
+
 # increase mmap system limit
 sudo sysctl -w vm.max_map_count=200000
 
@@ -27,16 +30,15 @@ usage() {
 
 start() {
   export HADOOP_OPTS="-Dlog4j.configuration=file://${LOG4J_FILE}"
-  # Set the fs impls as CachingNativeS3FileSystem for book-keeper. 
   ulimit -n 100000
-  nohup /usr/lib/hadoop2/bin/hadoop jar /usr/lib/rubix/lib/rubix-bookkeeper-*.jar com.qubole.rubix.bookkeeper.BookKeeperServer &
+  nohup $HADOOP_HOME/bin/hadoop jar /usr/lib/rubix/lib/rubix-bookkeeper-*.jar com.qubole.rubix.bookkeeper.BookKeeperServer &
 
   PID=$!
   echo $PID > ${PID_FILE}
 
   echo "Starting Cache BookKeeper server with pid `cat ${PID_FILE}`"
   export HADOOP_OPTS="-Dlog4j.configuration=file://${LOG4J_FILE_LDS}"
-  nohup /usr/lib/hadoop2/bin/hadoop jar /usr/lib/rubix/lib/rubix-bookkeeper-*.jar com.qubole.rubix.bookkeeper.LocalDataTransferServer &
+  nohup $HADOOP_HOME/bin/hadoop jar /usr/lib/rubix/lib/rubix-bookkeeper-*.jar com.qubole.rubix.bookkeeper.LocalDataTransferServer &
   PIDL=$!
   echo $PIDL > ${PID_FILE_2}
   echo "Starting Local Transfer server with pid $PIDL"
