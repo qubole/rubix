@@ -130,7 +130,8 @@ public class ReadRequest
         return (int) (backendReadEnd - backendReadStart);
     }
 
-    public ReadRequest clone() {
+    public ReadRequest clone()
+    {
         ReadRequest otherRequest = new ReadRequest();
         otherRequest.backendReadStart = this.backendReadStart;
         otherRequest.backendReadEnd = this.backendReadEnd;

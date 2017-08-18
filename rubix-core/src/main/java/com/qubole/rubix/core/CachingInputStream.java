@@ -278,7 +278,6 @@ public class CachingInputStream
             {
                 ReadRequestChainStats stats = new ReadRequestChainStats();
                 for (ReadRequestChain readRequestChain : readRequestChains) {
-                    log.debug("Updating cache for " + readRequestChain.toString());
                     readRequestChain.updateCacheStatus(remotePath, fileSize, lastModified, blockSize, conf);
                     stats = stats.add(readRequestChain.getStats());
                 }
@@ -404,7 +403,8 @@ public class CachingInputStream
                                 FSDataInputStream inputStream = remoteFileSystem.open(new Path(remotePath), CacheConfig.getBlockSize(conf));
                                 remoteFetchRequestChain = new RemoteFetchRequestChain(inputStream, localPath, directWriteBuffer, conf);
                             }
-                        } catch (IOException e) {
+                        }
+                        catch (IOException e) {
                             log.error("Unable to obtain open file channel in RW mode", e);
                             // reset bookkeeper client so that we take direct route
                             this.bookKeeperClient = null;
@@ -424,7 +424,8 @@ public class CachingInputStream
                             if (remoteReadRequestChain == null) {
                                 remoteReadRequestChain = new RemoteReadRequestChain(getParentDataInputStream(), localPath, directWriteBuffer, affixBuffer);
                             }
-                        } catch (IOException e) {
+                        }
+                        catch (IOException e) {
                             log.error("Unable to obtain open file channel in RW mode", e);
                             // reset bookkeeper client so that we take direct route
                             this.bookKeeperClient = null;
@@ -443,23 +444,23 @@ public class CachingInputStream
         }
 
         if (!CacheConfig.isParallelWarmupEnabled(conf)) {
-          if (directReadRequestChain != null ||
-              remoteReadRequestChain != null) {
-            ChainedReadRequestChain shared = new ChainedReadRequestChain();
-            if (remoteReadRequestChain != null) {
-              shared.addReadRequestChain(remoteReadRequestChain);
+            if (directReadRequestChain != null ||
+                remoteReadRequestChain != null) {
+                ChainedReadRequestChain shared = new ChainedReadRequestChain();
+                if (remoteReadRequestChain != null) {
+                    shared.addReadRequestChain(remoteReadRequestChain);
+                }
+                if (directReadRequestChain != null) {
+                    shared.addReadRequestChain(directReadRequestChain);
+                }
+                chainedReadRequestChainBuilder.add(shared);
             }
-
-            if (directReadRequestChain != null) {
-              shared.addReadRequestChain(directReadRequestChain);
+        }
+        else {
+            if (remoteFetchRequestChain != null) {
+                chainedReadRequestChainBuilder.add(remoteFetchRequestChain);
+                chainedReadRequestChainBuilder.add(directReadRequestChain);
             }
-            chainedReadRequestChainBuilder.add(shared);
-          }
-        } else {
-          if (remoteFetchRequestChain != null) {
-            chainedReadRequestChainBuilder.add(remoteFetchRequestChain);
-            chainedReadRequestChainBuilder.add(directReadRequestChain);
-          }
         }
 
         if (!nonLocalRequests.isEmpty()) {
