@@ -88,10 +88,10 @@ public class NonLocalRequestChain extends ReadRequestChain
         bookKeeperCleint = bookKeeperFactory.createBookKeeperClient(remoteNodeName, conf);
         List<BlockLocation> isCached = null;
         isCached = bookKeeperCleint.getCacheStatus(remoteFilePath, fileSize, lastModified,
-            readRequest.backendReadStart,readRequest.backendReadEnd, clusterType);
+            readRequest.backendReadStart, readRequest.backendReadEnd, clusterType);
 
         int idx = 0;
-        for (long blockNum = readRequest.backendReadStart; blockNum < readRequest.backendReadEnd; blockNum ++, idx++) {
+        for (long blockNum = readRequest.backendReadStart; blockNum < readRequest.backendReadEnd; blockNum++, idx++) {
           if (isCached.get(idx).getLocation() == Location.CACHED) {
             if (nonLocalReadRequestChain == null) {
               nonLocalReadRequestChain = new NonLocalReadRequestChain(remoteNodeName, fileSize, lastModified, conf,
@@ -99,14 +99,16 @@ public class NonLocalRequestChain extends ReadRequestChain
             }
             nonLocalReadRequestChain.addReadRequest(readRequest);
 
-          } else {
+          }
+          else {
             if (directReadRequestChain == null) {
               directReadRequestChain = new DirectReadRequestChain(inputStream);
             }
             directReadRequestChain.addReadRequest(readRequest);
           }
         }
-      } catch (Exception e) {
+      }
+      catch (Exception e) {
         log.warn("Could not create BookKeeper Client ", e);
         if (strictMode) {
           throw Throwables.propagate(e);
