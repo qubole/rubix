@@ -25,6 +25,7 @@ import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -59,6 +60,7 @@ public class PrestoClusterManager extends ClusterManager
 
     public static String serverPortConf = "caching.fs.presto-server-port";
     public static String serverAddressConf = "master.hostname";
+    public static String yarnServerAddressConf = "yarn.resourcemanager.address";
 
     // Safe to use single instance of HttpClient since Supplier.get() provides synchronization
     @Override
@@ -66,7 +68,8 @@ public class PrestoClusterManager extends ClusterManager
     {
         super.initialize(conf);
         this.serverPort = conf.getInt(serverPortConf, serverPort);
-        this.serverAddress = conf.get(serverAddressConf, serverAddress);
+        YarnConfiguration yarnConfiguration = new YarnConfiguration();
+        this.serverAddress = getMasterHostname(yarnConfiguration);
         ExecutorService executor = Executors.newSingleThreadExecutor();
         nodesCache = CacheBuilder.newBuilder()
                 .refreshAfterWrite(getNodeRefreshTime(), TimeUnit.SECONDS)
@@ -189,6 +192,24 @@ public class PrestoClusterManager extends ClusterManager
                         }
                     }
                 }, executor));
+    }
+
+    private String getMasterHostname(Configuration conf)
+    {
+        String host;
+        log.debug("Trying master.hostname");
+        host = conf.get(serverAddressConf);
+        if (host != null) {
+            return host;
+        }
+        log.debug("Trying yarn.resourcemanager.address");
+        host = conf.get(yarnServerAddressConf);
+        if (host != null) {
+            host = host.substring(0, host.indexOf(":"));
+            return host;
+        }
+        log.debug("No hostname found in etc/*-site.xml, returning localhost");
+        return serverAddress;
     }
 
     @Override
