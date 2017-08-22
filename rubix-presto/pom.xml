@@ -21,9 +21,8 @@
         </dependency>
 
         <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-core</artifactId>
-            <scope>provided</scope>
+            <groupId>com.qubole.rubix</groupId>
+            <artifactId>rubix-hadoop2</artifactId>
         </dependency>
 
         <dependency>
