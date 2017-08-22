@@ -21,11 +21,6 @@
         </dependency>
 
         <dependency>
-            <groupId>com.qubole.rubix</groupId>
-            <artifactId>rubix-hadoop2</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-common</artifactId>
             <scope>provided</scope>
@@ -99,7 +94,6 @@
                                     <include>com.google.code.gson:gson</include>
                                     <include>org.apache.httpcomponents:httpclient</include>
                                     <include>com.google.guava:guava</include>
-                                    <include>org.apache.hadoop</include>
                                 </includes>
                             </artifactSet>
                             <relocations>
