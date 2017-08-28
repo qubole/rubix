@@ -18,12 +18,12 @@
         <dependency>
             <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-core</artifactId>
-            <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-core</artifactId>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
