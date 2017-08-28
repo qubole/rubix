@@ -101,6 +101,16 @@ TestClusterManager
         server.stop(0);
     }
 
+    @Test
+    public void testParseIp()
+    {
+        PrestoClusterManager clusterManager = new PrestoClusterManager();
+        String uri = "hdfs://ip-10-154-45-46.ec2.internal:8020";
+        String expected = "10.154.45.46";
+        String actual = clusterManager.parseServerIp(uri);
+        assertTrue("Error parsing URI", actual.equals(expected));
+    }
+
     private HttpServer createServer(String endpoint1, HttpHandler handler1, String endpoint2, HttpHandler handler2)
             throws IOException
     {

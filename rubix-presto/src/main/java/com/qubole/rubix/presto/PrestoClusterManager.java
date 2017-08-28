@@ -25,7 +25,6 @@ import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -60,7 +59,7 @@ public class PrestoClusterManager extends ClusterManager
 
     public static String serverPortConf = "caching.fs.presto-server-port";
     public static String serverAddressConf = "master.hostname";
-    public static String yarnServerAddressConf = "yarn.resourcemanager.address";
+    public static String defaultFSConf = "fs.defaultFS";
 
     // Safe to use single instance of HttpClient since Supplier.get() provides synchronization
     @Override
@@ -68,8 +67,7 @@ public class PrestoClusterManager extends ClusterManager
     {
         super.initialize(conf);
         this.serverPort = conf.getInt(serverPortConf, serverPort);
-        YarnConfiguration yarnConfiguration = new YarnConfiguration();
-        this.serverAddress = getMasterHostname(yarnConfiguration);
+        this.serverAddress = getMasterHostname(conf);
         ExecutorService executor = Executors.newSingleThreadExecutor();
         nodesCache = CacheBuilder.newBuilder()
                 .refreshAfterWrite(getNodeRefreshTime(), TimeUnit.SECONDS)
@@ -202,14 +200,36 @@ public class PrestoClusterManager extends ClusterManager
         if (host != null) {
             return host;
         }
-        log.debug("Trying yarn.resourcemanager.address");
-        host = conf.get(yarnServerAddressConf);
+        log.debug("Trying fs.defaultFS");
+        host = parseServerIp(conf.get(defaultFSConf));
         if (host != null) {
-            host = host.substring(0, host.indexOf(":"));
             return host;
         }
-        log.debug("No hostname found in etc/*-site.xml, returning localhost");
+        log.warn("No hostname found in configuration, returning localhost");
         return serverAddress;
+    }
+
+    /*
+    This is a hack to get master IP since rubix config completely depends on hadoop.
+    */
+    public String parseServerIp(String uri)
+    {
+        try {
+            StringBuffer ip = new StringBuffer();
+            int beginindex = uri.indexOf("-");
+            int endindex = uri.indexOf(".");
+            String[] tokens = uri.substring(beginindex + 1, endindex).split("-");
+            for (String token : tokens) {
+                ip.append(token);
+                ip.append(".");
+            }
+            String ret = ip.toString();
+            return ret.substring(0, ret.length() - 1);
+        }
+        catch (Exception e) {
+            log.warn("error parsing master ip from URI", e);
+        }
+        return null;
     }
 
     @Override
