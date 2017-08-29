@@ -25,7 +25,6 @@ import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -68,8 +67,7 @@ public class PrestoClusterManager extends ClusterManager
     {
         super.initialize(conf);
         this.serverPort = conf.getInt(serverPortConf, serverPort);
-        YarnConfiguration yarnConfiguration = new YarnConfiguration();
-        this.serverAddress = getMasterHostname(yarnConfiguration);
+        this.serverAddress = getMasterHostname(conf);
         ExecutorService executor = Executors.newSingleThreadExecutor();
         nodesCache = CacheBuilder.newBuilder()
                 .refreshAfterWrite(getNodeRefreshTime(), TimeUnit.SECONDS)
