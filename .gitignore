@@ -21,3 +21,9 @@
 
 # Maven
 target
+
+# Sphinx
+_build
+
+# Mac
+.DS_Store
