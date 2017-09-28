@@ -15,19 +15,15 @@
 
     <properties>
         <main.basedir>${project.parent.basedir}</main.basedir>
+        <dep.hadoop2.version>2.6.0</dep.hadoop2.version>
     </properties>
 
     <dependencies>
 
         <dependency>
             <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-core</artifactId>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-common</artifactId>
+            <version>${dep.hadoop2.version}</version>
             <scope>provided</scope>
         </dependency>
 
