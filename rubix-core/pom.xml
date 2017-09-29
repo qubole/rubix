@@ -15,7 +15,6 @@
 
     <properties>
         <main.basedir>${project.parent.basedir}</main.basedir>
-        <dep.hadoop2.version>2.6.0</dep.hadoop2.version>
     </properties>
 
     <dependencies>
