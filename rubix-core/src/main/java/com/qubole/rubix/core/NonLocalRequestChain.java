@@ -22,7 +22,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 
 import java.util.List;
 
@@ -42,13 +41,17 @@ public class NonLocalRequestChain extends ReadRequestChain
   int clusterType;
   boolean strictMode;
   BookKeeperFactory bookKeeperFactory;
+  RetryingBookkeeperClient bookKeeperClient;
+  NonLocalReadRequestChain nonLocalReadRequestChain = null;
+  DirectReadRequestChain directReadRequestChain = null;
+  NonLocalFetchRequestChain nonLocalFetchRequestChain = null;
 
   DirectReadRequestChain directReadChain = null;
   int directRead = 0;
 
   public NonLocalRequestChain(String remoteNodeName, long fileSize, long lastModified, Configuration conf,
                               FileSystem remoteFileSystem, String remoteFilePath, FSDataInputStream inputStream,
-                              int clusterType, boolean strictMode)
+                              int clusterType, boolean strictMode) throws Exception
   {
     this.remoteNodeName = remoteNodeName;
     this.remoteFileSystem = remoteFileSystem;
@@ -60,11 +63,62 @@ public class NonLocalRequestChain extends ReadRequestChain
     this.clusterType = clusterType;
     this.strictMode = strictMode;
     this.bookKeeperFactory = new BookKeeperFactory();
+
   }
 
   public ReadRequestChainStats getStats()
   {
     return new ReadRequestChainStats().setRemoteReads(requests);
+  }
+
+  public void addReadRequest(ReadRequest readRequest)
+  {
+    List<BlockLocation> isCached = null;
+
+    // TODO Optimize not to make remote cache status call everytime
+    try {
+      this.bookKeeperClient = bookKeeperFactory.createBookKeeperClient(remoteNodeName, conf);
+      isCached = bookKeeperClient.getCacheStatus(remoteFilePath, fileSize, lastModified,
+            readRequest.backendReadStart, readRequest.backendReadEnd, clusterType);
+    }
+    catch (Exception e) {
+      if (strictMode) {
+        throw Throwables.propagate(e);
+      }
+      log.info("Could not get cache status from server " + Throwables.getStackTraceAsString(e));
+    }
+    finally {
+      try {
+        bookKeeperClient.close();
+        bookKeeperClient = null;
+      }
+      catch (Exception e) {
+        log.info("Could not close BookKeeper client " + Throwables.getStackTraceAsString(e));
+      }
+    }
+
+    int idx = 0;
+    for (long blockNum = readRequest.backendReadStart; blockNum < readRequest.backendReadEnd; blockNum++, idx++) {
+      if (isCached != null && isCached.get(idx).getLocation() == Location.CACHED) {
+        if (nonLocalReadRequestChain == null) {
+          nonLocalReadRequestChain = new NonLocalReadRequestChain(remoteNodeName, fileSize, lastModified, conf,
+              remoteFileSystem, remoteFilePath, clusterType, strictMode);
+        }
+        nonLocalReadRequestChain.addReadRequest(readRequest);
+      }
+      else {
+        if (directReadRequestChain == null) {
+          directReadRequestChain = new DirectReadRequestChain(inputStream);
+        }
+        directReadRequestChain.addReadRequest(readRequest);
+
+        if (nonLocalFetchRequestChain == null) {
+          nonLocalFetchRequestChain = new NonLocalFetchRequestChain(remoteFilePath, remoteFileSystem, remoteNodeName,
+              conf, lastModified, fileSize, clusterType);
+        }
+        nonLocalFetchRequestChain.addReadRequest(readRequest);
+      }
+    }
   }
 
   @Override
@@ -75,64 +129,22 @@ public class NonLocalRequestChain extends ReadRequestChain
       return 0;
     }
     checkState(isLocked, "Trying to execute Chain without locking");
+    int nonLocalReadBytes = 0;
+    int directReadBytes = 0;
 
-    NonLocalReadRequestChain nonLocalReadRequestChain = null;
-    DirectReadRequestChain directReadRequestChain = null;
-
-    for (ReadRequest readRequest : readRequests) {
-      if (cancelled) {
-        propagateCancel(this.getClass().getName());
-      }
-      RetryingBookkeeperClient bookKeeperCleint;
-      try {
-        bookKeeperCleint = bookKeeperFactory.createBookKeeperClient(remoteNodeName, conf);
-        List<BlockLocation> isCached = null;
-        isCached = bookKeeperCleint.getCacheStatus(remoteFilePath, fileSize, lastModified,
-            readRequest.backendReadStart, readRequest.backendReadEnd, clusterType);
-
-        int idx = 0;
-        for (long blockNum = readRequest.backendReadStart; blockNum < readRequest.backendReadEnd; blockNum++, idx++) {
-          if (isCached.get(idx).getLocation() == Location.CACHED) {
-            if (nonLocalReadRequestChain == null) {
-              nonLocalReadRequestChain = new NonLocalReadRequestChain(remoteNodeName, fileSize, lastModified, conf,
-                  remoteFileSystem, remoteFilePath, clusterType, strictMode);
-            }
-            nonLocalReadRequestChain.addReadRequest(readRequest);
-
-          }
-          else {
-            if (directReadRequestChain == null) {
-              directReadRequestChain = new DirectReadRequestChain(inputStream);
-            }
-            directReadRequestChain.addReadRequest(readRequest);
-          }
-        }
-      }
-      catch (Exception e) {
-        log.warn("Could not create BookKeeper Client ", e);
-        if (strictMode) {
-          throw Throwables.propagate(e);
-        }
-        else {
-          return directReadRequest(readRequests.indexOf(readRequest));
-        }
-      }
+    if (nonLocalReadRequestChain != null) {
+      nonLocalReadBytes += nonLocalFetchRequestChain.call();
     }
-    return 0;
-  }
 
-  private int directReadRequest(int index)
-      throws Exception
-  {
-    FSDataInputStream inputStream = remoteFileSystem.open(new Path(remoteFilePath));
-    directReadChain = new DirectReadRequestChain(inputStream);
-    for (ReadRequest readRequest : readRequests.subList(index, readRequests.size())) {
-      directReadChain.addReadRequest(readRequest);
+    if (directReadRequestChain != null) {
+      directReadBytes += directReadRequestChain.call();
     }
-    directReadChain.lock();
-    directRead = directReadChain.call();
-    inputStream.close();
-    directReadChain = null;
-    return directRead;
+
+    // Send a request remote node bookkeeper to fetch the data in async mode
+    if (nonLocalFetchRequestChain != null) {
+      nonLocalFetchRequestChain.call();
+    }
+
+    return nonLocalReadBytes + directReadBytes;
   }
 }

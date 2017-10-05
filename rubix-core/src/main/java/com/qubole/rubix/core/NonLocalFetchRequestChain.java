@@ -13,8 +13,10 @@
 package com.qubole.rubix.core;
 
 import com.qubole.rubix.spi.BookKeeperFactory;
+import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 
 public class NonLocalFetchRequestChain extends ReadRequestChain
@@ -24,19 +26,45 @@ public class NonLocalFetchRequestChain extends ReadRequestChain
   String remotePath;
   FileSystem remoteFileSystem;
   String remoteNodeLocation;
+  Configuration conf;
   BookKeeperFactory bookKeeperFactory;
+  long lastModified;
+  long fileSize;
+  int clusterType;
 
-  public NonLocalFetchRequestChain(String remotePath, FileSystem remoteFileSystem, String remoteNodeLocation)
+  public NonLocalFetchRequestChain(String remotePath, FileSystem remoteFileSystem, String remoteNodeLocation,
+                                   Configuration conf, long lastModified, long fileSize, int clusterType)
   {
     this.remotePath = remotePath;
     this.remoteFileSystem = remoteFileSystem;
     this.remoteNodeLocation = remoteNodeLocation;
-    this.bookKeeperFactory = bookKeeperFactory;
+    this.conf = conf;
+    this.lastModified = lastModified;
+    this.fileSize = fileSize;
+    this.clusterType = clusterType;
+    this.bookKeeperFactory = new BookKeeperFactory();
   }
 
   @Override
   public Integer call() throws Exception
   {
+    if (readRequests.size() == 0) {
+      return 0;
+    }
+
+    RetryingBookkeeperClient client = null;
+    try {
+      client = bookKeeperFactory.createBookKeeperClient(remoteNodeLocation, conf);
+      for (ReadRequest request : readRequests) {
+        client.readData(remotePath, request.backendReadStart, request.getBackendReadLength(),
+            fileSize, lastModified, clusterType);
+      }
+    }
+    finally {
+      client.close();
+      client = null;
+    }
+
     return 0;
   }
 
