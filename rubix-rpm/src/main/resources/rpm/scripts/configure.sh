@@ -13,6 +13,12 @@ OUTPUT_FILE="/etc/rubix/config.xml"
 <name>hadoop.cache.data.dirprefix.list</name>
 <value>/var/lib/rubix/cache/data</value>
 </property>
+<property>
+  <name>fs.rubix.impl</name>
+  <value>com.qubole.rubix.presto.CachingPrestoS3FileSystem</value>
+  <description>http://wiki.apache.org/hadoop/Hive/HBaseIntegration</description>
+</property>
+
 EOF
   ) > $OUTPUT_FILE
 
