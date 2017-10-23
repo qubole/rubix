@@ -132,9 +132,11 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
             return inputStream;
         }
 
+        Path originalPath = new Path(getOriginalURI(path.toUri()).getScheme(), path.toUri().getAuthority(),
+            path.toUri().getPath());
         return new FSDataInputStream(
                 new BufferedFSInputStream(
-                        new CachingInputStream(this, path, this.getConf(), statsMBean,
+                        new CachingInputStream(this, originalPath, this.getConf(), statsMBean,
                                 clusterManager.getClusterType(), bookKeeperFactory, fs, bufferSize, statistics),
                                                     CacheConfig.getBlockSize(getConf())));
     }
