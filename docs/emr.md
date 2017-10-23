@@ -44,7 +44,7 @@ Create rubix-admin config file at ~/.radminrc, bellow is the sample format.
 
 
 ## Install RubiX
-    rubix_admin installer install --rpm <path-to-qubole-presto-rpm> <path-to-rubix-rpm> 
+    rubix_admin installer install --rpm <path-to-rubix-rpm> 
 
 To enable debugging and see the rubix activity, create /usr/lib/presto/etc/log.properties file with bellow config.
 com.qubole=DEBUG
