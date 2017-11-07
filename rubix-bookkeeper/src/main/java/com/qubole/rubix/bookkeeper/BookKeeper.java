@@ -75,11 +75,14 @@ public class BookKeeper
     private List<String> nodes;
     int currentNodeIndex = -1;
     static long splitSize;
+    private RemoteFetchProcessor fetchProcessor;
 
     public BookKeeper(Configuration conf)
     {
         this.conf = conf;
         initializeCache(conf);
+        fetchProcessor = new RemoteFetchProcessor(conf);
+        fetchProcessor.startAsync();
     }
 
     @Override
@@ -261,6 +264,10 @@ public class BookKeeper
     public boolean readData(String remotePath, long offset, int length, long fileSize, long lastModified, int clusterType)
             throws TException
     {
+        if (CacheConfig.isParallelWarmupEnabled(conf)) {
+          fetchProcessor.addToProcessQueue(remotePath, offset, length, fileSize, lastModified);
+          return true;
+        }
         int blockSize = CacheConfig.getBlockSize(conf);
         byte[] buffer = new byte[blockSize];
         ByteBuffer byteBuffer = null;

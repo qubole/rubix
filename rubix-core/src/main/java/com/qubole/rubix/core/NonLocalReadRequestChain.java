@@ -88,6 +88,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
             }
             SocketChannel dataTransferClient;
             try {
+                //TODO create the client only once
                 dataTransferClient = DataTransferClientHelper.createDataTransferClient(remoteNodeName, conf);
             }
             catch (Exception e) {

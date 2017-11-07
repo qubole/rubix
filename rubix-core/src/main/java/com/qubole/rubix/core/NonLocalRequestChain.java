@@ -51,7 +51,7 @@ public class NonLocalRequestChain extends ReadRequestChain
 
   public NonLocalRequestChain(String remoteNodeName, long fileSize, long lastModified, Configuration conf,
                               FileSystem remoteFileSystem, String remoteFilePath, FSDataInputStream inputStream,
-                              int clusterType, boolean strictMode) throws Exception
+                              int clusterType, boolean strictMode)
   {
     this.remoteNodeName = remoteNodeName;
     this.remoteFileSystem = remoteFileSystem;

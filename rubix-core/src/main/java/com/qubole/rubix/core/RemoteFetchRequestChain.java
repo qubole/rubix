@@ -20,6 +20,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -32,8 +34,11 @@ import static com.google.common.base.Preconditions.checkState;
 
 public class RemoteFetchRequestChain extends ReadRequestChain
 {
-  private FSDataInputStream inputStream;
+  private FileSystem remoteFileSystem;
   private String localFile;
+  private String remotePath;
+  private long fileSize;
+  private long lastModified;
   private BookKeeperFactory bookKeeperFactory;
   private int totalRequestedRead = 0;
   private int warmupPenalty = 0;
@@ -43,15 +48,34 @@ public class RemoteFetchRequestChain extends ReadRequestChain
 
   private static final Log log = LogFactory.getLog(RemoteFetchRequestChain.class);
 
-  public RemoteFetchRequestChain(FSDataInputStream inputStream, String localfile, ByteBuffer directBuffer,
-                                 Configuration conf) throws IOException
+  public RemoteFetchRequestChain(FileSystem remoteFileSystem, String localfile, ByteBuffer directBuffer,
+                                 Configuration conf, String remotePath, long fileSize,
+                                 long lastModified) throws IOException
   {
-    this.inputStream = inputStream;
+    this.remoteFileSystem = remoteFileSystem;
     this.localFile = localfile;
     this.conf = conf;
+    this.remotePath = remotePath;
+    this.fileSize = fileSize;
+    this.lastModified = lastModified;
     this.bookKeeperFactory = new BookKeeperFactory();
     this.blockSize = CacheConfig.getBlockSize(conf);
     this.directBuffer = directBuffer;
+  }
+
+  public String getRemotePath()
+  {
+    return this.remotePath;
+  }
+
+  public long getFileSize()
+  {
+    return this.fileSize;
+  }
+
+  public long getLastModified()
+  {
+    return this.lastModified;
   }
 
   public Integer call() throws IOException
@@ -70,8 +94,12 @@ public class RemoteFetchRequestChain extends ReadRequestChain
       file.setReadable(true, false);
     }
 
-    FileChannel fileChannel = new FileOutputStream(new RandomAccessFile(file, "rw").getFD()).getChannel();
+    FSDataInputStream inputStream = null;
+    FileChannel fileChannel = null;
+
     try {
+      inputStream = remoteFileSystem.open(new Path(remotePath), CacheConfig.getBlockSize(conf));
+      fileChannel = new FileOutputStream(new RandomAccessFile(file, "rw").getFD()).getChannel();
       for (ReadRequest readRequest : readRequests) {
         if (cancelled) {
           propagateCancel(this.getClass().getName());
@@ -80,17 +108,20 @@ public class RemoteFetchRequestChain extends ReadRequestChain
         int readBytes = 0;
         inputStream.seek(readRequest.backendReadStart);
         //log.info("Processing request of  " + readRequest.getBackendReadLength() + " from " + readRequest.backendReadStart);
-        readBytes = copyIntoCache(fileChannel, readRequest.getBackendReadLength(), readRequest.backendReadStart);
+        readBytes = copyIntoCache(inputStream, fileChannel, readRequest.getBackendReadLength(),
+            readRequest.backendReadStart);
         totalRequestedRead += readBytes;
       }
       return 0;
     }
     finally {
       fileChannel.close();
+      inputStream.close();
     }
   }
 
-  private int copyIntoCache(FileChannel fileChannel, int length, long cacheReadStart) throws IOException
+  private int copyIntoCache(FSDataInputStream inputStream, FileChannel fileChannel, int length,
+                            long cacheReadStart) throws IOException
   {
     long start = System.nanoTime();
     int nread = 0;
