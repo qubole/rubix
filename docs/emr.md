@@ -26,7 +26,7 @@ Log into master and all slave nodes as "hadoop" user.
 
 ## Install RubiX Admin
 
-    pip install rubix-admin
+    pip install rubix_admin
 
 ## Setup and check passwordless SSH between cluster machines
    
@@ -43,40 +43,21 @@ Create rubix-admin config file at ~/.radminrc, bellow is the sample format.
     remote_packages_path: /tmp/rubix_rpms
 
 
-## Install Qubole Presto & RubiX
-    hadoop dfs -get s3://public-qubole/presto/presto-server-rpm-0.180-q1-SNAPSHOT.x86_64.rpm
-    rubix-admin installer install --rpm <path-to-qubole-presto-rpm> <path-to-rubix-rpm> 
-
-## Configure Presto
-
-After the installation has completed, update config.properties of *all* the nodes.
-Update /usr/lib/presto/etc/config.properties with the following values,
-
-### Master
-    coordinator=true
-    node-scheduler.include-coordinator=false
-    http-server.http.port=8081
-    query.max-memory=10GB
-    query.max-memory-per-node=1GB
-    discovery-server.enabled=true
-    discovery.uri=localhost:8081
-
-### Workers
-    coordinator=false
-    http-server.http.port=8081
-    query.max-memory=10GB
-    query.max-memory-per-node=1GB
-    discovery.uri=http://<master-public-ip>:8081
+## Install RubiX
+    rubix_admin installer install --rpm <path-to-rubix-rpm> 
 
 To enable debugging and see the rubix activity, create /usr/lib/presto/etc/log.properties file with bellow config.
 com.qubole=DEBUG
 
-## Start rubix-daemons & Qubole Presto
-    rubix-admin daemon start --debug
+## Start rubix-daemons
+    rubix_admin daemon start --debug
     # To verfiy the daemons are up
        verfiy process ids for both 
        BookKeeperServer and LocalDiscoveryServer.
     sudo jps -m
     
-    # start the presto cluster on each node with 
-    /usr/lib/presto/bin/launcher
+## Restart Presto Server
+    sudo restart presto-server
+    
+## Start the presto cli
+    presto-cli --catalog hive --schema default
