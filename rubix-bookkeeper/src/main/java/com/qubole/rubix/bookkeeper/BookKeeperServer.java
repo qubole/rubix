@@ -18,6 +18,9 @@ import com.qubole.rubix.spi.BookKeeperService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 import org.apache.thrift.shaded.server.TServer;
 import org.apache.thrift.shaded.server.TThreadPoolServer;
 import org.apache.thrift.shaded.transport.TServerSocket;
@@ -30,7 +33,7 @@ import static com.qubole.rubix.spi.CacheConfig.getServerPort;
 /**
  * Created by stagra on 15/2/16.
  */
-public class BookKeeperServer
+public class BookKeeperServer extends Configured implements Tool
 {
     public static BookKeeper bookKeeper;
     public static BookKeeperService.Processor processor;
@@ -44,10 +47,15 @@ public class BookKeeperServer
     private BookKeeperServer()
     {}
 
-    public static void main(String[] args)
+    public static void main(String[] args) throws Exception
     {
-        conf = new Configuration();
+        ToolRunner.run(new Configuration(), new BookKeeperServer(), args);
+    }
 
+    @Override
+    public int run(String[] args) throws Exception
+    {
+        conf = this.getConf();
         Runnable bookKeeperServer = new Runnable() {
             public void run()
             {
@@ -55,6 +63,7 @@ public class BookKeeperServer
             }
         };
         new Thread(bookKeeperServer).run();
+        return 0;
     }
 
     public static void startServer(Configuration conf)
