@@ -22,6 +22,9 @@ import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -38,7 +41,7 @@ import java.util.concurrent.Executors;
  * Created by sakshia on 26/10/16.
  */
 
-public class LocalDataTransferServer
+public class LocalDataTransferServer extends Configured implements Tool
 {
     private static Log log = LogFactory.getLog(LocalDataTransferServer.class.getName());
     private static Configuration conf;
@@ -48,10 +51,17 @@ public class LocalDataTransferServer
     {
     }
 
-    public static void main(String[] args)
+    public static void main(String[] args) throws Exception
     {
-        conf = new Configuration();
+        ToolRunner.run(new Configuration(), new LocalDataTransferServer(), args);
+    }
+
+    @Override
+    public int run(String[] args) throws Exception
+    {
+        conf = this.getConf();
         startServer(conf);
+        return 0;
     }
 
     public static void startServer(Configuration conf)
