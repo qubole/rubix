@@ -60,7 +60,6 @@ public class RemoteFetchProcessor extends AbstractScheduledService
   Runnable runnableStatusUpdateTask = null;
   int diskReadBufferSize;
   private static DirectBufferPool bufferPool = new DirectBufferPool();
-  private ByteBuffer directWriteBuffer = null;
 
   private static final Log log = LogFactory.getLog(RemoteFetchProcessor.class);
 
@@ -71,7 +70,6 @@ public class RemoteFetchProcessor extends AbstractScheduledService
     this.rangeMap = new ConcurrentHashMap<String, RangeSet<Long>>();
     this.fetchRequestMap = new ConcurrentHashMap<String, FileMetadataRequest>();
     this.diskReadBufferSize = CacheConfig.getDiskReadBufferSizeDefault(conf);
-    this.directWriteBuffer = bufferPool.getBuffer(diskReadBufferSize);
 
     runnableStatusUpdateTask = new Runnable()
     {
@@ -100,6 +98,8 @@ public class RemoteFetchProcessor extends AbstractScheduledService
   {
     if (!processQueue.isEmpty()) {
       FetchRequest request = processQueue.remove();
+      log.info("Processing Request : RemotePath - " + request.getRemotePath() + " Offset : " +
+          request.getOffset() + " Length : " + request.getLength());
       if (!rangeMap.containsKey(request.getRemotePath())) {
         RangeSet<Long> rangeSet = TreeRangeSet.create();
         rangeMap.put(request.getRemotePath(), rangeSet);
@@ -111,6 +111,7 @@ public class RemoteFetchProcessor extends AbstractScheduledService
       synchronized (remotePath) {
         RangeSet<Long> rangeSet = rangeMap.get(remotePath);
         rangeSet.add(Range.open(request.getOffset(), request.getOffset() + request.getLength()));
+        log.info("RangeSet : " + rangeSet);
       }
     }
   }
@@ -128,10 +129,12 @@ public class RemoteFetchProcessor extends AbstractScheduledService
     for (Map.Entry<String, RangeSet<Long>> entry : rangeMap.entrySet()) {
       Path path = new Path(entry.getKey());
       FileSystem fs = path.getFileSystem(conf);
+      log.info("Processing Request for File : " + path.toString());
       fs.initialize(path.toUri(), conf);
       FSDataInputStream inputStream = fs.open(path);
       String localPath = CacheConfig.getLocalPath(entry.getKey(), conf);
       FileMetadataRequest fileRequestMetadata = fetchRequestMap.get(entry.getKey());
+      ByteBuffer directWriteBuffer = bufferPool.getBuffer(diskReadBufferSize);
 
       RemoteFetchRequestChain requestChain = new RemoteFetchRequestChain(fs, localPath,
           directWriteBuffer, conf, fileRequestMetadata.remotePath, fileRequestMetadata.fileSize,
@@ -139,6 +142,8 @@ public class RemoteFetchProcessor extends AbstractScheduledService
 
       synchronized (entry.getKey()) {
         for (Range<Long> range : entry.getValue().asRanges()) {
+          log.info("Adding request for File : " + entry.getKey() + " Start : "
+              + range.upperEndpoint() + " End : " + range.lowerEndpoint());
           ReadRequest request = new ReadRequest(range.lowerEndpoint(), range.upperEndpoint(),
               range.lowerEndpoint(), range.upperEndpoint(), null, 0, fetchRequestMap.get(entry.getKey()).fileSize);
           requestChain.addReadRequest(request);
@@ -148,8 +153,9 @@ public class RemoteFetchProcessor extends AbstractScheduledService
     }
 
     ImmutableList.Builder builder = ImmutableList.builder();
-    for (RemoteFetchRequestChain request : readRequestChainList) {
-      builder.add(fetchService.submit(request));
+    for (RemoteFetchRequestChain requestChain : readRequestChainList) {
+      requestChain.lock();
+      builder.add(fetchService.submit(requestChain));
     }
 
     int sizeRead = 0;

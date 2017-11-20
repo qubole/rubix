@@ -112,6 +112,7 @@ public class RemoteFetchRequestChain extends ReadRequestChain
             readRequest.backendReadStart);
         totalRequestedRead += readBytes;
       }
+      log.info("Downloaded " + totalRequestedRead + " bytes of file " + remotePath);
       return 0;
     }
     finally {
@@ -125,21 +126,28 @@ public class RemoteFetchRequestChain extends ReadRequestChain
   {
     long start = System.nanoTime();
     int nread = 0;
-    byte[] buffer = new byte[CacheConfig.getDiskReadBufferSizeDefault(conf)];
+    byte[] buffer = new byte[length];
+    log.info("Copying data of file " + remotePath + " of length " + length + " from offset " + cacheReadStart);
     while (nread < length) {
-      //log.info("Reading data Offset: " + nread + " of length : " + (length - nread));
       int nbytes = inputStream.read(buffer, nread, length - nread);
-      //log.info("Read data : " + nbytes);
       if (nbytes < 0) {
         break;
       }
-
-      directBuffer.clear();
-      directBuffer.put(buffer, nread, nbytes);
-      directBuffer.flip();
-      fileChannel.write(directBuffer, cacheReadStart + nread);
-      directBuffer.compact();
       nread += nbytes;
+    }
+
+    int leftToWrite = length;
+    int writtenSoFar = 0;
+
+    while (leftToWrite > 0) {
+      int writeInThisCycle = Math.min(leftToWrite, directBuffer.capacity());
+      directBuffer.clear();
+      directBuffer.put(buffer, writtenSoFar, writeInThisCycle);
+      directBuffer.flip();
+      int nwrite = fileChannel.write(directBuffer, cacheReadStart + writtenSoFar);
+      directBuffer.compact();
+      writtenSoFar += nwrite;
+      leftToWrite -= nwrite;
     }
     warmupPenalty += System.nanoTime() - start;
     return nread;

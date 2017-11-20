@@ -16,6 +16,7 @@ import com.google.common.base.Throwables;
 import com.qubole.rubix.spi.BlockLocation;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.Location;
+import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -39,6 +40,7 @@ public class NonLocalRequestChain extends ReadRequestChain
   String remoteFilePath;
   FSDataInputStream inputStream;
   int clusterType;
+  int blockSize;
   boolean strictMode;
   BookKeeperFactory bookKeeperFactory;
   RetryingBookkeeperClient bookKeeperClient;
@@ -46,7 +48,6 @@ public class NonLocalRequestChain extends ReadRequestChain
   DirectReadRequestChain directReadRequestChain = null;
   NonLocalFetchRequestChain nonLocalFetchRequestChain = null;
 
-  DirectReadRequestChain directReadChain = null;
   int directRead = 0;
 
   public NonLocalRequestChain(String remoteNodeName, long fileSize, long lastModified, Configuration conf,
@@ -63,7 +64,7 @@ public class NonLocalRequestChain extends ReadRequestChain
     this.clusterType = clusterType;
     this.strictMode = strictMode;
     this.bookKeeperFactory = new BookKeeperFactory();
-
+    this.blockSize = CacheConfig.getBlockSize(conf);
   }
 
   public ReadRequestChainStats getStats()
@@ -74,12 +75,19 @@ public class NonLocalRequestChain extends ReadRequestChain
   public void addReadRequest(ReadRequest readRequest)
   {
     List<BlockLocation> isCached = null;
+    long startBlock = readRequest.backendReadStart / blockSize;
+    long endBlock = (readRequest.backendReadEnd / blockSize) == startBlock ? startBlock + 1 :
+        (readRequest.backendReadEnd / blockSize);
 
     // TODO Optimize not to make remote cache status call everytime
     try {
       this.bookKeeperClient = bookKeeperFactory.createBookKeeperClient(remoteNodeName, conf);
+      log.info(" Trying to getCacheStatus from : " + remoteNodeName + " for file : " + remoteFilePath
+          + " StartBlock : " + startBlock + " EndBlock : " + endBlock + " backendReadStart : "
+          + readRequest.backendReadStart + " backendReadEnd : " + readRequest.backendReadEnd);
+
       isCached = bookKeeperClient.getCacheStatus(remoteFilePath, fileSize, lastModified,
-            readRequest.backendReadStart, readRequest.backendReadEnd, clusterType);
+            startBlock, endBlock, clusterType);
     }
     catch (Exception e) {
       if (strictMode) {
@@ -97,8 +105,10 @@ public class NonLocalRequestChain extends ReadRequestChain
       }
     }
 
+    log.info("Cache Status : " + isCached);
+
     int idx = 0;
-    for (long blockNum = readRequest.backendReadStart; blockNum < readRequest.backendReadEnd; blockNum++, idx++) {
+    for (long blockNum = startBlock; blockNum < endBlock; blockNum++, idx++) {
       if (isCached != null && isCached.get(idx).getLocation() == Location.CACHED) {
         if (nonLocalReadRequestChain == null) {
           nonLocalReadRequestChain = new NonLocalReadRequestChain(remoteNodeName, fileSize, lastModified, conf,
@@ -108,6 +118,7 @@ public class NonLocalRequestChain extends ReadRequestChain
       }
       else {
         if (directReadRequestChain == null) {
+          log.info("Initilaizing Direct Read");
           directReadRequestChain = new DirectReadRequestChain(inputStream);
         }
         directReadRequestChain.addReadRequest(readRequest);
@@ -125,21 +136,21 @@ public class NonLocalRequestChain extends ReadRequestChain
   public Integer call() throws Exception
   {
     Thread.currentThread().setName(threadName);
-    if (readRequests.size() == 0) {
-      return 0;
-    }
     checkState(isLocked, "Trying to execute Chain without locking");
+
     int nonLocalReadBytes = 0;
     int directReadBytes = 0;
 
-    if (nonLocalReadRequestChain != null) {
-      nonLocalReadBytes += nonLocalFetchRequestChain.call();
-    }
-
+    log.info("Executing NonLocalRequestChain ");
     if (directReadRequestChain != null) {
+      directReadRequestChain.lock();
       directReadBytes += directReadRequestChain.call();
     }
 
+    if (nonLocalReadRequestChain != null) {
+      nonLocalReadRequestChain.lock();
+      nonLocalReadBytes += nonLocalReadRequestChain.call();
+    }
     // Send a request remote node bookkeeper to fetch the data in async mode
     if (nonLocalFetchRequestChain != null) {
       nonLocalFetchRequestChain.call();

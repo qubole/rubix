@@ -56,6 +56,8 @@ public class NonLocalFetchRequestChain extends ReadRequestChain
     try {
       client = bookKeeperFactory.createBookKeeperClient(remoteNodeLocation, conf);
       for (ReadRequest request : readRequests) {
+        log.info("NonLocalFetchRequest Start : " + request.backendReadStart + " of length " +
+            request.getBackendReadLength());
         client.readData(remotePath, request.backendReadStart, request.getBackendReadLength(),
             fileSize, lastModified, clusterType);
       }
