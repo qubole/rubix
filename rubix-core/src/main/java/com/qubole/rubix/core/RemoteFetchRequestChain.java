@@ -150,6 +150,7 @@ public class RemoteFetchRequestChain extends ReadRequestChain
       leftToWrite -= nwrite;
     }
     warmupPenalty += System.nanoTime() - start;
+    log.info("Read " + nread + " for file " + remotePath + " from offset " + cacheReadStart);
     return nread;
   }
 
