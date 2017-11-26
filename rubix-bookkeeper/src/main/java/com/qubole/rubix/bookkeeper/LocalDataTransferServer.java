@@ -184,7 +184,8 @@ public class LocalDataTransferServer extends Configured implements Tool
                 FileChannel fc = new FileInputStream(filename).getChannel();
                 int maxCount = CacheConfig.getLocalTransferBufferSize(conf);
                 int lengthRemaining = readLength;
-                long position = offset;
+                long fileOffset = offset % CacheConfig.getSplitSize(conf);
+                log.info(String.format("Converting actual offset %d to local file offset %d ", offset, fileOffset));
                 if (fc.size() < readLength) {
                     fc.close();
                     throw new Exception("File size is smaller than requested read");
@@ -194,7 +195,7 @@ public class LocalDataTransferServer extends Configured implements Tool
                     if (maxCount > lengthRemaining) {
                         maxCount = lengthRemaining;
                     }
-                    nread += fc.transferTo(position + nread, maxCount, localDataTransferClient);
+                    nread += fc.transferTo(fileOffset + nread, maxCount, localDataTransferClient);
                     lengthRemaining = readLength - nread;
                 }
                 if (bookKeeperClient != null) {

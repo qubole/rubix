@@ -13,8 +13,10 @@
 package com.qubole.rubix.core;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.qubole.rubix.spi.CacheConfig;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -31,26 +33,28 @@ public class CachedReadRequestChain extends ReadRequestChain
 {
     private FileChannel fileChannel = null;
     private RandomAccessFile raf;
+    private Configuration conf;
     private int read = 0; // data read
 
     private ByteBuffer directBuffer;
 
     private static final Log log = LogFactory.getLog(CachedReadRequestChain.class);
 
-    public CachedReadRequestChain(String fileToRead, ByteBuffer buffer)
+    public CachedReadRequestChain(String fileToRead, ByteBuffer buffer, Configuration conf)
             throws IOException
     {
         this.raf = new RandomAccessFile(fileToRead, "r");
         FileInputStream fis = new FileInputStream(raf.getFD());
         fileChannel = fis.getChannel();
         directBuffer = buffer;
+        this.conf = conf;
     }
 
     @VisibleForTesting
-    public CachedReadRequestChain(String fileToRead)
+    public CachedReadRequestChain(String fileToRead, Configuration conf)
             throws IOException
     {
-        this(fileToRead, ByteBuffer.allocate(1024));
+        this(fileToRead, ByteBuffer.allocate(1024), conf);
     }
 
     @VisibleForTesting
@@ -77,11 +81,13 @@ public class CachedReadRequestChain extends ReadRequestChain
             }
             int nread = 0;
             int leftToRead = readRequest.getActualReadLength();
-            log.debug(String.format("Processing readrequest %d-%d, length %d", readRequest.actualReadStart, readRequest.actualReadEnd, leftToRead));
+            long cachedFileOffset = readRequest.getActualReadStart() % CacheConfig.getSplitSize(conf);
+            log.info(String.format("Processing readrequest from fileoffset %d for length %d",
+                cachedFileOffset, leftToRead));
             while (nread < readRequest.getActualReadLength()) {
                 int readInThisCycle = Math.min(leftToRead, directBuffer.capacity());
                 directBuffer.clear();
-                int nbytes = fileChannel.read(directBuffer, readRequest.getActualReadStart() + nread);
+                int nbytes = fileChannel.read(directBuffer, cachedFileOffset + nread);
                 if (nbytes <= 0) {
                     break;
                 }

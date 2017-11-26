@@ -15,6 +15,7 @@ package com.qubole.rubix.core;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.qubole.rubix.spi.BookKeeperFactory;
+import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -47,6 +48,7 @@ public class RemoteReadRequestChain
     private int totalRequestedRead = 0;
     private long warmupPenalty = 0;
     private int blockSize = 0;
+    private Configuration conf;
 
     private BookKeeperFactory bookKeeperFactory;
 
@@ -54,18 +56,20 @@ public class RemoteReadRequestChain
 
     private String localFile;
 
-    public RemoteReadRequestChain(FSDataInputStream inputStream, String localfile, ByteBuffer directBuffer, byte[] affixBuffer)
-            throws IOException
+    public RemoteReadRequestChain(FSDataInputStream inputStream, String localfile, ByteBuffer directBuffer,
+                                  byte[] affixBuffer, Configuration conf) throws IOException
     {
         this(inputStream,
                 localfile,
                 directBuffer,
                 affixBuffer,
-                new BookKeeperFactory());
+                new BookKeeperFactory(),
+                conf);
     }
 
-    public RemoteReadRequestChain(FSDataInputStream inputStream, String localfile, ByteBuffer directBuffer, byte[] affixBuffer, BookKeeperFactory bookKeeperFactory)
-            throws IOException
+    public RemoteReadRequestChain(FSDataInputStream inputStream, String localfile, ByteBuffer directBuffer,
+                                  byte[] affixBuffer, BookKeeperFactory bookKeeperFactory,
+                                  Configuration conf) throws IOException
     {
         this.inputStream = inputStream;
         this.directBuffer = directBuffer;
@@ -73,13 +77,14 @@ public class RemoteReadRequestChain
         this.blockSize = affixBuffer.length;
         this.localFile = localfile;
         this.bookKeeperFactory = bookKeeperFactory;
+        this.conf = conf;
     }
 
     @VisibleForTesting
-    public RemoteReadRequestChain(FSDataInputStream inputStream, String fileName)
+    public RemoteReadRequestChain(FSDataInputStream inputStream, String fileName, Configuration conf)
             throws IOException
     {
-        this(inputStream, fileName, ByteBuffer.allocate(100), new byte[100]);
+        this(inputStream, fileName, ByteBuffer.allocate(100), new byte[100], conf);
     }
 
     public Integer call()
@@ -163,7 +168,10 @@ public class RemoteReadRequestChain
     private int copyIntoCache(FileChannel fileChannel, byte[] destBuffer, int destBufferOffset, int length, long cacheReadStart)
             throws IOException
     {
-        log.info(String.format("Trying to copy [%d - %d] bytes into cache from destination buffer offset %d into localFile %s", cacheReadStart, cacheReadStart + length, destBufferOffset, localFile));
+        long cachedFileOffset = cacheReadStart % CacheConfig.getSplitSize(conf);
+        log.info(String.format("Trying to copy [%d - %d] bytes into cache from destination buffer offset %d into " +
+                "localFile %s with offset %d", cacheReadStart, cacheReadStart + length, destBufferOffset, localFile,
+                cachedFileOffset));
         long start = System.nanoTime();
         int leftToWrite = length;
         int writtenSoFar = 0;
@@ -172,7 +180,7 @@ public class RemoteReadRequestChain
             directBuffer.clear();
             directBuffer.put(destBuffer, destBufferOffset + writtenSoFar, writeInThisCycle);
             directBuffer.flip();
-            int nwrite = fileChannel.write(directBuffer, cacheReadStart + writtenSoFar);
+            int nwrite = fileChannel.write(directBuffer, cachedFileOffset + writtenSoFar);
             writtenSoFar += nwrite;
             leftToWrite -= nwrite;
         }

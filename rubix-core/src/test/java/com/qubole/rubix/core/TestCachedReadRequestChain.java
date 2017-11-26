@@ -14,6 +14,7 @@ package com.qubole.rubix.core;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.testng.annotations.Test;
 
 import java.io.File;
@@ -55,7 +56,7 @@ public class TestCachedReadRequestChain
                 new ReadRequest(1800, 1900, 1800, 1900, buffer, 900, file.length())
         };
 
-        CachedReadRequestChain cachedReadRequestChain = new CachedReadRequestChain(filename);
+        CachedReadRequestChain cachedReadRequestChain = new CachedReadRequestChain(filename, new Configuration());
         for (ReadRequest rr : readRequests) {
             cachedReadRequestChain.addReadRequest(rr);
         }

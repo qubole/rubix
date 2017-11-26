@@ -292,7 +292,7 @@ public class BookKeeper
                     // Cache the data
                     // Ue RRRC directly instead of creating instance of CachingFS as in certain circumstances, CachingFS could
                     // send this request to NonLocalRRC which would be wrong as that would not cache it on disk
-                    RemoteReadRequestChain remoteReadRequestChain = new RemoteReadRequestChain(inputStream, localPath, byteBuffer, buffer, new BookKeeperFactory(this));
+                    RemoteReadRequestChain remoteReadRequestChain = new RemoteReadRequestChain(inputStream, localPath, byteBuffer, buffer, new BookKeeperFactory(this), conf);
                     remoteReadRequestChain.addReadRequest(new ReadRequest(readStart, readStart + blockSize, readStart, readStart + blockSize, buffer, 0, fileSize));
                     remoteReadRequestChain.lock();
                     remoteReadRequestChain.call();
