@@ -48,7 +48,7 @@ To install from a rpm file,
 To enable debugging and see the rubix activity, create /usr/lib/presto/etc/log.properties file with bellow config.
 com.qubole=DEBUG
 
-## Start rubix-daemons
+## Start RubiX Daemons
     rubix_admin daemon start --debug
     # To verfiy the daemons are up
        verfiy process ids for both 
@@ -58,5 +58,49 @@ com.qubole=DEBUG
 ## Restart Presto Server
     sudo restart presto-server
     
+## Create Table Using Hive
+
+### Start Hive Client
+
+    hive --hiveconf hive.metastore.uris="" --hiveconf fs.rubix.impl=com.qubole.rubix.hadoop2.CachingNativeS3FileSystem
+
+### Create External Table
+
+    CREATE EXTERNAL TABLE wikistats_orc_rubix 
+    (language STRING, page_title STRING,
+    hits BIGINT, retrived_size BIGINT)
+    STORED AS ORC
+    LOCATION 'rubix://emr.presto.airpal/wikistats/orc';
+
 ## Start the presto cli
     presto-cli --catalog hive --schema default
+
+## Query Execution
+
+Run the following query
+
+    SELECT language, page_title, AVG(hits) AS avg_hits
+    FROM default.wikistats_orc_rubix
+    WHERE language = 'en'
+    AND page_title NOT IN ('Main_Page',  '404_error/')
+    AND page_title NOT LIKE '%index%'
+    AND page_title NOT LIKE '%Search%'
+    GROUP BY language, page_title
+    ORDER BY avg_hits DESC
+    LIMIT 10;
+
+## Rubix Stats
+
+The cache statistics are pushed to MBean named rubix:name=stats. To check the stats, execute
+
+    SELECT Node, CachedReads, 
+    ROUND(extrareadfromremote,2) as ExtraReadFromRemote, 
+    ROUND(hitrate,2) as HitRate, 
+    ROUND(missrate,2) as MissRate,  
+    ROUND(nonlocaldataread,2) as NonLocalDataRead, 
+    NonLocalReads,
+    ROUND(readfromcache,2) as ReadFromCache, 
+    ROUND(readfromremote, 2) as ReadFromRemote, 
+    RemoteReads
+    FROM jmx.current."rubix:name=stats";
+
