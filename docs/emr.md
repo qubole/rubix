@@ -72,7 +72,7 @@ com.qubole=DEBUG
     STORED AS ORC
     LOCATION 'rubix://emr.presto.airpal/wikistats/orc';
 
-## Start the presto cli
+## Start Presto-cli
     presto-cli --catalog hive --schema default
 
 ## Query Execution
