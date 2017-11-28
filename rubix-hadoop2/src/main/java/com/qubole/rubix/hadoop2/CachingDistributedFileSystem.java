@@ -27,6 +27,7 @@ public class CachingDistributedFileSystem extends CachingFileSystem<DistributedF
 {
   private static final Log LOG = LogFactory.getLog(CachingDistributedFileSystem.class);
   private ClusterManager clusterManager;
+  private static final String SCHEME = "hdfs";
 
   @Override
   public void initialize(URI uri, Configuration conf) throws IOException
@@ -37,6 +38,11 @@ public class CachingDistributedFileSystem extends CachingFileSystem<DistributedF
     }
     setClusterManager(clusterManager);
     super.initialize(uri, conf);
+  }
+
+  public String getScheme()
+  {
+    return SCHEME;
   }
 
   private synchronized void initializeClusterManager(Configuration conf)

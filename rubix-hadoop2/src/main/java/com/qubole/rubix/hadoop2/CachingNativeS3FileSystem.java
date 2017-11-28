@@ -28,6 +28,7 @@ public class CachingNativeS3FileSystem
         extends CachingFileSystem<NativeS3FileSystem>
 {
     private static final Log LOG = LogFactory.getLog(CachingNativeS3FileSystem.class);
+    private static final String SCHEME = "s3n";
 
     private ClusterManager clusterManager;
 
@@ -35,6 +36,11 @@ public class CachingNativeS3FileSystem
             throws IOException
     {
         super();
+    }
+
+    public String getScheme()
+    {
+        return SCHEME;
     }
 
     @Override

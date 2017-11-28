@@ -26,6 +26,7 @@ public class CachingS3AFileSystem extends CachingFileSystem<S3AFileSystem>
 {
     private static final Log LOG = LogFactory.getLog(CachingS3AFileSystem.class);
     private ClusterManager clusterManager;
+    private static final String SCHEME = "s3a";
 
     public CachingS3AFileSystem() throws IOException
     {
@@ -41,6 +42,11 @@ public class CachingS3AFileSystem extends CachingFileSystem<S3AFileSystem>
         }
         setClusterManager(clusterManager);
         super.initialize(uri, conf);
+    }
+
+    public String getScheme()
+    {
+        return SCHEME;
     }
 
     private synchronized void initializeClusterManager(Configuration conf)

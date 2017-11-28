@@ -47,12 +47,15 @@ public class NonLocalReadRequestChain extends ReadRequestChain
     FileSystem remoteFileSystem;
     int clusterType;
     public boolean strictMode = false;
+    FileSystem.Statistics statistics = null;
 
     DirectReadRequestChain directReadChain = null; // Used when Non Local Requests fail
 
     private static final Log log = LogFactory.getLog(NonLocalReadRequestChain.class);
 
-    public NonLocalReadRequestChain(String remoteLocation, long fileSize, long lastModified, Configuration conf, FileSystem remoteFileSystem, String remotePath, int clusterType, boolean strictMode)
+    public NonLocalReadRequestChain(String remoteLocation, long fileSize, long lastModified, Configuration conf,
+                                    FileSystem remoteFileSystem, String remotePath, int clusterType,
+                                    boolean strictMode, FileSystem.Statistics statistics)
     {
         this.remoteNodeName = remoteLocation;
         this.remoteFileSystem = remoteFileSystem;
@@ -62,6 +65,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
         this.conf = conf;
         this.clusterType = clusterType;
         this.strictMode = strictMode;
+        this.statistics = statistics;
     }
 
     public ReadRequestChainStats getStats()
@@ -147,6 +151,9 @@ public class NonLocalReadRequestChain extends ReadRequestChain
                 }
             }
             finally {
+                if (statistics != null) {
+                  statistics.incrementBytesRead(totalRead);
+                }
                 try {
                     log.info(String.format("Read %d bytes internally from node %s", totalRead, remoteNodeName));
                     dataTransferClient.close();

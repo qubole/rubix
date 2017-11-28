@@ -35,6 +35,7 @@ public class MockCachingFileSystem
 {
     private static final Log log = LogFactory.getLog(MockCachingFileSystem.class);
     Configuration conf;
+    private static final String SCHEME = "file";
 
     @Override
     public void initialize(URI uri, Configuration conf)
@@ -44,6 +45,10 @@ public class MockCachingFileSystem
         log.debug("Initializing TestCachingFileSystem");
     }
 
+    public String getScheme()
+    {
+        return SCHEME;
+    }
 
     @Override
     public FSDataInputStream open(Path path, int i)
@@ -56,7 +61,8 @@ public class MockCachingFileSystem
                 new BufferedFSInputStream(
                         new CachingInputStream(new FSDataInputStream(inputStream), conf, path, file.length(),
                             file.lastModified(),  new CachingFileSystemStats(),
-                            ClusterType.TEST_CLUSTER_MANAGER, bookKeeperFactory, this),
+                            ClusterType.TEST_CLUSTER_MANAGER, bookKeeperFactory, this,
+                            CacheConfig.getBlockSize(conf), statistics),
                     CacheConfig.getBlockSize(conf)));
     }
 
