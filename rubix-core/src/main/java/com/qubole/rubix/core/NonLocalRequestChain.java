@@ -47,12 +47,13 @@ public class NonLocalRequestChain extends ReadRequestChain
   NonLocalReadRequestChain nonLocalReadRequestChain = null;
   DirectReadRequestChain directReadRequestChain = null;
   NonLocalFetchRequestChain nonLocalFetchRequestChain = null;
+  FileSystem.Statistics statistics = null;
 
   int directRead = 0;
 
   public NonLocalRequestChain(String remoteNodeName, long fileSize, long lastModified, Configuration conf,
                               FileSystem remoteFileSystem, String remoteFilePath, FSDataInputStream inputStream,
-                              int clusterType, boolean strictMode)
+                              int clusterType, boolean strictMode, FileSystem.Statistics statistics)
   {
     this.remoteNodeName = remoteNodeName;
     this.remoteFileSystem = remoteFileSystem;
@@ -112,7 +113,7 @@ public class NonLocalRequestChain extends ReadRequestChain
       if (isCached != null && isCached.get(idx).getLocation() == Location.CACHED) {
         if (nonLocalReadRequestChain == null) {
           nonLocalReadRequestChain = new NonLocalReadRequestChain(remoteNodeName, fileSize, lastModified, conf,
-              remoteFileSystem, remoteFilePath, clusterType, strictMode);
+              remoteFileSystem, remoteFilePath, clusterType, strictMode, statistics);
         }
         nonLocalReadRequestChain.addReadRequest(readRequest);
       }

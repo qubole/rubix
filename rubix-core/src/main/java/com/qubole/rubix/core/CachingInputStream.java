@@ -72,6 +72,7 @@ public class CachingInputStream
     private boolean strictMode = false;
     ClusterType clusterType;
     FileSystem remoteFileSystem;
+    FileSystem.Statistics statistics = null;
 
     private static DirectBufferPool bufferPool = new DirectBufferPool();
     private ByteBuffer directWriteBuffer = null;
@@ -83,7 +84,7 @@ public class CachingInputStream
     public CachingInputStream(FileSystem parentFs, Path backendPath, Configuration conf,
                               CachingFileSystemStats statsMbean, ClusterType clusterType,
                               BookKeeperFactory bookKeeperFactory, FileSystem remoteFileSystem,
-                              int bufferSize) throws IOException
+                              int bufferSize, FileSystem.Statistics statistics) throws IOException
     {
         this.remotePath = backendPath.toString();
         FileStatus fileStatus = parentFs.getFileStatus(backendPath);
@@ -94,13 +95,14 @@ public class CachingInputStream
         this.statsMbean = statsMbean;
         this.clusterType = clusterType;
         this.bufferSize = bufferSize;
+        this.statistics = statistics;
     }
 
     @VisibleForTesting
     public CachingInputStream(FSDataInputStream inputStream, Configuration conf, Path backendPath,
                               long size, long lastModified, CachingFileSystemStats statsMbean,
                               ClusterType clusterType, BookKeeperFactory bookKeeperFactory,
-                              FileSystem remoteFileSystem)
+                              FileSystem remoteFileSystem, int buffersize, FileSystem.Statistics statistics)
               throws IOException
     {
         this.inputStream = inputStream;
@@ -111,6 +113,8 @@ public class CachingInputStream
         this.statsMbean = statsMbean;
         this.clusterType = clusterType;
         this.remoteFileSystem = remoteFileSystem;
+        this.bufferSize = bufferSize;
+        this.statistics = statistics;
     }
 
     private void initialize(Configuration conf, BookKeeperFactory bookKeeperFactory)
@@ -371,7 +375,7 @@ public class CachingInputStream
                         directReadBuffer = bufferPool.getBuffer(diskReadBufferSize);
                     }
                     if (cachedReadRequestChain == null) {
-                        cachedReadRequestChain = new CachedReadRequestChain(localPath, directReadBuffer);
+                        cachedReadRequestChain = new CachedReadRequestChain(localPath, directReadBuffer, statistics);
                     }
                     cachedReadRequestChain.addReadRequest(readRequest);
                 }
@@ -394,14 +398,16 @@ public class CachingInputStream
                             NonLocalRequestChain nonLocalRequestChain =
                                 new NonLocalRequestChain(remoteLocation, fileSize, lastModified,
                                   conf, remoteFileSystem, remotePath, getParentDataInputStream(),
-                                  clusterType.ordinal(), strictMode);
+                                  clusterType.ordinal(), strictMode, statistics);
                             nonLocalAsyncRequests.put(remoteLocation, nonLocalRequestChain);
                         }
                         nonLocalAsyncRequests.get(remoteLocation).addReadRequest(readRequest);
                     }
                     else {
                         if (!nonLocalRequests.containsKey(remoteLocation)) {
-                            NonLocalReadRequestChain nonLocalReadRequestChain = new NonLocalReadRequestChain(remoteLocation, fileSize, lastModified, conf, remoteFileSystem, remotePath, clusterType.ordinal(), strictMode);
+                            NonLocalReadRequestChain nonLocalReadRequestChain =
+                                    new NonLocalReadRequestChain(remoteLocation, fileSize, lastModified, conf,
+                                    remoteFileSystem, remotePath, clusterType.ordinal(), strictMode, statistics);
                             nonLocalRequests.put(remoteLocation, nonLocalReadRequestChain);
                         }
                         nonLocalRequests.get(remoteLocation).addReadRequest(readRequest);

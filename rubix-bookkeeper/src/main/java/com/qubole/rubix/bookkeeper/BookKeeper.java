@@ -296,6 +296,7 @@ public class BookKeeper
 
                     if (fs == null) {
                         fs = path.getFileSystem(conf);
+                        log.info("Initializing FileSystem " + fs.toString() + " for Path " + path.toString());
                         fs.initialize(path.toUri(), conf);
 
                         inputStream = fs.open(path, blockSize);

@@ -42,6 +42,7 @@ import java.util.List;
 
 public class CacheConfig
 {
+    public static final String RUBIX_SCHEME = "rubix";
     public static final String DATA_CACHE_ENABLED = "hadoop.cache.data.enabled";
     public static final String DATA_CACHE_TABLE_WHITELIST = "hadoop.cache.data.table.whitelist";
     public static final String DATA_CACHE_TABLE = "hadoop.cache.data.table";

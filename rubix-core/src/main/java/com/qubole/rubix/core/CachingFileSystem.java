@@ -54,6 +54,9 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
     private static ClusterManager clusterManager;
 
     private boolean cacheSkipped = false;
+    private boolean isRubixSchemeUsed = false;
+    private URI uri;
+    private Path workingDir;
 
     private static CachingFileSystemStats statsMBean;
     public BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
@@ -84,6 +87,8 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
         }
     }
 
+    public abstract String getScheme();
+
     public void setClusterManager(ClusterManager clusterManager)
     {
         this.clusterManager = clusterManager;
@@ -102,13 +107,17 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
             throw new IOException("Cluster Manager not set");
         }
         super.initialize(uri, conf);
-        fs.initialize(uri, conf);
+        this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
+        this.workingDir = new Path("/user", System.getProperty("user.name")).makeQualified(this);
+        isRubixSchemeUsed = uri.getScheme().equals(CacheConfig.RUBIX_SCHEME);
+        URI originalUri = getOriginalURI(uri);
+        fs.initialize(originalUri, conf);
     }
 
     @Override
     public URI getUri()
     {
-        return fs.getUri();
+        return this.uri;
     }
 
     @Override
@@ -123,10 +132,12 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
             return inputStream;
         }
 
+        Path originalPath = new Path(getOriginalURI(path.toUri()).getScheme(), path.toUri().getAuthority(),
+            path.toUri().getPath());
         return new FSDataInputStream(
                 new BufferedFSInputStream(
-                        new CachingInputStream(this, path, this.getConf(), statsMBean,
-                                clusterManager.getClusterType(), bookKeeperFactory, fs, bufferSize),
+                        new CachingInputStream(this, originalPath, this.getConf(), statsMBean,
+                                clusterManager.getClusterType(), bookKeeperFactory, fs, bufferSize, statistics),
                                                     CacheConfig.getBlockSize(getConf())));
     }
 
@@ -180,19 +191,23 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
     public FileStatus[] listStatus(Path path)
             throws FileNotFoundException, IOException
     {
-        return fs.listStatus(path);
+        FileStatus[] files = fs.listStatus(path);
+        for (int i = 0; i < files.length; i++) {
+          files[i].setPath(getRubixPath(files[i].getPath(), isRubixSchemeUsed));
+        }
+        return files;
     }
 
     @Override
     public void setWorkingDirectory(Path path)
     {
-        fs.setWorkingDirectory(path);
+        this.workingDir = path;
     }
 
     @Override
     public Path getWorkingDirectory()
     {
-        return fs.getWorkingDirectory();
+        return this.workingDir;
     }
 
     @Override
@@ -206,7 +221,27 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
     public FileStatus getFileStatus(Path path)
             throws IOException
     {
-        return fs.getFileStatus(path);
+        FileStatus originalStatus = fs.getFileStatus(path);
+        originalStatus.setPath(getRubixPath(originalStatus.getPath(), isRubixSchemeUsed));
+        return originalStatus;
+    }
+
+    private Path getRubixPath(Path remotePath, boolean isRubixSchemeUsed)
+    {
+        String remotePathScheme = remotePath.toUri().getScheme();
+        if (remotePathScheme.equals(getScheme()) && isRubixSchemeUsed) {
+            return new Path(CacheConfig.RUBIX_SCHEME, remotePath.toUri().getAuthority(), remotePath.toUri().getPath());
+        }
+        return remotePath;
+    }
+
+    private URI getOriginalURI(URI actualURI)
+    {
+        String actualScheme = actualURI.getScheme();
+        if (!actualScheme.equals(CacheConfig.RUBIX_SCHEME)) {
+            return actualURI;
+        }
+        return URI.create(getScheme() + "://" + actualURI.getAuthority());
     }
 
     @Override

@@ -15,6 +15,7 @@ package com.qubole.rubix.core;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileSystem;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -32,25 +33,27 @@ public class CachedReadRequestChain extends ReadRequestChain
     private FileChannel fileChannel = null;
     private RandomAccessFile raf;
     private int read = 0; // data read
+    private FileSystem.Statistics statistics = null;
 
     private ByteBuffer directBuffer;
 
     private static final Log log = LogFactory.getLog(CachedReadRequestChain.class);
 
-    public CachedReadRequestChain(String fileToRead, ByteBuffer buffer)
+    public CachedReadRequestChain(String fileToRead, ByteBuffer buffer, FileSystem.Statistics statistics)
             throws IOException
     {
         this.raf = new RandomAccessFile(fileToRead, "r");
         FileInputStream fis = new FileInputStream(raf.getFD());
         fileChannel = fis.getChannel();
         directBuffer = buffer;
+        this.statistics = statistics;
     }
 
     @VisibleForTesting
     public CachedReadRequestChain(String fileToRead)
             throws IOException
     {
-        this(fileToRead, ByteBuffer.allocate(1024));
+        this(fileToRead, ByteBuffer.allocate(1024), null);
     }
 
     @VisibleForTesting
@@ -100,6 +103,9 @@ public class CachedReadRequestChain extends ReadRequestChain
         log.info(String.format("Read %d bytes from cached file", read));
         fileChannel.close();
         raf.close();
+        if (statistics != null) {
+          statistics.incrementBytesRead(read);
+        }
         return read;
     }
 

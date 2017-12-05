@@ -40,6 +40,7 @@ public class MockCachingFileSystem
     private static final Log log = LogFactory.getLog(MockCachingFileSystem.class);
     Configuration conf;
     private static ClusterManager clusterManager;
+    private static final String SCHEME = "file";
 
     @Override
     public void initialize(URI uri, Configuration conf) throws IOException
@@ -63,6 +64,11 @@ public class MockCachingFileSystem
       clusterManager.initialize(conf);
     }
 
+    public String getScheme()
+    {
+        return SCHEME;
+    }
+
     @Override
     public FSDataInputStream open(Path path, int i)
             throws IOException
@@ -74,7 +80,8 @@ public class MockCachingFileSystem
                 new BufferedFSInputStream(
                         new CachingInputStream(new FSDataInputStream(inputStream), conf, path, file.length(),
                             file.lastModified(),  new CachingFileSystemStats(),
-                            ClusterType.TEST_CLUSTER_MANAGER, bookKeeperFactory, fs),
+                            ClusterType.TEST_CLUSTER_MANAGER, bookKeeperFactory, fs,
+                            CacheConfig.getBlockSize(conf), statistics),
                     CacheConfig.getBlockSize(conf)));
     }
 
