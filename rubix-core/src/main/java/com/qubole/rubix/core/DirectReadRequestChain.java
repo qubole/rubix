@@ -64,7 +64,6 @@ public class DirectReadRequestChain extends ReadRequestChain
             int nread = 0;
             while (nread < readRequest.getActualReadLength()) {
                 int nbytes = inputStream.read(readRequest.getDestBuffer(), readRequest.getDestBufferOffset() + nread, readRequest.getActualReadLength() - nread);
-                log.info(" Read " + nread + " Offset is set to " + (readRequest.getDestBufferOffset() + nread));
                 if (nbytes < 0) {
                     return nread;
                 }

@@ -84,7 +84,7 @@ public class RemoteFetchProcessor extends AbstractScheduledService
         }
       }
     };
-    processService.scheduleAtFixedRate(runnableStatusUpdateTask, 60, 30, TimeUnit.SECONDS);
+    processService.scheduleAtFixedRate(runnableStatusUpdateTask, 10, 10, TimeUnit.SECONDS);
   }
 
   public void addToProcessQueue(String remotePath, long offset, int length, long fileSize, long lastModified)
@@ -149,6 +149,8 @@ public class RemoteFetchProcessor extends AbstractScheduledService
           requestChain.addReadRequest(request);
         }
       }
+      log.info("Request added for file: " + requestChain.getRemotePath() + " Number of Requests : " +
+              requestChain.getReadRequests().size());
       readRequestChainList.add(requestChain);
     }
 
