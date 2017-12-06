@@ -36,6 +36,8 @@ public class CachingNativeS3FileSystem extends CachingFileSystem<NativeS3FileSys
         super();
     }
 
+    private static final String SCHEME = "s3n";
+
     @Override
     public void initialize(URI uri, Configuration conf) throws IOException
     {
@@ -48,6 +50,11 @@ public class CachingNativeS3FileSystem extends CachingFileSystem<NativeS3FileSys
         setClusterManager(clusterManager);
 
         super.initialize(uri, conf);
+    }
+
+    public String getScheme()
+    {
+        return SCHEME;
     }
 
     private synchronized void initializeClusterManager(Configuration conf)

@@ -127,7 +127,7 @@ public class TestCachingInputStream
         // This should be after server comes up else client could not be created
         inputStream = new CachingInputStream(fsDataInputStream, conf, backendPath, file.length(),
             file.lastModified(), new CachingFileSystemStats(), ClusterType.TEST_CLUSTER_MANAGER,
-            new BookKeeperFactory(), null);
+            new BookKeeperFactory(), null, CacheConfig.getBlockSize(conf), null);
 
     }
 

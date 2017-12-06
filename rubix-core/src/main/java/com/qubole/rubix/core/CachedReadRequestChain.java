@@ -17,6 +17,7 @@ import com.qubole.rubix.spi.CacheConfig;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -35,12 +36,14 @@ public class CachedReadRequestChain extends ReadRequestChain
     private RandomAccessFile raf;
     private Configuration conf;
     private int read = 0; // data read
+    private FileSystem.Statistics statistics = null;
 
     private ByteBuffer directBuffer;
 
     private static final Log log = LogFactory.getLog(CachedReadRequestChain.class);
 
-    public CachedReadRequestChain(String fileToRead, ByteBuffer buffer, Configuration conf)
+    public CachedReadRequestChain(String fileToRead, ByteBuffer buffer, Configuration conf,
+                                  FileSystem.Statistics statistics)
             throws IOException
     {
         this.raf = new RandomAccessFile(fileToRead, "r");
@@ -48,13 +51,14 @@ public class CachedReadRequestChain extends ReadRequestChain
         fileChannel = fis.getChannel();
         directBuffer = buffer;
         this.conf = conf;
+        this.statistics = statistics;
     }
 
     @VisibleForTesting
     public CachedReadRequestChain(String fileToRead, Configuration conf)
             throws IOException
     {
-        this(fileToRead, ByteBuffer.allocate(1024), conf);
+        this(fileToRead, ByteBuffer.allocate(1024), conf, null);
     }
 
     @VisibleForTesting
@@ -106,6 +110,9 @@ public class CachedReadRequestChain extends ReadRequestChain
         log.info(String.format("Read %d bytes from cached file", read));
         fileChannel.close();
         raf.close();
+        if (statistics != null) {
+          statistics.incrementBytesRead(read);
+        }
         return read;
     }
 
