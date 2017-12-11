@@ -52,6 +52,7 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static com.qubole.rubix.spi.ClusterType.HADOOP2_CLUSTER_MANAGER;
 import static com.qubole.rubix.spi.ClusterType.PRESTO_CLUSTER_MANAGER;
@@ -66,9 +67,9 @@ public class BookKeeper
     private static Cache<String, FileMetadata> fileMetadataCache;
     private static ClusterManager clusterManager = null;
     private static Log log = LogFactory.getLog(BookKeeper.class.getName());
-    private long totalRequests = 0;
-    private long cachedRequests = 0;
-    private long remoteRequests = 0;
+    private AtomicLong totalRequests = new AtomicLong();
+    private AtomicLong cachedRequests = new AtomicLong();
+    private AtomicLong remoteRequests = new AtomicLong();
     static String nodeName = null;
     private Configuration conf;
     private static Integer lock = 1;
@@ -133,16 +134,16 @@ public class BookKeeper
 
         try {
             for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
-                totalRequests++;
+                totalRequests.getAndIncrement();
                 long split = (blockNum * blockSize) / splitSize;
                 if (md.isBlockCached(blockNum)) {
                     blockLocations.add(new BlockLocation(Location.CACHED, blockSplits.get(split)));
-                    cachedRequests++;
+                    cachedRequests.getAndIncrement();
                 }
                 else {
                     if (blockSplits.get(split).equalsIgnoreCase(nodeName)) {
                         blockLocations.add(new BlockLocation(Location.LOCAL, blockSplits.get(split)));
-                        remoteRequests++;
+                        remoteRequests.getAndIncrement();
                     }
                     else {
                         blockLocations.add(new BlockLocation(Location.NON_LOCAL, blockSplits.get(split)));
@@ -242,11 +243,11 @@ public class BookKeeper
     public Map getCacheStats()
     {
         Map<String, Double> stats = new HashMap<String, Double>();
-        stats.put("Cache Hit Rate", ((double) cachedRequests / (cachedRequests + remoteRequests)));
-        stats.put("Cache Miss Rate", ((double) (remoteRequests) / (cachedRequests + remoteRequests)));
-        stats.put("Cache Reads", ((double) cachedRequests));
-        stats.put("Remote Reads", ((double) remoteRequests));
-        stats.put("Non-Local Reads", ((double) (totalRequests - cachedRequests - remoteRequests)));
+        stats.put("Cache Hit Rate", ((double) cachedRequests.get() / (cachedRequests.get() + remoteRequests.get())));
+        stats.put("Cache Miss Rate", ((double) (remoteRequests.get()) / (cachedRequests.get() + remoteRequests.get())));
+        stats.put("Cache Reads", ((double) cachedRequests.get()));
+        stats.put("Remote Reads", ((double) remoteRequests.get()));
+        stats.put("Non-Local Reads", ((double) (totalRequests.get() - cachedRequests.get() - remoteRequests.get())));
         return stats;
     }
 
