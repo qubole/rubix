@@ -21,7 +21,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.qubole.rubix.core.ReadRequest;
-import com.qubole.rubix.core.RemoteFetchRequestChain;
+import com.qubole.rubix.core.FileDownloadRequestChain;
 import com.qubole.rubix.spi.CacheConfig;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.Executors;
@@ -49,6 +50,7 @@ import java.util.concurrent.ExecutionException;
 public class RemoteFetchProcessor extends AbstractScheduledService
 {
   private Configuration conf;
+  BookKeeper bookKeeper;
   private Queue<FetchRequest> processQueue = null;
   private ConcurrentMap<String, RangeSet<Long>> rangeMap = null;
   private ConcurrentMap<String, FileMetadataRequest> fetchRequestMap = null;
@@ -63,8 +65,9 @@ public class RemoteFetchProcessor extends AbstractScheduledService
 
   private static final Log log = LogFactory.getLog(RemoteFetchProcessor.class);
 
-  public RemoteFetchProcessor(Configuration conf)
+  public RemoteFetchProcessor(BookKeeper bookKeeper, Configuration conf)
   {
+    this.bookKeeper = bookKeeper;
     this.conf = conf;
     this.processQueue = new ConcurrentLinkedQueue<FetchRequest>();
     this.rangeMap = new ConcurrentHashMap<String, RangeSet<Long>>();
@@ -84,7 +87,7 @@ public class RemoteFetchProcessor extends AbstractScheduledService
         }
       }
     };
-    processService.scheduleAtFixedRate(runnableStatusUpdateTask, 10, 10, TimeUnit.SECONDS);
+    processService.scheduleAtFixedRate(runnableStatusUpdateTask, 100, 100, TimeUnit.MILLISECONDS);
   }
 
   public void addToProcessQueue(String remotePath, long offset, int length, long fileSize, long lastModified)
@@ -99,11 +102,12 @@ public class RemoteFetchProcessor extends AbstractScheduledService
     if (!processQueue.isEmpty()) {
       FetchRequest request = processQueue.remove();
       log.info("Processing Request : RemotePath - " + request.getRemotePath() + " Offset : " +
-          request.getOffset() + " Length : " + request.getLength());
+              request.getOffset() + " Length : " + request.getLength());
+
       if (!rangeMap.containsKey(request.getRemotePath())) {
         RangeSet<Long> rangeSet = TreeRangeSet.create();
-        rangeMap.put(request.getRemotePath(), rangeSet);
-        fetchRequestMap.put(request.getRemotePath(), new FileMetadataRequest(request.getRemotePath(),
+        rangeMap.putIfAbsent(request.getRemotePath(), rangeSet);
+        fetchRequestMap.putIfAbsent(request.getRemotePath(), new FileMetadataRequest(request.getRemotePath(),
             request.getFileSize(), request.getLastModified()));
       }
 
@@ -119,24 +123,25 @@ public class RemoteFetchProcessor extends AbstractScheduledService
   @Override
   protected Scheduler scheduler()
   {
-    return Scheduler.newFixedDelaySchedule(60, 1, TimeUnit.SECONDS);
+    return Scheduler.newFixedRateSchedule(1000, 10, TimeUnit.MILLISECONDS);
   }
 
   private void processFetchRequest() throws IOException, InterruptedException, ExecutionException
   {
-    final List<RemoteFetchRequestChain> readRequestChainList = new ArrayList<RemoteFetchRequestChain>();
+    final List<FileDownloadRequestChain> readRequestChainList = new ArrayList<FileDownloadRequestChain>();
 
-    for (Map.Entry<String, RangeSet<Long>> entry : rangeMap.entrySet()) {
+    for (Iterator<Map.Entry<String, RangeSet<Long>>> it = rangeMap.entrySet().iterator(); it.hasNext(); ) {
+      Map.Entry<String, RangeSet<Long>> entry = it.next();
       Path path = new Path(entry.getKey());
       FileSystem fs = path.getFileSystem(conf);
-      log.info("Processing Request for File : " + path.toString());
       fs.initialize(path.toUri(), conf);
       FSDataInputStream inputStream = fs.open(path);
       String localPath = CacheConfig.getLocalPath(entry.getKey(), conf);
+      log.info("Processing Request for File : " + path.toString() + " LocalFile : " + localPath);
       FileMetadataRequest fileRequestMetadata = fetchRequestMap.get(entry.getKey());
       ByteBuffer directWriteBuffer = bufferPool.getBuffer(diskReadBufferSize);
 
-      RemoteFetchRequestChain requestChain = new RemoteFetchRequestChain(fs, localPath,
+      FileDownloadRequestChain requestChain = new FileDownloadRequestChain(fs, localPath,
           directWriteBuffer, conf, fileRequestMetadata.remotePath, fileRequestMetadata.fileSize,
           fileRequestMetadata.lastModified);
 
@@ -148,6 +153,7 @@ public class RemoteFetchProcessor extends AbstractScheduledService
               range.lowerEndpoint(), range.upperEndpoint(), null, 0, fetchRequestMap.get(entry.getKey()).fileSize);
           requestChain.addReadRequest(request);
         }
+        it.remove();
       }
       log.info("Request added for file: " + requestChain.getRemotePath() + " Number of Requests : " +
               requestChain.getReadRequests().size());
@@ -155,7 +161,7 @@ public class RemoteFetchProcessor extends AbstractScheduledService
     }
 
     ImmutableList.Builder builder = ImmutableList.builder();
-    for (RemoteFetchRequestChain requestChain : readRequestChainList) {
+    for (FileDownloadRequestChain requestChain : readRequestChainList) {
       requestChain.lock();
       builder.add(fetchService.submit(requestChain));
     }
@@ -171,7 +177,7 @@ public class RemoteFetchProcessor extends AbstractScheduledService
         @Override
         public void run()
         {
-          for (RemoteFetchRequestChain readRequestChain : readRequestChainList) {
+          for (FileDownloadRequestChain readRequestChain : readRequestChainList) {
             readRequestChain.updateCacheStatus(readRequestChain.getRemotePath(), readRequestChain.getFileSize(),
                 readRequestChain.getLastModified(), CacheConfig.getBlockSize(conf), conf);
           }
@@ -179,7 +185,8 @@ public class RemoteFetchProcessor extends AbstractScheduledService
       });
     }
     catch (ExecutionException | InterruptedException e) {
-      for (RemoteFetchRequestChain readRequestChain : readRequestChainList) {
+      log.error(e.toString());
+      for (FileDownloadRequestChain readRequestChain : readRequestChainList) {
         readRequestChain.cancel();
       }
       throw e;

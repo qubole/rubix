@@ -81,7 +81,7 @@ public class BookKeeper
     {
         this.conf = conf;
         initializeCache(conf);
-        fetchProcessor = new RemoteFetchProcessor(conf);
+        fetchProcessor = new RemoteFetchProcessor(this, conf);
         fetchProcessor.startAsync();
     }
 
@@ -235,6 +235,7 @@ public class BookKeeper
             invalidate(remotePath);
             return;
         }
+        log.info("Updating cache for " + remotePath + " StarBlock : " + startBlock + " EndBlock : " + endBlock);
         endBlock = setCorrectEndBlock(endBlock, fileLength, remotePath);
 
         try {
