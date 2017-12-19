@@ -12,13 +12,10 @@
  */
 package com.qubole.rubix.bookkeeper;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import com.google.common.util.concurrent.AbstractScheduledService;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.qubole.rubix.core.ReadRequest;
 import com.qubole.rubix.core.FileDownloadRequestChain;
@@ -38,7 +35,6 @@ import java.util.List;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Queue;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
@@ -56,8 +52,6 @@ public class RemoteFetchProcessor extends AbstractScheduledService
   private ConcurrentMap<String, FileMetadataRequest> fetchRequestMap = null;
   private static ScheduledExecutorService processService = MoreExecutors.getExitingScheduledExecutorService(
       new ScheduledThreadPoolExecutor(10));
-  private static ListeningExecutorService fetchService = MoreExecutors.listeningDecorator(
-      Executors.newCachedThreadPool());
 
   Runnable runnableStatusUpdateTask = null;
   int diskReadBufferSize;
@@ -87,7 +81,7 @@ public class RemoteFetchProcessor extends AbstractScheduledService
         }
       }
     };
-    processService.scheduleAtFixedRate(runnableStatusUpdateTask, 100, 100, TimeUnit.MILLISECONDS);
+    processService.scheduleWithFixedDelay(runnableStatusUpdateTask, 1000, 100, TimeUnit.MILLISECONDS);
   }
 
   public void addToProcessQueue(String remotePath, long offset, int length, long fileSize, long lastModified)
@@ -160,37 +154,20 @@ public class RemoteFetchProcessor extends AbstractScheduledService
       readRequestChainList.add(requestChain);
     }
 
-    ImmutableList.Builder builder = ImmutableList.builder();
-    for (FileDownloadRequestChain requestChain : readRequestChainList) {
-      requestChain.lock();
-      builder.add(fetchService.submit(requestChain));
-    }
-
     int sizeRead = 0;
-    try {
-      List<ListenableFuture<Integer>> futures = builder.build();
-      for (ListenableFuture<Integer> future : futures) {
-        sizeRead += future.get();
+    for (FileDownloadRequestChain requestChain : readRequestChainList) {
+      try {
+        requestChain.lock();
+        sizeRead += requestChain.call();
+        requestChain.updateCacheStatus(requestChain.getRemotePath(), requestChain.getFileSize(),
+                requestChain.getLastModified(), CacheConfig.getBlockSize(conf), conf);
       }
+      catch (IOException ex) {
+        log.error(ex.getStackTrace());
+        requestChain.cancel();
+      }
+    }
 
-      fetchService.execute(new Runnable() {
-        @Override
-        public void run()
-        {
-          for (FileDownloadRequestChain readRequestChain : readRequestChainList) {
-            readRequestChain.updateCacheStatus(readRequestChain.getRemotePath(), readRequestChain.getFileSize(),
-                readRequestChain.getLastModified(), CacheConfig.getBlockSize(conf), conf);
-          }
-        }
-      });
-    }
-    catch (ExecutionException | InterruptedException e) {
-      log.error(e.toString());
-      for (FileDownloadRequestChain readRequestChain : readRequestChainList) {
-        readRequestChain.cancel();
-      }
-      throw e;
-    }
   }
 
   private class FileMetadataRequest

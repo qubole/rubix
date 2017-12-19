@@ -176,8 +176,11 @@ public class LocalDataTransferServer extends Configured implements Tool
                     throw new Exception("Could not create BookKeeper Client " + Throwables.getStackTraceAsString(e));
                 }
 
-                if (!bookKeeperClient.readData(remotePath, offset, readLength, header.getFileSize(), header.getLastModified(), header.getClusterType())) {
-                    throw new Exception("Could not cache data required by non-local node");
+                if (!CacheConfig.isParallelWarmupEnabled(conf)) {
+                    if (!bookKeeperClient.readData(remotePath, offset, readLength, header.getFileSize(),
+                        header.getLastModified(), header.getClusterType())) {
+                        throw new Exception("Could not cache data required by non-local node");
+                    }
                 }
 
                 String filename = CacheConfig.getLocalPath(remotePath, conf);
