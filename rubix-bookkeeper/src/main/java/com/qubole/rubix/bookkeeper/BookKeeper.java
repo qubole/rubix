@@ -336,8 +336,8 @@ public class BookKeeper
         for (int d = 0; d < CacheConfig.numDisks(conf); d++) {
             avail += new File(CacheConfig.getDirPath(conf, d)).getUsableSpace();
         }
-        avail = avail / 1024 / 1024;
-        log.info("total free space " + avail + "MB");
+        avail = avail / 1024 / 1024;log.info("total free space " + avail + "MB");
+
 
         // In corner cases evictions might not make enough space for new entries
         // To minimize those cases, consider available space lower than actual
