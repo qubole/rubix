@@ -1,4 +1,3 @@
-package com.qubole.rubix.hadoop2;
 /**
  * Copyright (c) 2016. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
@@ -11,6 +10,7 @@ package com.qubole.rubix.hadoop2;
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
+package com.qubole.rubix.hadoop2;
 
 import com.qubole.rubix.core.CachingFileSystem;
 import com.qubole.rubix.spi.ClusterManager;
