@@ -69,7 +69,9 @@ public class BookKeeper
     private long totalRequests = 0;
     private long cachedRequests = 0;
     private long remoteRequests = 0;
-    static String nodeName = null;
+    String nodeName = null;
+    static String nodeHostName = null;
+    static String nodeHostAddress = null;
     private Configuration conf;
     private static Integer lock = 1;
     private List<String> nodes;
@@ -171,7 +173,9 @@ public class BookKeeper
             synchronized (lock) {
                 if (this.clusterManager == null) {
                     try {
-                        nodeName = InetAddress.getLocalHost().getCanonicalHostName();
+                        nodeHostName = InetAddress.getLocalHost().getCanonicalHostName();
+                        nodeHostAddress = InetAddress.getLocalHost().getHostAddress();
+                        log.info(" HostName : " + nodeHostName + " HostAddress : " + nodeHostAddress);
                     }
                     catch (UnknownHostException e) {
                         log.warn("Could not get nodeName", e);
@@ -180,6 +184,7 @@ public class BookKeeper
 
                     if (clusterType == TEST_CLUSTER_MANAGER.ordinal()) {
                         nodes = new ArrayList<>();
+                        nodeName = nodeHostName;
                         nodes.add(nodeName);
                         splitSize = 64 * 1024 * 1024;
                         currentNodeIndex = 0;
@@ -189,18 +194,10 @@ public class BookKeeper
                         if (clusterType == HADOOP2_CLUSTER_MANAGER.ordinal()) {
                             clusterManager = new Hadoop2ClusterManager();
                         }
-
                         else if (clusterType == PRESTO_CLUSTER_MANAGER.ordinal()) {
-                            //Presto needs to store hostAddress in nodename
-                            try {
-                                nodeName = InetAddress.getLocalHost().getHostAddress();
-                            }
-                            catch (UnknownHostException e) {
-                                log.warn("Could not get nodeName", e);
-                                return;
-                            }
                             clusterManager = new PrestoClusterManager();
                         }
+
                         clusterManager.initialize(conf);
                         // set the global clusterManager only after it is inited
                         this.clusterManager = clusterManager;
@@ -212,10 +209,20 @@ public class BookKeeper
         }
 
         nodes = clusterManager.getNodes();
-        currentNodeIndex = nodes.indexOf(nodeName) == -1 ? currentNodeIndex : nodes.indexOf(nodeName);
-        if (nodes == null || nodes.size() == 0 || currentNodeIndex == -1) {
-            log.error(String.format("Could not initialize cluster nodes=%s nodeName=%s currentNodeIndex=%d", nodes, nodeName, currentNodeIndex));
-            // mark clusterManager null so that some
+        if (nodes == null || nodes.size() == 0) {
+            log.error("Could not initialize as no cluster node is found");
+        }
+        else if (nodes.indexOf(nodeHostName) >= 0) {
+            currentNodeIndex = nodes.indexOf(nodeHostName);
+            nodeName = nodeHostName;
+        }
+        else if (nodes.indexOf(nodeHostAddress) >= 0) {
+            currentNodeIndex = nodes.indexOf(nodeHostAddress);
+            nodeName = nodeHostAddress;
+        }
+        else {
+            log.error(String.format("Could not initialize cluster nodes=%s nodeHostName=%s nodeHostAddress=%s " +
+                      "currentNodeIndex=%d", nodes, nodeHostName, nodeHostAddress, currentNodeIndex));
         }
     }
 
