@@ -219,6 +219,6 @@ public class FileMetadata
     public int getWeight(Configuration conf)
     {
         // normal entries have no weight
-        return 0;
+        return 1;
     }
 }
