@@ -50,12 +50,17 @@ public class RemoteFetchProcessor extends AbstractScheduledService
   private Queue<FetchRequest> processQueue = null;
   private ConcurrentMap<String, RangeSet<Long>> rangeMap = null;
   private ConcurrentMap<String, FileMetadataRequest> fetchRequestMap = null;
-  private static ScheduledExecutorService processService = MoreExecutors.getExitingScheduledExecutorService(
-      new ScheduledThreadPoolExecutor(10));
+  private Runnable runnableStatusUpdateTask = null;
+  private ScheduledExecutorService processService;
 
-  Runnable runnableStatusUpdateTask = null;
-  int diskReadBufferSize;
   private static DirectBufferPool bufferPool = new DirectBufferPool();
+
+  int diskReadBufferSize;
+  int numRemoteFetchThreads;
+  int remoteFecthThreadInitialDelay;
+  int remoteFetchThreadInterval;
+  int processThreadInitalDelay;
+  int processThreadInterval;
 
   private static final Log log = LogFactory.getLog(RemoteFetchProcessor.class);
 
@@ -66,7 +71,16 @@ public class RemoteFetchProcessor extends AbstractScheduledService
     this.processQueue = new ConcurrentLinkedQueue<FetchRequest>();
     this.rangeMap = new ConcurrentHashMap<String, RangeSet<Long>>();
     this.fetchRequestMap = new ConcurrentHashMap<String, FileMetadataRequest>();
+
     this.diskReadBufferSize = CacheConfig.getDiskReadBufferSizeDefault(conf);
+    this.numRemoteFetchThreads = CacheConfig.getNumRemoteFetchThreads(conf);
+    this.remoteFecthThreadInitialDelay = CacheConfig.getRemoteFetchThreadInitalDelayInMS(conf);
+    this.remoteFetchThreadInterval = CacheConfig.getRemoteFetchThreadIntervalInMS(conf);
+    this.processThreadInitalDelay = CacheConfig.getProcessThreadInitialDelayInMS(conf);
+    this.processThreadInterval = CacheConfig.getProcessThreadIntervalInMS(conf);
+
+    this.processService = MoreExecutors.getExitingScheduledExecutorService(
+      new ScheduledThreadPoolExecutor(CacheConfig.getNumRemoteFetchThreads(conf)));
 
     runnableStatusUpdateTask = new Runnable()
     {
@@ -74,14 +88,15 @@ public class RemoteFetchProcessor extends AbstractScheduledService
       public void run()
       {
         try {
-          processFetchRequest();
+          processRemoteFetchRequest();
         }
         catch (Exception ex) {
           log.error(ex);
         }
       }
     };
-    processService.scheduleWithFixedDelay(runnableStatusUpdateTask, 1000, 100, TimeUnit.MILLISECONDS);
+    processService.scheduleWithFixedDelay(runnableStatusUpdateTask, remoteFecthThreadInitialDelay,
+        remoteFetchThreadInterval, TimeUnit.MILLISECONDS);
   }
 
   public void addToProcessQueue(String remotePath, long offset, int length, long fileSize, long lastModified)
@@ -117,10 +132,10 @@ public class RemoteFetchProcessor extends AbstractScheduledService
   @Override
   protected Scheduler scheduler()
   {
-    return Scheduler.newFixedRateSchedule(1000, 10, TimeUnit.MILLISECONDS);
+    return Scheduler.newFixedRateSchedule(processThreadInitalDelay, processThreadInterval, TimeUnit.MILLISECONDS);
   }
 
-  private void processFetchRequest() throws IOException, InterruptedException, ExecutionException
+  private void processRemoteFetchRequest() throws IOException, InterruptedException, ExecutionException
   {
     final List<FileDownloadRequestChain> readRequestChainList = new ArrayList<FileDownloadRequestChain>();
 

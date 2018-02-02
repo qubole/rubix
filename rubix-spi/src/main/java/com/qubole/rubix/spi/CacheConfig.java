@@ -69,8 +69,15 @@ public class CacheConfig
     private static String diskReadBufferSizeConf = "hadoop.cache.data.disk.read.buffer.size";
     public static String socketReadTimeOutConf = "hadoop.cache.network.socket.read.timeout";
     private static String diskMonitorIntervalConf = "hadoop.cache.disk.monitor.interval";
-    private static String parallelWarmupEnable = "hadoop.cache.parallel.warmup";
+
+    private static String parallelWarmupEnable = "hadoop.cache.data.parallel.warmup";
+    private static String numRemoteFetchThreads = "hadoop.cache.data.remotefetch.threads";
+    private static String remoteFecthThreadInitialDelay = "hadoop.cache.data.remotefetch.intial.delay";
+    private static String remoteFetchThreadInterval = "hadoop.cache.data.remotefetch.interval";
+    private static String processThreadInitalDelay = "hadoop.cache.data.request.process.inital.delay";
+    private static String processThreadInterval = "hadoop.cache.data.request.process.interval";
     static String fileCacheDirSuffixConf = "/fcache/";
+
     static int maxDisksConf = 5;
 
     // default values
@@ -392,5 +399,30 @@ public class CacheConfig
     public static boolean isParallelWarmupEnabled(Configuration conf)
     {
         return conf.getBoolean(parallelWarmupEnable, true);
+    }
+
+    public static int getNumRemoteFetchThreads(Configuration conf)
+    {
+        return conf.getInt(numRemoteFetchThreads, 10);
+    }
+
+    public static int getRemoteFetchThreadInitalDelayInMS(Configuration conf)
+    {
+        return conf.getInt(remoteFecthThreadInitialDelay, 1000);
+    }
+
+    public static int getRemoteFetchThreadIntervalInMS(Configuration conf)
+    {
+        return conf.getInt(remoteFetchThreadInterval, 100);
+    }
+
+    public static int getProcessThreadInitialDelayInMS(Configuration conf)
+    {
+        return conf.getInt(processThreadInitalDelay, 1000);
+    }
+
+    public static int getProcessThreadIntervalInMS(Configuration conf)
+    {
+        return conf.getInt(processThreadInterval, 10);
     }
 }
