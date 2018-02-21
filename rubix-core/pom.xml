@@ -54,7 +54,10 @@
             <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-spi</artifactId>
         </dependency>
-
+        <dependency>
+            <groupId>com.qubole.rubix</groupId>
+            <artifactId>rubix-common</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

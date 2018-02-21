@@ -69,6 +69,8 @@ public class CacheConfig
     private static String diskReadBufferSizeConf = "hadoop.cache.data.disk.read.buffer.size";
     public static String socketReadTimeOutConf = "hadoop.cache.network.socket.read.timeout";
     private static String diskMonitorIntervalConf = "hadoop.cache.disk.monitor.interval";
+    private static String meticsClassConf = "hadoop.cache.data.metrics.class";
+    private static String metricsRepotersConf = "hadoop.cache.data.metrics.reporters";
     static String fileCacheDirSuffixConf = "/fcache/";
     static int maxDisksConf = 5;
 
@@ -86,6 +88,8 @@ public class CacheConfig
     public static final int diskReadBufferSizeDefault = 1024;
     public static int socketReadTimeOutDefault = 30000; // In milliseconds.
     private static int diskMonitorInterval = 10; // in seconds
+    private static String metricsClassDefault = "com.qubole.rubix.common.CodahaleMetrics";
+    private static String metricsReporterDefault = "JMX";
 
     private static final Log log = LogFactory.getLog(CacheConfig.class.getName());
 
@@ -386,5 +390,15 @@ public class CacheConfig
     public static int getDiskMonitorInterval(Configuration conf)
     {
         return conf.getInt(diskMonitorIntervalConf, diskMonitorInterval);
+    }
+
+    public static String getMetricsClass(Configuration conf)
+    {
+        return conf.get(meticsClassConf, metricsClassDefault);
+    }
+
+    public static String getMetricsReporters(Configuration conf)
+    {
+        return conf.get(metricsRepotersConf, metricsReporterDefault);
     }
 }
