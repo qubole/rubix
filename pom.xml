@@ -48,7 +48,7 @@
         <dep.airlift.version>0.98</dep.airlift.version>
         <commons-httpclient.version>3.0.1</commons-httpclient.version>
         <dep.hadoop1.version>1.2.0</dep.hadoop1.version>
-        <dep.hadoop2.version>2.7.0</dep.hadoop2.version>
+        <dep.hadoop2.version>2.6.0</dep.hadoop2.version>
     </properties>
 
     <modules>
