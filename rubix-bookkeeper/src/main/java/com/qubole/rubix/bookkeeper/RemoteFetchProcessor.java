@@ -37,11 +37,13 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 public class RemoteFetchProcessor extends AbstractScheduledService
 {
@@ -51,7 +53,7 @@ public class RemoteFetchProcessor extends AbstractScheduledService
   private ConcurrentMap<String, RangeSet<Long>> rangeMap = null;
   private ConcurrentMap<String, FileMetadataRequest> fetchRequestMap = null;
   private Runnable runnableStatusUpdateTask = null;
-  private ScheduledExecutorService processService;
+  private ExecutorService processService;
 
   private static DirectBufferPool bufferPool = new DirectBufferPool();
 
@@ -61,6 +63,7 @@ public class RemoteFetchProcessor extends AbstractScheduledService
   int remoteFetchThreadInterval;
   int processThreadInitalDelay;
   int processThreadInterval;
+  long requestProcessDelay;
 
   private static final Log log = LogFactory.getLog(RemoteFetchProcessor.class);
 
@@ -73,45 +76,32 @@ public class RemoteFetchProcessor extends AbstractScheduledService
     this.fetchRequestMap = new ConcurrentHashMap<String, FileMetadataRequest>();
 
     this.diskReadBufferSize = CacheConfig.getDiskReadBufferSizeDefault(conf);
-    this.numRemoteFetchThreads = CacheConfig.getNumRemoteFetchThreads(conf);
-    this.remoteFecthThreadInitialDelay = CacheConfig.getRemoteFetchThreadInitalDelayInMS(conf);
-    this.remoteFetchThreadInterval = CacheConfig.getRemoteFetchThreadIntervalInMS(conf);
-    this.processThreadInitalDelay = CacheConfig.getProcessThreadInitialDelayInMS(conf);
-    this.processThreadInterval = CacheConfig.getProcessThreadIntervalInMS(conf);
+    this.processThreadInitalDelay = CacheConfig.getProcessThreadInitialDelayInMs(conf);
+    this.processThreadInterval = CacheConfig.getProcessThreadIntervalInMs(conf);
+    this.requestProcessDelay = CacheConfig.getRemoteFetchProcessIntervalInMS(conf);
+    int numThreads = CacheConfig.getRemoteFetchNumThreads(conf);
 
-    this.processService = MoreExecutors.getExitingScheduledExecutorService(
-      new ScheduledThreadPoolExecutor(CacheConfig.getNumRemoteFetchThreads(conf)));
-
-    runnableStatusUpdateTask = new Runnable()
-    {
-      @Override
-      public void run()
-      {
-        try {
-          processRemoteFetchRequest();
-        }
-        catch (Exception ex) {
-          log.error(ex);
-        }
-      }
-    };
-    processService.scheduleWithFixedDelay(runnableStatusUpdateTask, remoteFecthThreadInitialDelay,
-        remoteFetchThreadInterval, TimeUnit.MILLISECONDS);
+    ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(numThreads);
+    processService = MoreExecutors.getExitingExecutorService(executor);
   }
 
   public void addToProcessQueue(String remotePath, long offset, int length, long fileSize, long lastModified)
   {
-    FetchRequest request = new FetchRequest(remotePath, offset, length, fileSize, lastModified);
+    long requestedTime = System.currentTimeMillis();
+    FetchRequest request = new FetchRequest(remotePath, offset, length, fileSize, lastModified, requestedTime);
     processQueue.add(request);
   }
 
   @Override
   protected void runOneIteration() throws Exception
   {
-    if (!processQueue.isEmpty()) {
-      FetchRequest request = processQueue.remove();
-      log.info("Processing Request : RemotePath - " + request.getRemotePath() + " Offset : " +
-              request.getOffset() + " Length : " + request.getLength());
+    long currentTime = System.currentTimeMillis();
+
+    while (!processQueue.isEmpty()) {
+      FetchRequest request = processQueue.peek();
+      if (currentTime - request.getRequestedTime() < this.requestProcessDelay) {
+        break;
+      }
 
       if (!rangeMap.containsKey(request.getRemotePath())) {
         RangeSet<Long> rangeSet = TreeRangeSet.create();
@@ -119,20 +109,21 @@ public class RemoteFetchProcessor extends AbstractScheduledService
         fetchRequestMap.putIfAbsent(request.getRemotePath(), new FileMetadataRequest(request.getRemotePath(),
             request.getFileSize(), request.getLastModified()));
       }
-
-      String remotePath = request.getRemotePath();
-      synchronized (remotePath) {
-        RangeSet<Long> rangeSet = rangeMap.get(remotePath);
-        rangeSet.add(Range.open(request.getOffset(), request.getOffset() + request.getLength()));
-        log.info("RangeSet : " + rangeSet);
-      }
+      rangeMap.get(request.getRemotePath()).add(Range.open(request.getOffset(),
+          request.getOffset() + request.getLength()));
+      processQueue.remove();
     }
+
+    processRemoteFetchRequest();
+
+    rangeMap.clear();
+    fetchRequestMap.clear();
   }
 
   @Override
   protected Scheduler scheduler()
   {
-    return Scheduler.newFixedRateSchedule(processThreadInitalDelay, processThreadInterval, TimeUnit.MILLISECONDS);
+    return Scheduler.newFixedDelaySchedule(processThreadInitalDelay, processThreadInterval, TimeUnit.MILLISECONDS);
   }
 
   private void processRemoteFetchRequest() throws IOException, InterruptedException, ExecutionException
@@ -170,19 +161,27 @@ public class RemoteFetchProcessor extends AbstractScheduledService
     }
 
     int sizeRead = 0;
+    List<Future<Integer>> futures = new ArrayList<Future<Integer>>();
+
     for (FileDownloadRequestChain requestChain : readRequestChainList) {
+      requestChain.lock();
+      Future<Integer> result = processService.submit(requestChain);
+      futures.add(result);
+    }
+
+    for (Future<Integer> future : futures) {
+      FileDownloadRequestChain requestChain = readRequestChainList.get(futures.indexOf(future));
       try {
-        requestChain.lock();
-        sizeRead += requestChain.call();
+        int read = future.get();
+        sizeRead += read;
         requestChain.updateCacheStatus(requestChain.getRemotePath(), requestChain.getFileSize(),
-                requestChain.getLastModified(), CacheConfig.getBlockSize(conf), conf);
+            requestChain.getLastModified(), CacheConfig.getBlockSize(conf), conf);
       }
-      catch (IOException ex) {
+      catch (ExecutionException | InterruptedException ex) {
         log.error(ex.getStackTrace());
         requestChain.cancel();
       }
     }
-
   }
 
   private class FileMetadataRequest

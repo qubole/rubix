@@ -20,14 +20,16 @@ public class FetchRequest
   private int length;
   private long fileSize;
   private long lastModified;
+  private long requestedTime;
 
-  FetchRequest(String remotePath, long offset, int length, long fileSize, long lastModified)
+  FetchRequest(String remotePath, long offset, int length, long fileSize, long lastModified, long requestedTime)
   {
     this.remotePath = remotePath;
     this.offset = offset;
     this.length = length;
     this.fileSize = fileSize;
     this.lastModified = lastModified;
+    this.requestedTime = requestedTime;
   }
 
   public String getRemotePath()
@@ -53,5 +55,10 @@ public class FetchRequest
   public long getLastModified()
   {
     return this.lastModified;
+  }
+
+  public long getRequestedTime()
+  {
+    return this.requestedTime;
   }
 }
