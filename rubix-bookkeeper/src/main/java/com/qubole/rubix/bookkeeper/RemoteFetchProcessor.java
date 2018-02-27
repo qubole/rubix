@@ -148,7 +148,7 @@ public class RemoteFetchProcessor extends AbstractScheduledService
       synchronized (entry.getKey()) {
         for (Range<Long> range : entry.getValue().asRanges()) {
           log.info("Adding request for File : " + entry.getKey() + " Start : "
-              + range.upperEndpoint() + " End : " + range.lowerEndpoint());
+              + range.lowerEndpoint() + " End : " + range.upperEndpoint());
           ReadRequest request = new ReadRequest(range.lowerEndpoint(), range.upperEndpoint(),
               range.lowerEndpoint(), range.upperEndpoint(), null, 0, fetchRequestMap.get(entry.getKey()).fileSize);
           requestChain.addReadRequest(request);
@@ -160,6 +160,11 @@ public class RemoteFetchProcessor extends AbstractScheduledService
       readRequestChainList.add(requestChain);
     }
 
+    processDownloadRequests(readRequestChainList);
+  }
+
+  private void processDownloadRequests(List<FileDownloadRequestChain> readRequestChainList)
+  {
     int sizeRead = 0;
     List<Future<Integer>> futures = new ArrayList<Future<Integer>>();
 

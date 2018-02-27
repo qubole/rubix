@@ -405,9 +405,8 @@ public class CachingInputStream
                             nonLocalAsyncRequests.put(remoteLocation, nonLocalRequestChain);
                         }
                         nonLocalAsyncRequests.get(remoteLocation).addReadRequest(readRequest);
-                        if (!nonLocalAsyncRequests.get(remoteLocation).getDirectReadRequestQueue().isEmpty()) {
+                        if (nonLocalAsyncRequests.get(remoteLocation).needDirectReadRequest(blockNum)) {
                             if (directReadRequestChain == null) {
-                                nonLocalAsyncRequests.get(remoteLocation).getDirectReadRequestQueue().remove();
                                 directReadRequestChain = new DirectReadRequestChain(getParentDataInputStream());
                             }
                             directReadRequestChain.addReadRequest(readRequest);

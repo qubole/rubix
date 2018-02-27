@@ -23,9 +23,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Queue;
 
 import static com.google.common.base.Preconditions.checkState;
 
@@ -48,8 +46,10 @@ public class NonLocalRequestChain extends ReadRequestChain
   DirectReadRequestChain directReadRequestChain = null;
   RemoteFetchRequestChain remoteFetchRequestChain = null;
   FileSystem.Statistics statistics = null;
-  Queue<ReadRequest> directReadRequestQueue = new LinkedList<ReadRequest>();
+  boolean needDirectReadRequest = false;
   List<BlockLocation> isCached = null;
+  long startBlockForCacheStatus;
+  long endBlockForCacheStatus;
 
   int directRead = 0;
 
@@ -66,6 +66,10 @@ public class NonLocalRequestChain extends ReadRequestChain
     this.conf = conf;
     this.clusterType = clusterType;
     this.strictMode = strictMode;
+    this.statistics = statistics;
+    this.startBlockForCacheStatus = startBlock;
+    this.endBlockForCacheStatus = endBlock;
+
     this.bookKeeperFactory = new BookKeeperFactory();
     this.blockSize = CacheConfig.getBlockSize(conf);
 
@@ -103,34 +107,34 @@ public class NonLocalRequestChain extends ReadRequestChain
 
   public void addReadRequest(ReadRequest readRequest)
   {
-    long startBlock = readRequest.backendReadStart / blockSize;
-    long endBlock = (readRequest.backendReadEnd / blockSize) == startBlock ? startBlock + 1 :
-        (readRequest.backendReadEnd / blockSize);
+    long blockNum = readRequest.backendReadStart / blockSize;
 
-    int idx = 0;
-    for (long blockNum = startBlock; blockNum < endBlock; blockNum++, idx++) {
-      if (isCached != null && isCached.get(idx).getLocation() == Location.CACHED) {
-        if (nonLocalReadRequestChain == null) {
-          nonLocalReadRequestChain = new NonLocalReadRequestChain(remoteNodeName, fileSize, lastModified, conf,
-              remoteFileSystem, remoteFilePath, clusterType, strictMode, statistics);
-        }
-        nonLocalReadRequestChain.addReadRequest(readRequest);
+    if (!needDirectReadRequest(blockNum)) {
+      needDirectReadRequest = false;
+      if (nonLocalReadRequestChain == null) {
+        nonLocalReadRequestChain = new NonLocalReadRequestChain(remoteNodeName, fileSize, lastModified, conf,
+            remoteFileSystem, remoteFilePath, clusterType, strictMode, statistics);
       }
-      else {
-        directReadRequestQueue.add(readRequest);
-
-        if (remoteFetchRequestChain == null) {
-          remoteFetchRequestChain = new RemoteFetchRequestChain(remoteFilePath, remoteFileSystem, remoteNodeName,
-              conf, lastModified, fileSize, clusterType);
-        }
-        remoteFetchRequestChain.addReadRequest(readRequest);
+      nonLocalReadRequestChain.addReadRequest(readRequest);
+    }
+    else {
+      needDirectReadRequest = true;
+      if (remoteFetchRequestChain == null) {
+        remoteFetchRequestChain = new RemoteFetchRequestChain(remoteFilePath, remoteFileSystem, remoteNodeName,
+            conf, lastModified, fileSize, clusterType);
       }
+      remoteFetchRequestChain.addReadRequest(readRequest);
     }
   }
 
-  public Queue<ReadRequest> getDirectReadRequestQueue()
+  protected boolean needDirectReadRequest(long blockNum)
   {
-    return directReadRequestQueue;
+    int idx = (int) (blockNum - startBlockForCacheStatus);
+    if (isCached != null && isCached.get(idx).getLocation() == Location.CACHED) {
+      return false;
+    }
+
+    return true;
   }
 
   @Override
