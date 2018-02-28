@@ -398,7 +398,7 @@ public class CacheConfig
 
     public static boolean isParallelWarmupEnabled(Configuration conf)
     {
-        return conf.getBoolean(parallelWarmupEnable, true);
+        return conf.getBoolean(parallelWarmupEnable, false);
     }
 
     public static int getProcessThreadInitialDelayInMs(Configuration conf)
