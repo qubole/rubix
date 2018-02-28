@@ -230,7 +230,7 @@ public class CachingInputStream
             throws IOException, InterruptedException, ExecutionException
 
     {
-        log.info(String.format("Got Read, currentPos: %d currentBlock: %d bufferOffset: %d length: %d", nextReadPosition, nextReadBlock, offset, length));
+        log.debug(String.format("Got Read, currentPos: %d currentBlock: %d bufferOffset: %d length: %d", nextReadPosition, nextReadBlock, offset, length));
 
         if (nextReadPosition >= fileSize) {
             log.debug("Already at eof, returning");
@@ -247,8 +247,6 @@ public class CachingInputStream
                 endBlock,
                 length);
 
-        log.info("Executing Chains");
-
         // start read requests
         ImmutableList.Builder builder = ImmutableList.builder();
         int sizeRead = 0;
@@ -258,8 +256,6 @@ public class CachingInputStream
             readRequestChain.lock();
             builder.add(readService.submit(readRequestChain));
         }
-
-        log.info("Submitted");
 
         List<ListenableFuture<Integer>> futures = builder.build();
         log.info("Length of Futures : " + futures.size());
@@ -288,7 +284,6 @@ public class CachingInputStream
             {
                 ReadRequestChainStats stats = new ReadRequestChainStats();
                 for (ReadRequestChain readRequestChain : readRequestChains) {
-                    log.info("Updating cache status for : " + readRequestChain.toString());
                     readRequestChain.updateCacheStatus(remotePath, fileSize, lastModified, blockSize, conf);
                     stats = stats.add(readRequestChain.getStats());
                 }
@@ -372,7 +367,7 @@ public class CachingInputStream
             }
 
             else if (isCached.get(idx).getLocation() == Location.CACHED) {
-                log.info(String.format("Sending cached block %d to cachedReadRequestChain", blockNum));
+                log.debug(String.format("Sending cached block %d to cachedReadRequestChain", blockNum));
                 try {
                     if (directReadBuffer == null) {
                         directReadBuffer = bufferPool.getBuffer(diskReadBufferSize);
@@ -396,7 +391,7 @@ public class CachingInputStream
                     String remoteLocation = isCached.get(idx).getRemoteLocation();
 
                     if (CacheConfig.isParallelWarmupEnabled(conf)) {
-                        log.info(String.format("Sending block %d to NonLocalRequestChain to node : %s", blockNum, remoteLocation));
+                        log.debug(String.format("Sending block %d to NonLocalRequestChain to node : %s", blockNum, remoteLocation));
                         if (!nonLocalAsyncRequests.containsKey(remoteLocation)) {
                             NonLocalRequestChain nonLocalRequestChain =
                                 new NonLocalRequestChain(remoteLocation, fileSize, lastModified,
@@ -413,7 +408,7 @@ public class CachingInputStream
                         }
                     }
                     else {
-                        log.info(String.format("Sending block %d to NonLocalReadRequestChain to node : %s", blockNum, remoteLocation));
+                        log.debug(String.format("Sending block %d to NonLocalReadRequestChain to node : %s", blockNum, remoteLocation));
                         if (!nonLocalRequests.containsKey(remoteLocation)) {
                             NonLocalReadRequestChain nonLocalReadRequestChain =
                                     new NonLocalReadRequestChain(remoteLocation, fileSize, lastModified, conf,
@@ -428,7 +423,7 @@ public class CachingInputStream
                         directWriteBuffer = bufferPool.getBuffer(diskReadBufferSize);
                     }
                     if (CacheConfig.isParallelWarmupEnabled(conf)) {
-                        log.info(String.format("Sending block %d to remoteFetchRequestChain", blockNum));
+                        log.debug(String.format("Sending block %d to remoteFetchRequestChain", blockNum));
                         if (directReadRequestChain == null) {
                             directReadRequestChain = new DirectReadRequestChain(getParentDataInputStream());
                         }
@@ -443,7 +438,7 @@ public class CachingInputStream
 
                     }
                     else {
-                        log.info(String.format("Sending block %d to remoteReadRequestChain", blockNum));
+                        log.debug(String.format("Sending block %d to remoteReadRequestChain", blockNum));
                         try {
                             if (affixBuffer == null) {
                                 affixBuffer = new byte[blockSize];

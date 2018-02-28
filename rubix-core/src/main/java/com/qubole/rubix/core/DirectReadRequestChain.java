@@ -47,7 +47,6 @@ public class DirectReadRequestChain extends ReadRequestChain
     public Integer call()
             throws Exception
     {
-        String oldThreadName = Thread.currentThread().getName();
         Thread.currentThread().setName(threadName);
         long startTime = System.currentTimeMillis();
 
@@ -56,7 +55,6 @@ public class DirectReadRequestChain extends ReadRequestChain
         }
 
         checkState(isLocked, "Trying to execute Chain without locking");
-        log.info("InputStream: " + inputStream.toString() + " Thread Id : " + oldThreadName);
 
         for (ReadRequest readRequest : readRequests) {
             if (cancelled) {
@@ -76,7 +74,7 @@ public class DirectReadRequestChain extends ReadRequestChain
             totalRead += nread;
         }
         log.info(String.format("Read %d bytes directly from remote, no caching", totalRead));
-        log.info("DirectReadRequest took : " + (System.currentTimeMillis() - startTime) + " msecs ");
+        log.debug("DirectReadRequest took : " + (System.currentTimeMillis() - startTime) + " msecs ");
         return totalRead;
     }
 }
