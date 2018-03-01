@@ -83,6 +83,7 @@ public class TestNonLocalReadRequestChain
         conf.setInt(CacheConfig.dataCacheBookkeeperPortConf, 3456);
         conf.setInt(CacheConfig.localServerPortConf, 2222);
         conf.setInt(CacheConfig.blockSizeConf, blockSize);
+        conf.setBoolean(CacheConfig.parallelWarmupEnable, false);
         conf.set(CacheConfig.dataCacheDirprefixesConf, testDirectoryPrefix + "dir");
         localDataTransferServer = new Thread()
         {

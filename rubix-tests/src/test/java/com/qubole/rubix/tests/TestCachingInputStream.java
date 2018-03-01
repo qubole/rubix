@@ -88,6 +88,7 @@ public class TestCachingInputStream
         conf.setInt(CacheConfig.dataCacheBookkeeperPortConf, 3456);
         conf.setInt(CacheConfig.localServerPortConf, 2222);
         conf.set(CacheConfig.dataCacheDirprefixesConf, testDirectoryPrefix + "dir");
+        conf.setBoolean(CacheConfig.parallelWarmupEnable, false);
         Thread server = new Thread()
         {
             public void run()

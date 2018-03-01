@@ -70,7 +70,7 @@ public class CacheConfig
     public static String socketReadTimeOutConf = "hadoop.cache.network.socket.read.timeout";
     private static String diskMonitorIntervalConf = "hadoop.cache.disk.monitor.interval";
 
-    private static String parallelWarmupEnable = "hadoop.cache.data.parallel.warmup";
+    public static String parallelWarmupEnable = "hadoop.cache.data.parallel.warmup";
     private static String processThreadInitalDelay = "hadoop.cache.data.request.process.inital.delay";
     private static String processThreadInterval = "hadoop.cache.data.request.process.interval";
     private static String remoteFetchProcessInterval = "hadoop.cache.data.remotefetch.interval";
@@ -398,7 +398,7 @@ public class CacheConfig
 
     public static boolean isParallelWarmupEnabled(Configuration conf)
     {
-        return conf.getBoolean(parallelWarmupEnable, false);
+        return conf.getBoolean(parallelWarmupEnable, true);
     }
 
     public static int getProcessThreadInitialDelayInMs(Configuration conf)
