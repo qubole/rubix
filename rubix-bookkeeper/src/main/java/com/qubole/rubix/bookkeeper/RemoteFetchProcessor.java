@@ -50,8 +50,6 @@ public class RemoteFetchProcessor extends AbstractScheduledService
   private Configuration conf;
   BookKeeper bookKeeper;
   private Queue<FetchRequest> processQueue = null;
-  private ConcurrentMap<String, RangeSet<Long>> rangeMap = null;
-  private ConcurrentMap<String, FileMetadataRequest> fetchRequestMap = null;
   private Runnable runnableStatusUpdateTask = null;
   private ExecutorService processService;
 
@@ -72,8 +70,6 @@ public class RemoteFetchProcessor extends AbstractScheduledService
     this.bookKeeper = bookKeeper;
     this.conf = conf;
     this.processQueue = new ConcurrentLinkedQueue<FetchRequest>();
-    this.rangeMap = new ConcurrentHashMap<String, RangeSet<Long>>();
-    this.fetchRequestMap = new ConcurrentHashMap<String, FileMetadataRequest>();
 
     this.diskReadBufferSize = CacheConfig.getDiskReadBufferSizeDefault(conf);
     this.processThreadInitalDelay = CacheConfig.getProcessThreadInitialDelayInMs(conf);
@@ -97,6 +93,14 @@ public class RemoteFetchProcessor extends AbstractScheduledService
   {
     long currentTime = System.currentTimeMillis();
 
+    processRequest(currentTime);
+  }
+
+  private void processRequest(long currentTime) throws IOException, InterruptedException, ExecutionException
+  {
+    ConcurrentMap<String, FileMetadataRequest> fetchRequestMap = new ConcurrentHashMap<String, FileMetadataRequest>();
+    ConcurrentMap<String, RangeSet<Long>> rangeMap = new ConcurrentHashMap<String, RangeSet<Long>>();
+
     // Till the queue is not empty or there are no more requests which came in before the configured delay time
     // we are going to collect the requests and process them
     while (!processQueue.isEmpty()) {
@@ -116,7 +120,7 @@ public class RemoteFetchProcessor extends AbstractScheduledService
       processQueue.remove();
     }
 
-    processRemoteFetchRequest();
+    processRemoteFetchRequest(fetchRequestMap, rangeMap);
 
     // After every iteration we are clearing the maps
     rangeMap.clear();
@@ -129,7 +133,9 @@ public class RemoteFetchProcessor extends AbstractScheduledService
     return Scheduler.newFixedDelaySchedule(processThreadInitalDelay, processThreadInterval, TimeUnit.MILLISECONDS);
   }
 
-  private void processRemoteFetchRequest() throws IOException, InterruptedException, ExecutionException
+  private void processRemoteFetchRequest(ConcurrentMap<String, FileMetadataRequest> fetchRequestMap,
+                                         ConcurrentMap<String, RangeSet<Long>> rangeMap)
+                                        throws IOException, InterruptedException, ExecutionException
   {
     final List<FileDownloadRequestChain> readRequestChainList = new ArrayList<FileDownloadRequestChain>();
 
