@@ -239,7 +239,6 @@ public class CachingInputStream
 
         // Get the last block
         final long endBlock = ((nextReadPosition + (length - 1)) / blockSize) + 1; // this block will not be read
-        log.debug("End block : " + endBlock);
 
         // Create read requests
         final List<ReadRequestChain> readRequestChains = setupReadRequestChains(buffer,
@@ -252,18 +251,15 @@ public class CachingInputStream
         int sizeRead = 0;
 
         for (ReadRequestChain readRequestChain : readRequestChains) {
-            log.info("Submitting Request for " + readRequestChain.toString());
             readRequestChain.lock();
             builder.add(readService.submit(readRequestChain));
         }
 
         List<ListenableFuture<Integer>> futures = builder.build();
-        log.info("Length of Futures : " + futures.size());
         for (ListenableFuture<Integer> future : futures) {
             // exceptions handled in caller
             try {
                 int read = future.get();
-                log.info("Finally Read " + read + " from " + readRequestChains.get(futures.indexOf(future)).toString());
                 sizeRead += read;
             }
             catch (ExecutionException | InterruptedException e) {

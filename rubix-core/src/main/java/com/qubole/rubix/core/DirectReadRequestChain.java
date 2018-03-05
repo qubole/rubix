@@ -61,7 +61,6 @@ public class DirectReadRequestChain extends ReadRequestChain
                 propagateCancel(this.getClass().getName());
             }
             inputStream.seek(readRequest.actualReadStart);
-            log.info(" Actual read start " + readRequest.getActualReadStart() + " Actual Read End " + readRequest.getActualReadEnd());
             int nread = 0;
             while (nread < readRequest.getActualReadLength()) {
                 int nbytes = inputStream.read(readRequest.getDestBuffer(), readRequest.getDestBufferOffset() + nread, readRequest.getActualReadLength() - nread);

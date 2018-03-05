@@ -274,10 +274,18 @@ public class BookKeeper
             throws TException
     {
         if (CacheConfig.isParallelWarmupEnabled(conf)) {
-          log.info("Adding to the queue Path : " + remotePath + " Offste : " + offset + " Length " + length);
-          fetchProcessor.addToProcessQueue(remotePath, offset, length, fileSize, lastModified);
-          return true;
+            log.info("Adding to the queue Path : " + remotePath + " Offste : " + offset + " Length " + length);
+            fetchProcessor.addToProcessQueue(remotePath, offset, length, fileSize, lastModified);
+            return true;
         }
+        else {
+            return readDataInternal(remotePath, offset, length, fileSize, lastModified, clusterType);
+        }
+    }
+
+    private boolean readDataInternal(String remotePath, long offset, int length, long fileSize,
+                                     long lastModified, int clusterType) throws TException
+    {
         int blockSize = CacheConfig.getBlockSize(conf);
         byte[] buffer = new byte[blockSize];
         ByteBuffer byteBuffer = null;
@@ -303,7 +311,6 @@ public class BookKeeper
                         fs = path.getFileSystem(conf);
                         log.info("Initializing FileSystem " + fs.toString() + " for Path " + path.toString());
                         fs.initialize(path.toUri(), conf);
-
                         inputStream = fs.open(path, blockSize);
                     }
 

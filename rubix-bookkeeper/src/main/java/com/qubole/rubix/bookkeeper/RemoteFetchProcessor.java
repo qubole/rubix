@@ -23,7 +23,6 @@ import com.qubole.rubix.spi.CacheConfig;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.DirectBufferPool;
@@ -144,7 +143,6 @@ public class RemoteFetchProcessor extends AbstractScheduledService
       Path path = new Path(entry.getKey());
       FileSystem fs = path.getFileSystem(conf);
       fs.initialize(path.toUri(), conf);
-      FSDataInputStream inputStream = fs.open(path);
       String localPath = CacheConfig.getLocalPath(entry.getKey(), conf);
       log.info("Processing Request for File : " + path.toString() + " LocalFile : " + localPath);
       FileMetadataRequest fileRequestMetadata = fetchRequestMap.get(entry.getKey());
