@@ -12,17 +12,23 @@
  */
 package com.qubole.rubix.core;
 
+import org.apache.hadoop.util.DirectBufferPool;
+
 import java.io.BufferedWriter;
+import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 
 /**
  * Created by stagra on 21/1/16.
  */
 public class DataGen
 {
-    static String generateContent(int jump)
+    public static String generateContent(int jump)
     {
         StringBuilder stringBuilder = new StringBuilder();
         for (char i = 'a'; i <= 'z'; i = (char) (i + jump)) {
@@ -53,4 +59,33 @@ public class DataGen
         out.close();
     }
 
+  public static byte[] readBytesFromFile(String path, int offset, int length) throws IOException
+  {
+    RandomAccessFile raf = new RandomAccessFile(path, "r");
+    FileInputStream fis = new FileInputStream(raf.getFD());
+    DirectBufferPool bufferPool = new DirectBufferPool();
+    ByteBuffer directBuffer = bufferPool.getBuffer(2000);
+    byte[] result = new byte[length];
+
+    FileChannel fileChannel = fis.getChannel();
+
+    int nread = 0;
+    int leftToRead = length;
+
+    while (nread < length) {
+      int readInThisCycle = Math.min(leftToRead, directBuffer.capacity());
+      directBuffer.clear();
+      int nbytes = fileChannel.read(directBuffer, offset + nread);
+      if (nbytes <= 0) {
+        break;
+      }
+      directBuffer.flip();
+      int transferBytes = Math.min(readInThisCycle, nbytes);
+      directBuffer.get(result, nread, transferBytes);
+      leftToRead -= transferBytes;
+      nread += transferBytes;
+    }
+
+    return result;
+  }
 }

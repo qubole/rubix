@@ -83,7 +83,7 @@ public class BookKeeper
     {
         this.conf = conf;
         initializeCache(conf);
-        fetchProcessor = new RemoteFetchProcessor(this, conf);
+        fetchProcessor = new RemoteFetchProcessor(conf);
         fetchProcessor.startAsync();
     }
 

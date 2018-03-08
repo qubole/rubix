@@ -47,7 +47,6 @@ import java.util.concurrent.Future;
 public class RemoteFetchProcessor extends AbstractScheduledService
 {
   private Configuration conf;
-  BookKeeper bookKeeper;
   private Queue<FetchRequest> processQueue = null;
   private Runnable runnableStatusUpdateTask = null;
   private ExecutorService processService;
@@ -64,9 +63,8 @@ public class RemoteFetchProcessor extends AbstractScheduledService
 
   private static final Log log = LogFactory.getLog(RemoteFetchProcessor.class);
 
-  public RemoteFetchProcessor(BookKeeper bookKeeper, Configuration conf)
+  public RemoteFetchProcessor(Configuration conf)
   {
-    this.bookKeeper = bookKeeper;
     this.conf = conf;
     this.processQueue = new ConcurrentLinkedQueue<FetchRequest>();
 
@@ -95,11 +93,23 @@ public class RemoteFetchProcessor extends AbstractScheduledService
     processRequest(currentTime);
   }
 
-  private void processRequest(long currentTime) throws IOException, InterruptedException, ExecutionException
+  public void processRequest(long currentTime) throws IOException, InterruptedException, ExecutionException
   {
     ConcurrentMap<String, FileMetadataRequest> fetchRequestMap = new ConcurrentHashMap<String, FileMetadataRequest>();
     ConcurrentMap<String, RangeSet<Long>> rangeMap = new ConcurrentHashMap<String, RangeSet<Long>>();
 
+    mergeRequests(currentTime, fetchRequestMap, rangeMap);
+
+    processRemoteFetchRequest(fetchRequestMap, rangeMap);
+
+    // After every iteration we are clearing the maps
+    rangeMap.clear();
+    fetchRequestMap.clear();
+  }
+
+  public void mergeRequests(long currentTime, ConcurrentMap<String, FileMetadataRequest> fetchRequestMap,
+                             ConcurrentMap<String, RangeSet<Long>> rangeMap)
+  {
     // Till the queue is not empty or there are no more requests which came in before the configured delay time
     // we are going to collect the requests and process them
     while (!processQueue.isEmpty()) {
@@ -118,12 +128,6 @@ public class RemoteFetchProcessor extends AbstractScheduledService
           request.getOffset() + request.getLength()));
       processQueue.remove();
     }
-
-    processRemoteFetchRequest(fetchRequestMap, rangeMap);
-
-    // After every iteration we are clearing the maps
-    rangeMap.clear();
-    fetchRequestMap.clear();
   }
 
   @Override
@@ -195,7 +199,7 @@ public class RemoteFetchProcessor extends AbstractScheduledService
     }
   }
 
-  private class FileMetadataRequest
+  public class FileMetadataRequest
   {
     private String remotePath;
     private long fileSize;

@@ -1,0 +1,220 @@
+package com.qubole.rubix.bookkeeper;
+
+/**
+ * Copyright (c) 2016. Qubole Inc
+ * Licensed under the Apache License, Version 2.0 (the License);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an AS IS BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
+ */
+import com.google.shaded.common.collect.RangeSet;
+import com.qubole.rubix.core.DataGen;
+import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.tests.DeleteFileVisitor;
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Test;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
+
+import static org.testng.AssertJUnit.assertTrue;
+
+/**
+ * Created by Abhishek on 3/6/18.
+ */
+public class RemoteFetchProcessorTest {
+
+  private Configuration conf;
+  private static final Log log = LogFactory.getLog(RemoteFetchProcessorTest.class.getName());
+
+  int blockSize = 100;
+  private final static String testDirectoryPrefix = System.getProperty("java.io.tmpdir") + "TestCachingInputStream/";
+  String backendFileName = testDirectoryPrefix + "backendFile";
+  Path backendPath = new Path("file:///" + backendFileName.substring(1));
+  private final static String testDirectory = testDirectoryPrefix + "dir0";
+
+  @BeforeClass
+  public static void setupClass() throws IOException {
+  }
+
+  @AfterClass
+  public static void tearDownClass() throws IOException {
+  }
+
+  @BeforeMethod
+  public void setUp() throws Exception {
+    conf = new Configuration();
+    conf.set(CacheConfig.dataCacheDirprefixesConf, testDirectoryPrefix + "dir");
+    conf.setInt(CacheConfig.blockSizeConf, blockSize);
+    Files.createDirectories(Paths.get(testDirectory));
+  }
+
+  @AfterMethod
+  public void tearDown() throws Exception {
+    log.info("Deleting files in " + testDirectory);
+    Files.walkFileTree(Paths.get(testDirectory), new DeleteFileVisitor());
+    Files.deleteIfExists(Paths.get(testDirectory));
+  }
+
+
+  @Test
+  public void testMergeRequests() throws Exception
+  {
+    conf.setLong("hadoop.cache.data.remotefetch.interval", 2000);
+    RemoteFetchProcessor processor = new RemoteFetchProcessor(conf);
+    ConcurrentMap<String, RemoteFetchProcessor.FileMetadataRequest> fetchRequestMap =
+        new ConcurrentHashMap<String, RemoteFetchProcessor.FileMetadataRequest>();
+    ConcurrentMap<String, RangeSet<Long>> rangeMap = new ConcurrentHashMap<String, RangeSet<Long>>();
+
+    log.info("Merge Test 1 when requests are all from different file");
+    for (int i = 0; i < 100; i++) {
+      String path = "File--" + i;
+      processor.addToProcessQueue(path, i , i+10, 100, 1000);
+    }
+
+    Thread.sleep(3000);
+
+    processor.mergeRequests(System.currentTimeMillis(), fetchRequestMap, rangeMap);
+
+    int expected = 100;
+    assertTrue("Merge didn't work. Expecting Number of File Requests " + expected + " Got : " + rangeMap.size(),
+        expected == rangeMap.size());
+
+    fetchRequestMap.clear();
+    rangeMap.clear();
+
+    log.info("Merge Test 2 when requests are from a set of files");
+    for (int i = 0; i < 100; i++) {
+      String path = "File--" + (i % 10);
+      processor.addToProcessQueue(path, i , i+10, 100, 1000);
+    }
+
+    Thread.sleep(3000);
+    processor.mergeRequests(System.currentTimeMillis(), fetchRequestMap, rangeMap);
+
+    expected = 10;
+    assertTrue("Merge didn't work. Expecting Number of File Requests " + expected + " Got : " + rangeMap.size(),
+        expected == rangeMap.size());
+
+    fetchRequestMap.clear();
+    rangeMap.clear();
+
+    log.info("Merge Test 3 when requests non overlapping set from one file");
+    for (int i = 0; i < 300; i+=30) {
+      String path = "File--1";
+      processor.addToProcessQueue(path, i , 10, 100, 1000);
+    }
+    Thread.sleep(3000);
+    processor.mergeRequests(System.currentTimeMillis(), fetchRequestMap, rangeMap);
+
+    expected = 10;
+    int result = ((RangeSet<Long>)rangeMap.get("File--1")).asRanges().size();
+    assertTrue("Merge didn't work. Expecting Number Ranges in file " + expected + " Got : " + result,
+        expected == result);
+
+    fetchRequestMap.clear();
+    rangeMap.clear();
+
+    log.info("Merge Test 4 when requests overlapping set from one file");
+    for (int i = 0; i < 300; i+=30) {
+      String path = "File--1";
+      processor.addToProcessQueue(path, i , 50, 100, 1000);
+    }
+    Thread.sleep(3000);
+    processor.mergeRequests(System.currentTimeMillis(), fetchRequestMap, rangeMap);
+
+    expected = 1;
+    result = ((RangeSet<Long>)rangeMap.get("File--1")).asRanges().size();
+    assertTrue("Merge didn't work. Expecting Number Ranges in file " + expected + " Got : " + result,
+        expected == result);
+
+    fetchRequestMap.clear();
+    rangeMap.clear();
+
+  }
+
+  @Test
+  public void testProcessRequestOverlappingSet() throws Exception {
+
+    DataGen.populateFile(backendFileName);
+    File file = new File(backendFileName);
+    Path backendPath = new Path("file:///" + backendFileName);
+
+    conf.setLong("hadoop.cache.data.remotefetch.interval", 2000);
+    RemoteFetchProcessor processsor = new RemoteFetchProcessor(conf);
+
+    processsor.addToProcessQueue(backendPath.toString(), 0, 100, file.length(), (long)10000);
+    processsor.addToProcessQueue(backendPath.toString(), 50, 100, file.length(), (long)10000);
+    processsor.addToProcessQueue(backendPath.toString(), 100, 100, file.length(), (long)10000);
+    processsor.addToProcessQueue(backendPath.toString(), 150, 100, file.length(), (long)10000);
+    processsor.addToProcessQueue(backendPath.toString(), 200, 100, file.length(), (long)10000);
+    processsor.addToProcessQueue(backendPath.toString(), 250, 100, file.length(), (long)10000);
+    processsor.addToProcessQueue(backendPath.toString(), 300, 100, file.length(), (long)10000);
+    processsor.addToProcessQueue(backendPath.toString(), 350, 100, file.length(), (long)10000);
+    processsor.addToProcessQueue(backendPath.toString(), 400, 100, file.length(), (long)10000);
+
+    processsor.processRequest(System.currentTimeMillis() + 2000);
+
+    String downloadedFile = CacheConfig.getLocalPath(backendPath.toString(), conf);
+    String resultString = new String(DataGen.readBytesFromFile(downloadedFile, 0, 500));
+
+    String expected = DataGen.generateContent().substring(0, 500);
+    assertTrue("Downloaded data length didn't match Expected : " + expected.length() + " Got : " + resultString.length(), expected.length() == resultString.length());
+    assertTrue("Downloaded data didn't match Expected : " + expected + " Got : " + resultString, expected.equals(resultString));
+  }
+
+  @Test
+  public void testProcessRequestNonOverlappingSet() throws Exception {
+
+    DataGen.populateFile(backendFileName);
+    File file = new File(backendFileName);
+    Path backendPath = new Path("file:///" + backendFileName);
+
+    conf.setLong("hadoop.cache.data.remotefetch.interval", 2000);
+    RemoteFetchProcessor processsor = new RemoteFetchProcessor(conf);// 0-100, 200-300 ....1000-1100
+
+
+    processsor.addToProcessQueue(backendPath.toString(), 0, 100, file.length(), (long)10000);
+    processsor.addToProcessQueue(backendPath.toString(), 200, 100, file.length(), (long)10000);
+    processsor.addToProcessQueue(backendPath.toString(), 400, 100, file.length(), (long)10000);
+    processsor.addToProcessQueue(backendPath.toString(), 600, 100, file.length(), (long)10000);
+    processsor.addToProcessQueue(backendPath.toString(), 800, 100, file.length(), (long)10000);
+    processsor.addToProcessQueue(backendPath.toString(), 1000, 100, file.length(), (long)10000);
+
+    processsor.processRequest(System.currentTimeMillis() + 2000);
+
+    String downloadedFile = CacheConfig.getLocalPath(backendPath.toString(), conf);
+
+    String resultString = null;
+    String expected = null;
+    String content = DataGen.generateContent(1);
+
+    for (int i =0; i < 1200; i+=200) {
+      resultString = new String(DataGen.readBytesFromFile(downloadedFile, i, 100));
+      expected = content.substring(i, i+100);
+      assertTrue("Downloaded data length didn't match Expected : " + 100 + " Got : " +
+          resultString.length(), resultString.length() == 100);
+      assertTrue("Downloaded data didn't match Expected : " + expected + " Got : " +
+          resultString, expected.equals(resultString));
+    }
+  }
+}
