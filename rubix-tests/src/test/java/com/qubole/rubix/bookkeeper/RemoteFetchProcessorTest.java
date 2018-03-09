@@ -81,9 +81,6 @@ public class RemoteFetchProcessorTest {
   {
     conf.setLong("hadoop.cache.data.remotefetch.interval", 2000);
     RemoteFetchProcessor processor = new RemoteFetchProcessor(conf);
-    ConcurrentMap<String, RemoteFetchProcessor.FileMetadataRequest> fetchRequestMap =
-        new ConcurrentHashMap<String, RemoteFetchProcessor.FileMetadataRequest>();
-    ConcurrentMap<String, RangeSet<Long>> rangeMap = new ConcurrentHashMap<String, RangeSet<Long>>();
 
     log.info("Merge Test 1 when requests are all from different file");
     for (int i = 0; i < 100; i++) {
@@ -93,14 +90,13 @@ public class RemoteFetchProcessorTest {
 
     Thread.sleep(3000);
 
-    processor.mergeRequests(System.currentTimeMillis(), fetchRequestMap, rangeMap);
+    ConcurrentMap<String, DownloadRequestContext> contextMap = processor.mergeRequests(System.currentTimeMillis());
 
     int expected = 100;
-    assertTrue("Merge didn't work. Expecting Number of File Requests " + expected + " Got : " + rangeMap.size(),
-        expected == rangeMap.size());
+    assertTrue("Merge didn't work. Expecting Number of File Requests " + expected + " Got : " + contextMap.size(),
+        expected == contextMap.size());
 
-    fetchRequestMap.clear();
-    rangeMap.clear();
+    contextMap.clear();
 
     log.info("Merge Test 2 when requests are from a set of files");
     for (int i = 0; i < 100; i++) {
@@ -109,14 +105,11 @@ public class RemoteFetchProcessorTest {
     }
 
     Thread.sleep(3000);
-    processor.mergeRequests(System.currentTimeMillis(), fetchRequestMap, rangeMap);
+    contextMap = processor.mergeRequests(System.currentTimeMillis());
 
     expected = 10;
-    assertTrue("Merge didn't work. Expecting Number of File Requests " + expected + " Got : " + rangeMap.size(),
-        expected == rangeMap.size());
-
-    fetchRequestMap.clear();
-    rangeMap.clear();
+    assertTrue("Merge didn't work. Expecting Number of File Requests " + expected + " Got : " + contextMap.size(),
+        expected == contextMap.size());
 
     log.info("Merge Test 3 when requests non overlapping set from one file");
     for (int i = 0; i < 300; i+=30) {
@@ -124,15 +117,12 @@ public class RemoteFetchProcessorTest {
       processor.addToProcessQueue(path, i , 10, 100, 1000);
     }
     Thread.sleep(3000);
-    processor.mergeRequests(System.currentTimeMillis(), fetchRequestMap, rangeMap);
+    contextMap = processor.mergeRequests(System.currentTimeMillis());
 
     expected = 10;
-    int result = ((RangeSet<Long>)rangeMap.get("File--1")).asRanges().size();
+    int result = ((RangeSet<Long>) contextMap.get("File--1").getRanges()).asRanges().size();
     assertTrue("Merge didn't work. Expecting Number Ranges in file " + expected + " Got : " + result,
         expected == result);
-
-    fetchRequestMap.clear();
-    rangeMap.clear();
 
     log.info("Merge Test 4 when requests overlapping set from one file");
     for (int i = 0; i < 300; i+=30) {
@@ -140,16 +130,12 @@ public class RemoteFetchProcessorTest {
       processor.addToProcessQueue(path, i , 50, 100, 1000);
     }
     Thread.sleep(3000);
-    processor.mergeRequests(System.currentTimeMillis(), fetchRequestMap, rangeMap);
+    contextMap = processor.mergeRequests(System.currentTimeMillis());
 
     expected = 1;
-    result = ((RangeSet<Long>)rangeMap.get("File--1")).asRanges().size();
+    result = ((RangeSet<Long>) contextMap.get("File--1").getRanges()).asRanges().size();
     assertTrue("Merge didn't work. Expecting Number Ranges in file " + expected + " Got : " + result,
         expected == result);
-
-    fetchRequestMap.clear();
-    rangeMap.clear();
-
   }
 
   @Test
