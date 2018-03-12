@@ -47,7 +47,7 @@ public class RemoteFetchProcessorTest {
   private static final Log log = LogFactory.getLog(RemoteFetchProcessorTest.class.getName());
 
   int blockSize = 100;
-  private final static String testDirectoryPrefix = System.getProperty("java.io.tmpdir") + "TestCachingInputStream/";
+  private final static String testDirectoryPrefix = System.getProperty("java.io.tmpdir") + "TestRemoteFetchProcessor/";
   String backendFileName = testDirectoryPrefix + "backendFile";
   Path backendPath = new Path("file:///" + backendFileName.substring(1));
   private final static String testDirectory = testDirectoryPrefix + "dir0";
@@ -88,9 +88,7 @@ public class RemoteFetchProcessorTest {
       processor.addToProcessQueue(path, i , i+10, 100, 1000);
     }
 
-    Thread.sleep(3000);
-
-    ConcurrentMap<String, DownloadRequestContext> contextMap = processor.mergeRequests(System.currentTimeMillis());
+    ConcurrentMap<String, DownloadRequestContext> contextMap = processor.mergeRequests(System.currentTimeMillis() + 3000);
 
     int expected = 100;
     assertTrue("Merge didn't work. Expecting Number of File Requests " + expected + " Got : " + contextMap.size(),
@@ -104,8 +102,7 @@ public class RemoteFetchProcessorTest {
       processor.addToProcessQueue(path, i , i+10, 100, 1000);
     }
 
-    Thread.sleep(3000);
-    contextMap = processor.mergeRequests(System.currentTimeMillis());
+    contextMap = processor.mergeRequests(System.currentTimeMillis() + 3000);
 
     expected = 10;
     assertTrue("Merge didn't work. Expecting Number of File Requests " + expected + " Got : " + contextMap.size(),
@@ -116,8 +113,7 @@ public class RemoteFetchProcessorTest {
       String path = "File--1";
       processor.addToProcessQueue(path, i , 10, 100, 1000);
     }
-    Thread.sleep(3000);
-    contextMap = processor.mergeRequests(System.currentTimeMillis());
+    contextMap = processor.mergeRequests(System.currentTimeMillis() + 3000);
 
     expected = 10;
     int result = ((RangeSet<Long>) contextMap.get("File--1").getRanges()).asRanges().size();
@@ -129,8 +125,8 @@ public class RemoteFetchProcessorTest {
       String path = "File--1";
       processor.addToProcessQueue(path, i , 50, 100, 1000);
     }
-    Thread.sleep(3000);
-    contextMap = processor.mergeRequests(System.currentTimeMillis());
+
+    contextMap = processor.mergeRequests(System.currentTimeMillis() + 3000);
 
     expected = 1;
     result = ((RangeSet<Long>) contextMap.get("File--1").getRanges()).asRanges().size();

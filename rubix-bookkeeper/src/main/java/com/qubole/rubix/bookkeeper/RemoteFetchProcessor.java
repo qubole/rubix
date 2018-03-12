@@ -34,9 +34,6 @@ public class RemoteFetchProcessor extends AbstractScheduledService
   private Queue<FetchRequest> processQueue = null;
   private FileDownloader downloader = null;
 
-  int numRemoteFetchThreads;
-  int remoteFecthThreadInitialDelay;
-  int remoteFetchThreadInterval;
   int processThreadInitalDelay;
   int processThreadInterval;
   long requestProcessDelay;
