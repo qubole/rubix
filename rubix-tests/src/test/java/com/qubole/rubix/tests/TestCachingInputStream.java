@@ -51,7 +51,7 @@ import static org.testng.AssertJUnit.assertTrue;
 public class TestCachingInputStream
 {
     int blockSize = 100;
-    private final static String testDirectoryPrefix = System.getProperty("java.io.tmpdir") + "TestCachingInputStream/";
+    private final static String testDirectoryPrefix = System.getProperty("java.io.tmpdir") + "/TestCachingInputStream/";
     String backendFileName = testDirectoryPrefix + "backendFile";
     Path backendPath = new Path("file://" + backendFileName.substring(1));
 
