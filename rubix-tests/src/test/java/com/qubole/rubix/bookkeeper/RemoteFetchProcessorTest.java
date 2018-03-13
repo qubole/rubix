@@ -47,7 +47,7 @@ public class RemoteFetchProcessorTest {
   private static final Log log = LogFactory.getLog(RemoteFetchProcessorTest.class.getName());
 
   int blockSize = 100;
-  private final static String testDirectoryPrefix = System.getProperty("java.io.tmpdir") + "TestRemoteFetchProcessor/";
+  private final static String testDirectoryPrefix = System.getProperty("java.io.tmpdir") + "/TestRemoteFetchProcessor/";
   String backendFileName = testDirectoryPrefix + "backendFile";
   Path backendPath = new Path("file:///" + backendFileName.substring(1));
   private final static String testDirectory = testDirectoryPrefix + "dir0";
