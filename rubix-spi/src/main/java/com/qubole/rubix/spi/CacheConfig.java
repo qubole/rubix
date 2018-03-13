@@ -89,7 +89,7 @@ public class CacheConfig
     public static final int diskReadBufferSizeDefault = 1024;
     public static int socketReadTimeOutDefault = 30000; // In milliseconds.
     private static int diskMonitorInterval = 10; // in seconds
-    private static boolean metricsEnabledDefault = false;
+    private static boolean metricsEnabledDefault = true;
     private static String metricsClassDefault = "com.qubole.rubix.common.CodahaleMetrics";
     private static String metricsReporterDefault = "JMX";
 

@@ -17,8 +17,5 @@ package com.qubole.rubix.common;
  */
 public enum MetricsReporting {
   JMX,
-  CONSOLE,
-  JSON_FILE,
-  HADOOP2,
   GANGLIA
 }
