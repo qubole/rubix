@@ -386,7 +386,6 @@ public class BookKeeper
 
         if (MetricsFactory.getInstance() != null) {
             Metrics metrics = MetricsFactory.getInstance();
-            log.info("Metrics : " + metrics);
             registerDiskSpaceUsedMetrics(metrics, conf);
         }
     }
@@ -398,7 +397,6 @@ public class BookKeeper
             @Override
             public Integer getValue()
             {
-              log.info("getting value ");
               return DiskUtils.getUsedSpaceMB(conf);
             }
           };
