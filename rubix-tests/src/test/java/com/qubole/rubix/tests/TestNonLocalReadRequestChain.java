@@ -49,7 +49,7 @@ import static org.testng.AssertJUnit.assertTrue;
 public class TestNonLocalReadRequestChain
 {
     int blockSize = 100;
-    private final static String testDirectoryPrefix = System.getProperty("java.io.tmpdir") + "TestNonLocalReadRequestChain/";
+    private final static String testDirectoryPrefix = System.getProperty("java.io.tmpdir") + "/TestNonLocalReadRequestChain/";
     String backendFileName = testDirectoryPrefix + "backendFile";
     Path backendPath = new Path("file:///" + backendFileName.substring(1));
     File backendFile = null;
