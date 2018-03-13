@@ -30,10 +30,13 @@ public final class MetricsFactory
 
   public static synchronized void init(Configuration conf) throws Exception
   {
-    if (metrics == null) {
+    if (CacheConfig.isMetricsEnabled(conf)) {
       Class meticsClass = conf.getClassByName(CacheConfig.getMetricsClass(conf));
       Constructor constructor = meticsClass.getConstructor(Configuration.class);
       metrics = (Metrics) constructor.newInstance(conf);
+    }
+    else {
+      metrics = new DummyMetrics();
     }
   }
 
