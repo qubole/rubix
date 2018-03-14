@@ -14,9 +14,15 @@ package com.qubole.rubix.bookkeeper;
  */
 
 import com.qubole.rubix.core.FileDownloadRequestChain;
+import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.tests.DeleteFileVisitor;
 import org.apache.hadoop.conf.Configuration;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -27,6 +33,23 @@ import static org.testng.AssertJUnit.assertTrue;
  * Created by Abhishek on 3/12/18.
  */
 public class FileDownloaderTest {
+
+  private final static String testDirectoryPrefix = System.getProperty("java.io.tmpdir") + "/TestFileDownloader/";
+  private final static String testDirectory = testDirectoryPrefix + "dir0";
+  private Configuration conf;
+
+  @BeforeMethod
+  public void setUp() throws Exception {
+    conf = new Configuration();
+    conf.set(CacheConfig.dataCacheDirprefixesConf, testDirectoryPrefix + "dir");
+    Files.createDirectories(Paths.get(testDirectory));
+  }
+
+  @AfterMethod
+  public void tearDown() throws Exception {
+    Files.walkFileTree(Paths.get(testDirectory), new DeleteFileVisitor());
+    Files.deleteIfExists(Paths.get(testDirectory));
+  }
 
   @Test
   public void testGetFileDownloadRequestChains() throws Exception {
@@ -43,7 +66,7 @@ public class FileDownloaderTest {
     context.addDownloadRange(100, 200);
     context.addDownloadRange(500, 800);
 
-    FileDownloader downloader = new FileDownloader(new Configuration());
+    FileDownloader downloader = new FileDownloader(conf);
     List<FileDownloadRequestChain> requestChains = downloader.getFileDownloadRequestChains(contextMap);
 
     assertTrue("Wrong Number of Request Chains. Expected = 2 Got = " + requestChains.size(), requestChains.size() == 2);
