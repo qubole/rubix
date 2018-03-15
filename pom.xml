@@ -44,6 +44,7 @@
 
     <properties>
         <main.basedir>${project.basedir}</main.basedir>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <dep.presto.version>0.142</dep.presto.version>
         <dep.airlift.version>0.98</dep.airlift.version>
         <commons-httpclient.version>3.0.1</commons-httpclient.version>
