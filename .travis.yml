@@ -14,3 +14,5 @@ before_install:
   - cd thrift-0.9.3 && ./configure --with-java --without-c_glib --without-cpp --without-ruby --without-nodejs && sudo make install
   - cd $TRAVIS_BUILD_DIR
 script: mvn clean install
+after_success:
+  - mvn clean cobertura:cobertura coveralls:report
