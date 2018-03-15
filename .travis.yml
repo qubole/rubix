@@ -1,6 +1,7 @@
 branches:
   only: 
     - master
+    - cobertura-integration
 language: java
 jdk:
   - openjdk7
