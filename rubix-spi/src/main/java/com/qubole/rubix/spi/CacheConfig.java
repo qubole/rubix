@@ -69,6 +69,7 @@ public class CacheConfig
     private static String diskReadBufferSizeConf = "hadoop.cache.data.disk.read.buffer.size";
     public static String socketReadTimeOutConf = "hadoop.cache.network.socket.read.timeout";
     private static String diskMonitorIntervalConf = "hadoop.cache.disk.monitor.interval";
+    private static String cachedFileSplitSize = "caching.fs.split-size";
     static String fileCacheDirSuffixConf = "/fcache/";
     static int maxDisksConf = 5;
 
@@ -86,6 +87,7 @@ public class CacheConfig
     public static final int diskReadBufferSizeDefault = 1024;
     public static int socketReadTimeOutDefault = 30000; // In milliseconds.
     private static int diskMonitorInterval = 10; // in seconds
+    private static long cachedFileSplitSizeDefault = 256 * 1024 * 1024;
 
     private static final Log log = LogFactory.getLog(CacheConfig.class.getName());
 
@@ -386,5 +388,10 @@ public class CacheConfig
     public static int getDiskMonitorInterval(Configuration conf)
     {
         return conf.getInt(diskMonitorIntervalConf, diskMonitorInterval);
+    }
+
+    public static long getSplitSize(Configuration conf)
+    {
+        return conf.getLong(cachedFileSplitSize, cachedFileSplitSizeDefault);
     }
 }

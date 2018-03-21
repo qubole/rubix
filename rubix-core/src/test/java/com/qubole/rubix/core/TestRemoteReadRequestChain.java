@@ -14,6 +14,7 @@ package com.qubole.rubix.core;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -52,7 +53,7 @@ public class TestRemoteReadRequestChain
         LocalFSInputStream localFSInputStream = new LocalFSInputStream(backendFileName);
         fsDataInputStream = new FSDataInputStream(localFSInputStream);
 
-        remoteReadRequestChain = new RemoteReadRequestChain(fsDataInputStream, localFileName);
+        remoteReadRequestChain = new RemoteReadRequestChain(fsDataInputStream, localFileName, new Configuration());
     }
 
     @Test

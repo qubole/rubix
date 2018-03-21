@@ -368,7 +368,7 @@ public class CachingInputStream
                         directReadBuffer = bufferPool.getBuffer(diskReadBufferSize);
                     }
                     if (cachedReadRequestChain == null) {
-                        cachedReadRequestChain = new CachedReadRequestChain(localPath, directReadBuffer, statistics);
+                        cachedReadRequestChain = new CachedReadRequestChain(localPath, directReadBuffer, conf, statistics);
                     }
                     cachedReadRequestChain.addReadRequest(readRequest);
                 }
@@ -403,7 +403,7 @@ public class CachingInputStream
                             affixBuffer = new byte[blockSize];
                         }
                         if (remoteReadRequestChain == null) {
-                            remoteReadRequestChain = new RemoteReadRequestChain(getParentDataInputStream(), localPath, directWriteBuffer, affixBuffer);
+                            remoteReadRequestChain = new RemoteReadRequestChain(getParentDataInputStream(), localPath, directWriteBuffer, affixBuffer, conf);
                         }
                     }
                     catch (IOException e) {
