@@ -86,10 +86,23 @@ public class RemoteFetchProcessor extends AbstractScheduledService
         break;
       }
 
+      DownloadRequestContext context = new DownloadRequestContext(request.getRemotePath(), request.getFileSize(),
+          request.getLastModified());
       if (!contextMap.containsKey(request.getRemotePath())) {
-        DownloadRequestContext context = new DownloadRequestContext(request.getRemotePath(), request.getFileSize(),
-            request.getLastModified());
         contextMap.putIfAbsent(request.getRemotePath(), context);
+      }
+      else {
+        // This takes care of the case where the last modfied time of a file in the request is not matching
+        // with the same of other requests. We will take the latest modified time as a source of truth.
+        // If the last modfied time in context is less than that of current request, we will remove it from the map
+        // Else we will ignode this request.
+        if (contextMap.get(request.getRemotePath()).getLastModifiedTime() < request.getLastModified()) {
+          contextMap.remove(request.getLastModified());
+          contextMap.putIfAbsent(request.getRemotePath(), context);
+        }
+        else if (contextMap.get(request.getRemotePath()).getLastModifiedTime() < request.getLastModified()) {
+          continue;
+        }
       }
       contextMap.get(request.getRemotePath()).addDownloadRange(request.getOffset(),
           request.getOffset() + request.getLength());
