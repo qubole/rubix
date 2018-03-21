@@ -22,17 +22,17 @@ public final class MetricsConstant
   {
   }
 
-  public static final String CACHED_READ_BYTES = "cached_read_bytes";
-  public static final String REMOTE_READ_BYTES = "remote_read_bytes";
-  public static final String NONLOCAL_READ_BYTES = "nonlocal_read_bytes";
+  public static final String CACHED_READ_BYTES = "cachedReadBytes";
+  public static final String REMOTE_READ_BYTES = "remoteReadBytes";
+  public static final String NONLOCAL_READ_BYTES = "nonlocalReadBytes";
 
-  public static final String CACHED_READ_REQUESTS = "cached_read_requests";
-  public static final String REMOTE_READ_REQUESTS = "remote_read_requests";
-  public static final String NONLOCAL_READ_REQUESTS = "nonlocal_read_requests";
+  public static final String CACHED_READ_REQUESTS = "cachedReadRequests";
+  public static final String REMOTE_READ_REQUESTS = "remoteReadRequests";
+  public static final String NONLOCAL_READ_REQUESTS = "nonlocalReadRequests";
 
-  public static final String CACHE_DISK_SPACE_USED = "cache_disk_space_used";
+  public static final String CACHE_DISK_SPACE_USED = "cacheDiskSpaceUsed";
 
-  public static final String NUM_FILES_EVICTED = "num_files_evicted";
-  public static final String NUM_FILES_EVICTED_EXPLICIT = "num_files_evicted_explicit";
-  public static final String NUM_FILES_EVICTED_SIZE = "num_files_evicted_size";
+  public static final String NUM_FILES_EVICTED = "numFilesEvicted";
+  public static final String NUM_FILES_EVICTED_EXPLICIT = "numFilesEvictedExplicit";
+  public static final String NUM_FILES_EVICTED_SIZE = "numFilesEvictedSize";
 }
