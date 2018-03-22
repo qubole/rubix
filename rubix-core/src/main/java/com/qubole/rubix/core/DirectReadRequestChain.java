@@ -20,57 +20,58 @@ import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Created by stagra on 17/2/16.
- *
+ * <p>
  * This chain read directly from Remote. This is like reading from ParentFS directly
  */
-public class DirectReadRequestChain extends ReadRequestChain
+public class DirectReadRequestChain
+    extends ReadRequestChain
 {
-    FSDataInputStream inputStream;
-    int totalRead = 0;
+  FSDataInputStream inputStream;
+  int totalRead;
 
-    private static final Log log = LogFactory.getLog(DirectReadRequestChain.class);
+  private static final Log log = LogFactory.getLog(DirectReadRequestChain.class);
 
-    public DirectReadRequestChain(FSDataInputStream inputStream)
-    {
-        this.inputStream = inputStream;
+  public DirectReadRequestChain(FSDataInputStream inputStream)
+  {
+    this.inputStream = inputStream;
+  }
+
+  @Override
+  public ReadRequestChainStats getStats()
+  {
+    return new ReadRequestChainStats()
+        .setRemoteReads(requests)
+        .setRequestedRead(totalRead);
+  }
+
+  @Override
+  public Integer call()
+      throws Exception
+  {
+    Thread.currentThread().setName(threadName);
+
+    if (readRequests.size() == 0) {
+      return 0;
     }
 
-    @Override
-    public ReadRequestChainStats getStats()
-    {
-        return new ReadRequestChainStats()
-                .setRemoteReads(requests)
-                .setRequestedRead(totalRead);
-    }
+    checkState(isLocked, "Trying to execute Chain without locking");
 
-    @Override
-    public Integer call()
-            throws Exception
-    {
-        Thread.currentThread().setName(threadName);
-
-        if (readRequests.size() == 0) {
-            return 0;
+    for (ReadRequest readRequest : readRequests) {
+      if (cancelled) {
+        propagateCancel(this.getClass().getName());
+      }
+      inputStream.seek(readRequest.actualReadStart);
+      int nread = 0;
+      while (nread < readRequest.getActualReadLength()) {
+        int nbytes = inputStream.read(readRequest.getDestBuffer(), readRequest.getDestBufferOffset() + nread, readRequest.getActualReadLength() - nread);
+        if (nbytes < 0) {
+          return nread;
         }
-
-        checkState(isLocked, "Trying to execute Chain without locking");
-
-        for (ReadRequest readRequest : readRequests) {
-            if (cancelled) {
-                propagateCancel(this.getClass().getName());
-            }
-            inputStream.seek(readRequest.actualReadStart);
-            int nread = 0;
-            while (nread < readRequest.getActualReadLength()) {
-                int nbytes = inputStream.read(readRequest.getDestBuffer(), readRequest.getDestBufferOffset() + nread, readRequest.getActualReadLength() - nread);
-                if (nbytes < 0) {
-                    return nread;
-                }
-                nread += nbytes;
-            }
-            totalRead += nread;
-        }
-        log.info(String.format("Read %d bytes directly from remote, no caching", totalRead));
-        return totalRead;
+        nread += nbytes;
+      }
+      totalRead += nread;
     }
+    log.info(String.format("Read %d bytes directly from remote, no caching", totalRead));
+    return totalRead;
+  }
 }
