@@ -17,24 +17,24 @@ package com.qubole.rubix.spi;
  */
 public enum ClusterType
 {
-    HADOOP2_CLUSTER_MANAGER,
-    PRESTO_CLUSTER_MANAGER,
-    HADOOP_CLUSTER_MANAGER,
-    TEST_CLUSTER_MANAGER;
+  HADOOP2_CLUSTER_MANAGER,
+  PRESTO_CLUSTER_MANAGER,
+  HADOOP_CLUSTER_MANAGER,
+  TEST_CLUSTER_MANAGER;
 
-    public static ClusterType findByValue(int value)
-    {
-        switch (value) {
-            case 0:
-                return HADOOP2_CLUSTER_MANAGER;
-            case 1:
-                return PRESTO_CLUSTER_MANAGER;
-            case 2:
-                return HADOOP_CLUSTER_MANAGER;
-            case 3:
-                return TEST_CLUSTER_MANAGER;
-            default:
-                return null;
-        }
+  public static ClusterType findByValue(int value)
+  {
+    switch (value) {
+      case 0:
+        return HADOOP2_CLUSTER_MANAGER;
+      case 1:
+        return PRESTO_CLUSTER_MANAGER;
+      case 2:
+        return HADOOP_CLUSTER_MANAGER;
+      case 3:
+        return TEST_CLUSTER_MANAGER;
+      default:
+        return null;
     }
+  }
 }
