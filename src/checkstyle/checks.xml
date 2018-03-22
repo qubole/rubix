@@ -204,10 +204,5 @@
             <property name="illegalPkgs" value="jdk.nashorn.internal" />
             <property name="illegalPkgs" value="jdk.internal" />
         </module>
-
-        <module name="IllegalImport">
-            <property name="illegalPkgs" value=".*\.\$internal" />
-            <property name="regexp" value="true" />
-        </module>
     </module>
 </module>
