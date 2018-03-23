@@ -33,8 +33,7 @@ import static com.qubole.rubix.bookkeeper.utils.DiskUtils.getUsedSpaceMB;
 /**
  * Created by shubham on 19/05/17.
  */
-public class DiskMonitorService
-    extends AbstractScheduledService
+public class DiskMonitorService extends AbstractScheduledService
 {
   private Executor executor = Executors.newSingleThreadExecutor();
   private final int interval;

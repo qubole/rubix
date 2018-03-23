@@ -28,8 +28,7 @@ import static com.google.common.base.Preconditions.checkState;
 /**
  * Created by stagra on 4/1/16.
  */
-public class CachedReadRequestChain
-    extends ReadRequestChain
+public class CachedReadRequestChain extends ReadRequestChain
 {
   private FileChannel fileChannel;
   private RandomAccessFile raf;

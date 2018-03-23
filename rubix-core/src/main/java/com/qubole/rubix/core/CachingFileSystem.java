@@ -48,8 +48,7 @@ import static com.qubole.rubix.spi.CacheConfig.skipCache;
 /**
  * Created by stagra on 29/12/15.
  */
-public abstract class CachingFileSystem<T extends FileSystem>
-    extends FileSystem
+public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
 {
   private static final Log log = LogFactory.getLog(CachingFileSystem.class);
   private T fs;

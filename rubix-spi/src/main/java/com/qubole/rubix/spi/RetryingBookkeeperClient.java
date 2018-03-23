@@ -27,9 +27,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Callable;
 
-public class RetryingBookkeeperClient
-    extends BookKeeperService.Client
-    implements Closeable
+public class RetryingBookkeeperClient extends BookKeeperService.Client implements Closeable
 {
   private static final Logger LOG = LoggerFactory.getLogger(RetryingBookkeeperClient.class);
   private int maxRetries;

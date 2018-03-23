@@ -20,8 +20,7 @@ import java.util.List;
 /**
  * Created by qubole on 14/9/16.
  */
-public class ChainedReadRequestChain
-    extends ReadRequestChain
+public class ChainedReadRequestChain extends ReadRequestChain
 {
   private List<ReadRequestChain> readRequestChains = new ArrayList<>();
 

@@ -60,8 +60,7 @@ import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
 /**
  * Created by stagra on 12/2/16.
  */
-public class BookKeeper
-    implements com.qubole.rubix.spi.BookKeeperService.Iface
+public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
 {
   private static Cache<String, FileMetadata> fileMetadataCache;
   private static ClusterManager clusterManager;

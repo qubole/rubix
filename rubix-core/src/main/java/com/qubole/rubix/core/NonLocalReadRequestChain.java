@@ -35,8 +35,7 @@ import static com.google.common.base.Preconditions.checkState;
 /**
  * Created by sakshia on 31/8/16.
  */
-public class NonLocalReadRequestChain
-    extends ReadRequestChain
+public class NonLocalReadRequestChain extends ReadRequestChain
 {
   long fileSize;
   String filePath;

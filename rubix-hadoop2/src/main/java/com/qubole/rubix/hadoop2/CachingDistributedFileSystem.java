@@ -23,8 +23,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import java.io.IOException;
 import java.net.URI;
 
-public class CachingDistributedFileSystem
-        extends CachingFileSystem<DistributedFileSystem>
+public class CachingDistributedFileSystem extends CachingFileSystem<DistributedFileSystem>
 {
   private static final Log LOG = LogFactory.getLog(CachingDistributedFileSystem.class);
   private ClusterManager clusterManager;

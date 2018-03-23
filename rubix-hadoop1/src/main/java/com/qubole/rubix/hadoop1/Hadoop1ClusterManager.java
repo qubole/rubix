@@ -36,8 +36,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Created by stagra on 9/2/16.
  */
-public class Hadoop1ClusterManager
-    extends ClusterManager
+public class Hadoop1ClusterManager extends ClusterManager
 {
   private boolean isMaster = true;
   Supplier<List<String>> nodesSupplier;

@@ -22,8 +22,7 @@ import java.net.URI;
 /**
  * Created by stagra on 14/1/16.
  */
-public class CachingPrestoS3FileSystem
-    extends CachingFileSystem<PrestoS3FileSystem>
+public class CachingPrestoS3FileSystem extends CachingFileSystem<PrestoS3FileSystem>
 {
   private static PrestoClusterManager clusterManager;
 

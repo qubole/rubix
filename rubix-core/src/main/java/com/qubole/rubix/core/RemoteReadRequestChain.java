@@ -35,8 +35,7 @@ import static com.google.common.base.Preconditions.checkState;
  * <p>
  * This chain reads from Remote and stores one copy in cache
  */
-public class RemoteReadRequestChain
-    extends ReadRequestChain
+public class RemoteReadRequestChain extends ReadRequestChain
 {
   final FSDataInputStream inputStream;
 

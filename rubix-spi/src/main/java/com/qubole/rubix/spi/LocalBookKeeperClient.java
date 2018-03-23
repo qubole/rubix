@@ -23,8 +23,7 @@ import java.util.List;
 /**
  * Created by sakshia on 6/10/16.
  */
-public class LocalBookKeeperClient
-    extends RetryingBookkeeperClient
+public class LocalBookKeeperClient extends RetryingBookkeeperClient
 {
   private static final Logger log = LoggerFactory.getLogger(RetryingBookkeeperClient.class);
   BookKeeperService.Iface bookKeeper;

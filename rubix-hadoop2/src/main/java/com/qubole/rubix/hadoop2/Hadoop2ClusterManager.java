@@ -45,8 +45,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Created by sakshia on 28/7/16.
  */
-public class Hadoop2ClusterManager
-    extends ClusterManager
+public class Hadoop2ClusterManager extends ClusterManager
 {
   private boolean isMaster = true;
   public int serverPort = 8088;

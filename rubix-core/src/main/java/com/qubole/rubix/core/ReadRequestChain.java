@@ -29,8 +29,7 @@ import static com.google.common.base.Preconditions.checkState;
  * <p>
  * One ReadRequestChain contains ReadRequests for same buffer
  */
-public abstract class ReadRequestChain
-    implements Callable<Integer>
+public abstract class ReadRequestChain implements Callable<Integer>
 {
   List<ReadRequest> readRequests = new ArrayList<ReadRequest>();
   ReadRequest lastRequest;

@@ -48,8 +48,7 @@ import static com.google.common.base.Preconditions.checkState;
 /**
  * Created by stagra on 29/12/15.
  */
-public class CachingInputStream
-    extends FSInputStream
+public class CachingInputStream extends FSInputStream
 {
   private FSDataInputStream inputStream;
 

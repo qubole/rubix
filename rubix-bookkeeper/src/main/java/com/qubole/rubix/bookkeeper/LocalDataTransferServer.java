@@ -41,9 +41,7 @@ import java.util.concurrent.Executors;
  * Created by sakshia on 26/10/16.
  */
 
-public class LocalDataTransferServer
-    extends Configured
-    implements Tool
+public class LocalDataTransferServer extends Configured implements Tool
 {
   private static Log log = LogFactory.getLog(LocalDataTransferServer.class.getName());
   private static Configuration conf;

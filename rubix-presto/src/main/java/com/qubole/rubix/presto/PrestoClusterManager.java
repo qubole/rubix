@@ -48,8 +48,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Created by stagra on 14/1/16.
  */
-public class PrestoClusterManager
-    extends ClusterManager
+public class PrestoClusterManager extends ClusterManager
 {
   private boolean isMaster = true;
   private int serverPort = 8081;

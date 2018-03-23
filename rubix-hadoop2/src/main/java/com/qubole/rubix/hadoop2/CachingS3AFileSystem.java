@@ -22,8 +22,7 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import java.io.IOException;
 import java.net.URI;
 
-public class CachingS3AFileSystem
-    extends CachingFileSystem<S3AFileSystem>
+public class CachingS3AFileSystem extends CachingFileSystem<S3AFileSystem>
 {
   private static final Log LOG = LogFactory.getLog(CachingS3AFileSystem.class);
   private ClusterManager clusterManager;

@@ -23,8 +23,7 @@ import static com.google.common.base.Preconditions.checkState;
  * <p>
  * This chain read directly from Remote. This is like reading from ParentFS directly
  */
-public class DirectReadRequestChain
-    extends ReadRequestChain
+public class DirectReadRequestChain extends ReadRequestChain
 {
   FSDataInputStream inputStream;
   int totalRead;

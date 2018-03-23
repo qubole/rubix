@@ -25,8 +25,7 @@ import java.net.URI;
 /**
  * Created by stagra on 9/2/16.
  */
-public class CachingNativeS3FileSystem
-    extends CachingFileSystem<NativeS3FileSystem>
+public class CachingNativeS3FileSystem extends CachingFileSystem<NativeS3FileSystem>
 {
   private static final Log LOG = LogFactory.getLog(CachingNativeS3FileSystem.class);
 

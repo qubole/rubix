@@ -33,8 +33,7 @@ import static com.qubole.rubix.spi.CacheConfig.getServerPort;
 /**
  * Created by stagra on 15/2/16.
  */
-public class BookKeeperServer
-    extends Configured implements Tool
+public class BookKeeperServer extends Configured implements Tool
 {
   public static BookKeeper bookKeeper;
   public static BookKeeperService.Processor processor;
