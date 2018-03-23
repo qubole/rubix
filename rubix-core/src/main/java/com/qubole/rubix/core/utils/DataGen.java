@@ -10,7 +10,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-package com.qubole.rubix.core;
+package com.qubole.rubix.core.utils;
 
 import org.apache.hadoop.util.DirectBufferPool;
 
@@ -28,6 +28,10 @@ import java.nio.channels.FileChannel;
  */
 public class DataGen
 {
+    private DataGen()
+    {
+    }
+
     public static String generateContent(int jump)
     {
         StringBuilder stringBuilder = new StringBuilder();
@@ -50,7 +54,6 @@ public class DataGen
         return expected.substring(0, size);
     }
 
-
     public static void populateFile(String filename)
             throws IOException
     {
@@ -59,33 +62,33 @@ public class DataGen
         out.close();
     }
 
-  public static byte[] readBytesFromFile(String path, int offset, int length) throws IOException
-  {
-    RandomAccessFile raf = new RandomAccessFile(path, "r");
-    FileInputStream fis = new FileInputStream(raf.getFD());
-    DirectBufferPool bufferPool = new DirectBufferPool();
-    ByteBuffer directBuffer = bufferPool.getBuffer(2000);
-    byte[] result = new byte[length];
+    public static byte[] readBytesFromFile(String path, int offset, int length) throws IOException
+    {
+        RandomAccessFile raf = new RandomAccessFile(path, "r");
+        FileInputStream fis = new FileInputStream(raf.getFD());
+        DirectBufferPool bufferPool = new DirectBufferPool();
+        ByteBuffer directBuffer = bufferPool.getBuffer(2000);
+        byte[] result = new byte[length];
+        FileChannel fileChannel = fis.getChannel();
 
-    FileChannel fileChannel = fis.getChannel();
+        int nread = 0;
+        int leftToRead = length;
 
-    int nread = 0;
-    int leftToRead = length;
+        while (nread < length) {
+            int readInThisCycle = Math.min(leftToRead, directBuffer.capacity());
+            directBuffer.clear();
+            int nbytes = fileChannel.read(directBuffer, offset + nread);
+            if (nbytes <= 0) {
+                break;
+            }
 
-    while (nread < length) {
-      int readInThisCycle = Math.min(leftToRead, directBuffer.capacity());
-      directBuffer.clear();
-      int nbytes = fileChannel.read(directBuffer, offset + nread);
-      if (nbytes <= 0) {
-        break;
-      }
-      directBuffer.flip();
-      int transferBytes = Math.min(readInThisCycle, nbytes);
-      directBuffer.get(result, nread, transferBytes);
-      leftToRead -= transferBytes;
-      nread += transferBytes;
-    }
+            directBuffer.flip();
+            int transferBytes = Math.min(readInThisCycle, nbytes);
+            directBuffer.get(result, nread, transferBytes);
+            leftToRead -= transferBytes;
+            nread += transferBytes;
+        }
 
-    return result;
+        return result;
   }
 }

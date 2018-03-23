@@ -1,5 +1,3 @@
-package com.qubole.rubix.bookkeeper;
-
 /**
  * Copyright (c) 2016. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
@@ -13,9 +11,11 @@ package com.qubole.rubix.bookkeeper;
  * limitations under the License. See accompanying LICENSE file.
  */
 
+package com.qubole.rubix.bookkeeper;
+
 import com.qubole.rubix.core.FileDownloadRequestChain;
 import com.qubole.rubix.spi.CacheConfig;
-import com.qubole.rubix.tests.DeleteFileVisitor;
+import com.qubole.rubix.core.utils.DeleteFileVisitor;
 import org.apache.hadoop.conf.Configuration;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -32,28 +32,30 @@ import static org.testng.AssertJUnit.assertTrue;
 /**
  * Created by Abhishek on 3/12/18.
  */
-public class FileDownloaderTest {
-
+public class TestFileDownloader
+{
   private final static String testDirectoryPrefix = System.getProperty("java.io.tmpdir") + "/TestFileDownloader/";
   private final static String testDirectory = testDirectoryPrefix + "dir0";
   private Configuration conf;
 
   @BeforeMethod
-  public void setUp() throws Exception {
+  public void setUp() throws Exception
+  {
     conf = new Configuration();
     conf.set(CacheConfig.dataCacheDirprefixesConf, testDirectoryPrefix + "dir");
     Files.createDirectories(Paths.get(testDirectory));
   }
 
   @AfterMethod
-  public void tearDown() throws Exception {
+  public void tearDown() throws Exception
+  {
     Files.walkFileTree(Paths.get(testDirectory), new DeleteFileVisitor());
     Files.deleteIfExists(Paths.get(testDirectory));
   }
 
   @Test
-  public void testGetFileDownloadRequestChains() throws Exception {
-
+  public void testGetFileDownloadRequestChains() throws Exception
+  {
     ConcurrentMap<String, DownloadRequestContext> contextMap = new ConcurrentHashMap<String, DownloadRequestContext>();
     DownloadRequestContext context = new DownloadRequestContext("file:///Files/file-1", 1000, 1000);
     contextMap.put("file:///Files/file-1", context);
