@@ -27,43 +27,43 @@ import java.net.URI;
  */
 public class CachingNativeS3FileSystem extends CachingFileSystem<NativeS3FileSystem>
 {
-    private static final Log LOG = LogFactory.getLog(CachingNativeS3FileSystem.class);
+  private static final Log LOG = LogFactory.getLog(CachingNativeS3FileSystem.class);
 
-    private static ClusterManager clusterManager;
+  private static ClusterManager clusterManager;
 
-    public CachingNativeS3FileSystem()
-    {
-        super();
-    }
+  public CachingNativeS3FileSystem()
+  {
+    super();
+  }
 
-    private static final String SCHEME = "s3n";
+  private static final String SCHEME = "s3n";
 
-    @Override
-    public void initialize(URI uri, Configuration conf) throws IOException
-    {
-        LOG.info("Initializing CachingNativeS3FileSystem");
+  @Override
+  public void initialize(URI uri, Configuration conf) throws IOException
+  {
+    LOG.info("Initializing CachingNativeS3FileSystem");
         /*ClusterManager clusterManager = new Hadoop1ClusterManager();
         clusterManager.initialize(conf);*/
-        if (clusterManager == null) {
-            initializeClusterManager(conf);
-        }
-        setClusterManager(clusterManager);
+    if (clusterManager == null) {
+      initializeClusterManager(conf);
+    }
+    setClusterManager(clusterManager);
 
-        super.initialize(uri, conf);
+    super.initialize(uri, conf);
+  }
+
+  public String getScheme()
+  {
+    return SCHEME;
+  }
+
+  private synchronized void initializeClusterManager(Configuration conf)
+  {
+    if (clusterManager != null) {
+      return;
     }
 
-    public String getScheme()
-    {
-        return SCHEME;
-    }
-
-    private synchronized void initializeClusterManager(Configuration conf)
-    {
-        if (clusterManager != null) {
-            return;
-        }
-
-        clusterManager = new Hadoop1ClusterManager();
-        clusterManager.initialize(conf);
-    }
+    clusterManager = new Hadoop1ClusterManager();
+    clusterManager.initialize(conf);
+  }
 }

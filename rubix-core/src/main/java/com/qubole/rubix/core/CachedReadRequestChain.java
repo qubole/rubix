@@ -30,89 +30,89 @@ import static com.google.common.base.Preconditions.checkState;
  */
 public class CachedReadRequestChain extends ReadRequestChain
 {
-    private FileChannel fileChannel = null;
-    private RandomAccessFile raf;
-    private int read = 0; // data read
-    private FileSystem.Statistics statistics = null;
+  private FileChannel fileChannel;
+  private RandomAccessFile raf;
+  private int read; // data read
+  private FileSystem.Statistics statistics;
 
-    private ByteBuffer directBuffer;
+  private ByteBuffer directBuffer;
 
-    private static final Log log = LogFactory.getLog(CachedReadRequestChain.class);
+  private static final Log log = LogFactory.getLog(CachedReadRequestChain.class);
 
-    public CachedReadRequestChain(String fileToRead, ByteBuffer buffer, FileSystem.Statistics statistics)
-            throws IOException
-    {
-        this.raf = new RandomAccessFile(fileToRead, "r");
-        FileInputStream fis = new FileInputStream(raf.getFD());
-        fileChannel = fis.getChannel();
-        directBuffer = buffer;
-        this.statistics = statistics;
+  public CachedReadRequestChain(String fileToRead, ByteBuffer buffer, FileSystem.Statistics statistics)
+      throws IOException
+  {
+    this.raf = new RandomAccessFile(fileToRead, "r");
+    FileInputStream fis = new FileInputStream(raf.getFD());
+    fileChannel = fis.getChannel();
+    directBuffer = buffer;
+    this.statistics = statistics;
+  }
+
+  @VisibleForTesting
+  public CachedReadRequestChain(String fileToRead)
+      throws IOException
+  {
+    this(fileToRead, ByteBuffer.allocate(1024), null);
+  }
+
+  @VisibleForTesting
+  public CachedReadRequestChain()
+  {
+    //Dummy constructor for testing #testConsequtiveRequest method.
+  }
+
+  public Integer call()
+      throws IOException
+  {
+    // TODO: any exception here should not cause workload to fail
+    // rather should be retried and eventually read from backend
+    Thread.currentThread().setName(threadName);
+
+    if (readRequests.size() == 0) {
+      return 0;
     }
 
-    @VisibleForTesting
-    public CachedReadRequestChain(String fileToRead)
-            throws IOException
-    {
-        this(fileToRead, ByteBuffer.allocate(1024), null);
-    }
-
-    @VisibleForTesting
-    public CachedReadRequestChain()
-    {
-        //Dummy constructor for testing #testConsequtiveRequest method.
-    }
-
-    public Integer call()
-            throws IOException
-    {
-        // TODO: any exception here should not cause workload to fail
-        // rather should be retried and eventually read from backend
-        Thread.currentThread().setName(threadName);
-
-        if (readRequests.size() == 0) {
-            return 0;
+    checkState(isLocked, "Trying to execute Chain without locking");
+    for (ReadRequest readRequest : readRequests) {
+      if (cancelled) {
+        propagateCancel(this.getClass().getName());
+      }
+      int nread = 0;
+      int leftToRead = readRequest.getActualReadLength();
+      log.debug(String.format("Processing readrequest %d-%d, length %d", readRequest.actualReadStart, readRequest.actualReadEnd, leftToRead));
+      while (nread < readRequest.getActualReadLength()) {
+        int readInThisCycle = Math.min(leftToRead, directBuffer.capacity());
+        directBuffer.clear();
+        int nbytes = fileChannel.read(directBuffer, readRequest.getActualReadStart() + nread);
+        if (nbytes <= 0) {
+          break;
         }
-
-        checkState(isLocked, "Trying to execute Chain without locking");
-        for (ReadRequest readRequest : readRequests) {
-            if (cancelled) {
-                propagateCancel(this.getClass().getName());
-            }
-            int nread = 0;
-            int leftToRead = readRequest.getActualReadLength();
-            log.debug(String.format("Processing readrequest %d-%d, length %d", readRequest.actualReadStart, readRequest.actualReadEnd, leftToRead));
-            while (nread < readRequest.getActualReadLength()) {
-                int readInThisCycle = Math.min(leftToRead, directBuffer.capacity());
-                directBuffer.clear();
-                int nbytes = fileChannel.read(directBuffer, readRequest.getActualReadStart() + nread);
-                if (nbytes <= 0) {
-                    break;
-                }
-                directBuffer.flip();
-                int transferBytes = Math.min(readInThisCycle, nbytes);
-                directBuffer.get(readRequest.getDestBuffer(), readRequest.getDestBufferOffset() + nread, transferBytes);
-                leftToRead -= transferBytes;
-                nread += transferBytes;
-            }
-            log.debug(String.format("CachedFileRead copied data [%d - %d] at buffer offset %d",
-                    readRequest.getActualReadStart(),
-                    readRequest.getActualReadStart() + nread,
-                    readRequest.getDestBufferOffset()));
-            read += nread;
-        }
-        log.info(String.format("Read %d bytes from cached file", read));
-        fileChannel.close();
-        raf.close();
-        if (statistics != null) {
-          statistics.incrementBytesRead(read);
-        }
-        return read;
+        directBuffer.flip();
+        int transferBytes = Math.min(readInThisCycle, nbytes);
+        directBuffer.get(readRequest.getDestBuffer(), readRequest.getDestBufferOffset() + nread, transferBytes);
+        leftToRead -= transferBytes;
+        nread += transferBytes;
+      }
+      log.debug(String.format("CachedFileRead copied data [%d - %d] at buffer offset %d",
+          readRequest.getActualReadStart(),
+          readRequest.getActualReadStart() + nread,
+          readRequest.getDestBufferOffset()));
+      read += nread;
     }
-
-    public ReadRequestChainStats getStats()
-    {
-        return new ReadRequestChainStats()
-                .setCachedDataRead(read)
-                .setCachedReads(requests);
+    log.info(String.format("Read %d bytes from cached file", read));
+    fileChannel.close();
+    raf.close();
+    if (statistics != null) {
+      statistics.incrementBytesRead(read);
     }
+    return read;
+  }
+
+  public ReadRequestChainStats getStats()
+  {
+    return new ReadRequestChainStats()
+        .setCachedDataRead(read)
+        .setCachedReads(requests);
+  }
 }

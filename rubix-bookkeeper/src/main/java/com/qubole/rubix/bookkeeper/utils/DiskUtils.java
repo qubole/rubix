@@ -24,33 +24,33 @@ import java.io.IOException;
  */
 public class DiskUtils
 {
-    private static Log log = LogFactory.getLog(DiskUtils.class.getName());
+  private static Log log = LogFactory.getLog(DiskUtils.class.getName());
 
-    private DiskUtils()
-    {
-        //
-    }
+  private DiskUtils()
+  {
+    //
+  }
 
-    // Return actual size of a sparse file in bytes
-    public static long getActualSize(String path)
-            throws IOException
-    {
-        File file = new File(path);
-        String cmd = "ls -s " + path + " | cut -d ' ' -f 1";
-        ShellExec se = new ShellExec(cmd);
-        log.debug("Running: " + cmd);
-        ShellExec.CommandResult cr = se.runCmd();
-        long size = Long.parseLong(cr.getOut().trim());
-        return size * 1024;
-    }
+  // Return actual size of a sparse file in bytes
+  public static long getActualSize(String path)
+      throws IOException
+  {
+    File file = new File(path);
+    String cmd = "ls -s " + path + " | cut -d ' ' -f 1";
+    ShellExec se = new ShellExec(cmd);
+    log.debug("Running: " + cmd);
+    ShellExec.CommandResult cr = se.runCmd();
+    long size = Long.parseLong(cr.getOut().trim());
+    return size * 1024;
+  }
 
-    public static int getUsedSpaceMB(org.apache.hadoop.conf.Configuration conf)
-    {
-        long used = 0;
-        for (int d = 0; d < CacheConfig.numDisks(conf); d++) {
-            File localPath = new File(CacheConfig.getDirPath(conf, d));
-            used += localPath.getTotalSpace() - localPath.getUsableSpace();
-        }
-        return (int) (used / 1024 / 1024);
+  public static int getUsedSpaceMB(org.apache.hadoop.conf.Configuration conf)
+  {
+    long used = 0;
+    for (int d = 0; d < CacheConfig.numDisks(conf); d++) {
+      File localPath = new File(CacheConfig.getDirPath(conf, d));
+      used += localPath.getTotalSpace() - localPath.getUsableSpace();
     }
+    return (int) (used / 1024 / 1024);
+  }
 }

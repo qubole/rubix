@@ -26,94 +26,95 @@ import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Created by stagra on 4/1/16.
- *
+ * <p>
  * One ReadRequestChain contains ReadRequests for same buffer
  */
 public abstract class ReadRequestChain implements Callable<Integer>
 {
-    List<ReadRequest> readRequests = new ArrayList<ReadRequest>();
-    ReadRequest lastRequest = null;
-    boolean isLocked = false;
-    boolean cancelled = false;
+  List<ReadRequest> readRequests = new ArrayList<ReadRequest>();
+  ReadRequest lastRequest;
+  boolean isLocked;
+  boolean cancelled;
 
-    protected String threadName;
-    protected long requests = 0;
+  protected String threadName;
+  protected long requests;
 
-    private static final Log log = LogFactory.getLog(ReadRequestChain.class);
+  private static final Log log = LogFactory.getLog(ReadRequestChain.class);
 
-    public ReadRequestChain()
-    {
-        super();
-        this.threadName = Thread.currentThread().getName();
+  public ReadRequestChain()
+  {
+    super();
+    this.threadName = Thread.currentThread().getName();
+  }
+
+  // Should be added in forward seek fashion for better performance
+  public void addReadRequest(ReadRequest readRequest)
+  {
+    checkState(!isLocked, "Adding request to a locked chain");
+    log.debug(String.format("Request to add ReadRequest: [%d, %d, %d, %d, %d]", readRequest.getBackendReadStart(), readRequest.getBackendReadEnd(), readRequest.getActualReadStart(), readRequest.getActualReadEnd(), readRequest.getDestBufferOffset()));
+    if (lastRequest == null) {
+      addRequest(readRequest);
     }
-
-    // Should be added in forward seek fashion for better performance
-    public void addReadRequest(ReadRequest readRequest)
-    {
-        checkState(!isLocked, "Adding request to a locked chain");
-        log.debug(String.format("Request to add ReadRequest: [%d, %d, %d, %d, %d]", readRequest.getBackendReadStart(), readRequest.getBackendReadEnd(), readRequest.getActualReadStart(), readRequest.getActualReadEnd(), readRequest.getDestBufferOffset()));
-        if (lastRequest == null) {
-            addRequest(readRequest);
-        }
-        else {
-            // since one chain contains request of same buffer, we can collate
-            if (lastRequest.getBackendReadEnd() == readRequest.getBackendReadStart()) {
-                // Since the ReadRequests coming in are for same buffer, can merge the two
-                lastRequest.setBackendReadEnd(readRequest.getBackendReadEnd());
-                lastRequest.setActualReadEnd(readRequest.getActualReadEnd());
-                log.debug(String.format("Updated last to: [%d, %d, %d, %d, %d]", lastRequest.getBackendReadStart(), lastRequest.getBackendReadEnd(), lastRequest.getActualReadStart(), lastRequest.getActualReadEnd(), lastRequest.getDestBufferOffset()));
-            }
-            else {
-                addRequest(readRequest);
-            }
-        }
-        requests++;
+    else {
+      // since one chain contains request of same buffer, we can collate
+      if (lastRequest.getBackendReadEnd() == readRequest.getBackendReadStart()) {
+        // Since the ReadRequests coming in are for same buffer, can merge the two
+        lastRequest.setBackendReadEnd(readRequest.getBackendReadEnd());
+        lastRequest.setActualReadEnd(readRequest.getActualReadEnd());
+        log.debug(String.format("Updated last to: [%d, %d, %d, %d, %d]", lastRequest.getBackendReadStart(), lastRequest.getBackendReadEnd(), lastRequest.getActualReadStart(), lastRequest.getActualReadEnd(), lastRequest.getDestBufferOffset()));
+      }
+      else {
+        addRequest(readRequest);
+      }
     }
+    requests++;
+  }
 
-    private void addRequest(ReadRequest readRequest)
+  private void addRequest(ReadRequest readRequest)
+  {
+    readRequests.add(readRequest);
+    lastRequest = readRequest;
+    log.debug(String.format("Added ReadRequest: [%d, %d, %d, %d, %d]", readRequest.getBackendReadStart(), readRequest.getBackendReadEnd(), readRequest.getActualReadStart(), readRequest.getActualReadEnd(), readRequest.getDestBufferOffset()));
+  }
+
+  public void lock()
+  {
+    isLocked = true;
+  }
+
+  @VisibleForTesting
+  public List<ReadRequest> getReadRequests()
+  {
+    return readRequests;
+  }
+
+  public abstract ReadRequestChainStats getStats();
+
+  /*
+   * This method is used called to update the cache status after read has been done
+   */
+  public void updateCacheStatus(String remotePath, long fileSize, long lastModified, int blockSize, Configuration conf)
+  {
+    // no-op by default
+  }
+
+  public void cancel()
+  {
+    cancelled = true;
+  }
+
+  protected void propagateCancel(String className)
+      throws IOException
+  {
+    throw new CancelledException(className + " Cancelled");
+  }
+
+  private class CancelledException
+      extends IOException
+  {
+    public CancelledException(String message)
     {
-        readRequests.add(readRequest);
-        lastRequest = readRequest;
-        log.debug(String.format("Added ReadRequest: [%d, %d, %d, %d, %d]", readRequest.getBackendReadStart(), readRequest.getBackendReadEnd(), readRequest.getActualReadStart(), readRequest.getActualReadEnd(), readRequest.getDestBufferOffset()));
+      super(message);
     }
-
-    public void lock()
-    {
-        isLocked = true;
-    }
-
-    @VisibleForTesting
-    public List<ReadRequest> getReadRequests()
-    {
-        return readRequests;
-    }
-
-    public abstract ReadRequestChainStats getStats();
-
-    /*
-     * This method is used called to update the cache status after read has been done
-     */
-    public void updateCacheStatus(String remotePath, long fileSize, long lastModified, int blockSize, Configuration conf)
-    {
-        // no-op by default
-    }
-
-    public void cancel()
-    {
-        cancelled = true;
-    }
-
-    protected void propagateCancel(String className)
-            throws IOException
-    {
-        throw new CancelledException(className + " Cancelled");
-    }
-
-    private class CancelledException extends IOException
-    {
-        public CancelledException(String message)
-        {
-            super(message);
-        }
-    }
+  }
 }

@@ -23,35 +23,34 @@ import java.util.List;
 /**
  * Created by sakshia on 6/10/16.
  */
-public class LocalBookKeeperClient
-        extends RetryingBookkeeperClient
+public class LocalBookKeeperClient extends RetryingBookkeeperClient
 {
-    private static final Logger log = LoggerFactory.getLogger(RetryingBookkeeperClient.class);
-    BookKeeperService.Iface bookKeeper = null;
+  private static final Logger log = LoggerFactory.getLogger(RetryingBookkeeperClient.class);
+  BookKeeperService.Iface bookKeeper;
 
-    public LocalBookKeeperClient(TTransport transport, BookKeeperService.Iface bookKeeper)
-    {
-        super(transport, 1);
-        this.bookKeeper = bookKeeper;
-    }
+  public LocalBookKeeperClient(TTransport transport, BookKeeperService.Iface bookKeeper)
+  {
+    super(transport, 1);
+    this.bookKeeper = bookKeeper;
+  }
 
-    @Override
-    public List<BlockLocation> getCacheStatus(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock, int clusterType)
-            throws TException
-    {
-        return bookKeeper.getCacheStatus(remotePath, fileLength, lastModified, startBlock, endBlock, clusterType);
-    }
+  @Override
+  public List<BlockLocation> getCacheStatus(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock, int clusterType)
+      throws TException
+  {
+    return bookKeeper.getCacheStatus(remotePath, fileLength, lastModified, startBlock, endBlock, clusterType);
+  }
 
-    @Override
-    public void setAllCached(final String remotePath, final long fileLength, final long lastModified, final long startBlock, final long endBlock)
-            throws TException
-    {
-        bookKeeper.setAllCached(remotePath, fileLength, lastModified, startBlock, endBlock);
-    }
+  @Override
+  public void setAllCached(final String remotePath, final long fileLength, final long lastModified, final long startBlock, final long endBlock)
+      throws TException
+  {
+    bookKeeper.setAllCached(remotePath, fileLength, lastModified, startBlock, endBlock);
+  }
 
-    @Override
-    public void close()
-            throws IOException
-    {
-    }
+  @Override
+  public void close()
+      throws IOException
+  {
+  }
 }
