@@ -27,41 +27,41 @@ import java.util.concurrent.ExecutionException;
  */
 public abstract class ClusterManager
 {
-    private long splitSize = 256 * 1024 * 1024; // 256MB
+  private long splitSize = 256 * 1024 * 1024; // 256MB
 
-    private int nodeRefreshTime = 300; //sec
+  private int nodeRefreshTime = 300; //sec
 
-    public static String splitSizeConf = "caching.fs.split-size";
+  public static String splitSizeConf = "caching.fs.split-size";
 
-    public static String nodeRefreshTimeConf = "caching.fs.node-refresh-time";
+  public static String nodeRefreshTimeConf = "caching.fs.node-refresh-time";
 
-    public ClusterType getClusterType()
-    {
-        return null;
-    }
+  public ClusterType getClusterType()
+  {
+    return null;
+  }
 
-    public void initialize(Configuration conf)
+  public void initialize(Configuration conf)
 
-    {
-        splitSize = conf.getLong(splitSizeConf, splitSize);
-        nodeRefreshTime = conf.getInt(nodeRefreshTimeConf, nodeRefreshTime);
-    }
+  {
+    splitSize = conf.getLong(splitSizeConf, splitSize);
+    nodeRefreshTime = conf.getInt(nodeRefreshTimeConf, nodeRefreshTime);
+  }
 
-    // This is the size in which the file will be logically divided into splits
-    public long getSplitSize()
-    {
-        return splitSize;
-    }
+  // This is the size in which the file will be logically divided into splits
+  public long getSplitSize()
+  {
+    return splitSize;
+  }
 
-    public int getNodeRefreshTime()
-    {
-        return nodeRefreshTime;
-    }
+  public int getNodeRefreshTime()
+  {
+    return nodeRefreshTime;
+  }
 
-    public abstract boolean isMaster()
-            throws ExecutionException;
+  public abstract boolean isMaster()
+      throws ExecutionException;
 
-    // Nodes format as per the note above
-    // Should return sorted list
-    public abstract List<String> getNodes();
+  // Nodes format as per the note above
+  // Should return sorted list
+  public abstract List<String> getNodes();
 }

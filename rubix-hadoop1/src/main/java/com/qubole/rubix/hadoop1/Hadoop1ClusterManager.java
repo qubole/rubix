@@ -38,102 +38,102 @@ import java.util.concurrent.TimeUnit;
  */
 public class Hadoop1ClusterManager extends ClusterManager
 {
-    private boolean isMaster = true;
-    Supplier<List<String>> nodesSupplier;
-    private int nnPort = 50070;
+  private boolean isMaster = true;
+  Supplier<List<String>> nodesSupplier;
+  private int nnPort = 50070;
 
-    public static String nnPortConf = "caching.fs.namenode-port";
+  public static String nnPortConf = "caching.fs.namenode-port";
 
-    private static final Log LOG = LogFactory.getLog(Hadoop1ClusterManager.class);
+  private static final Log LOG = LogFactory.getLog(Hadoop1ClusterManager.class);
 
-    @Override
-    public void initialize(Configuration conf)
+  @Override
+  public void initialize(Configuration conf)
+  {
+    super.initialize(conf);
+    nnPort = conf.getInt(nnPortConf, nnPort);
+
+    nodesSupplier = Suppliers.memoizeWithExpiration(new Supplier<List<String>>()
     {
-        super.initialize(conf);
-        nnPort = conf.getInt(nnPortConf, nnPort);
-
-        nodesSupplier = Suppliers.memoizeWithExpiration(new Supplier<List<String>>()
-        {
-            @Override
-            public List<String> get()
-            {
-                if (!isMaster) {
-                    // First time all nodes start assuming themselves as master and down the line figure out their role
-                    // Next time onwards, only master will be fetching the list of nodes
-                    return ImmutableList.of();
-                }
-
-                HttpClient httpclient = new HttpClient();
-                HttpMethod method = new GetMethod("http://localhost:" + nnPort + "/dfsnodelist.jsp?whatNodes=LIVE&status=NORMAL");
-                int sc;
-                try {
-                    sc = httpclient.executeMethod(method);
-                }
-                catch (IOException e) {
-                    // not reachable => worker
-                    sc = -1;
-                }
-
-                if (sc != 200) {
-                    LOG.debug("Could not reach dfsnodelist.jsp, setting worker role");
-                    isMaster = false;
-                    return ImmutableList.of();
-                }
-
-                LOG.debug("Reached dfsnodelist.jsp, setting master role");
-                isMaster = true;
-                String html;
-                try {
-                    byte[] buf = method.getResponseBody();
-                    html = new String(buf);
-                }
-                catch (IOException e) {
-                    throw Throwables.propagate(e);
-                }
-
-                List<String> nodes = extractNodes(html);
-                return nodes;
-            }
-        }, 10, TimeUnit.SECONDS);
-        nodesSupplier.get();
-    }
-
-    private List<String> extractNodes(String dfsnodelist)
-    {
-        Document doc = Jsoup.parse(dfsnodelist);
-
-        String title = doc.title();
-        List<String> workers = new ArrayList<String>();
-
-        Elements links = doc.select(".name");
-        for (int i = 0; i < links.size(); i++) {
-            Elements nodes = links.get(i).select("a[href]");
-            if (nodes != null && nodes.size() > 0) {
-                String node = nodes.get(0).ownText();
-                if (node != null && !node.isEmpty()) {
-                    workers.add(node);
-                }
-            }
+      @Override
+      public List<String> get()
+      {
+        if (!isMaster) {
+          // First time all nodes start assuming themselves as master and down the line figure out their role
+          // Next time onwards, only master will be fetching the list of nodes
+          return ImmutableList.of();
         }
 
-        Collections.sort(workers);
-        return workers;
-    }
+        HttpClient httpclient = new HttpClient();
+        HttpMethod method = new GetMethod("http://localhost:" + nnPort + "/dfsnodelist.jsp?whatNodes=LIVE&status=NORMAL");
+        int sc;
+        try {
+          sc = httpclient.executeMethod(method);
+        }
+        catch (IOException e) {
+          // not reachable => worker
+          sc = -1;
+        }
 
-    @Override
-    public List<String> getNodes()
-    {
-        long start = System.nanoTime();
-        List<String> nodes = nodesSupplier.get();
-        LOG.info("Fetched node list in " + (System.nanoTime() - start) / Math.pow(10, 9) + "sec");
+        if (sc != 200) {
+          LOG.debug("Could not reach dfsnodelist.jsp, setting worker role");
+          isMaster = false;
+          return ImmutableList.of();
+        }
+
+        LOG.debug("Reached dfsnodelist.jsp, setting master role");
+        isMaster = true;
+        String html;
+        try {
+          byte[] buf = method.getResponseBody();
+          html = new String(buf);
+        }
+        catch (IOException e) {
+          throw Throwables.propagate(e);
+        }
+
+        List<String> nodes = extractNodes(html);
         return nodes;
+      }
+    }, 10, TimeUnit.SECONDS);
+    nodesSupplier.get();
+  }
+
+  private List<String> extractNodes(String dfsnodelist)
+  {
+    Document doc = Jsoup.parse(dfsnodelist);
+
+    String title = doc.title();
+    List<String> workers = new ArrayList<String>();
+
+    Elements links = doc.select(".name");
+    for (int i = 0; i < links.size(); i++) {
+      Elements nodes = links.get(i).select("a[href]");
+      if (nodes != null && nodes.size() > 0) {
+        String node = nodes.get(0).ownText();
+        if (node != null && !node.isEmpty()) {
+          workers.add(node);
+        }
+      }
     }
 
-    @Override
-    public boolean isMaster()
-    {
-        // issue get on nodesSupplier to ensure that isMaster is set correctly
-        nodesSupplier.get();
-        return isMaster;
-    }
+    Collections.sort(workers);
+    return workers;
+  }
+
+  @Override
+  public List<String> getNodes()
+  {
+    long start = System.nanoTime();
+    List<String> nodes = nodesSupplier.get();
+    LOG.info("Fetched node list in " + (System.nanoTime() - start) / Math.pow(10, 9) + "sec");
+    return nodes;
+  }
+
+  @Override
+  public boolean isMaster()
+  {
+    // issue get on nodesSupplier to ensure that isMaster is set correctly
+    nodesSupplier.get();
+    return isMaster;
+  }
 }

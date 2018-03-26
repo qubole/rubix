@@ -35,71 +35,73 @@ import static com.qubole.rubix.spi.CacheConfig.getServerPort;
  */
 public class BookKeeperServer extends Configured implements Tool
 {
-    public static BookKeeper bookKeeper;
-    public static BookKeeperService.Processor processor;
+  public static BookKeeper bookKeeper;
+  public static BookKeeperService.Processor processor;
 
-    public static Configuration conf;
+  public static Configuration conf;
 
-    private static TServer server;
+  private static TServer server;
 
-    private static Log log = LogFactory.getLog(BookKeeperServer.class.getName());
+  private static Log log = LogFactory.getLog(BookKeeperServer.class.getName());
 
-    private BookKeeperServer()
-    {}
+  private BookKeeperServer()
+  {
+  }
 
-    public static void main(String[] args) throws Exception
+  public static void main(String[] args) throws Exception
+  {
+    ToolRunner.run(new Configuration(), new BookKeeperServer(), args);
+  }
+
+  @Override
+  public int run(String[] args) throws Exception
+  {
+    conf = this.getConf();
+    Runnable bookKeeperServer = new Runnable()
     {
-        ToolRunner.run(new Configuration(), new BookKeeperServer(), args);
+      public void run()
+      {
+        startServer(conf);
+      }
+    };
+    new Thread(bookKeeperServer).run();
+    return 0;
+  }
+
+  public static void startServer(Configuration conf)
+  {
+    bookKeeper = new BookKeeper(conf);
+    DiskMonitorService diskMonitorService = new DiskMonitorService(conf, bookKeeper);
+    diskMonitorService.startAsync();
+    processor = new BookKeeperService.Processor(bookKeeper);
+    log.info("Starting BookKeeperServer on port " + getServerPort(conf));
+    try {
+      TServerTransport serverTransport = new TServerSocket(getServerPort(conf));
+      server = new TThreadPoolServer(new TThreadPoolServer
+          .Args(serverTransport)
+          .processor(processor)
+          .maxWorkerThreads(getServerMaxThreads(conf)));
+
+      server.serve();
+    }
+    catch (TTransportException e) {
+      e.printStackTrace();
+      log.error(String.format("Error starting BookKeeper server %s", Throwables.getStackTraceAsString(e)));
+    }
+  }
+
+  public static void stopServer()
+  {
+    server.stop();
+  }
+
+  @VisibleForTesting
+  public static boolean isServerUp()
+  {
+    if (server != null) {
+      return server.isServing();
     }
 
-    @Override
-    public int run(String[] args) throws Exception
-    {
-        conf = this.getConf();
-        Runnable bookKeeperServer = new Runnable() {
-            public void run()
-            {
-                startServer(conf);
-            }
-        };
-        new Thread(bookKeeperServer).run();
-        return 0;
-    }
-
-    public static void startServer(Configuration conf)
-    {
-        bookKeeper = new BookKeeper(conf);
-        DiskMonitorService diskMonitorService = new DiskMonitorService(conf, bookKeeper);
-        diskMonitorService.startAsync();
-        processor = new BookKeeperService.Processor(bookKeeper);
-        log.info("Starting BookKeeperServer on port " + getServerPort(conf));
-        try {
-            TServerTransport serverTransport = new TServerSocket(getServerPort(conf));
-            server = new TThreadPoolServer(new TThreadPoolServer
-                    .Args(serverTransport)
-                    .processor(processor)
-                    .maxWorkerThreads(getServerMaxThreads(conf)));
-
-            server.serve();
-        }
-        catch (TTransportException e) {
-            e.printStackTrace();
-            log.error(String.format("Error starting BookKeeper server %s", Throwables.getStackTraceAsString(e)));
-        }
-    }
-
-    public static void stopServer()
-    {
-        server.stop();
-    }
-
-    @VisibleForTesting
-    public static boolean isServerUp()
-    {
-        if (server != null) {
-            return server.isServing();
-        }
-
-        return false;
-    }
+    return false;
+  }
 }

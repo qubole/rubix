@@ -11,6 +11,7 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 package com.qubole.rubix.hadoop2;
+
 import com.qubole.rubix.core.CachingFileSystem;
 import com.qubole.rubix.spi.ClusterManager;
 import org.apache.commons.logging.Log;
@@ -24,43 +25,42 @@ import java.net.URI;
 /**
  * Created by sakshia on 28/7/16.
  */
-public class CachingNativeS3FileSystem
-        extends CachingFileSystem<NativeS3FileSystem>
+public class CachingNativeS3FileSystem extends CachingFileSystem<NativeS3FileSystem>
 {
-    private static final Log LOG = LogFactory.getLog(CachingNativeS3FileSystem.class);
-    private static final String SCHEME = "s3n";
+  private static final Log LOG = LogFactory.getLog(CachingNativeS3FileSystem.class);
+  private static final String SCHEME = "s3n";
 
-    private ClusterManager clusterManager;
+  private ClusterManager clusterManager;
 
-    public CachingNativeS3FileSystem()
-            throws IOException
-    {
-        super();
+  public CachingNativeS3FileSystem()
+      throws IOException
+  {
+    super();
+  }
+
+  public String getScheme()
+  {
+    return SCHEME;
+  }
+
+  @Override
+  public void initialize(URI uri, Configuration conf)
+      throws IOException
+  {
+    LOG.debug("Initializing CachingNativeS3FileSystem - Hadoop2");
+    if (clusterManager == null) {
+      initializeClusterManager(conf);
     }
+    setClusterManager(clusterManager);
+    super.initialize(uri, conf);
+  }
 
-    public String getScheme()
-    {
-        return SCHEME;
+  private synchronized void initializeClusterManager(Configuration conf)
+  {
+    if (clusterManager != null) {
+      return;
     }
-
-    @Override
-    public void initialize(URI uri, Configuration conf)
-            throws IOException
-    {
-        LOG.debug("Initializing CachingNativeS3FileSystem - Hadoop2");
-        if (clusterManager == null) {
-            initializeClusterManager(conf);
-        }
-        setClusterManager(clusterManager);
-        super.initialize(uri, conf);
-    }
-
-    private synchronized void initializeClusterManager(Configuration conf)
-    {
-        if (clusterManager != null) {
-            return;
-        }
-        clusterManager = new Hadoop2ClusterManager();
-        clusterManager.initialize(conf);
-    }
+    clusterManager = new Hadoop2ClusterManager();
+    clusterManager.initialize(conf);
+  }
 }

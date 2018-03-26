@@ -17,58 +17,58 @@ package com.qubole.rubix.spi;
  */
 public class DataTransferHeader
 {
-    public long offset;
-    public int readLength;
-    public long fileSize;
-    public long lastModified;
-    public int clusterType;
-    public int filePathLength;
-    public String filePath;
+  public long offset;
+  public int readLength;
+  public long fileSize;
+  public long lastModified;
+  public int clusterType;
+  public int filePathLength;
+  public String filePath;
 
-    public DataTransferHeader(long offset, int readLength, long fileSize,
-                              long lastModified, int clusterType, String filePath)
-    {
-        this.clusterType = clusterType;
-        this.filePath = filePath;
-        this.fileSize = fileSize;
-        this.lastModified = lastModified;
-        this.offset = offset;
-        this.filePathLength = filePath.length();
-        this.readLength = readLength;
-    }
+  public DataTransferHeader(long offset, int readLength, long fileSize,
+                            long lastModified, int clusterType, String filePath)
+  {
+    this.clusterType = clusterType;
+    this.filePath = filePath;
+    this.fileSize = fileSize;
+    this.lastModified = lastModified;
+    this.offset = offset;
+    this.filePathLength = filePath.length();
+    this.readLength = readLength;
+  }
 
-    public int getClusterType()
-    {
-        return clusterType;
-    }
+  public int getClusterType()
+  {
+    return clusterType;
+  }
 
-    public long getOffset()
-    {
-        return offset;
-    }
+  public long getOffset()
+  {
+    return offset;
+  }
 
-    public int getReadLength()
-    {
-        return readLength;
-    }
+  public int getReadLength()
+  {
+    return readLength;
+  }
 
-    public long getFileSize()
-    {
-        return fileSize;
-    }
+  public long getFileSize()
+  {
+    return fileSize;
+  }
 
-    public long getLastModified()
-    {
-        return lastModified;
-    }
+  public long getLastModified()
+  {
+    return lastModified;
+  }
 
-    public int getFilePathLength()
-    {
-        return filePathLength;
-    }
+  public int getFilePathLength()
+  {
+    return filePathLength;
+  }
 
-    public String getFilePath()
-    {
-        return filePath;
-    }
+  public String getFilePath()
+  {
+    return filePath;
+  }
 }
