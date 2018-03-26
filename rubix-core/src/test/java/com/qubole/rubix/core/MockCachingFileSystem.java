@@ -30,48 +30,47 @@ import java.net.URI;
  * Created by sakshia on 25/11/16.
  */
 
-public class MockCachingFileSystem
-        extends CachingFileSystem<RawLocalFileSystem>
+public class MockCachingFileSystem extends CachingFileSystem<RawLocalFileSystem>
 {
-    private static final Log log = LogFactory.getLog(MockCachingFileSystem.class);
-    Configuration conf;
-    private static final String SCHEME = "file";
+  private static final Log log = LogFactory.getLog(MockCachingFileSystem.class);
+  Configuration conf;
+  private static final String SCHEME = "file";
 
-    @Override
-    public void initialize(URI uri, Configuration conf)
-            throws IOException
-    {
-        this.conf = conf;
-        log.debug("Initializing TestCachingFileSystem");
-    }
+  @Override
+  public void initialize(URI uri, Configuration conf)
+      throws IOException
+  {
+    this.conf = conf;
+    log.debug("Initializing TestCachingFileSystem");
+  }
 
-    public String getScheme()
-    {
-        return SCHEME;
-    }
+  public String getScheme()
+  {
+    return SCHEME;
+  }
 
-    @Override
-    public FSDataInputStream open(Path path, int i)
-            throws IOException
-    {
-        String localPath = path.toString().substring(9);
-        File file = new File(localPath);
-        LocalFSInputStream inputStream = new LocalFSInputStream(localPath);
-        return new FSDataInputStream(
-                new BufferedFSInputStream(
-                        new CachingInputStream(new FSDataInputStream(inputStream), conf, path, file.length(),
-                            file.lastModified(),  new CachingFileSystemStats(),
-                            ClusterType.TEST_CLUSTER_MANAGER, bookKeeperFactory, this,
-                            CacheConfig.getBlockSize(conf), statistics),
-                    CacheConfig.getBlockSize(conf)));
-    }
+  @Override
+  public FSDataInputStream open(Path path, int i)
+      throws IOException
+  {
+    String localPath = path.toString().substring(9);
+    File file = new File(localPath);
+    LocalFSInputStream inputStream = new LocalFSInputStream(localPath);
+    return new FSDataInputStream(
+        new BufferedFSInputStream(
+            new CachingInputStream(new FSDataInputStream(inputStream), conf, path, file.length(),
+                file.lastModified(), new CachingFileSystemStats(),
+                ClusterType.TEST_CLUSTER_MANAGER, bookKeeperFactory, this,
+                CacheConfig.getBlockSize(conf), statistics),
+            CacheConfig.getBlockSize(conf)));
+  }
 
-    @Override
-    public FSDataInputStream open(Path path)
-            throws IOException
-    {
-        String localPath = path.toString().substring(9);
-        LocalFSInputStream inputStream = new LocalFSInputStream(localPath);
-        return  new FSDataInputStream(inputStream);
-    }
+  @Override
+  public FSDataInputStream open(Path path)
+      throws IOException
+  {
+    String localPath = path.toString().substring(9);
+    LocalFSInputStream inputStream = new LocalFSInputStream(localPath);
+    return new FSDataInputStream(inputStream);
+  }
 }

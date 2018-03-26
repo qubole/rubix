@@ -14,35 +14,32 @@ package com.qubole.rubix.core;
 
 import org.testng.annotations.Test;
 
-import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.util.List;
 
-import static org.testng.AssertJUnit.assertTrue;
+import static org.testng.Assert.assertTrue;
 
 /**
  * Created by stagra on 15/1/16.
  */
 public class TestReadRequestChain
 {
-    @Test
-    public void testConsequtiveRequest()
-    {
-        ReadRequest rr1 = new ReadRequest(0, 1024, 0, 1024, null, 0, 2048);
-        ReadRequest rr2 = new ReadRequest(1024, 2048, 1024, 2048, null, 1024, 2048);
-        CachedReadRequestChain chain = new CachedReadRequestChain();
-        chain.addReadRequest(rr1);
-        chain.addReadRequest(rr2);
+  @Test
+  public void testConsequtiveRequest()
+  {
+    ReadRequest rr1 = new ReadRequest(0, 1024, 0, 1024, null, 0, 2048);
+    ReadRequest rr2 = new ReadRequest(1024, 2048, 1024, 2048, null, 1024, 2048);
+    CachedReadRequestChain chain = new CachedReadRequestChain();
+    chain.addReadRequest(rr1);
+    chain.addReadRequest(rr2);
 
-        List<ReadRequest> finalRequests = chain.getReadRequests();
+    List<ReadRequest> finalRequests = chain.getReadRequests();
 
-        assertTrue("Requests not collated", finalRequests.size() == 1);
+    assertTrue(finalRequests.size() == 1, "Requests not collated");
 
-        ReadRequest rr = finalRequests.get(0);
-        assertTrue("Wrong backend read start", rr.getBackendReadStart() == 0);
-        assertTrue("Wrong backend read end", rr.getBackendReadEnd() == 2048);
-        assertTrue("Wrong actual read start", rr.getActualReadStart() == 0);
-        assertTrue("Wrong actual read end", rr.getActualReadEnd() == 2048);
-
-    }
+    ReadRequest rr = finalRequests.get(0);
+    assertTrue(rr.getBackendReadStart() == 0, "Wrong backend read start");
+    assertTrue(rr.getBackendReadEnd() == 2048, "Wrong backend read end");
+    assertTrue(rr.getActualReadStart() == 0, "Wrong actual read start");
+    assertTrue(rr.getActualReadEnd() == 2048, "Wrong actual read end");
+  }
 }

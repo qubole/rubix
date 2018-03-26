@@ -22,35 +22,37 @@ import java.io.PrintWriter;
  */
 public class DataGen
 {
-    static String generateContent(int jump)
-    {
-        StringBuilder stringBuilder = new StringBuilder();
-        for (char i = 'a'; i <= 'z'; i = (char) (i + jump)) {
-            for (int j = 0; j < 100; j++) {
-                stringBuilder.append(i);
-            }
-        }
-        return stringBuilder.toString();
+  private DataGen()
+  {
+  }
+
+  static String generateContent(int jump)
+  {
+    StringBuilder stringBuilder = new StringBuilder();
+    for (char i = 'a'; i <= 'z'; i = (char) (i + jump)) {
+      for (int j = 0; j < 100; j++) {
+        stringBuilder.append(i);
+      }
     }
+    return stringBuilder.toString();
+  }
 
-    public static String generateContent()
-    {
-        return generateContent(1);
-    }
+  public static String generateContent()
+  {
+    return generateContent(1);
+  }
 
-    public static String getExpectedOutput(int size)
-    {
-        String expected = generateContent(2);
-        return expected.substring(0, size);
-    }
+  public static String getExpectedOutput(int size)
+  {
+    String expected = generateContent(2);
+    return expected.substring(0, size);
+  }
 
-
-    public static void populateFile(String filename)
-            throws IOException
-    {
-        PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(filename, false)));
-        out.print(generateContent());
-        out.close();
-    }
-
+  public static void populateFile(String filename)
+      throws IOException
+  {
+    PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(filename, false)));
+    out.print(generateContent());
+    out.close();
+  }
 }
