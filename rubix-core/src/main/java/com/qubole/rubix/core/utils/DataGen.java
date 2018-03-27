@@ -28,67 +28,66 @@ import java.nio.channels.FileChannel;
  */
 public class DataGen
 {
-    private DataGen()
-    {
+  private DataGen()
+  {
+  }
+
+  public static String generateContent(int jump)
+  {
+    StringBuilder stringBuilder = new StringBuilder();
+    for (char i = 'a'; i <= 'z'; i = (char) (i + jump)) {
+      for (int j = 0; j < 100; j++) {
+        stringBuilder.append(i);
+      }
+    }
+    return stringBuilder.toString();
+  }
+
+  public static String generateContent()
+  {
+    return generateContent(1);
+  }
+
+  public static String getExpectedOutput(int size)
+  {
+    String expected = generateContent(2);
+    return expected.substring(0, size);
+  }
+
+  public static void populateFile(String filename) throws IOException
+  {
+    PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(filename, false)));
+    out.print(generateContent());
+    out.close();
+  }
+
+  public static byte[] readBytesFromFile(String path, int offset, int length) throws IOException
+  {
+    RandomAccessFile raf = new RandomAccessFile(path, "r");
+    FileInputStream fis = new FileInputStream(raf.getFD());
+    DirectBufferPool bufferPool = new DirectBufferPool();
+    ByteBuffer directBuffer = bufferPool.getBuffer(2000);
+    byte[] result = new byte[length];
+    FileChannel fileChannel = fis.getChannel();
+
+    int nread = 0;
+    int leftToRead = length;
+
+    while (nread < length) {
+      int readInThisCycle = Math.min(leftToRead, directBuffer.capacity());
+      directBuffer.clear();
+      int nbytes = fileChannel.read(directBuffer, offset + nread);
+      if (nbytes <= 0) {
+        break;
+      }
+
+      directBuffer.flip();
+      int transferBytes = Math.min(readInThisCycle, nbytes);
+      directBuffer.get(result, nread, transferBytes);
+      leftToRead -= transferBytes;
+      nread += transferBytes;
     }
 
-    public static String generateContent(int jump)
-    {
-        StringBuilder stringBuilder = new StringBuilder();
-        for (char i = 'a'; i <= 'z'; i = (char) (i + jump)) {
-            for (int j = 0; j < 100; j++) {
-                stringBuilder.append(i);
-            }
-        }
-        return stringBuilder.toString();
-    }
-
-    public static String generateContent()
-    {
-        return generateContent(1);
-    }
-
-    public static String getExpectedOutput(int size)
-    {
-        String expected = generateContent(2);
-        return expected.substring(0, size);
-    }
-
-    public static void populateFile(String filename)
-            throws IOException
-    {
-        PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(filename, false)));
-        out.print(generateContent());
-        out.close();
-    }
-
-    public static byte[] readBytesFromFile(String path, int offset, int length) throws IOException
-    {
-        RandomAccessFile raf = new RandomAccessFile(path, "r");
-        FileInputStream fis = new FileInputStream(raf.getFD());
-        DirectBufferPool bufferPool = new DirectBufferPool();
-        ByteBuffer directBuffer = bufferPool.getBuffer(2000);
-        byte[] result = new byte[length];
-        FileChannel fileChannel = fis.getChannel();
-
-        int nread = 0;
-        int leftToRead = length;
-
-        while (nread < length) {
-            int readInThisCycle = Math.min(leftToRead, directBuffer.capacity());
-            directBuffer.clear();
-            int nbytes = fileChannel.read(directBuffer, offset + nread);
-            if (nbytes <= 0) {
-                break;
-            }
-
-            directBuffer.flip();
-            int transferBytes = Math.min(readInThisCycle, nbytes);
-            directBuffer.get(result, nread, transferBytes);
-            leftToRead -= transferBytes;
-            nread += transferBytes;
-        }
-
-        return result;
+    return result;
   }
 }

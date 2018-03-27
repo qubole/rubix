@@ -22,17 +22,17 @@ import org.apache.hadoop.conf.Configuration;
 import java.io.IOException;
 import java.util.List;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 public class RemoteFetchProcessor extends AbstractScheduledService
 {
   private Configuration conf;
-  private Queue<FetchRequest> processQueue = null;
-  private FileDownloader downloader = null;
+  private Queue<FetchRequest> processQueue;
+  private FileDownloader downloader;
 
   int processThreadInitalDelay;
   int processThreadInterval;

@@ -40,9 +40,9 @@ public class FileDownloadRequestChain extends ReadRequestChain
   private long fileSize;
   private long lastModified;
   private BookKeeperFactory bookKeeperFactory;
-  private int totalRequestedRead = 0;
-  private int warmupPenalty = 0;
-  private int blockSize = 0;
+  private int totalRequestedRead;
+  private int warmupPenalty;
+  private int blockSize;
   Configuration conf;
   ByteBuffer directBuffer;
 

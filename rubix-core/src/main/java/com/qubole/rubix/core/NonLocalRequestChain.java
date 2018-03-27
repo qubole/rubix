@@ -15,8 +15,8 @@ package com.qubole.rubix.core;
 import com.google.common.base.Throwables;
 import com.qubole.rubix.spi.BlockLocation;
 import com.qubole.rubix.spi.BookKeeperFactory;
-import com.qubole.rubix.spi.Location;
 import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.Location;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -42,16 +42,16 @@ public class NonLocalRequestChain extends ReadRequestChain
   boolean strictMode;
   BookKeeperFactory bookKeeperFactory;
   RetryingBookkeeperClient bookKeeperClient;
-  NonLocalReadRequestChain nonLocalReadRequestChain = null;
-  DirectReadRequestChain directReadRequestChain = null;
-  RemoteFetchRequestChain remoteFetchRequestChain = null;
-  FileSystem.Statistics statistics = null;
-  boolean needDirectReadRequest = false;
-  List<BlockLocation> isCached = null;
+  NonLocalReadRequestChain nonLocalReadRequestChain;
+  DirectReadRequestChain directReadRequestChain;
+  RemoteFetchRequestChain remoteFetchRequestChain;
+  FileSystem.Statistics statistics;
+  boolean needDirectReadRequest;
+  List<BlockLocation> isCached;
   long startBlockForCacheStatus;
   long endBlockForCacheStatus;
 
-  int directRead = 0;
+  int directRead;
 
   public NonLocalRequestChain(String remoteNodeName, long fileSize, long lastModified, Configuration conf,
                               FileSystem remoteFileSystem, String remoteFilePath, int clusterType,
@@ -97,7 +97,6 @@ public class NonLocalRequestChain extends ReadRequestChain
         log.info("Could not close BookKeeper client " + Throwables.getStackTraceAsString(e));
       }
     }
-
   }
 
   public ReadRequestChainStats getStats()

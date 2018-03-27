@@ -19,41 +19,41 @@ package com.qubole.rubix.bookkeeper;
 // This class provides bitmap semantics over MappeByteBuffer
 public class ByteBufferBitmap
 {
-    final byte[] bytes;
+  final byte[] bytes;
 
-    public ByteBufferBitmap(byte[] bytes)
-    {
-        this.bytes = bytes;
+  public ByteBufferBitmap(byte[] bytes)
+  {
+    this.bytes = bytes;
+  }
+
+  // keeping idx in int as mbuf.get can take only Int. And Integer.MAX_VALUE large enough to keep us safe for big files
+  public boolean isSet(int idx)
+  {
+    byte containerByte = bytes[(idx / 8)];
+    int offset = idx % 8;
+    if (((containerByte & (1 << offset)) != 0)) {
+      return true;
     }
 
-    // keeping idx in int as mbuf.get can take only Int. And Integer.MAX_VALUE large enough to keep us safe for big files
-    public boolean isSet(int idx)
-    {
-        byte containerByte = bytes[(idx / 8)];
-        int offset = idx % 8;
-        if (((containerByte & (1 << offset)) != 0)) {
-            return true;
-        }
+    return false;
+  }
 
-        return false;
-    }
+  public void set(int idx)
+  {
+    byte containerByte = bytes[(idx / 8)];
+    int offset = idx % 8;
+    bytes[(idx / 8)] = (byte) (containerByte | (1 << offset));
+  }
 
-    public void set(int idx)
-    {
-        byte containerByte = bytes[(idx / 8)];
-        int offset = idx % 8;
-        bytes[(idx / 8)] = (byte) (containerByte | (1 << offset));
-    }
+  public void unset(int idx)
+  {
+    byte containerByte = bytes[(idx / 8)];
+    int offset = idx % 8;
+    bytes[(idx / 8)] = (byte) (containerByte & ~(1 << offset));
+  }
 
-    public void unset(int idx)
-    {
-        byte containerByte = bytes[(idx / 8)];
-        int offset = idx % 8;
-        bytes[(idx / 8)] = (byte) (containerByte & ~(1 << offset));
-    }
-
-    public byte[] getBytes()
-    {
-        return bytes;
-    }
+  public byte[] getBytes()
+  {
+    return bytes;
+  }
 }

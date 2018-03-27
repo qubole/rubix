@@ -25,7 +25,7 @@ public class DownloadRequestContext
   private String remoteFilePath;
   private long fileSize;
   private long lastModified;
-  RangeSet<Long> rangeSet = null;
+  RangeSet<Long> rangeSet;
 
   public DownloadRequestContext(String remoteFilePath, long fileSize, long lastModified)
   {

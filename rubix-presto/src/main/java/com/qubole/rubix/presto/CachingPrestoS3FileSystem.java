@@ -24,35 +24,36 @@ import java.net.URI;
  */
 public class CachingPrestoS3FileSystem extends CachingFileSystem<PrestoS3FileSystem>
 {
-    private static PrestoClusterManager clusterManager = null;
+  private static PrestoClusterManager clusterManager;
 
-    public CachingPrestoS3FileSystem()
-    {
-        super();
+  public CachingPrestoS3FileSystem()
+  {
+    super();
+  }
+
+  private static final String SCHEME = "s3n";
+
+  @Override
+  public void initialize(URI uri, Configuration conf) throws IOException
+  {
+    if (clusterManager == null) {
+      initializeClusterManager(conf);
     }
-    private static final String SCHEME = "s3n";
+    setClusterManager(clusterManager);
 
-    @Override
-    public void initialize(URI uri, Configuration conf) throws IOException
-    {
-        if (clusterManager == null) {
-            initializeClusterManager(conf);
-        }
-        setClusterManager(clusterManager);
+    super.initialize(uri, conf);
+  }
 
-        super.initialize(uri, conf);
+  public String getScheme()
+  {
+    return SCHEME;
+  }
+
+  private synchronized void initializeClusterManager(Configuration conf)
+  {
+    if (clusterManager == null) {
+      clusterManager = new PrestoClusterManager();
+      clusterManager.initialize(conf);
     }
-
-    public String getScheme()
-    {
-        return SCHEME;
-    }
-
-    private synchronized void initializeClusterManager(Configuration conf)
-    {
-        if (clusterManager == null) {
-            clusterManager = new PrestoClusterManager();
-            clusterManager.initialize(conf);
-        }
-    }
+  }
 }

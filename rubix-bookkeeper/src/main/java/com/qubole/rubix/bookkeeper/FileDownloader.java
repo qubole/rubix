@@ -42,7 +42,7 @@ import java.util.concurrent.ThreadPoolExecutor;
  */
 class FileDownloader
 {
-  Configuration conf = null;
+  Configuration conf;
   private ExecutorService processService;
   int diskReadBufferSize;
 
