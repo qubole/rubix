@@ -24,145 +24,144 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
 
-import static org.testng.AssertJUnit.assertTrue;
+import static org.testng.Assert.assertTrue;
 
 /**
  * Created by stagra on 15/1/16.
  */
 public class TestRemoteReadRequestChain
 {
-    FSDataInputStream fsDataInputStream;
+  FSDataInputStream fsDataInputStream;
 
-    String backendFileName = "/tmp/testRemoteReadRequestChainBackendFile";
-    File backendFile = new File(backendFileName);
+  String backendFileName = "/tmp/testRemoteReadRequestChainBackendFile";
+  File backendFile = new File(backendFileName);
 
-    String localFileName = "/tmp/testRemoteReadRequestChainLocalFile";
+  String localFileName = "/tmp/testRemoteReadRequestChainLocalFile";
 
-    RemoteReadRequestChain remoteReadRequestChain;
+  RemoteReadRequestChain remoteReadRequestChain;
 
-    private static final Log log = LogFactory.getLog(TestRemoteReadRequestChain.class);
+  private static final Log log = LogFactory.getLog(TestRemoteReadRequestChain.class);
 
-    @BeforeMethod
-    public void setup()
-            throws IOException
-    {
-        // Populate File
-        DataGen.populateFile(backendFileName);
+  @BeforeMethod
+  public void setup()
+      throws IOException
+  {
+    // Populate File
+    DataGen.populateFile(backendFileName);
 
-        LocalFSInputStream localFSInputStream = new LocalFSInputStream(backendFileName);
-        fsDataInputStream = new FSDataInputStream(localFSInputStream);
+    LocalFSInputStream localFSInputStream = new LocalFSInputStream(backendFileName);
+    fsDataInputStream = new FSDataInputStream(localFSInputStream);
 
-        remoteReadRequestChain = new RemoteReadRequestChain(fsDataInputStream, localFileName);
+    remoteReadRequestChain = new RemoteReadRequestChain(fsDataInputStream, localFileName);
+  }
+
+  @Test
+  public void testBlockAlignedRead()
+      throws IOException
+  {
+    byte[] buffer = new byte[1000];
+    ReadRequest[] readRequests = {
+        new ReadRequest(0, 100, 0, 100, buffer, 0, backendFile.length()),
+        new ReadRequest(200, 300, 200, 300, buffer, 100, backendFile.length()),
+        new ReadRequest(400, 500, 400, 500, buffer, 200, backendFile.length()),
+        new ReadRequest(600, 700, 600, 700, buffer, 300, backendFile.length()),
+        new ReadRequest(800, 900, 800, 900, buffer, 400, backendFile.length()),
+        new ReadRequest(1000, 1100, 1000, 1100, buffer, 500, backendFile.length()),
+        new ReadRequest(1200, 1300, 1200, 1300, buffer, 600, backendFile.length()),
+        new ReadRequest(1400, 1500, 1400, 1500, buffer, 700, backendFile.length()),
+        new ReadRequest(1600, 1700, 1600, 1700, buffer, 800, backendFile.length()),
+        new ReadRequest(1800, 1900, 1800, 1900, buffer, 900, backendFile.length())
+    };
+    String generatedTestData = DataGen.getExpectedOutput(1000);
+
+    testRead(readRequests,
+        buffer,
+        generatedTestData,
+        generatedTestData);
+  }
+
+  @Test
+  public void testBlockUnalignedRead()
+      throws IOException
+  {
+    byte[] buffer = new byte[900];
+    ReadRequest[] readRequests = {
+        new ReadRequest(0, 100, 50, 100, buffer, 0, backendFile.length()),
+        new ReadRequest(200, 300, 200, 300, buffer, 50, backendFile.length()),
+        new ReadRequest(400, 500, 400, 500, buffer, 150, backendFile.length()),
+        new ReadRequest(600, 700, 600, 700, buffer, 250, backendFile.length()),
+        new ReadRequest(800, 900, 800, 900, buffer, 350, backendFile.length()),
+        new ReadRequest(1000, 1100, 1000, 1100, buffer, 450, backendFile.length()),
+        new ReadRequest(1200, 1300, 1200, 1300, buffer, 550, backendFile.length()),
+        new ReadRequest(1400, 1500, 1400, 1500, buffer, 650, backendFile.length()),
+        new ReadRequest(1600, 1700, 1600, 1700, buffer, 750, backendFile.length()),
+        new ReadRequest(1800, 1900, 1800, 1850, buffer, 850, backendFile.length())
+    };
+
+    // Expected output is 50a100c100e....100q50s
+    String generatedTestData = DataGen.getExpectedOutput(1000);
+    String expectedBufferOutput = generatedTestData.substring(50, 950);
+    testRead(readRequests,
+        buffer,
+        expectedBufferOutput,
+        generatedTestData);
+  }
+
+  private void testRead(ReadRequest[] readRequests,
+                        byte[] buffer,
+                        String expectedBufferOutput,
+                        String expectedCacheOutput)
+      throws IOException
+  {
+    for (ReadRequest rr : readRequests) {
+      remoteReadRequestChain.addReadRequest(rr);
     }
 
-    @Test
-    public void testBlockAlignedRead()
-            throws IOException
-    {
-        byte[] buffer = new byte[1000];
-        ReadRequest[] readRequests = {
-                new ReadRequest(0, 100, 0, 100, buffer, 0, backendFile.length()),
-                new ReadRequest(200, 300, 200, 300, buffer, 100, backendFile.length()),
-                new ReadRequest(400, 500, 400, 500, buffer, 200, backendFile.length()),
-                new ReadRequest(600, 700, 600, 700, buffer, 300, backendFile.length()),
-                new ReadRequest(800, 900, 800, 900, buffer, 400, backendFile.length()),
-                new ReadRequest(1000, 1100, 1000, 1100, buffer, 500, backendFile.length()),
-                new ReadRequest(1200, 1300, 1200, 1300, buffer, 600, backendFile.length()),
-                new ReadRequest(1400, 1500, 1400, 1500, buffer, 700, backendFile.length()),
-                new ReadRequest(1600, 1700, 1600, 1700, buffer, 800, backendFile.length()),
-                new ReadRequest(1800, 1900, 1800, 1900, buffer, 900, backendFile.length())
-        };
-        String generatedTestData = DataGen.getExpectedOutput(1000);
+    remoteReadRequestChain.lock();
 
-        testRead(readRequests,
-                buffer,
-                generatedTestData,
-                generatedTestData);
-    }
+    // 2. Execute and verify that buffer has right data
+    int readSize = remoteReadRequestChain.call();
 
-    @Test
-    public void testBlockUnalignedRead()
-            throws IOException
-    {
-        byte[] buffer = new byte[900];
-        ReadRequest[] readRequests = {
-                new ReadRequest(0, 100, 50, 100, buffer, 0, backendFile.length()),
-                new ReadRequest(200, 300, 200, 300, buffer, 50, backendFile.length()),
-                new ReadRequest(400, 500, 400, 500, buffer, 150, backendFile.length()),
-                new ReadRequest(600, 700, 600, 700, buffer, 250, backendFile.length()),
-                new ReadRequest(800, 900, 800, 900, buffer, 350, backendFile.length()),
-                new ReadRequest(1000, 1100, 1000, 1100, buffer, 450, backendFile.length()),
-                new ReadRequest(1200, 1300, 1200, 1300, buffer, 550, backendFile.length()),
-                new ReadRequest(1400, 1500, 1400, 1500, buffer, 650, backendFile.length()),
-                new ReadRequest(1600, 1700, 1600, 1700, buffer, 750, backendFile.length()),
-                new ReadRequest(1800, 1900, 1800, 1850, buffer, 850, backendFile.length())
-        };
+    assertTrue(readSize == expectedBufferOutput.length(), "Wrong amount of data read " + readSize + " was expecting " + expectedBufferOutput.length());
+    String actualBufferOutput = new String(buffer, Charset.defaultCharset());
+    assertTrue(expectedBufferOutput.equals(actualBufferOutput), "Wrong data read, expected\n" + expectedBufferOutput + "\nBut got\n" + actualBufferOutput);
 
-        // Expected output is 50a100c100e....100q50s
-        String generatedTestData = DataGen.getExpectedOutput(1000);
-        String expectedBufferOutput = generatedTestData.substring(50, 950);
-        testRead(readRequests,
-                buffer,
-                expectedBufferOutput,
-                generatedTestData);
-    }
+    // 3. read from randomAccessFile and verify that it has the right data
+    // data present should be of form 100bytes of data and 100bytes of holes
+    byte[] filledBuffer = new byte[expectedCacheOutput.length()];
+    byte[] emptyBuffer = new byte[100];
+    int filledBufferOffset = 0;
+    readSize = 0;
 
-    private void testRead(ReadRequest[] readRequests,
-            byte[] buffer,
-            String expectedBufferOutput,
-            String expectedCacheOutput)
-            throws IOException
-    {
-        for (ReadRequest rr : readRequests) {
-            remoteReadRequestChain.addReadRequest(rr);
+    FileInputStream localFileInputStream = new FileInputStream(new File(localFileName));
+    for (int i = 1; i < 20; i++) {
+      //Expect a hole also in the case of partial prefix and suffix blocks.
+      if (i % 2 == 0) {
+        // empty buffer
+        localFileInputStream.read(emptyBuffer, 0, 100);
+        for (int j = 0; j < 100; j++) {
+          assertTrue(emptyBuffer[j] == 0, "Got data instead of hole: " + emptyBuffer[j]);
         }
-
-        remoteReadRequestChain.lock();
-
-        // 2. Execute and verify that buffer has right data
-        int readSize = remoteReadRequestChain.call();
-
-        assertTrue("Wrong amount of data read " + readSize + " was expecting " + expectedBufferOutput.length(), readSize == expectedBufferOutput.length());
-        String actualBufferOutput = new String(buffer, Charset.defaultCharset());
-        assertTrue("Wrong data read, expected\n" + expectedBufferOutput + "\nBut got\n" + actualBufferOutput, expectedBufferOutput.equals(actualBufferOutput));
-
-        // 3. read from randomAccessFile and verify that it has the right data
-        // data present should be of form 100bytes of data and 100bytes of holes
-        byte[] filledBuffer = new byte[expectedCacheOutput.length()];
-        byte[] emptyBuffer = new byte[100];
-        int filledBufferOffset = 0;
-        readSize = 0;
-
-        FileInputStream localFileInputStream = new FileInputStream(new File(localFileName));
-        for (int i = 1; i < 20; i++)
-        {
-            //Expect a hole also in the case of partial prefix and suffix blocks.
-            if (i % 2 == 0) {
-                // empty buffer
-                localFileInputStream.read(emptyBuffer, 0, 100);
-                for (int j = 0; j < 100; j++) {
-                    assertTrue("Got data instead of hole: " + emptyBuffer[j], emptyBuffer[j] == 0);
-                }
-            }
-            else {
-                readSize += localFileInputStream.read(filledBuffer, filledBufferOffset, 100);
-                filledBufferOffset += 100;
-            }
-        }
-        localFileInputStream.close();
-        log.debug("READ: \n" + new String(filledBuffer, Charset.defaultCharset()));
-        assertTrue("Wrong amount of data read from localFile " + readSize, readSize == expectedCacheOutput.length());
-        String actualCacheOutput = new String(filledBuffer, Charset.defaultCharset());
-        assertTrue("Wrong data read in local randomAccessFile, expected\n" + expectedCacheOutput + "\nBut got\n" + actualCacheOutput, expectedCacheOutput.equals(actualCacheOutput));
+      }
+      else {
+        readSize += localFileInputStream.read(filledBuffer, filledBufferOffset, 100);
+        filledBufferOffset += 100;
+      }
     }
+    localFileInputStream.close();
+    log.debug("READ: \n" + new String(filledBuffer, Charset.defaultCharset()));
+    assertTrue(readSize == expectedCacheOutput.length(), "Wrong amount of data read from localFile " + readSize);
+    String actualCacheOutput = new String(filledBuffer, Charset.defaultCharset());
+    assertTrue(expectedCacheOutput.equals(actualCacheOutput), "Wrong data read in local randomAccessFile, expected\n" + expectedCacheOutput + "\nBut got\n" + actualCacheOutput);
+  }
 
-    @AfterMethod
-    public void cleanup()
-            throws IOException
-    {
-        fsDataInputStream.close();
-        backendFile.delete();
-        File localFile = new File(localFileName);
-        localFile.delete();
-    }
+  @AfterMethod
+  public void cleanup()
+      throws IOException
+  {
+    fsDataInputStream.close();
+    backendFile.delete();
+    File localFile = new File(localFileName);
+    localFile.delete();
+  }
 }

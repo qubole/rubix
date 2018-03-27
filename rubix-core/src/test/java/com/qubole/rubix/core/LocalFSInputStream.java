@@ -12,90 +12,90 @@
  */
 package com.qubole.rubix.core;
 
-/**
- * Created by stagra on 21/1/16.
- */
+import org.apache.hadoop.fs.FSInputStream;
+
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.fs.FSInputStream;
-
+/**
+ * Created by stagra on 21/1/16.
+ */
 public class LocalFSInputStream extends FSInputStream
 {
-    FileInputStream fis;
-    private long position;
+  FileInputStream fis;
+  private long position;
 
-    public LocalFSInputStream(String f) throws IOException
-    {
-        this.fis = new FileInputStream(f);
-    }
+  public LocalFSInputStream(String f) throws IOException
+  {
+    this.fis = new FileInputStream(f);
+  }
 
-    public void seek(long pos) throws IOException
-    {
-        fis.getChannel().position(pos);
-        this.position = pos;
-    }
+  public void seek(long pos) throws IOException
+  {
+    fis.getChannel().position(pos);
+    this.position = pos;
+  }
 
-    public long getPos() throws IOException
-    {
-        return this.position;
-    }
+  public long getPos() throws IOException
+  {
+    return this.position;
+  }
 
-    public boolean seekToNewSource(long targetPos) throws IOException
-    {
-        return false;
-    }
+  public boolean seekToNewSource(long targetPos) throws IOException
+  {
+    return false;
+  }
 
-    /*
-     * Just forward to the fis
-     */
-    public int available() throws IOException
-    {
-        return fis.available();
-    }
+  /*
+   * Just forward to the fis
+   */
+  public int available() throws IOException
+  {
+    return fis.available();
+  }
 
-    public void close() throws IOException
-    {
-        fis.close();
-    }
+  public void close() throws IOException
+  {
+    fis.close();
+  }
 
-    public boolean markSupport()
-    {
-        return false;
-    }
+  public boolean markSupport()
+  {
+    return false;
+  }
 
-    public int read() throws IOException
-    {
-        int value = fis.read();
-        if (value >= 0) {
-            this.position++;
-        }
-        return value;
+  public int read() throws IOException
+  {
+    int value = fis.read();
+    if (value >= 0) {
+      this.position++;
     }
+    return value;
+  }
 
-    public int read(byte[] b, int off, int len) throws IOException
-    {
-        int value = fis.read(b, off, len);
-        if (value > 0) {
-            this.position += value;
-        }
-        return value;
+  public int read(byte[] b, int off, int len) throws IOException
+  {
+    int value = fis.read(b, off, len);
+    if (value > 0) {
+      this.position += value;
     }
+    return value;
+  }
 
-    public int read(long position, byte[] b, int off, int len)
-            throws IOException
-    {
-        ByteBuffer bb = ByteBuffer.wrap(b, off, len);
-        return fis.getChannel().read(bb, position);
-    }
+  public int read(long position, byte[] b, int off, int len)
+      throws IOException
+  {
+    ByteBuffer bb = ByteBuffer.wrap(b, off, len);
+    return fis.getChannel().read(bb, position);
+  }
 
-    public long skip(long n) throws IOException
-    {
-        long value = fis.skip(n);
-        if (value > 0) {
-            this.position += value;
-        }
-        return value;
+  public long skip(long n) throws IOException
+  {
+    long value = fis.skip(n);
+    if (value > 0) {
+      this.position += value;
     }
+    return value;
+  }
 }
