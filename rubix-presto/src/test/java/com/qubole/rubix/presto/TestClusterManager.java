@@ -27,145 +27,148 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.List;
 
-import static org.testng.AssertJUnit.assertTrue;
+import static org.testng.Assert.assertTrue;
 
 /**
  * Created by stagra on 14/1/16.
  */
 
 @Test(singleThreaded = true)
-public class
-TestClusterManager
+public class TestClusterManager
 {
-    private Log log = LogFactory.getLog(TestClusterManager.class);
+  private Log log = LogFactory.getLog(TestClusterManager.class);
 
-    @Test
-    /*
-     * Tests that the worker nodes returned are correctly handled by PrestoClusterManager and sorted list of hosts is returned
-     */
-    public void testGetNodes()
-            throws IOException
+  @Test
+  /*
+   * Tests that the worker nodes returned are correctly handled by PrestoClusterManager and sorted list of hosts is returned
+   */
+  public void testGetNodes()
+      throws IOException
+  {
+    HttpServer server = createServer("/v1/node", new MultipleWorkers(), "/v1/node/failed", new NoFailedNode());
+
+    log.info("STARTED SERVER");
+
+    ClusterManager clusterManager = getPrestoClusterManager();
+    List<String> nodes = clusterManager.getNodes();
+    log.info("Got nodes: " + nodes);
+
+    assertTrue(nodes.size() == 2, "Should only have two nodes");
+    assertTrue(nodes.get(0).equals("192.168.1.3") && nodes.get(1).equals("192.168.2.252"), "Wrong nodes data");
+
+    server.stop(0);
+  }
+
+  @Test
+  /*
+   * Tests that in a single node cluster, master node is returned as worker
+   */
+  public void testMasterOnlyCluster()
+      throws IOException
+  {
+    HttpServer server = createServer("/v1/node", new NoWorker(), "/v1/node/failed", new NoFailedNode());
+
+    log.info("STARTED SERVER");
+
+    ClusterManager clusterManager = getPrestoClusterManager();
+    List<String> nodes = clusterManager.getNodes();
+    log.info("Got nodes: " + nodes);
+
+    assertTrue(nodes.size() == 1, "Should have added localhost in list");
+    assertTrue(nodes.get(0).equals(InetAddress.getLocalHost().getHostAddress()), "Not added right hostname");
+    server.stop(0);
+  }
+
+  @Test
+  /*
+   * Tests that in a cluster with failed node, failed node is not returned
+   */
+  public void testFailedNodeCluster()
+      throws IOException
+  {
+    HttpServer server = createServer("/v1/node", new MultipleWorkers(), "/v1/node/failed", new OneFailedNode());
+
+    log.info("STARTED SERVER");
+
+    ClusterManager clusterManager = getPrestoClusterManager();
+    List<String> nodes = clusterManager.getNodes();
+    log.info("Got nodes: " + nodes);
+
+    assertTrue(nodes.size() == 1, "Should only have two nodes");
+    assertTrue(nodes.get(0).equals("192.168.2.252"), "Wrong nodes data");
+
+    server.stop(0);
+  }
+
+  private HttpServer createServer(String endpoint1, HttpHandler handler1, String endpoint2, HttpHandler handler2)
+      throws IOException
+  {
+    HttpServer server = HttpServer.create(new InetSocketAddress(45326), 0);
+    server.createContext(endpoint1, handler1);
+    server.createContext(endpoint2, handler2);
+    server.setExecutor(null); // creates a default executor
+    server.start();
+    return server;
+  }
+
+  private ClusterManager getPrestoClusterManager()
+  {
+    ClusterManager clusterManager = new PrestoClusterManager();
+    Configuration conf = new Configuration();
+    conf.setInt(PrestoClusterManager.serverPortConf, 45326);
+    clusterManager.initialize(conf);
+    return clusterManager;
+  }
+
+  class MultipleWorkers implements HttpHandler
+  {
+    public void handle(HttpExchange exchange) throws IOException
     {
-        HttpServer server = createServer("/v1/node", new MultipleWorkers(), "/v1/node/failed", new NoFailedNode());
-
-        log.info("STARTED SERVER");
-
-        ClusterManager clusterManager = getPrestoClusterManager();
-        List<String> nodes = clusterManager.getNodes();
-        log.info("Got nodes: " + nodes);
-
-        assertTrue("Should only have two nodes", nodes.size() == 2);
-        assertTrue("Wrong nodes data", nodes.get(0).equals("192.168.1.3") && nodes.get(1).equals("192.168.2.252"));
-
-        server.stop(0);
+      String nodes = "[{\"uri\":\"http://192.168.2.252:8083\",\"recentRequests\":119.0027780896941,\"recentFailures\":119.00267353393015,\"recentSuccesses\":1.0845754237194612E-4,\"lastRequestTime\":\"2016-01-14T13:26:29.948Z\",\"lastResponseTime\":\"2016-01-14T13:26:29.948Z\",\"recentFailureRatio\":0.999999121400646,\"age\":\"6.68h\",\"recentFailuresByType\":{\"java.util.concurrent.TimeoutException\":2.4567611856996272E-6,\"java.net.SocketTimeoutException\":119.00237271323728,\"java.net.SocketException\":2.98363931759331E-4}},{\"uri\":\"http://192.168.1.3:8082\",\"recentRequests\":119.00277802527565,\"recentFailures\":119.00282273097419,\"recentSuccesses\":0.0,\"lastRequestTime\":\"2016-01-14T13:26:29.701Z\",\"lastResponseTime\":\"2016-01-14T13:26:29.701Z\",\"recentFailureRatio\":1.0000003756693692,\"age\":\"21.81h\",\"recentFailuresByType\":{\"java.util.concurrent.TimeoutException\":0.0,\"java.net.SocketTimeoutException\":119.00258110193407,\"java.net.ConnectException\":0.0,\"java.net.SocketException\":2.416290401318479E-4,\"java.net.NoRouteToHostException\":1.3332509542453224E-21}}]\n";
+      exchange.getResponseHeaders().add("Content-Type", "application/json");
+      exchange.sendResponseHeaders(200, nodes.length());
+      OutputStream os = exchange.getResponseBody();
+      os.write(nodes.getBytes());
+      os.close();
     }
+  }
 
-    @Test
-    /*
-     * Tests that in a single node cluster, master node is returned as worker
-     */
-    public void testMasterOnlyCluster()
-            throws IOException
+  class NoWorker implements HttpHandler
+  {
+    public void handle(HttpExchange exchange) throws IOException
     {
-        HttpServer server = createServer("/v1/node", new NoWorker(), "/v1/node/failed", new NoFailedNode());
-
-        log.info("STARTED SERVER");
-
-        ClusterManager clusterManager = getPrestoClusterManager();
-        List<String> nodes = clusterManager.getNodes();
-        log.info("Got nodes: " + nodes);
-
-        assertTrue("Should have added localhost in list", nodes.size() == 1);
-        assertTrue("Not added right hostname", nodes.get(0).equals(InetAddress.getLocalHost().getHostAddress()));
-        server.stop(0);
+      String nodes = "[]\n";
+      exchange.getResponseHeaders().add("Content-Type", "application/json");
+      exchange.sendResponseHeaders(200, nodes.length());
+      OutputStream os = exchange.getResponseBody();
+      os.write(nodes.getBytes());
+      os.close();
     }
+  }
 
-    @Test
-    /*
-     * Tests that in a cluster with failed node, failed node is not returned
-     */
-    public void testFailedNodeCluster()
-            throws IOException
+  class NoFailedNode implements HttpHandler
+  {
+    public void handle(HttpExchange exchange) throws IOException
     {
-        HttpServer server = createServer("/v1/node", new MultipleWorkers(), "/v1/node/failed", new OneFailedNode());
-
-        log.info("STARTED SERVER");
-
-        ClusterManager clusterManager = getPrestoClusterManager();
-        List<String> nodes = clusterManager.getNodes();
-        log.info("Got nodes: " + nodes);
-
-        assertTrue("Should only have two nodes", nodes.size() == 1);
-        assertTrue("Wrong nodes data", nodes.get(0).equals("192.168.2.252"));
-
-        server.stop(0);
+      String nodes = "[]\n";
+      exchange.getResponseHeaders().add("Content-Type", "application/json");
+      exchange.sendResponseHeaders(200, nodes.length());
+      OutputStream os = exchange.getResponseBody();
+      os.write(nodes.getBytes());
+      os.close();
     }
+  }
 
-    private HttpServer createServer(String endpoint1, HttpHandler handler1, String endpoint2, HttpHandler handler2)
-            throws IOException
+  class OneFailedNode implements HttpHandler
+  {
+    public void handle(HttpExchange exchange) throws IOException
     {
-        HttpServer server = HttpServer.create(new InetSocketAddress(45326), 0);
-        server.createContext(endpoint1, handler1);
-        server.createContext(endpoint2, handler2);
-        server.setExecutor(null); // creates a default executor
-        server.start();
-        return server;
+      String nodes = "[{\"uri\":\"http://192.168.1.3:8082\",\"recentRequests\":119.00277802527565,\"recentFailures\":119.00282273097419,\"recentSuccesses\":0.0,\"lastRequestTime\":\"2016-01-14T13:26:29.701Z\",\"lastResponseTime\":\"2016-01-14T13:26:29.701Z\",\"recentFailureRatio\":1.0000003756693692,\"age\":\"21.81h\",\"recentFailuresByType\":{\"java.util.concurrent.TimeoutException\":0.0,\"java.net.SocketTimeoutException\":119.00258110193407,\"java.net.ConnectException\":0.0,\"java.net.SocketException\":2.416290401318479E-4,\"java.net.NoRouteToHostException\":1.3332509542453224E-21}}]\n";
+      exchange.getResponseHeaders().add("Content-Type", "application/json");
+      exchange.sendResponseHeaders(200, nodes.length());
+      OutputStream os = exchange.getResponseBody();
+      os.write(nodes.getBytes());
+      os.close();
     }
-
-    private ClusterManager getPrestoClusterManager()
-    {
-        ClusterManager clusterManager = new PrestoClusterManager();
-        Configuration conf = new Configuration();
-        conf.setInt(PrestoClusterManager.serverPortConf, 45326);
-        clusterManager.initialize(conf);
-        return clusterManager;
-    }
-
-    class MultipleWorkers implements HttpHandler
-    {
-        public void handle(HttpExchange exchange) throws IOException {
-            String nodes = "[{\"uri\":\"http://192.168.2.252:8083\",\"recentRequests\":119.0027780896941,\"recentFailures\":119.00267353393015,\"recentSuccesses\":1.0845754237194612E-4,\"lastRequestTime\":\"2016-01-14T13:26:29.948Z\",\"lastResponseTime\":\"2016-01-14T13:26:29.948Z\",\"recentFailureRatio\":0.999999121400646,\"age\":\"6.68h\",\"recentFailuresByType\":{\"java.util.concurrent.TimeoutException\":2.4567611856996272E-6,\"java.net.SocketTimeoutException\":119.00237271323728,\"java.net.SocketException\":2.98363931759331E-4}},{\"uri\":\"http://192.168.1.3:8082\",\"recentRequests\":119.00277802527565,\"recentFailures\":119.00282273097419,\"recentSuccesses\":0.0,\"lastRequestTime\":\"2016-01-14T13:26:29.701Z\",\"lastResponseTime\":\"2016-01-14T13:26:29.701Z\",\"recentFailureRatio\":1.0000003756693692,\"age\":\"21.81h\",\"recentFailuresByType\":{\"java.util.concurrent.TimeoutException\":0.0,\"java.net.SocketTimeoutException\":119.00258110193407,\"java.net.ConnectException\":0.0,\"java.net.SocketException\":2.416290401318479E-4,\"java.net.NoRouteToHostException\":1.3332509542453224E-21}}]\n";
-            exchange.getResponseHeaders().add("Content-Type", "application/json");
-            exchange.sendResponseHeaders(200, nodes.length());
-            OutputStream os = exchange.getResponseBody();
-            os.write(nodes.getBytes());
-            os.close();
-        }
-    }
-
-    class NoWorker implements HttpHandler
-    {
-        public void handle(HttpExchange exchange) throws IOException {
-            String nodes = "[]\n";
-            exchange.getResponseHeaders().add("Content-Type", "application/json");
-            exchange.sendResponseHeaders(200, nodes.length());
-            OutputStream os = exchange.getResponseBody();
-            os.write(nodes.getBytes());
-            os.close();
-        }
-    }
-
-    class NoFailedNode implements  HttpHandler
-    {
-        public void handle(HttpExchange exchange) throws IOException {
-            String nodes = "[]\n";
-            exchange.getResponseHeaders().add("Content-Type", "application/json");
-            exchange.sendResponseHeaders(200, nodes.length());
-            OutputStream os = exchange.getResponseBody();
-            os.write(nodes.getBytes());
-            os.close();
-        }
-    }
-
-    class OneFailedNode implements  HttpHandler
-    {
-        public void handle(HttpExchange exchange) throws IOException {
-            String nodes = "[{\"uri\":\"http://192.168.1.3:8082\",\"recentRequests\":119.00277802527565,\"recentFailures\":119.00282273097419,\"recentSuccesses\":0.0,\"lastRequestTime\":\"2016-01-14T13:26:29.701Z\",\"lastResponseTime\":\"2016-01-14T13:26:29.701Z\",\"recentFailureRatio\":1.0000003756693692,\"age\":\"21.81h\",\"recentFailuresByType\":{\"java.util.concurrent.TimeoutException\":0.0,\"java.net.SocketTimeoutException\":119.00258110193407,\"java.net.ConnectException\":0.0,\"java.net.SocketException\":2.416290401318479E-4,\"java.net.NoRouteToHostException\":1.3332509542453224E-21}}]\n";
-            exchange.getResponseHeaders().add("Content-Type", "application/json");
-            exchange.sendResponseHeaders(200, nodes.length());
-            OutputStream os = exchange.getResponseBody();
-            os.write(nodes.getBytes());
-            os.close();
-        }
-    }
+  }
 }

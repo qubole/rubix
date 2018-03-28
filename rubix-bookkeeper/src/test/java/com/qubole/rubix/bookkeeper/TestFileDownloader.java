@@ -14,8 +14,8 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.qubole.rubix.core.FileDownloadRequestChain;
-import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.core.utils.DeleteFileVisitor;
+import com.qubole.rubix.spi.CacheConfig;
 import org.apache.hadoop.conf.Configuration;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -27,15 +27,15 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import static org.testng.AssertJUnit.assertTrue;
+import static org.testng.Assert.assertTrue;
 
 /**
  * Created by Abhishek on 3/12/18.
  */
 public class TestFileDownloader
 {
-  private final static String testDirectoryPrefix = System.getProperty("java.io.tmpdir") + "/TestFileDownloader/";
-  private final static String testDirectory = testDirectoryPrefix + "dir0";
+  private static final String testDirectoryPrefix = System.getProperty("java.io.tmpdir") + "/TestFileDownloader/";
+  private static final String testDirectory = testDirectoryPrefix + "dir0";
   private Configuration conf;
 
   @BeforeMethod
@@ -71,14 +71,15 @@ public class TestFileDownloader
     FileDownloader downloader = new FileDownloader(conf);
     List<FileDownloadRequestChain> requestChains = downloader.getFileDownloadRequestChains(contextMap);
 
-    assertTrue("Wrong Number of Request Chains. Expected = 2 Got = " + requestChains.size(), requestChains.size() == 2);
+    assertTrue(requestChains.size() == 2,
+        "Wrong Number of Request Chains. Expected = 2 Got = " + requestChains.size());
 
     FileDownloadRequestChain request1 = requestChains.get(0);
-    assertTrue("Wrong Number of Requests For File-1. Expected = 2 Got = " + request1.getReadRequests().size(),
-        request1.getReadRequests().size() == 2);
+    assertTrue(request1.getReadRequests().size() == 2,
+        "Wrong Number of Requests For File-1. Expected = 2 Got = " + request1.getReadRequests().size());
 
     FileDownloadRequestChain request2 = requestChains.get(1);
-    assertTrue("Wrong Number of Requests For File-2. Expected = 2 Got = " + request2.getReadRequests().size(),
-        request2.getReadRequests().size() == 2);
+    assertTrue(request2.getReadRequests().size() == 2,
+        "Wrong Number of Requests For File-2. Expected = 2 Got = " + request2.getReadRequests().size());
   }
 }

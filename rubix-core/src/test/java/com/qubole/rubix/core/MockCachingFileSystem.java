@@ -22,7 +22,6 @@ import org.apache.hadoop.fs.BufferedFSInputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
-import org.apache.hadoop.fs.FileSystem;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,65 +33,62 @@ import java.util.List;
  * Created by sakshia on 25/11/16.
  */
 
-public class MockCachingFileSystem
-        extends CachingFileSystem<RawLocalFileSystem>
+public class MockCachingFileSystem extends CachingFileSystem<RawLocalFileSystem>
 {
-    private static final Log log = LogFactory.getLog(MockCachingFileSystem.class);
-    Configuration conf;
-    private static ClusterManager clusterManager;
-    private static final String SCHEME = "file";
+  private static final Log log = LogFactory.getLog(MockCachingFileSystem.class);
+  Configuration conf;
+  private static ClusterManager clusterManager;
+  private static final String SCHEME = "file";
 
-    @Override
-    public void initialize(URI uri, Configuration conf) throws IOException
-    {
-        LOG.info("Initializing MockCachingFileSystem");
-        if (clusterManager == null) {
-            initializeClusterManager(conf);
-        }
-        this.conf = conf;
-        setClusterManager(clusterManager);
-        super.initialize(uri, conf);
+  @Override
+  public void initialize(URI uri, Configuration conf) throws IOException
+  {
+    this.conf = conf;
+    log.debug("Initializing MockCachingFileSystem");
+    if (clusterManager == null) {
+      initializeClusterManager(conf);
+    }
+    setClusterManager(clusterManager);
+    super.initialize(uri, conf);
+  }
+
+  private synchronized void initializeClusterManager(Configuration conf)
+  {
+    if (clusterManager != null) {
+      return;
     }
 
-    private synchronized void initializeClusterManager(Configuration conf)
-    {
-        if (clusterManager != null) {
-          return;
-        }
+    clusterManager = new TestClusterManager();
+    clusterManager.initialize(conf);
+  }
 
-      clusterManager = new TestClusterManager();
-      clusterManager.initialize(conf);
-    }
+  public String getScheme()
+  {
+    return SCHEME;
+  }
 
-    public String getScheme()
-    {
-        return SCHEME;
-    }
+  @Override
+  public FSDataInputStream open(Path path, int i)
+      throws IOException
+  {
+    String localPath = path.toString();
+    File file = new File(localPath);
+    LocalFSInputStream inputStream = new LocalFSInputStream(localPath);
+    return new FSDataInputStream(
+        new BufferedFSInputStream(
+            new CachingInputStream(new FSDataInputStream(inputStream), conf, path, file.length(),
+                file.lastModified(), new CachingFileSystemStats(),
+                ClusterType.TEST_CLUSTER_MANAGER, bookKeeperFactory, fs,
+                CacheConfig.getBlockSize(conf), statistics),
+            CacheConfig.getBlockSize(conf)));
+  }
 
-    @Override
-    public FSDataInputStream open(Path path, int i)
-            throws IOException
-    {
-        String localPath = path.toString();
-        File file = new File(localPath);
-        LocalFSInputStream inputStream = new LocalFSInputStream(localPath);
-        return new FSDataInputStream(
-                new BufferedFSInputStream(
-                        new CachingInputStream(new FSDataInputStream(inputStream), conf, path, file.length(),
-                            file.lastModified(),  new CachingFileSystemStats(),
-                            ClusterType.TEST_CLUSTER_MANAGER, bookKeeperFactory, fs,
-                            CacheConfig.getBlockSize(conf), statistics),
-                    CacheConfig.getBlockSize(conf)));
-    }
-
-
-    @Override
-    public FSDataInputStream open(Path path)
-            throws IOException
-    {
-        FSDataInputStream stream = fs.open(path, CacheConfig.getBlockSize(conf));
-        return stream;
-    }
+  @Override
+  public FSDataInputStream open(Path path) throws IOException
+  {
+    FSDataInputStream stream = fs.open(path, CacheConfig.getBlockSize(conf));
+    return stream;
+  }
 
   class TestClusterManager extends ClusterManager
   {
