@@ -22,50 +22,49 @@ import java.nio.charset.Charset;
 
 import static com.qubole.rubix.core.DataGen.getExpectedOutput;
 import static com.qubole.rubix.core.DataGen.populateFile;
-import static org.testng.AssertJUnit.assertTrue;
+import static org.testng.Assert.assertTrue;
 
 /**
  * Created by stagra on 15/1/16.
  */
 public class TestCachedReadRequestChain
 {
-    private static final Log log = LogFactory.getLog(TestCachedReadRequestChain.class);
+  private static final Log log = LogFactory.getLog(TestCachedReadRequestChain.class);
 
-    @Test
-    public void testCachedReadRequestChain()
-            throws IOException
-    {
-        String filename = "/tmp/testCachedReadRequestChainFile";
-        populateFile(filename);
+  @Test
+  public void testCachedReadRequestChain()
+      throws IOException
+  {
+    String filename = "/tmp/testCachedReadRequestChainFile";
+    populateFile(filename);
 
-        File file = new File(filename);
+    File file = new File(filename);
 
+    byte[] buffer = new byte[1000];
+    ReadRequest[] readRequests = {
+        new ReadRequest(0, 100, 0, 100, buffer, 0, file.length()),
+        new ReadRequest(200, 300, 200, 300, buffer, 100, file.length()),
+        new ReadRequest(400, 500, 400, 500, buffer, 200, file.length()),
+        new ReadRequest(600, 700, 600, 700, buffer, 300, file.length()),
+        new ReadRequest(800, 900, 800, 900, buffer, 400, file.length()),
+        new ReadRequest(1000, 1100, 1000, 1100, buffer, 500, file.length()),
+        new ReadRequest(1200, 1300, 1200, 1300, buffer, 600, file.length()),
+        new ReadRequest(1400, 1500, 1400, 1500, buffer, 700, file.length()),
+        new ReadRequest(1600, 1700, 1600, 1700, buffer, 800, file.length()),
+        new ReadRequest(1800, 1900, 1800, 1900, buffer, 900, file.length())
+    };
 
-        byte[] buffer = new byte[1000];
-        ReadRequest[] readRequests = {
-                new ReadRequest(0, 100, 0, 100, buffer, 0, file.length()),
-                new ReadRequest(200, 300, 200, 300, buffer, 100, file.length()),
-                new ReadRequest(400, 500, 400, 500, buffer, 200, file.length()),
-                new ReadRequest(600, 700, 600, 700, buffer, 300, file.length()),
-                new ReadRequest(800, 900, 800, 900, buffer, 400, file.length()),
-                new ReadRequest(1000, 1100, 1000, 1100, buffer, 500, file.length()),
-                new ReadRequest(1200, 1300, 1200, 1300, buffer, 600, file.length()),
-                new ReadRequest(1400, 1500, 1400, 1500, buffer, 700, file.length()),
-                new ReadRequest(1600, 1700, 1600, 1700, buffer, 800, file.length()),
-                new ReadRequest(1800, 1900, 1800, 1900, buffer, 900, file.length())
-        };
-
-        CachedReadRequestChain cachedReadRequestChain = new CachedReadRequestChain(filename);
-        for (ReadRequest rr : readRequests) {
-            cachedReadRequestChain.addReadRequest(rr);
-        }
-        cachedReadRequestChain.lock();
-        int readSize = cachedReadRequestChain.call();
-
-        assertTrue("Wrong amount of data read " + readSize, readSize == 1000);
-        String output = new String(buffer, Charset.defaultCharset());
-        assertTrue("Wrong data read, expected\n" + getExpectedOutput(readSize) + "\nBut got\n" + output, getExpectedOutput(readSize).equals(output));
-
-        file.delete();
+    CachedReadRequestChain cachedReadRequestChain = new CachedReadRequestChain(filename);
+    for (ReadRequest rr : readRequests) {
+      cachedReadRequestChain.addReadRequest(rr);
     }
+    cachedReadRequestChain.lock();
+    int readSize = cachedReadRequestChain.call();
+
+    assertTrue(readSize == 1000, "Wrong amount of data read " + readSize);
+    String output = new String(buffer, Charset.defaultCharset());
+    assertTrue(getExpectedOutput(readSize).equals(output), "Wrong data read, expected\n" + getExpectedOutput(readSize) + "\nBut got\n" + output);
+
+    file.delete();
+  }
 }

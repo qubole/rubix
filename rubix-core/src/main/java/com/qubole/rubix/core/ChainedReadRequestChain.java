@@ -20,51 +20,50 @@ import java.util.List;
 /**
  * Created by qubole on 14/9/16.
  */
-public class ChainedReadRequestChain
-        extends ReadRequestChain
+public class ChainedReadRequestChain extends ReadRequestChain
 {
-    private List<ReadRequestChain> readRequestChains = new ArrayList<>();
+  private List<ReadRequestChain> readRequestChains = new ArrayList<>();
 
-    public ChainedReadRequestChain addReadRequestChain(ReadRequestChain readRequestChain)
-    {
-        readRequestChains.add(readRequestChain);
-        return this;
-    }
+  public ChainedReadRequestChain addReadRequestChain(ReadRequestChain readRequestChain)
+  {
+    readRequestChains.add(readRequestChain);
+    return this;
+  }
 
-    @Override
-    public Integer call()
-            throws Exception
-    {
-        int read = 0;
-        for (ReadRequestChain readRequestChain : readRequestChains) {
-            readRequestChain.lock();
-            read += readRequestChain.call();
-        }
-        return read;
+  @Override
+  public Integer call()
+      throws Exception
+  {
+    int read = 0;
+    for (ReadRequestChain readRequestChain : readRequestChains) {
+      readRequestChain.lock();
+      read += readRequestChain.call();
     }
+    return read;
+  }
 
-    @Override
-    public ReadRequestChainStats getStats()
-    {
-        ReadRequestChainStats stats = new ReadRequestChainStats();
-        for (ReadRequestChain readRequestChain : readRequestChains) {
-            stats = stats.add(readRequestChain.getStats());
-        }
-        return stats;
+  @Override
+  public ReadRequestChainStats getStats()
+  {
+    ReadRequestChainStats stats = new ReadRequestChainStats();
+    for (ReadRequestChain readRequestChain : readRequestChains) {
+      stats = stats.add(readRequestChain.getStats());
     }
+    return stats;
+  }
 
-    @Override
-    public void cancel()
-    {
-        for (ReadRequestChain readRequestChain : readRequestChains) {
-            readRequestChain.cancel();
-        }
+  @Override
+  public void cancel()
+  {
+    for (ReadRequestChain readRequestChain : readRequestChains) {
+      readRequestChain.cancel();
     }
+  }
 
-    public void updateCacheStatus(String remotePath, long fileSize, long lastModified, int blockSize, Configuration conf)
-    {
-        for (ReadRequestChain readRequestChain : readRequestChains) {
-            readRequestChain.updateCacheStatus(remotePath, fileSize, lastModified, blockSize, conf);
-        }
+  public void updateCacheStatus(String remotePath, long fileSize, long lastModified, int blockSize, Configuration conf)
+  {
+    for (ReadRequestChain readRequestChain : readRequestChains) {
+      readRequestChain.updateCacheStatus(remotePath, fileSize, lastModified, blockSize, conf);
     }
+  }
 }

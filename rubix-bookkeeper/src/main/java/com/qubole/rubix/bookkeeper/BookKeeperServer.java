@@ -36,95 +36,96 @@ import static com.qubole.rubix.spi.CacheConfig.getServerPort;
  */
 public class BookKeeperServer extends Configured implements Tool
 {
-    public static BookKeeper bookKeeper;
-    public static BookKeeperService.Processor processor;
+  public static BookKeeper bookKeeper;
+  public static BookKeeperService.Processor processor;
 
-    public static Configuration conf;
+  public static Configuration conf;
 
-    private static TServer server;
+  private static TServer server;
 
-    private static Log log = LogFactory.getLog(BookKeeperServer.class.getName());
+  private static Log log = LogFactory.getLog(BookKeeperServer.class.getName());
 
-    private BookKeeperServer()
-    {}
+  private BookKeeperServer()
+  {
+  }
 
-    public static void main(String[] args) throws Exception
+  public static void main(String[] args) throws Exception
+  {
+    ToolRunner.run(new Configuration(), new BookKeeperServer(), args);
+  }
+
+  @Override
+  public int run(String[] args) throws Exception
+  {
+    conf = this.getConf();
+    Runnable bookKeeperServer = new Runnable()
     {
-        ToolRunner.run(new Configuration(), new BookKeeperServer(), args);
+      public void run()
+      {
+        startServer(conf);
+      }
+    };
+    new Thread(bookKeeperServer).run();
+    return 0;
+  }
+
+  public static void startServer(Configuration conf)
+  {
+    try {
+      MetricsFactory.init(conf);
     }
-
-    @Override
-    public int run(String[] args) throws Exception
-    {
-        conf = this.getConf();
-        Runnable bookKeeperServer = new Runnable() {
-            public void run()
-            {
-                startServer(conf);
-            }
-        };
-        new Thread(bookKeeperServer).run();
-        return 0;
+    catch (Exception ex) {
+      log.error("Not able to initialize MetricsFactory ", ex);
     }
+    bookKeeper = new BookKeeper(conf);
+    DiskMonitorService diskMonitorService = new DiskMonitorService(conf, bookKeeper);
+    diskMonitorService.startAsync();
+    processor = new BookKeeperService.Processor(bookKeeper);
+    log.info("Starting BookKeeperServer on port " + getServerPort(conf));
 
-    public static void startServer(Configuration conf)
-    {
+    Runtime.getRuntime().addShutdownHook(new Thread() {
+      @Override
+      public void run()
+      {
+        String shutdownMsg = "Shutting down BookKeeperServer.";
+        log.info(shutdownMsg);
         try {
-            MetricsFactory.init(conf);
+          MetricsFactory.close();
         }
-        catch (Exception ex) {
-            log.error("Not able to initialize MetricsFactory ", ex);
+        catch (Exception e) {
+          log.error("Error in closing MetricsFactory : " + e.getClass().getName() + " "
+              + e.getMessage(), e);
         }
+      }
+    });
 
-        bookKeeper = new BookKeeper(conf);
-        DiskMonitorService diskMonitorService = new DiskMonitorService(conf, bookKeeper);
-        diskMonitorService.startAsync();
-        processor = new BookKeeperService.Processor(bookKeeper);
-        log.info("Starting BookKeeperServer on port " + getServerPort(conf));
+    try {
+      TServerTransport serverTransport = new TServerSocket(getServerPort(conf));
+      server = new TThreadPoolServer(new TThreadPoolServer
+          .Args(serverTransport)
+          .processor(processor)
+          .maxWorkerThreads(getServerMaxThreads(conf)));
 
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            @Override
-            public void run()
-            {
-                String shutdownMsg = "Shutting down BookKeeperServer.";
-                log.info(shutdownMsg);
-                try {
-                    MetricsFactory.close();
-                }
-                catch (Exception e) {
-                    log.error("Error in closing MetricsFactory : " + e.getClass().getName() + " "
-                    + e.getMessage(), e);
-                }
-            }
-        });
+      server.serve();
+    }
+    catch (TTransportException e) {
+      e.printStackTrace();
+      log.error(String.format("Error starting BookKeeper server %s", Throwables.getStackTraceAsString(e)));
+    }
+  }
 
-        try {
-            TServerTransport serverTransport = new TServerSocket(getServerPort(conf));
-            server = new TThreadPoolServer(new TThreadPoolServer
-                    .Args(serverTransport)
-                    .processor(processor)
-                    .maxWorkerThreads(getServerMaxThreads(conf)));
+  public static void stopServer()
+  {
+    server.stop();
+  }
 
-            server.serve();
-        }
-        catch (TTransportException e) {
-            e.printStackTrace();
-            log.error(String.format("Error starting BookKeeper server %s", Throwables.getStackTraceAsString(e)));
-        }
+  @VisibleForTesting
+  public static boolean isServerUp()
+  {
+    if (server != null) {
+      return server.isServing();
     }
 
-    public static void stopServer()
-    {
-        server.stop();
-    }
-
-    @VisibleForTesting
-    public static boolean isServerUp()
-    {
-        if (server != null) {
-            return server.isServing();
-        }
-
-        return false;
-    }
+    return false;
+  }
 }

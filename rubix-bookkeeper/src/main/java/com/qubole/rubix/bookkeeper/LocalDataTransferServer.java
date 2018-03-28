@@ -43,183 +43,182 @@ import java.util.concurrent.Executors;
 
 public class LocalDataTransferServer extends Configured implements Tool
 {
-    private static Log log = LogFactory.getLog(LocalDataTransferServer.class.getName());
-    private static Configuration conf;
-    private static  LocalServer localServer;
+  private static Log log = LogFactory.getLog(LocalDataTransferServer.class.getName());
+  private static Configuration conf;
+  private static LocalServer localServer;
 
-    private LocalDataTransferServer()
-    {
+  private LocalDataTransferServer()
+  {
+  }
+
+  public static void main(String[] args) throws Exception
+  {
+    ToolRunner.run(new Configuration(), new LocalDataTransferServer(), args);
+  }
+
+  @Override
+  public int run(String[] args) throws Exception
+  {
+    conf = this.getConf();
+    startServer(conf);
+    return 0;
+  }
+
+  public static void startServer(Configuration conf)
+  {
+    localServer = new LocalServer(conf);
+    new Thread(localServer).run();
+  }
+
+  public static void stopServer()
+  {
+    if (localServer != null) {
+      localServer.stop();
+    }
+  }
+
+  @VisibleForTesting
+  public static boolean isServerUp()
+  {
+    if (localServer != null) {
+      return localServer.isAlive();
     }
 
-    public static void main(String[] args) throws Exception
+    return false;
+  }
+
+  public static class LocalServer
+      implements Runnable
+  {
+    static ServerSocketChannel listener;
+    Configuration conf;
+
+    public LocalServer(Configuration conf)
     {
-        ToolRunner.run(new Configuration(), new LocalDataTransferServer(), args);
+      this.conf = conf;
     }
 
     @Override
-    public int run(String[] args) throws Exception
+    public void run()
     {
-        conf = this.getConf();
-        startServer(conf);
-        return 0;
+      int port = CacheConfig.getLocalServerPort(conf);
+      ExecutorService threadPool = Executors.newCachedThreadPool();
+      try {
+        listener = ServerSocketChannel.open();
+        listener.bind(new InetSocketAddress(port));
+        log.info("Listening on port " + port);
+        while (true) {
+          SocketChannel clientSocket = listener.accept();
+          ClientServiceThread cliThread = new ClientServiceThread(clientSocket, conf);
+          threadPool.execute(cliThread);
+        }
+      }
+      catch (AsynchronousCloseException e) {
+        log.info("Stopping Local Transfer server");
+      }
+      catch (IOException e) {
+        log.error(String.format("Error starting Local Transfer server %s", e));
+      }
     }
 
-    public static void startServer(Configuration conf)
+    public boolean isAlive()
     {
-        localServer = new LocalServer(conf);
-        new Thread(localServer).run();
+      return listener.isOpen();
     }
 
-    public static void stopServer()
+    public void stop()
     {
-        if (localServer != null) {
-            localServer.stop();
-        }
+      try {
+        listener.close();
+      }
+      catch (IOException e) {
+        log.error(String.format("Error stopping Local Transfer server %s", e));
+      }
+    }
+  }
+
+  static class ClientServiceThread
+      extends Thread
+  {
+    SocketChannel localDataTransferClient;
+    RetryingBookkeeperClient bookKeeperClient;
+    Configuration conf;
+
+    ClientServiceThread(SocketChannel s, Configuration conf)
+    {
+      localDataTransferClient = s;
+      this.conf = conf;
     }
 
-    @VisibleForTesting
-    public static boolean isServerUp()
+    public void run()
     {
-        if (localServer != null) {
-            return localServer.isAlive();
+      try {
+        log.debug("Connected to node - " + localDataTransferClient.getLocalAddress());
+        BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
+        ByteBuffer dataInfo = ByteBuffer.allocate(CacheConfig.getMaxHeaderSize(conf));
+
+        int read = localDataTransferClient.read(dataInfo);
+        if (read == -1) {
+          throw new Exception("Could not read data from Non-local node");
+        }
+        dataInfo.flip();
+
+        DataTransferHeader header = DataTransferClientHelper.readHeaders(dataInfo);
+        long offset = header.getOffset();
+        int readLength = header.getReadLength();
+        String remotePath = header.getFilePath();
+        log.debug(String.format("Trying to read from %s at offset %d and length %d for client %s", remotePath, offset, readLength, localDataTransferClient.getRemoteAddress()));
+        try {
+          this.bookKeeperClient = bookKeeperFactory.createBookKeeperClient(conf);
+        }
+        catch (Exception e) {
+          throw new Exception("Could not create BookKeeper Client " + Throwables.getStackTraceAsString(e));
         }
 
-        return false;
+        if (!bookKeeperClient.readData(remotePath, offset, readLength, header.getFileSize(), header.getLastModified(), header.getClusterType())) {
+          throw new Exception("Could not cache data required by non-local node");
+        }
+
+        String filename = CacheConfig.getLocalPath(remotePath, conf);
+        FileChannel fc = new FileInputStream(filename).getChannel();
+        int maxCount = CacheConfig.getLocalTransferBufferSize(conf);
+        int lengthRemaining = readLength;
+        long position = offset;
+        if (fc.size() < readLength) {
+          fc.close();
+          throw new Exception("File size is smaller than requested read");
+        }
+        int nread = 0;
+        while (nread < readLength) {
+          if (maxCount > lengthRemaining) {
+            maxCount = lengthRemaining;
+          }
+          nread += fc.transferTo(position + nread, maxCount, localDataTransferClient);
+          lengthRemaining = readLength - nread;
+        }
+        if (bookKeeperClient != null) {
+          bookKeeperClient.close();
+        }
+        fc.close();
+        log.debug(String.format("Done reading %d from %s at offset %d and length %d for client %s", nread, remotePath, offset, readLength, localDataTransferClient.getRemoteAddress()));
+      }
+      catch (Exception e) {
+        try {
+          log.warn("Error in Local Data Transfer Server for client: " + localDataTransferClient.getRemoteAddress(), e);
+        }
+        catch (IOException e1) {
+          log.warn("Error in Local Data Transfer Server for client: ", e);
+        }
+        return;
+      }
+      finally {
+        try {
+          localDataTransferClient.close();
+        }
+        catch (IOException e) {
+          log.info("Error in Local Data Transfer Server: ", e);
+        }
+      }
     }
-
-    public static class LocalServer implements Runnable
-    {
-        static ServerSocketChannel listener;
-        Configuration conf;
-
-        public LocalServer(Configuration conf)
-        {
-            this.conf = conf;
-        }
-
-        @Override
-        public void run()
-        {
-            int port = CacheConfig.getLocalServerPort(conf);
-            ExecutorService threadPool = Executors.newCachedThreadPool();
-            try {
-                listener = ServerSocketChannel.open();
-                listener.bind(new InetSocketAddress(port));
-                log.info("Listening on port " + port);
-                while (true) {
-                    SocketChannel clientSocket = listener.accept();
-                    ClientServiceThread cliThread = new ClientServiceThread(clientSocket, conf);
-                    threadPool.execute(cliThread);
-                }
-            }
-            catch (AsynchronousCloseException e) {
-                log.info("Stopping Local Transfer server");
-            }
-            catch (IOException e) {
-                log.error(String.format("Error starting Local Transfer server %s", e));
-            }
-
-        }
-
-        public boolean isAlive()
-        {
-            return listener.isOpen();
-        }
-
-        public void stop()
-        {
-            try {
-                listener.close();
-            }
-            catch (IOException e) {
-                log.error(String.format("Error stopping Local Transfer server %s", e));
-            }
-        }
-
-    }
-
-    static class ClientServiceThread
-            extends Thread
-    {
-        SocketChannel localDataTransferClient;
-        RetryingBookkeeperClient bookKeeperClient;
-        Configuration conf;
-
-        ClientServiceThread(SocketChannel s, Configuration conf)
-        {
-            localDataTransferClient = s;
-            this.conf = conf;
-        }
-
-        public void run()
-        {
-            try {
-                log.debug("Connected to node - " + localDataTransferClient.getLocalAddress());
-                BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
-                ByteBuffer dataInfo = ByteBuffer.allocate(CacheConfig.getMaxHeaderSize(conf));
-
-                int read = localDataTransferClient.read(dataInfo);
-                if (read == -1) {
-                    throw new Exception("Could not read data from Non-local node");
-                }
-                dataInfo.flip();
-
-                DataTransferHeader header = DataTransferClientHelper.readHeaders(dataInfo);
-                long offset = header.getOffset();
-                int readLength = header.getReadLength();
-                String remotePath = header.getFilePath();
-                log.debug(String.format("Trying to read from %s at offset %d and length %d for client %s", remotePath, offset, readLength, localDataTransferClient.getRemoteAddress()));
-                try {
-                    this.bookKeeperClient = bookKeeperFactory.createBookKeeperClient(conf);
-                }
-                catch (Exception e) {
-                    throw new Exception("Could not create BookKeeper Client " + Throwables.getStackTraceAsString(e));
-                }
-
-                if (!bookKeeperClient.readData(remotePath, offset, readLength, header.getFileSize(), header.getLastModified(), header.getClusterType())) {
-                    throw new Exception("Could not cache data required by non-local node");
-                }
-
-                String filename = CacheConfig.getLocalPath(remotePath, conf);
-                FileChannel fc = new FileInputStream(filename).getChannel();
-                int maxCount = CacheConfig.getLocalTransferBufferSize(conf);
-                int lengthRemaining = readLength;
-                long position = offset;
-                if (fc.size() < readLength) {
-                    fc.close();
-                    throw new Exception("File size is smaller than requested read");
-                }
-                int nread = 0;
-                while (nread < readLength) {
-                    if (maxCount > lengthRemaining) {
-                        maxCount = lengthRemaining;
-                    }
-                    nread += fc.transferTo(position + nread, maxCount, localDataTransferClient);
-                    lengthRemaining = readLength - nread;
-                }
-                if (bookKeeperClient != null) {
-                    bookKeeperClient.close();
-                }
-                fc.close();
-                log.debug(String.format("Done reading %d from %s at offset %d and length %d for client %s", nread, remotePath, offset, readLength, localDataTransferClient.getRemoteAddress()));
-            }
-            catch (Exception e) {
-                try {
-                    log.warn("Error in Local Data Transfer Server for client: " + localDataTransferClient.getRemoteAddress(), e);
-                }
-                catch (IOException e1) {
-                    log.warn("Error in Local Data Transfer Server for client: ", e);
-                }
-                return;
-            }
-            finally {
-                try {
-                    localDataTransferClient.close();
-                }
-                catch (IOException e) {
-                    log.info("Error in Local Data Transfer Server: ", e);
-                }
-            }
-        }
-    }
+  }
 }

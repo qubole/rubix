@@ -31,8 +31,8 @@ import java.net.URL;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-import static org.testng.AssertJUnit.assertFalse;
-import static org.testng.AssertJUnit.assertTrue;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
 
 /**
  * Created by stagra on 9/2/16.
@@ -40,83 +40,83 @@ import static org.testng.AssertJUnit.assertTrue;
 @Test(singleThreaded = true)
 public class TestClusterManager
 {
-    private static final Log LOG = LogFactory.getLog(TestClusterManager.class);
+  private static final Log LOG = LogFactory.getLog(TestClusterManager.class);
 
-    @Test
-    public void testGetNodes()
-            throws IOException, ExecutionException
-    {
-        HttpServer server = startServer(true);
-        ClusterManager cm = getHadoop1ClusterManager();
-        List<String> nodes = cm.getNodes();
+  @Test
+  public void testGetNodes()
+      throws IOException, ExecutionException
+  {
+    HttpServer server = startServer(true);
+    ClusterManager cm = getHadoop1ClusterManager();
+    List<String> nodes = cm.getNodes();
 
-        assertTrue("Should have been master", cm.isMaster());
-        assertTrue("Should have 4 nodes", nodes.size() == 4);
+    assertTrue(cm.isMaster(), "Should have been master");
+    assertTrue(nodes.size() == 4, "Should have 4 nodes");
 
-        String[] expected = new String[] {"ip-172-31-37-232.ec2.internal", "ip-172-31-37-233.ec2.internal", "ip-172-31-37-234.ec2.internal", "ip-172-31-37-235.ec2.internal"};
-        for (int i = 0; i < 4; i++) {
-            assertTrue(String.format("Wrong Node at position %d, expected %s but got %s", i, expected[i], nodes.get(i)), nodes.get(i).equals(expected[i]));
-        }
-        server.stop(0);
+    String[] expected = new String[]{"ip-172-31-37-232.ec2.internal", "ip-172-31-37-233.ec2.internal", "ip-172-31-37-234.ec2.internal", "ip-172-31-37-235.ec2.internal"};
+    for (int i = 0; i < 4; i++) {
+      assertTrue(nodes.get(i).equals(expected[i]), String.format("Wrong Node at position %d, expected %s but got %s", i, expected[i], nodes.get(i)));
     }
+    server.stop(0);
+  }
 
-    @Test
-    public void testIsMasterOnWorker()
-            throws IOException, ExecutionException
-    {
-        HttpServer server = startServer(false);
-        ClusterManager cm = getHadoop1ClusterManager();
-        assertFalse("Should have been worker, isMaster=" + cm.isMaster(), cm.isMaster());
-        server.stop(0);
+  @Test
+  public void testIsMasterOnWorker()
+      throws IOException, ExecutionException
+  {
+    HttpServer server = startServer(false);
+    ClusterManager cm = getHadoop1ClusterManager();
+    assertFalse(cm.isMaster(), "Should have been worker, isMaster=" + cm.isMaster());
+    server.stop(0);
+  }
+
+  private ClusterManager getHadoop1ClusterManager()
+  {
+    ClusterManager clusterManager = new Hadoop1ClusterManager();
+    Configuration conf = new Configuration();
+    conf.setInt(Hadoop1ClusterManager.nnPortConf, 45326);
+    clusterManager.initialize(conf);
+    return clusterManager;
+  }
+
+  private HttpServer startServer(boolean master)
+      throws IOException
+  {
+    HttpServer server = HttpServer.create(new InetSocketAddress(45326), 0);
+    if (master) {
+      server.createContext("/dfsnodelist.jsp", new MasterDFSAdminHandler());
     }
+    server.setExecutor(null); // creates a default executor
+    server.start();
+    return server;
+  }
 
-    private ClusterManager getHadoop1ClusterManager()
+  class MasterDFSAdminHandler
+      implements HttpHandler
+  {
+    @Override
+    public void handle(HttpExchange exchange)
+        throws IOException
     {
-        ClusterManager clusterManager = new Hadoop1ClusterManager();
-        Configuration conf = new Configuration();
-        conf.setInt(Hadoop1ClusterManager.nnPortConf, 45326);
-        clusterManager.initialize(conf);
-        return clusterManager;
-    }
+      URL url = TestClusterManager.class.getResource("/masterResponse.html");
+      File file;
+      try {
+        file = new File(url.toURI());
+      }
+      catch (URISyntaxException e) {
+        throw new IOException(e);
+      }
+      InputStream is = url.openStream();
+      byte[] data = new byte[(int) file.length()];
+      int len = is.read(data);
+      is.close();
 
-    private HttpServer startServer(boolean master)
-            throws IOException
-    {
-        HttpServer server = HttpServer.create(new InetSocketAddress(45326), 0);
-        if (master) {
-            server.createContext("/dfsnodelist.jsp", new masterDFSAdminHandler());
-        }
-        server.setExecutor(null); // creates a default executor
-        server.start();
-        return server;
+      //String response = new String(data, "UTF-8");
+      exchange.getResponseHeaders().add("Content-Type", "application/json");
+      exchange.sendResponseHeaders(200, len);
+      OutputStream os = exchange.getResponseBody();
+      os.write(data);
+      os.close();
     }
-
-    class masterDFSAdminHandler
-            implements HttpHandler
-    {
-        @Override
-        public void handle(HttpExchange exchange)
-                throws IOException
-        {
-            URL url = TestClusterManager.class.getResource("/masterResponse.html");
-            File file;
-            try {
-                file = new File(url.toURI());
-            }
-            catch (URISyntaxException e) {
-                throw new IOException(e);
-            }
-            InputStream is = url.openStream();
-            byte[] data = new byte[(int) file.length()];
-            int len = is.read(data);
-            is.close();
-
-            //String response = new String(data, "UTF-8");
-            exchange.getResponseHeaders().add("Content-Type", "application/json");
-            exchange.sendResponseHeaders(200, len);
-            OutputStream os = exchange.getResponseBody();
-            os.write(data);
-            os.close();
-        }
-    }
+  }
 }

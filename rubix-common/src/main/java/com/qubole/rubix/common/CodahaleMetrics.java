@@ -13,16 +13,16 @@
 
 package com.qubole.rubix.common;
 
-import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Gauge;
-import com.codahale.metrics.Metric;
 import com.codahale.metrics.JmxReporter;
+import com.codahale.metrics.Metric;
+import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.MetricSet;
+import com.codahale.metrics.jvm.BufferPoolMetricSet;
 import com.codahale.metrics.jvm.GarbageCollectorMetricSet;
 import com.codahale.metrics.jvm.MemoryUsageGaugeSet;
 import com.codahale.metrics.jvm.ThreadStatesGaugeSet;
-import com.codahale.metrics.jvm.BufferPoolMetricSet;
 
 import com.google.common.base.Splitter;
 import com.google.common.cache.CacheBuilder;
@@ -36,10 +36,10 @@ import org.apache.hadoop.conf.Configuration;
 
 import java.io.Closeable;
 import java.lang.management.ManagementFactory;
-import java.util.Set;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -75,8 +75,7 @@ public class CodahaleMetrics implements Metrics
             metricRegistry.register(key, counter);
             return counter;
           }
-        }
-    );
+        });
 
     gauges = new ConcurrentHashMap<String, Gauge>();
 
@@ -89,8 +88,7 @@ public class CodahaleMetrics implements Metrics
     //Metrics reporter
     Set<MetricsReporting> finalReporterList = new HashSet<MetricsReporting>();
     List<String> metricsReporterNames = Lists.newArrayList(
-        Splitter.on(",").trimResults().omitEmptyStrings().split(CacheConfig.getMetricsReporters(conf))
-    );
+        Splitter.on(",").trimResults().omitEmptyStrings().split(CacheConfig.getMetricsReporters(conf)));
 
     if (metricsReporterNames != null) {
       for (String metricsReportingName : metricsReporterNames) {

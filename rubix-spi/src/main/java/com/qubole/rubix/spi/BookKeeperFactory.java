@@ -22,30 +22,30 @@ import org.apache.thrift.transport.TTransportException;
  */
 public class BookKeeperFactory
 {
-    BookKeeperService.Iface bookKeeper = null;
+  BookKeeperService.Iface bookKeeper;
 
-    public BookKeeperFactory()
-    {
-    }
+  public BookKeeperFactory()
+  {
+  }
 
-    public BookKeeperFactory(BookKeeperService.Iface bookKeeper)
-    {
-        this.bookKeeper = bookKeeper;
-    }
+  public BookKeeperFactory(BookKeeperService.Iface bookKeeper)
+  {
+    this.bookKeeper = bookKeeper;
+  }
 
-    public RetryingBookkeeperClient createBookKeeperClient(Configuration conf)
-            throws TTransportException
-    {
-        if (bookKeeper == null) {
-            TTransport transport;
-            transport = new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf));
-            transport.open();
-            RetryingBookkeeperClient retryingBookkeeperClient = new RetryingBookkeeperClient(transport, CacheConfig.getMaxRetries(conf));
-            return retryingBookkeeperClient;
-        }
-        else {
-            TTransport transport = null;
-            return new LocalBookKeeperClient(transport, bookKeeper);
-        }
+  public RetryingBookkeeperClient createBookKeeperClient(Configuration conf)
+      throws TTransportException
+  {
+    if (bookKeeper == null) {
+      TTransport transport;
+      transport = new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf));
+      transport.open();
+      RetryingBookkeeperClient retryingBookkeeperClient = new RetryingBookkeeperClient(transport, CacheConfig.getMaxRetries(conf));
+      return retryingBookkeeperClient;
     }
+    else {
+      TTransport transport = null;
+      return new LocalBookKeeperClient(transport, bookKeeper);
+    }
+  }
 }
