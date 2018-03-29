@@ -67,8 +67,11 @@ class FileDownloader
       Path path = new Path(entry.getKey());
       DownloadRequestContext context = entry.getValue();
 
-      FileSystem fs = path.getFileSystem(conf);
+      // Creating a new instance of the filesystem object by calling FileSystem.newInstance
+      // This one makes sure we will get a new instance even if fs.%.impl.disable.cache is set to false
+      FileSystem fs = FileSystem.newInstance(path.toUri(), conf);
       fs.initialize(path.toUri(), conf);
+
       String localPath = CacheConfig.getLocalPath(entry.getKey(), conf);
       log.info("Processing Request for File : " + path.toString() + " LocalFile : " + localPath);
       ByteBuffer directWriteBuffer = bufferPool.getBuffer(diskReadBufferSize);
@@ -105,11 +108,20 @@ class FileDownloader
 
     for (Future<Integer> future : futures) {
       FileDownloadRequestChain requestChain = readRequestChainList.get(futures.indexOf(future));
+      long totalBytesToBeDownloaded = 0;
+      for (ReadRequest request : requestChain.getReadRequests()) {
+        totalBytesToBeDownloaded += request.getBackendReadLength();
+      }
       try {
         int read = future.get();
+        // Updating the cache only when we have downloaded the same amount of data that we requested
+        // This takes care of the scenario where the data is download partially but the cache
+        // metadata gets updated for all the requested blocks.
+        if (read == totalBytesToBeDownloaded) {
+          requestChain.updateCacheStatus(requestChain.getRemotePath(), requestChain.getFileSize(),
+              requestChain.getLastModified(), CacheConfig.getBlockSize(conf), conf);
+        }
         sizeRead += read;
-        requestChain.updateCacheStatus(requestChain.getRemotePath(), requestChain.getFileSize(),
-            requestChain.getLastModified(), CacheConfig.getBlockSize(conf), conf);
       }
       catch (ExecutionException | InterruptedException ex) {
         log.error(ex.getStackTrace());
