@@ -13,6 +13,7 @@
 package com.qubole.rubix.spi;
 
 import org.apache.hadoop.conf.Configuration;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -24,20 +25,20 @@ import java.nio.channels.SocketChannel;
  */
 public class DataTransferClientHelper
 {
-    private DataTransferClientHelper()
-    {
-    }
+  private DataTransferClientHelper()
+  {
+  }
 
-    public static SocketChannel createDataTransferClient(String remoteNodeName, Configuration conf)
-            throws IOException
-    {
-        SocketAddress sad = new InetSocketAddress(remoteNodeName, CacheConfig.getLocalServerPort(conf));
-        SocketChannel sc = SocketChannel.open();
-        sc.socket().setSoTimeout(CacheConfig.getSocketReadTimeOutDefault(conf));
-        sc.configureBlocking(true);
-        sc.socket().connect(sad, CacheConfig.getClientTimeout(conf));
-        return sc;
-    }
+  public static SocketChannel createDataTransferClient(String remoteNodeName, Configuration conf)
+      throws IOException
+  {
+    SocketAddress sad = new InetSocketAddress(remoteNodeName, CacheConfig.getLocalServerPort(conf));
+    SocketChannel sc = SocketChannel.open();
+    sc.socket().setSoTimeout(CacheConfig.getSocketReadTimeOutDefault(conf));
+    sc.configureBlocking(true);
+    sc.socket().connect(sad, CacheConfig.getClientTimeout(conf));
+    return sc;
+  }
 
     /* order is:
     int : filePathLength
@@ -48,26 +49,26 @@ public class DataTransferClientHelper
     long : lastModified
     int : clusterType */
 
-    public static ByteBuffer writeHeaders(Configuration conf, DataTransferHeader header)
-    {
-        ByteBuffer buf = ByteBuffer.allocate(CacheConfig.getMaxHeaderSize(conf));
-        buf.putInt(header.getFilePath().length());
-        buf.put(header.getFilePath().getBytes());
-        buf.putLong(header.getOffset());
-        buf.putInt(header.getReadLength());
-        buf.putLong(header.getFileSize());
-        buf.putLong(header.getLastModified());
-        buf.putInt(header.getClusterType());
-        buf.flip();
-        return buf;
-    }
+  public static ByteBuffer writeHeaders(Configuration conf, DataTransferHeader header)
+  {
+    ByteBuffer buf = ByteBuffer.allocate(CacheConfig.getMaxHeaderSize(conf));
+    buf.putInt(header.getFilePath().length());
+    buf.put(header.getFilePath().getBytes());
+    buf.putLong(header.getOffset());
+    buf.putInt(header.getReadLength());
+    buf.putLong(header.getFileSize());
+    buf.putLong(header.getLastModified());
+    buf.putInt(header.getClusterType());
+    buf.flip();
+    return buf;
+  }
 
-    public static DataTransferHeader readHeaders(ByteBuffer dataInfo)
-    {
-        byte[] fileBytes = new byte[dataInfo.getInt()];
-        dataInfo.get(fileBytes);
-        String remotePath = new String(fileBytes);
-        return new DataTransferHeader(dataInfo.getLong(), dataInfo.getInt(), dataInfo.getLong(),
-                dataInfo.getLong(), dataInfo.getInt(), remotePath);
-    }
+  public static DataTransferHeader readHeaders(ByteBuffer dataInfo)
+  {
+    byte[] fileBytes = new byte[dataInfo.getInt()];
+    dataInfo.get(fileBytes);
+    String remotePath = new String(fileBytes);
+    return new DataTransferHeader(dataInfo.getLong(), dataInfo.getInt(), dataInfo.getLong(),
+        dataInfo.getLong(), dataInfo.getInt(), remotePath);
+  }
 }

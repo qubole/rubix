@@ -1,5 +1,8 @@
 # RubiX
 
+[![Build Status](https://travis-ci.org/qubole/rubix.svg?branch=master)](https://travis-ci.org/qubole/rubix)
+[![Coverage Status](https://coveralls.io/repos/github/qubole/rubix/badge.svg)](https://coveralls.io/github/qubole/rubix)
+
 RubiX is a light-weight data caching framework that can be used by Big-Data engines.
 RubiX can be extended to support any engine that accesses data in cloud stores using Hadoop FileSystem interface via plugins. 
 Using the same plugins, RubiX can also be extended to be used with any cloud store

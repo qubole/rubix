@@ -1,0 +1,18 @@
+branches:
+  only: 
+    - master
+language: java
+jdk:
+  - openjdk7
+sudo: required
+before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install libboost-dev libboost-test-dev libboost-program-options-dev libevent-dev automake libtool flex bison pkg-config g++ libssl-dev
+  - cd $TRAVIS_HOME
+  - wget http://archive.apache.org/dist/thrift/0.9.3/thrift-0.9.3.tar.gz
+  - tar xfz thrift-0.9.3.tar.gz
+  - cd thrift-0.9.3 && ./configure --with-java --without-c_glib --without-cpp --without-ruby --without-nodejs --without-python --without-php --without-erlang --without-go && sudo make install
+  - cd $TRAVIS_BUILD_DIR
+script: mvn clean install
+after_success:
+  - mvn cobertura:cobertura coveralls:report
