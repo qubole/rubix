@@ -136,17 +136,17 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
       for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
         totalRequests++;
         long split = (blockNum * blockSize) / splitSize;
-        if (md.isBlockCached(blockNum)) {
-          blockLocations.add(new BlockLocation(Location.CACHED, blockSplits.get(split)));
-          cachedRequests++;
+        if (!blockSplits.get(split).equalsIgnoreCase(nodeName)) {
+          blockLocations.add(new BlockLocation(Location.NON_LOCAL, blockSplits.get(split)));
         }
         else {
-          if (blockSplits.get(split).equalsIgnoreCase(nodeName)) {
-            blockLocations.add(new BlockLocation(Location.LOCAL, blockSplits.get(split)));
-            remoteRequests++;
+          if (md.isBlockCached(blockNum)) {
+            blockLocations.add(new BlockLocation(Location.CACHED, blockSplits.get(split)));
+            cachedRequests++;
           }
           else {
-            blockLocations.add(new BlockLocation(Location.NON_LOCAL, blockSplits.get(split)));
+            blockLocations.add(new BlockLocation(Location.LOCAL, blockSplits.get(split)));
+            remoteRequests++;
           }
         }
       }
