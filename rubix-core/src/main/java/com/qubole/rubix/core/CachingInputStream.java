@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.DirectBufferPool;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
@@ -133,19 +132,6 @@ public class CachingInputStream extends FSInputStream
     this.blockSize = CacheConfig.getBlockSize(conf);
     this.localPath = CacheConfig.getLocalPath(remotePath, conf);
     this.diskReadBufferSize = CacheConfig.getDiskReadBufferSizeDefault(conf);
-    File file = new File(localPath);
-    if (!file.exists()) {
-      try {
-        file.createNewFile();
-      }
-      catch (IOException e) {
-        log.error("Error in creating local file " + localPath, e);
-        // reset bookkeeper client so that we take direct route
-        this.bookKeeperClient = null;
-      }
-      file.setReadable(true, false);
-      file.setWritable(true, false);
-    }
   }
 
   private FSDataInputStream getParentDataInputStream() throws IOException
