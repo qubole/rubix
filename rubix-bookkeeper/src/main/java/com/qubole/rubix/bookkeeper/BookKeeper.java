@@ -383,6 +383,7 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
             }
           }
         })
+        .concurrencyLevel(1)
         .build();
   }
 
