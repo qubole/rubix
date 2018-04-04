@@ -131,7 +131,7 @@ public class CachingInputStream extends FSInputStream
       bookKeeperClient = null;
     }
     this.blockSize = CacheConfig.getBlockSize(conf);
-    this.localPath = CacheConfig.getLocalPath(remotePath, conf);
+    this.localPath = CacheUtil.getLocalPath(remotePath, conf);
     this.diskReadBufferSize = CacheConfig.getDiskReadBufferSize(conf);
   }
 
