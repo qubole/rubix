@@ -17,5 +17,6 @@ package com.qubole.rubix.common;
  */
 public enum MetricsReporting {
   JMX,
-  GANGLIA
+  GANGLIA,
+  STATSD
 }

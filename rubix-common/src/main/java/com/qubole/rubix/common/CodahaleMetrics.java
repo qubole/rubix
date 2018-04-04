@@ -30,6 +30,7 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
 import com.qubole.rubix.spi.CacheConfig;
+import com.readytalk.metrics.StatsDReporter;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -115,6 +116,14 @@ public class CodahaleMetrics implements Metrics
               .build();
           jmxReporter.start();
           reporters.add(jmxReporter);
+          break;
+        case STATSD:
+          final StatsDReporter statsDReporter = StatsDReporter.forRegistry(metricRegistry)
+              .convertRatesTo(TimeUnit.SECONDS)
+              .convertDurationsTo(TimeUnit.MILLISECONDS)
+              .build("localhost", 8125);
+          statsDReporter.start(5, TimeUnit.SECONDS);
+          reporters.add(statsDReporter);
           break;
       }
     }
