@@ -137,17 +137,17 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
       for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
         totalRequests++;
         long split = (blockNum * blockSize) / splitSize;
-        if (md.isBlockCached(blockNum)) {
-          blockLocations.add(new BlockLocation(Location.CACHED, blockSplits.get(split)));
-          cachedRequests++;
+        if (!blockSplits.get(split).equalsIgnoreCase(nodeName)) {
+          blockLocations.add(new BlockLocation(Location.NON_LOCAL, blockSplits.get(split)));
         }
         else {
-          if (blockSplits.get(split).equalsIgnoreCase(nodeName)) {
-            blockLocations.add(new BlockLocation(Location.LOCAL, blockSplits.get(split)));
-            remoteRequests++;
+          if (md.isBlockCached(blockNum)) {
+            blockLocations.add(new BlockLocation(Location.CACHED, blockSplits.get(split)));
+            cachedRequests++;
           }
           else {
-            blockLocations.add(new BlockLocation(Location.NON_LOCAL, blockSplits.get(split)));
+            blockLocations.add(new BlockLocation(Location.LOCAL, blockSplits.get(split)));
+            remoteRequests++;
           }
         }
       }
@@ -299,11 +299,22 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
           // Cache the data
           // Ue RRRC directly instead of creating instance of CachingFS as in certain circumstances, CachingFS could
           // send this request to NonLocalRRC which would be wrong as that would not cache it on disk
+          long expectedBytesToRead = (readStart + blockSize) > fileSize ? (fileSize - readStart) : blockSize;
           RemoteReadRequestChain remoteReadRequestChain = new RemoteReadRequestChain(inputStream, localPath, byteBuffer, buffer, new BookKeeperFactory(this));
           remoteReadRequestChain.addReadRequest(new ReadRequest(readStart, readStart + blockSize, readStart, readStart + blockSize, buffer, 0, fileSize));
           remoteReadRequestChain.lock();
-          remoteReadRequestChain.call();
-          remoteReadRequestChain.updateCacheStatus(remotePath, fileSize, lastModified, blockSize, conf);
+          Integer dataRead = remoteReadRequestChain.call();
+
+          // Making sure the data downloaded matches with the expected bytes. If not, there is some problem with
+          // the download this time. So won't update the cache metadata and return false so that client can
+          // fall back on the directread
+          if (dataRead == expectedBytesToRead) {
+            remoteReadRequestChain.updateCacheStatus(remotePath, fileSize, lastModified, blockSize, conf);
+          }
+          else {
+            log.error("Not able to download requested bytes. Not updating the cache for block " + startBlock);
+            return false;
+          }
         }
       }
       return true;
