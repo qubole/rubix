@@ -43,7 +43,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-import static com.qubole.rubix.spi.CacheConfig.skipCache;
+import static com.qubole.rubix.spi.CacheUtil.skipCache;
 
 /**
  * Created by stagra on 29/12/15.
