@@ -179,6 +179,13 @@ public class LocalDataTransferServer extends Configured implements Tool
           throw new Exception("Could not cache data required by non-local node");
         }
 
+        if (!CacheConfig.isParallelWarmupEnabled(conf)) {
+          if (!bookKeeperClient.readData(remotePath, offset, readLength, header.getFileSize(),
+              header.getLastModified(), header.getClusterType())) {
+            throw new Exception("Could not cache data required by non-local node");
+          }
+        }
+
         String filename = CacheConfig.getLocalPath(remotePath, conf);
         FileChannel fc = new FileInputStream(filename).getChannel();
         int maxCount = CacheConfig.getLocalTransferBufferSize(conf);
@@ -188,6 +195,7 @@ public class LocalDataTransferServer extends Configured implements Tool
           fc.close();
           throw new Exception("File size is smaller than requested read");
         }
+
         int nread = 0;
         while (nread < readLength) {
           if (maxCount > lengthRemaining) {
