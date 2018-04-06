@@ -79,7 +79,7 @@ public class TestRemoteFetchProcessor
   @Test
   public void testMergeRequests() throws Exception
   {
-    conf.setLong("hadoop.cache.data.remotefetch.interval", 2000);
+    conf.setLong(CacheConfig.remoteFetchProcessInterval, 2000);
     RemoteFetchProcessor processor = new RemoteFetchProcessor(conf);
 
     log.info("Merge Test 1 when requests are all from different file");
@@ -141,7 +141,7 @@ public class TestRemoteFetchProcessor
     File file = new File(backendFileName);
     Path backendPath = new Path("file:///" + backendFileName);
 
-    conf.setLong("hadoop.cache.data.remotefetch.interval", 2000);
+    conf.setLong(CacheConfig.remoteFetchProcessInterval, 2000);
     RemoteFetchProcessor processsor = new RemoteFetchProcessor(conf);
 
     processsor.addToProcessQueue(backendPath.toString(), 0, 100, file.length(), (long) 10000);
@@ -173,7 +173,7 @@ public class TestRemoteFetchProcessor
     File file = new File(backendFileName);
     Path backendPath = new Path("file:///" + backendFileName);
 
-    conf.setLong("hadoop.cache.data.remotefetch.interval", 2000);
+    conf.setLong(CacheConfig.remoteFetchProcessInterval, 2000);
     RemoteFetchProcessor processsor = new RemoteFetchProcessor(conf);
 
     processsor.addToProcessQueue(backendPath.toString(), 0, 100, file.length(), (long) 10000);

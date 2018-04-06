@@ -70,11 +70,11 @@ public class CacheConfig
   public static String socketReadTimeOutConf = "hadoop.cache.network.socket.read.timeout";
   private static String diskMonitorIntervalConf = "hadoop.cache.disk.monitor.interval";
 
-  public static String parallelWarmupEnable = "hadoop.cache.data.parallel.warmup";
-  private static String processThreadInitalDelay = "hadoop.cache.data.request.process.inital.delay";
-  private static String processThreadInterval = "hadoop.cache.data.request.process.interval";
-  private static String remoteFetchProcessInterval = "hadoop.cache.data.remotefetch.interval";
-  private static String numRemoteFetchThreads = "hadoop.cache.data.remotefetch.threads";
+  public static String parallelWarmupEnable = "rubix.parallel.warmup";
+  public static String processThreadInitalDelay = "rubix.request.process.inital.delay";
+  public static String processThreadInterval = "rubix.request.process.interval";
+  public static String remoteFetchProcessInterval = "rubix.remotefetch.interval";
+  public static String numRemoteFetchThreads = "rubix.remotefetch.threads";
 
   static String fileCacheDirSuffixConf = "/fcache/";
   static int maxDisksConf = 5;
@@ -93,6 +93,11 @@ public class CacheConfig
   public static final int diskReadBufferSizeDefault = 1024;
   public static int socketReadTimeOutDefault = 30000; // In milliseconds.
   private static int diskMonitorInterval = 10; // in seconds
+
+  private static int processThreadInitalDelayDefault = 1000;
+  private static int processThreadIntervalDefault = 1000;
+  private static int remoteFetchProcessIntervalDefault = 10000;
+  private static int numRemoteFetchThreadsDefault = 10;
 
   private static final Log log = LogFactory.getLog(CacheConfig.class.getName());
 
@@ -396,26 +401,26 @@ public class CacheConfig
 
   public static boolean isParallelWarmupEnabled(Configuration conf)
   {
-    return conf.getBoolean(parallelWarmupEnable, true);
+    return conf.getBoolean(parallelWarmupEnable, false);
   }
 
   public static int getProcessThreadInitialDelayInMs(Configuration conf)
   {
-    return conf.getInt(processThreadInitalDelay, 1000);
+    return conf.getInt(processThreadInitalDelay, processThreadInitalDelayDefault);
   }
 
   public static int getProcessThreadIntervalInMs(Configuration conf)
   {
-    return conf.getInt(processThreadInterval, 1000);
+    return conf.getInt(processThreadInterval, processThreadIntervalDefault);
   }
 
   public static int getRemoteFetchProcessIntervalInMS(Configuration conf)
   {
-    return conf.getInt(remoteFetchProcessInterval, 10000);
+    return conf.getInt(remoteFetchProcessInterval, remoteFetchProcessIntervalDefault);
   }
 
   public static int getRemoteFetchNumThreads(Configuration conf)
   {
-    return conf.getInt(numRemoteFetchThreads, 10);
+    return conf.getInt(numRemoteFetchThreads, numRemoteFetchThreadsDefault);
   }
 }
