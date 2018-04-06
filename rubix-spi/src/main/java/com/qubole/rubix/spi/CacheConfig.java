@@ -74,6 +74,8 @@ public class CacheConfig
   private static String metricsClassConf = "rubix.metrics.class";
   private static String metricsRepotersConf = "rubix.metrics.reporters";
 
+  private static String statsdPortConf = "rubix.statsd.port";
+
   static String fileCacheDirSuffixConf = "/fcache/";
   static int maxDisksConf = 5;
 
@@ -95,6 +97,8 @@ public class CacheConfig
   private static boolean metricsEnabledDefault = true;
   private static String metricsClassDefault = "com.qubole.rubix.common.CodahaleMetrics";
   private static String metricsReporterDefault = "JMX";
+
+  private static int statsdPortDefault = 8125;
 
   private static final Log log = LogFactory.getLog(CacheConfig.class.getName());
 
@@ -410,5 +414,10 @@ public class CacheConfig
   public static boolean isMetricsEnabled(Configuration conf)
   {
     return conf.getBoolean(enableMetricsConf, metricsEnabledDefault);
+  }
+
+  public static int getStatsdPort(Configuration conf)
+  {
+    return conf.getInt(statsdPortConf, statsdPortDefault);
   }
 }

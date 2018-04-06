@@ -118,10 +118,11 @@ public class CodahaleMetrics implements Metrics
           reporters.add(jmxReporter);
           break;
         case STATSD:
+          int statsdPort = CacheConfig.getStatsdPort(conf);
           final StatsDReporter statsDReporter = StatsDReporter.forRegistry(metricRegistry)
               .convertRatesTo(TimeUnit.SECONDS)
               .convertDurationsTo(TimeUnit.MILLISECONDS)
-              .build("localhost", 8125);
+              .build("localhost", statsdPort);
           statsDReporter.start(5, TimeUnit.SECONDS);
           reporters.add(statsDReporter);
           break;
