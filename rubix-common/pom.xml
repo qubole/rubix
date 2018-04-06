@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <parent>
         <groupId>com.qubole.rubix</groupId>
@@ -10,8 +12,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.qubole.rubix</groupId>
-    <artifactId>rubix-core</artifactId>
-    <name>rubix-core</name>
+    <artifactId>rubix-common</artifactId>
+    <name>rubix-common</name>
 
     <properties>
         <main.basedir>${project.parent.basedir}</main.basedir>
@@ -27,37 +29,34 @@
         </dependency>
 
         <dependency>
-            <groupId>org.weakref</groupId>
-            <artifactId>jmxutils</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-        </dependency>
-
-        <!-- TESTING -->
-        <dependency>
-            <groupId>org.testng</groupId>
-            <artifactId>testng</artifactId>
-            <version>6.9.8</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>1.7.5</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-spi</artifactId>
         </dependency>
+
         <dependency>
-            <groupId>com.qubole.rubix</groupId>
-            <artifactId>rubix-common</artifactId>
+            <groupId>io.dropwizard.metrics</groupId>
+            <artifactId>metrics-core</artifactId>
+            <version>${dep.dropwizard.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>io.dropwizard.metrics</groupId>
+            <artifactId>metrics-jvm</artifactId>
+            <version>${dep.dropwizard.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.readytalk</groupId>
+            <artifactId>metrics-statsd-common</artifactId>
+            <version>4.2.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.readytalk</groupId>
+            <artifactId>metrics3-statsd</artifactId>
+            <version>4.2.0</version>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -74,19 +73,6 @@
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>2.3.2</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>test-jar</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
                 <version>2.3</version>
                 <executions>
@@ -98,18 +84,14 @@
                         <configuration>
                             <artifactSet>
                                 <includes>
-                                    <include>org.weakref:jmxutils</include>
-                                    <include>com.google.guava:guava</include>
+                                    <include>io.dropwizard.metrics:metrics-core</include>
+                                    <include>io.dropwizard.metrics:metrics-jvm</include>
                                 </includes>
                             </artifactSet>
                             <relocations>
                                 <relocation>
-                                    <pattern>org.weakref.jmx</pattern>
-                                    <shadedPattern>org.weakref.shaded.jmx</shadedPattern>
-                                </relocation>
-                                <relocation>
-                                    <pattern>com.google</pattern>
-                                    <shadedPattern>com.google.shaded</shadedPattern>
+                                    <pattern>io.dropwizard.metrics</pattern>
+                                    <shadedPattern>io.dropwizard.metrics.shaded</shadedPattern>
                                 </relocation>
                             </relocations>
 
@@ -117,6 +99,7 @@
                     </execution>
                 </executions>
             </plugin>
+
         </plugins>
     </build>
 

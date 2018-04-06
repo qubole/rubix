@@ -16,6 +16,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.cache.Cache;
 import com.google.common.cache.RemovalCause;
 import com.google.common.util.concurrent.Striped;
+import com.qubole.rubix.common.MetricsConstant;
+import com.qubole.rubix.common.MetricsFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -164,6 +166,17 @@ public class FileMetadata
       throws IOException
   {
     log.warn("Evicting " + getRemotePath().toString() + " due to " + cause);
+    MetricsFactory.getInstance().incrementCounter(MetricsConstant.NUM_FILES_EVICTED);
+    switch (cause) {
+      case EXPLICIT:
+        MetricsFactory.getInstance().incrementCounter(MetricsConstant.NUM_FILES_EVICTED_EXPLICIT);
+        break;
+      case SIZE:
+        MetricsFactory.getInstance().incrementCounter(MetricsConstant.NUM_FILES_EVICTED_SIZE);
+        break;
+      default:
+        break;
+    }
     deleteFiles(cause, cache);
   }
 

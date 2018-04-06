@@ -14,6 +14,7 @@ package com.qubole.rubix.bookkeeper;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
+import com.qubole.rubix.common.MetricsFactory;
 import com.qubole.rubix.spi.BookKeeperService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -70,11 +71,34 @@ public class BookKeeperServer extends Configured implements Tool
 
   public static void startServer(Configuration conf)
   {
+    try {
+      MetricsFactory.init(conf);
+    }
+    catch (Exception ex) {
+      log.error("Not able to initialize MetricsFactory ", ex);
+    }
     bookKeeper = new BookKeeper(conf);
     DiskMonitorService diskMonitorService = new DiskMonitorService(conf, bookKeeper);
     diskMonitorService.startAsync();
     processor = new BookKeeperService.Processor(bookKeeper);
     log.info("Starting BookKeeperServer on port " + getServerPort(conf));
+
+    Runtime.getRuntime().addShutdownHook(new Thread() {
+      @Override
+      public void run()
+      {
+        String shutdownMsg = "Shutting down BookKeeperServer.";
+        log.info(shutdownMsg);
+        try {
+          MetricsFactory.close();
+        }
+        catch (Exception e) {
+          log.error("Error in closing MetricsFactory : " + e.getClass().getName() + " "
+              + e.getMessage(), e);
+        }
+      }
+    });
+
     try {
       TServerTransport serverTransport = new TServerSocket(getServerPort(conf));
       server = new TThreadPoolServer(new TThreadPoolServer

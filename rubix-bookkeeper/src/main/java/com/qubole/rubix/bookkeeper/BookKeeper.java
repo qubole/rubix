@@ -22,6 +22,11 @@ import com.google.common.cache.Weigher;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
+import com.qubole.rubix.bookkeeper.utils.DiskUtils;
+import com.qubole.rubix.common.Metrics;
+import com.qubole.rubix.common.MetricsConstant;
+import com.qubole.rubix.common.MetricsFactory;
+import com.qubole.rubix.common.MetricsVariable;
 import com.qubole.rubix.core.ReadRequest;
 import com.qubole.rubix.core.RemoteReadRequestChain;
 import com.qubole.rubix.hadoop2.Hadoop2ClusterManager;
@@ -138,15 +143,18 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
         long split = (blockNum * blockSize) / splitSize;
         if (!blockSplits.get(split).equalsIgnoreCase(nodeName)) {
           blockLocations.add(new BlockLocation(Location.NON_LOCAL, blockSplits.get(split)));
+          MetricsFactory.getInstance().incrementCounter(MetricsConstant.NONLOCAL_READ_REQUESTS);
         }
         else {
           if (md.isBlockCached(blockNum)) {
             blockLocations.add(new BlockLocation(Location.CACHED, blockSplits.get(split)));
             cachedRequests++;
+            MetricsFactory.getInstance().incrementCounter(MetricsConstant.CACHED_READ_REQUESTS);
           }
           else {
             blockLocations.add(new BlockLocation(Location.LOCAL, blockSplits.get(split)));
             remoteRequests++;
+            MetricsFactory.getInstance().incrementCounter(MetricsConstant.REMOTE_READ_REQUESTS);
           }
         }
       }
@@ -384,6 +392,30 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
           }
         })
         .build();
+
+    if (MetricsFactory.getInstance() != null) {
+      Metrics metrics = MetricsFactory.getInstance();
+      registerDiskSpaceUsedMetrics(metrics, conf);
+    }
+  }
+
+  private static void registerDiskSpaceUsedMetrics(Metrics metrics, final Configuration conf)
+  {
+    try {
+      MetricsVariable<Integer> diskSpaceUsed = new MetricsVariable<Integer>()
+      {
+        @Override
+        public Integer getValue()
+        {
+          return DiskUtils.getUsedSpaceMB(conf);
+        }
+      };
+
+      metrics.addGauge(MetricsConstant.CACHE_DISK_SPACE_USED, diskSpaceUsed);
+    }
+    catch (Exception ex) {
+      log.error("Exception in registering ", ex);
+    }
   }
 
   public void invalidateEntry(String key)
