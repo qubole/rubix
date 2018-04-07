@@ -26,7 +26,7 @@ import java.net.URI;
  */
 public class CachingPrestoNativeAzureFileSystem extends CachingFileSystem<NativeAzureFileSystem>
 {
-  private static final Log LOG = LogFactory.getLog(CachingNativeAzureFileSystem.class);
+  private static final Log LOG = LogFactory.getLog(CachingPrestoNativeAzureFileSystem.class);
   private static PrestoClusterManager clusterManager;
 
   public CachingPrestoNativeAzureFileSystem()
