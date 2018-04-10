@@ -106,11 +106,11 @@ public class NonLocalReadRequestChain extends ReadRequestChain
       try {
         int nread = 0;
 
-                /*
-                SocketChannels does not support timeouts when used directly, because timeout is used only by streams.
-                We get this working by wrapping it in ReadableByteChannel.
-                Ref - https://technfun.wordpress.com/2009/01/29/networking-in-java-non-blocking-nio-blocking-nio-and-io/
-                 */
+        /*
+        SocketChannels does not support timeouts when used directly, because timeout is used only by streams.
+        We get this working by wrapping it in ReadableByteChannel.
+        Ref - https://technfun.wordpress.com/2009/01/29/networking-in-java-non-blocking-nio-blocking-nio-and-io/
+        */
         InputStream inStream = dataTransferClient.socket().getInputStream();
         ReadableByteChannel wrappedChannel = Channels.newChannel(inStream);
 
