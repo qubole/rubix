@@ -31,6 +31,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
+import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collections;
@@ -60,7 +61,7 @@ public class Hadoop2ClusterManager extends ClusterManager
   public void initialize(Configuration conf)
   {
     super.initialize(conf);
-    yconf = new YarnConfiguration();
+    yconf = new YarnConfiguration(conf);
     this.address = yconf.get(addressConf, address);
     this.serverAddress = address.substring(0, address.indexOf(":"));
     this.serverPort = Integer.parseInt(address.substring(address.indexOf(":") + 1));
@@ -108,6 +109,12 @@ public class Hadoop2ClusterManager extends ClusterManager
               Nodes nodes = gson.fromJson(response.toString(), type);
               List<Elements> allNodes = nodes.getNodes().getNode();
               Set<String> hosts = new HashSet<>();
+
+              if (allNodes.isEmpty()) {
+                // Empty result set => server up and only master node running, return localhost has the only node
+                // Do not need to consider failed nodes list as 1node cluster and server is up since it replied to allNodesRequest
+                return ImmutableList.of(InetAddress.getLocalHost().getHostAddress());
+              }
 
               for (Elements node : allNodes) {
                 String state = node.getState();
@@ -174,6 +181,12 @@ public class Hadoop2ClusterManager extends ClusterManager
     {
     }
 
+    // Necessary for GSON parsing
+    public Nodes(Node nodes)
+    {
+      this.nodes = nodes;
+    }
+
     private Node nodes;
 
     public void setNodes(Node nodes)
@@ -193,6 +206,12 @@ public class Hadoop2ClusterManager extends ClusterManager
     {
     }
 
+    // Necessary for GSON parsing
+    public Node(List<Elements> node)
+    {
+      this.node = node;
+    }
+
     private List<Elements> node;
 
     public void setNode(List<Elements> node)
@@ -208,19 +227,26 @@ public class Hadoop2ClusterManager extends ClusterManager
 
   public static class Elements
   {
-        /*
-        rack             string
-        state            string
-        id               string
-        nodeHostName     string
-        nodeHTTPAddress  string
-        healthStatus     string
-        healthReport     string
-        lastHealthUpdate long
-        usedMemoryMB     long
-        availMemoryMB    long
-        numContainers    int
-        */
+    /*
+    rack             string
+    state            string
+    id               string
+    nodeHostName     string
+    nodeHTTPAddress  string
+    healthStatus     string
+    healthReport     string
+    lastHealthUpdate long
+    usedMemoryMB     long
+    availMemoryMB    long
+    numContainers    int
+    */
+
+    // Necessary for GSON parsing
+    public Elements(String nodeHostName, String state)
+    {
+      this.nodeHostName = nodeHostName;
+      this.state = state;
+    }
 
     String nodeHostName;
     String state;
