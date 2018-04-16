@@ -51,18 +51,10 @@ public class TestClusterManager
   public void testGetNodes()
       throws IOException
   {
-    final HttpServer server = createServer(CLUSTER_NODES_ENDPOINT, new MultipleWorkers());
+    final List<String> nodeHostnames = getNodeHostnamesFromCluster(CLUSTER_NODES_ENDPOINT, new MultipleWorkers());
 
-    log.info("STARTED SERVER");
-
-    final ClusterManager clusterManager = buildHadoop2ClusterManager();
-    final List<String> nodes = clusterManager.getNodes();
-    log.info("Got nodes: " + nodes);
-
-    assertTrue(nodes.size() == 2, "Should only have two nodes");
-    assertTrue(nodes.get(0).equals(WORKER_HOSTNAME_1) && nodes.get(1).equals(WORKER_HOSTNAME_2), "Wrong nodes data");
-
-    server.stop(0);
+    assertTrue(nodeHostnames.size() == 2, "Should only have two nodes");
+    assertTrue(nodeHostnames.get(0).equals(WORKER_HOSTNAME_1) && nodeHostnames.get(1).equals(WORKER_HOSTNAME_2), "Wrong nodes data");
   }
 
   @Test
@@ -72,17 +64,10 @@ public class TestClusterManager
   public void testMasterOnlyCluster()
       throws IOException
   {
-    final HttpServer server = createServer(CLUSTER_NODES_ENDPOINT, new NoWorker());
+    final List<String> nodeHostnames = getNodeHostnamesFromCluster(CLUSTER_NODES_ENDPOINT, new NoWorker());
 
-    log.info("STARTED SERVER");
-
-    final ClusterManager clusterManager = buildHadoop2ClusterManager();
-    final List<String> nodes = clusterManager.getNodes();
-    log.info("Got nodes: " + nodes);
-
-    assertTrue(nodes.size() == 1, "Should have added localhost in list");
-    assertTrue(nodes.get(0).equals(InetAddress.getLocalHost().getHostAddress()), "Not added right hostname");
-    server.stop(0);
+    assertTrue(nodeHostnames.size() == 1, "Should have added localhost in list");
+    assertTrue(nodeHostnames.get(0).equals(InetAddress.getLocalHost().getHostAddress()), "Not added right hostname");
   }
 
   @Test
@@ -92,18 +77,10 @@ public class TestClusterManager
   public void testUnhealthyNodeCluster()
       throws IOException
   {
-    final HttpServer server = createServer(CLUSTER_NODES_ENDPOINT, new OneUnhealthyWorker());
+    final List<String> nodeHostnames = getNodeHostnamesFromCluster(CLUSTER_NODES_ENDPOINT, new OneUnhealthyWorker());
 
-    log.info("STARTED SERVER");
-
-    final ClusterManager clusterManager = buildHadoop2ClusterManager();
-    final List<String> nodes = clusterManager.getNodes();
-    log.info("Got nodes: " + nodes);
-
-    assertTrue(nodes.size() == 1, "Should only have one node");
-    assertTrue(nodes.get(0).equals(WORKER_HOSTNAME_2), "Wrong nodes data");
-
-    server.stop(0);
+    assertTrue(nodeHostnames.size() == 1, "Should only have one node");
+    assertTrue(nodeHostnames.get(0).equals(WORKER_HOSTNAME_2), "Wrong nodes data");
   }
 
   /**
@@ -139,24 +116,45 @@ public class TestClusterManager
   }
 
   /**
+   * Fetch a list of node hostnames from the specified endpoint.
+   *
+   * @param endpoint          The endpoint to query.
+   * @param responseHandler   The handler used to return the desired response.
+   * @return A list of hostnames for the nodes in the cluster.
+   * @throws IOException if the cluster server could not be created.
+   */
+  private List<String> getNodeHostnamesFromCluster(String endpoint, HttpHandler responseHandler) throws IOException
+  {
+    final HttpServer server = createServer(endpoint, responseHandler);
+    log.info("STARTED SERVER");
+
+    final ClusterManager clusterManager = buildHadoop2ClusterManager();
+    final List<String> nodes = clusterManager.getNodes();
+    log.info("Got nodes: " + nodes);
+
+    server.stop(0);
+    return nodes;
+  }
+
+  /**
    * Http response handler base class.
    */
   private class TestWorker implements HttpHandler
   {
-    private String nodeJson;
+    private String nodeResponse;
 
     public TestWorker(String nodeJson)
     {
-      this.nodeJson = nodeJson;
+      this.nodeResponse = nodeJson;
     }
 
     @Override
     public void handle(HttpExchange exchange) throws IOException
     {
       exchange.getResponseHeaders().add("Content-Type", "application/json");
-      exchange.sendResponseHeaders(200, nodeJson.length());
+      exchange.sendResponseHeaders(200, nodeResponse.length());
       final OutputStream os = exchange.getResponseBody();
-      os.write(nodeJson.getBytes());
+      os.write(nodeResponse.getBytes());
       os.close();
     }
   }
@@ -164,7 +162,7 @@ public class TestClusterManager
   /**
    * Http response handler to represent a cluster with multiple worker nodes.
    */
-  class MultipleWorkers extends TestWorker
+  private class MultipleWorkers extends TestWorker
   {
     public MultipleWorkers()
     {
@@ -175,7 +173,7 @@ public class TestClusterManager
   /**
    * Http response handler to represent a cluster with no worker nodes.
    */
-  class NoWorker extends TestWorker
+  private class NoWorker extends TestWorker
   {
     public NoWorker()
     {
@@ -186,7 +184,7 @@ public class TestClusterManager
   /**
    * Http response handler to represent a cluster with one unhealthy worker node.
    */
-  class OneUnhealthyWorker extends TestWorker
+  private class OneUnhealthyWorker extends TestWorker
   {
     public OneUnhealthyWorker()
     {
