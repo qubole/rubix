@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
+import com.google.gson.annotations.SerializedName;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
@@ -103,11 +104,11 @@ public class Hadoop2ClusterManager extends ClusterManager
                 return ImmutableList.of();
               }
               Gson gson = new Gson();
-              Type type = new TypeToken<Nodes>()
+              Type type = new TypeToken<NodesResponse>()
               {
               }.getType();
-              Nodes nodes = gson.fromJson(response.toString(), type);
-              List<Elements> allNodes = nodes.getNodes().getNode();
+              NodesResponse nodesResponse = gson.fromJson(response.toString(), type);
+              List<Node> allNodes = nodesResponse.getNodes().getNodeList();
               Set<String> hosts = new HashSet<>();
 
               if (allNodes.isEmpty()) {
@@ -116,7 +117,7 @@ public class Hadoop2ClusterManager extends ClusterManager
                 return ImmutableList.of(InetAddress.getLocalHost().getHostAddress());
               }
 
-              for (Elements node : allNodes) {
+              for (Node node : allNodes) {
                 String state = node.getState();
                 log.debug("Hostname: " + node.getNodeHostName() + "State: " + state);
                 //keep only healthy data nodes
@@ -175,57 +176,51 @@ public class Hadoop2ClusterManager extends ClusterManager
     return ClusterType.HADOOP2_CLUSTER_MANAGER;
   }
 
-  public static class Nodes
+  public static class NodesResponse
   {
-    private Node nodes;
-
-    public Nodes()
-    {
-    }
+    @SerializedName("nodes")
+    private Nodes nodes;
 
     // Necessary for GSON parsing
-    public Nodes(Node nodes)
+    public NodesResponse(Nodes nodes)
     {
       this.nodes = nodes;
     }
 
-    public void setNodes(Node nodes)
+    public void setNodes(Nodes nodes)
     {
       this.nodes = nodes;
     }
 
-    public Node getNodes()
+    public Nodes getNodes()
     {
       return nodes;
     }
   }
 
-  public static class Node
+  public static class Nodes
   {
-    private List<Elements> node;
-
-    public Node()
-    {
-    }
+    @SerializedName("node")
+    private List<Node> nodeList;
 
     // Necessary for GSON parsing
-    public Node(List<Elements> node)
+    public Nodes(List<Node> nodeStats)
     {
-      this.node = node;
+      this.nodeList = nodeStats;
     }
 
-    public void setNode(List<Elements> node)
+    public void setNodeList(List<Node> nodeStats)
     {
-      this.node = node;
+      this.nodeList = nodeStats;
     }
 
-    public List<Elements> getNode()
+    public List<Node> getNodeList()
     {
-      return node;
+      return nodeList;
     }
   }
 
-  public static class Elements
+  public static class Node
   {
     /*
     /ws/v1/cluster/nodes REST endpoint fields:
@@ -246,7 +241,7 @@ public class Hadoop2ClusterManager extends ClusterManager
     String state;
 
     // Necessary for GSON parsing
-    public Elements(String nodeHostName, String state)
+    public Node(String nodeHostName, String state)
     {
       this.nodeHostName = nodeHostName;
       this.state = state;
