@@ -177,6 +177,8 @@ public class Hadoop2ClusterManager extends ClusterManager
 
   public static class Nodes
   {
+    private Node nodes;
+
     public Nodes()
     {
     }
@@ -186,8 +188,6 @@ public class Hadoop2ClusterManager extends ClusterManager
     {
       this.nodes = nodes;
     }
-
-    private Node nodes;
 
     public void setNodes(Node nodes)
     {
@@ -202,6 +202,8 @@ public class Hadoop2ClusterManager extends ClusterManager
 
   public static class Node
   {
+    private List<Elements> node;
+
     public Node()
     {
     }
@@ -211,8 +213,6 @@ public class Hadoop2ClusterManager extends ClusterManager
     {
       this.node = node;
     }
-
-    private List<Elements> node;
 
     public void setNode(List<Elements> node)
     {
@@ -228,6 +228,7 @@ public class Hadoop2ClusterManager extends ClusterManager
   public static class Elements
   {
     /*
+    /ws/v1/cluster/nodes REST endpoint fields:
     rack             string
     state            string
     id               string
@@ -241,15 +242,15 @@ public class Hadoop2ClusterManager extends ClusterManager
     numContainers    int
     */
 
+    String nodeHostName;
+    String state;
+
     // Necessary for GSON parsing
     public Elements(String nodeHostName, String state)
     {
       this.nodeHostName = nodeHostName;
       this.state = state;
     }
-
-    String nodeHostName;
-    String state;
 
     String getState()
     {

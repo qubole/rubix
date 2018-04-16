@@ -40,6 +40,10 @@ public class TestClusterManager
   // The address used for testing the cluster manager.
   private static final String HADOOP2_CLUSTER_ADDRESS = "localhost:45326";
 
+  // The worker hostnames used for verifying cluster manager behaviour
+  private static final String WORKER_HOSTNAME_1 = "192.168.1.3";
+  private static final String WORKER_HOSTNAME_2 = "192.168.2.252";
+
   @Test
   /*
    * Tests that the worker nodes returned are correctly handled by HadoopClusterManager and sorted list of hosts is returned
@@ -56,7 +60,7 @@ public class TestClusterManager
     log.info("Got nodes: " + nodes);
 
     assertTrue(nodes.size() == 2, "Should only have two nodes");
-    assertTrue(nodes.get(0).equals("192.168.1.3") && nodes.get(1).equals("192.168.2.252"), "Wrong nodes data");
+    assertTrue(nodes.get(0).equals(WORKER_HOSTNAME_1) && nodes.get(1).equals(WORKER_HOSTNAME_2), "Wrong nodes data");
 
     server.stop(0);
   }
@@ -97,7 +101,7 @@ public class TestClusterManager
     log.info("Got nodes: " + nodes);
 
     assertTrue(nodes.size() == 1, "Should only have one node");
-    assertTrue(nodes.get(0).equals("192.168.2.252"), "Wrong nodes data");
+    assertTrue(nodes.get(0).equals(WORKER_HOSTNAME_2), "Wrong nodes data");
 
     server.stop(0);
   }
@@ -135,50 +139,58 @@ public class TestClusterManager
   }
 
   /**
-   * Http response handler to represent a cluster with multiple worker nodes.
+   * Http response handler base class.
    */
-  class MultipleWorkers implements HttpHandler
+  private class TestWorker implements HttpHandler
   {
+    private String nodeJson;
+
+    public TestWorker(String nodeJson)
+    {
+      this.nodeJson = nodeJson;
+    }
+
+    @Override
     public void handle(HttpExchange exchange) throws IOException
     {
-      final String nodes = "{\"nodes\":{\"node\":[{\"nodeHostName\":\"192.168.2.252\",\"state\":\"RUNNING\"},{\"nodeHostName\":\"192.168.1.3\",\"state\":\"RUNNING\"}]}}\n";
       exchange.getResponseHeaders().add("Content-Type", "application/json");
-      exchange.sendResponseHeaders(200, nodes.length());
+      exchange.sendResponseHeaders(200, nodeJson.length());
       final OutputStream os = exchange.getResponseBody();
-      os.write(nodes.getBytes());
+      os.write(nodeJson.getBytes());
       os.close();
+    }
+  }
+
+  /**
+   * Http response handler to represent a cluster with multiple worker nodes.
+   */
+  class MultipleWorkers extends TestWorker
+  {
+    public MultipleWorkers()
+    {
+      super("{\"nodes\":{\"node\":[{\"nodeHostName\":\"" + WORKER_HOSTNAME_2 + "\",\"state\":\"RUNNING\"},{\"nodeHostName\":\"" + WORKER_HOSTNAME_1 + "\",\"state\":\"RUNNING\"}]}}\n");
     }
   }
 
   /**
    * Http response handler to represent a cluster with no worker nodes.
    */
-  class NoWorker implements HttpHandler
+  class NoWorker extends TestWorker
   {
-    public void handle(HttpExchange exchange) throws IOException
+    public NoWorker()
     {
-      final String nodes = "{\"nodes\":{\"node\":[]}}\n";
-      exchange.getResponseHeaders().add("Content-Type", "application/json");
-      exchange.sendResponseHeaders(200, nodes.length());
-      final OutputStream os = exchange.getResponseBody();
-      os.write(nodes.getBytes());
-      os.close();
+      super("{\"nodes\":{\"node\":[]}}\n");
     }
   }
 
   /**
    * Http response handler to represent a cluster with one unhealthy worker node.
    */
-  class OneUnhealthyWorker implements HttpHandler
+  class OneUnhealthyWorker extends TestWorker
   {
-    public void handle(HttpExchange exchange) throws IOException
+    public OneUnhealthyWorker()
     {
-      final String nodes = "{\"nodes\":{\"node\":[{\"nodeHostName\":\"192.168.2.252\",\"state\":\"RUNNING\"},{\"nodeHostName\":\"192.168.1.3\",\"state\":\"UNHEALTHY\"}]}}\n";
-      exchange.getResponseHeaders().add("Content-Type", "application/json");
-      exchange.sendResponseHeaders(200, nodes.length());
-      final OutputStream os = exchange.getResponseBody();
-      os.write(nodes.getBytes());
-      os.close();
+      super("{\"nodes\":{\"node\":[{\"nodeHostName\":\"" + WORKER_HOSTNAME_2 + "\",\"state\":\"RUNNING\"},{\"nodeHostName\":\"" + WORKER_HOSTNAME_1 + "\",\"state\":\"UNHEALTHY\"}]}}\n");
     }
   }
 }
