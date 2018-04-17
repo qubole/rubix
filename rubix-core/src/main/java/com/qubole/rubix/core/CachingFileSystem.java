@@ -127,7 +127,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
   {
     FSDataInputStream inputStream = null;
 
-    if (skipCache(path, getConf())) {
+    if (skipCache(path.toString(), getConf())) {
       inputStream = fs.open(path, bufferSize);
       cacheSkipped = true;
       return inputStream;

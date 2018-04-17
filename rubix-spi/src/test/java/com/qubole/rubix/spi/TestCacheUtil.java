@@ -13,11 +13,11 @@
 package com.qubole.rubix.spi;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -26,6 +26,7 @@ import java.util.HashMap;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 
 public class TestCacheUtil
 {
@@ -56,11 +57,15 @@ public class TestCacheUtil
     CacheConfig.setCacheDataDirSuffix(conf, "/fcache/");
     CacheConfig.setMaxDisks(conf, maxDisks);
 
-    CacheUtil.createCacheDirectories(conf);
+    try {
+      CacheUtil.createCacheDirectories(conf);
+    }
+    catch (FileNotFoundException e) {
+      assertEquals(e.getMessage(), "Cache parent directory " + cacheTestDirPrefix + "doesNotExist/0" + " does not exist");
+      return;
+    }
 
-    boolean cacheDirExists = Files.exists(Paths.get(cacheTestDirPrefix, "doesNotExist", "0", "/fcache"));
-
-    assertFalse(cacheDirExists, "Cache directory should not be created!");
+    fail("Cache directory creation should not succeed.");
   }
 
   @Test
@@ -70,7 +75,7 @@ public class TestCacheUtil
     CacheConfig.setCacheDataDirSuffix(conf, "/fcache/");
     CacheConfig.setMaxDisks(conf, maxDisks);
 
-    CacheUtil.createCacheDirectories(conf);
+    createCacheDirectoriesForTest(conf);
 
     int diskCount = CacheUtil.getCacheDiskCount(conf);
     assertEquals(diskCount, maxDisks, "Sizes don't match!");
@@ -83,7 +88,7 @@ public class TestCacheUtil
     CacheConfig.setCacheDataDirSuffix(conf, "/fcache/");
     CacheConfig.setMaxDisks(conf, maxDisks);
 
-    CacheUtil.createCacheDirectories(conf);
+    createCacheDirectoriesForTest(conf);
 
     HashMap<Integer, String> diskPathsMap = CacheUtil.getCacheDiskPathsMap(conf);
     assertEquals(diskPathsMap.get(0), cacheTestDirPrefix + "0", "Sizes don't match!");
@@ -96,7 +101,7 @@ public class TestCacheUtil
     CacheConfig.setCacheDataDirSuffix(conf, "/fcache/");
     CacheConfig.setMaxDisks(conf, 2);
 
-    CacheUtil.createCacheDirectories(conf);
+    createCacheDirectoriesForTest(conf);
     String dirPath = CacheUtil.getDirPath(1, conf);
 
     assertEquals(dirPath, cacheTestDirPrefix + "1", "Paths don't match");
@@ -111,7 +116,7 @@ public class TestCacheUtil
     CacheConfig.setCacheDataDirSuffix(conf, "/fcache/");
     CacheConfig.setMaxDisks(conf, 1);
 
-    CacheUtil.createCacheDirectories(conf);
+    createCacheDirectoriesForTest(conf);
 
     String localPath = CacheUtil.getLocalPath(remotePath, conf);
     assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + localRelPath, "Paths not equal!");
@@ -125,7 +130,7 @@ public class TestCacheUtil
     CacheConfig.setCacheDataDirSuffix(conf, "/fcache/");
     CacheConfig.setMaxDisks(conf, 1);
 
-    CacheUtil.createCacheDirectories(conf);
+    createCacheDirectoriesForTest(conf);
 
     String localPath = CacheUtil.getLocalPath(localRelPath, conf);
     assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + localRelPath, "Paths not equal!");
@@ -139,7 +144,7 @@ public class TestCacheUtil
     CacheConfig.setCacheDataDirSuffix(conf, "/fcache/");
     CacheConfig.setMaxDisks(conf, 1);
 
-    CacheUtil.createCacheDirectories(conf);
+    createCacheDirectoriesForTest(conf);
 
     String localPath = CacheUtil.getLocalPath(localRelPath, conf);
     assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache//" + localRelPath, "Paths not equal!");
@@ -154,7 +159,7 @@ public class TestCacheUtil
     CacheConfig.setCacheDataDirSuffix(conf, "/fcache/");
     CacheConfig.setMaxDisks(conf, 1);
 
-    CacheUtil.createCacheDirectories(conf);
+    createCacheDirectoriesForTest(conf);
 
     String localPath = CacheUtil.getMetadataFilePath(remotePath, conf);
     assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + localRelPath + "_mdfile", "Paths not equal!");
@@ -164,7 +169,7 @@ public class TestCacheUtil
   public void testSkipCache_cachingDisabled()
   {
     CacheConfig.setCacheDataEnabled(conf, false);
-    Path testPath = new Path("/test/path");
+    String testPath = "/test/path";
 
     boolean skipCache = CacheUtil.skipCache(testPath, conf);
 
@@ -176,7 +181,7 @@ public class TestCacheUtil
   {
     CacheConfig.setCacheDataEnabled(conf, true);
     CacheConfig.setCacheDataLocationWhitelist(conf, "^((?!test).)*$");
-    Path testPath = new Path("/test/path");
+    String testPath = "/test/path";
 
     boolean skipCache = CacheUtil.skipCache(testPath, conf);
 
@@ -188,7 +193,7 @@ public class TestCacheUtil
   {
     CacheConfig.setCacheDataEnabled(conf, true);
     CacheConfig.setCacheDataLocationBlacklist(conf, ".*test.*");
-    Path testPath = new Path("/test/path");
+    String testPath = "/test/path";
 
     boolean skipCache = CacheUtil.skipCache(testPath, conf);
 
@@ -201,7 +206,7 @@ public class TestCacheUtil
     CacheConfig.setCacheDataEnabled(conf, true);
     CacheConfig.setCacheDataLocationWhitelist(conf, ".*test.*");
     CacheConfig.setCacheDataLocationBlacklist(conf, ".*test.*");
-    Path testPath = new Path("/test/path");
+    String testPath = "/test/path";
 
     boolean skipCache = CacheUtil.skipCache(testPath, conf);
 
@@ -215,7 +220,7 @@ public class TestCacheUtil
     CacheConfig.setCacheDataLocationWhitelist(conf, ".*test.*");
     CacheConfig.setCacheDataTable(conf, "testTable");
     CacheConfig.setCacheDataTableWhitelist(conf, "^((?!testTable).)*$");
-    Path testPath = new Path("/test/path");
+    String testPath = "/test/path";
 
     boolean skipCache = CacheUtil.skipCache(testPath, conf);
 
@@ -226,7 +231,7 @@ public class TestCacheUtil
   public void testSkipCache_noTableName()
   {
     CacheConfig.setCacheDataEnabled(conf, true);
-    Path testPath = new Path("/test/path");
+    String testPath = "/test/path";
 
     boolean skipCache = CacheUtil.skipCache(testPath, conf);
 
@@ -242,7 +247,7 @@ public class TestCacheUtil
     CacheConfig.setCacheDataTableWhitelist(conf, ".*testTable.*");
     CacheConfig.setCacheDataMinColumns(conf, 5);
     CacheConfig.setCacheDataChosenColumns(conf, 3);
-    Path testPath = new Path("/test/path");
+    String testPath = "/test/path";
 
     boolean skipCache = CacheUtil.skipCache(testPath, conf);
 
@@ -258,10 +263,25 @@ public class TestCacheUtil
     CacheConfig.setCacheDataTableWhitelist(conf, ".*testTable.*");
     CacheConfig.setCacheDataMinColumns(conf, 3);
     CacheConfig.setCacheDataChosenColumns(conf, 5);
-    Path testPath = new Path("/test/path");
+    String testPath = "/test/path";
 
     boolean skipCache = CacheUtil.skipCache(testPath, conf);
 
     assertFalse(skipCache, "Cache is being skipped!");
+  }
+
+  /**
+   * Create the cache directories necessary for running the test.
+   *
+   * @param conf  The current Hadoop configuration.
+   */
+  private void createCacheDirectoriesForTest(Configuration conf)
+  {
+    try {
+      CacheUtil.createCacheDirectories(conf);
+    }
+    catch (FileNotFoundException e) {
+      fail("Could not create cache directories: " + e.getMessage());
+    }
   }
 }

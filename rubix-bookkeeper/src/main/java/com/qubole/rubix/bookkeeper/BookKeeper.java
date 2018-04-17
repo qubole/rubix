@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.thrift.shaded.TException;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -349,7 +350,14 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
 
   private static synchronized void initializeCache(final Configuration conf)
   {
-    CacheUtil.createCacheDirectories(conf);
+    try {
+      CacheUtil.createCacheDirectories(conf);
+    }
+    catch (FileNotFoundException e) {
+      log.error("Cache directories could not be created", e);
+      System.exit(0);
+    }
+
     long avail = 0;
     for (int d = 0; d < CacheUtil.getCacheDiskCount(conf); d++) {
       avail += new File(CacheUtil.getDirPath(d, conf)).getUsableSpace();

@@ -21,10 +21,9 @@ import com.google.common.hash.Hashing;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 
 import java.io.File;
-import java.nio.file.Paths;
+import java.io.FileNotFoundException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -41,8 +40,9 @@ public class CacheUtil
    * Create the necessary directories for caching file data.
    *
    * @param conf  The current Hadoop configuration.
+   * @throws FileNotFoundException if the parent directory for the cache cannot be found.
    */
-  public static void createCacheDirectories(Configuration conf)
+  public static void createCacheDirectories(Configuration conf) throws FileNotFoundException
   {
     final List<String> dirPrefixList = getDirPrefixList(conf);
     final int maxDisks = CacheConfig.getCacheMaxDisks(conf);
@@ -53,8 +53,11 @@ public class CacheUtil
         log.debug("Checking for " + cacheParentDir);
 
         if (exists(cacheParentDir)) {
-          final java.nio.file.Path cacheDirPath = Paths.get(cacheParentDir, CacheConfig.getCacheDataDirSuffix(conf));
+          final String cacheDirPath = cacheParentDir + "/" + CacheConfig.getCacheDataDirSuffix(conf);
           createCacheDirectory(cacheDirPath);
+        }
+        else {
+          throw new FileNotFoundException(String.format("Cache parent directory %s does not exist", cacheParentDir));
         }
       }
     }
@@ -92,9 +95,9 @@ public class CacheUtil
         int numDisks = 0;
         for (String dirPrefix : dirPrefixList) {
           for (int i = 0; i < maxDisks; ++i) {
-            final java.nio.file.Path cacheDirPath = Paths.get(dirPrefix + i, dirSuffix);
-            log.debug("Checking " + cacheDirPath.toString());
-            if (exists(cacheDirPath.toString())) {
+            final String cacheDirPath = dirPrefix + i + "/" + dirSuffix;
+            log.debug("Checking " + cacheDirPath);
+            if (exists(cacheDirPath)) {
               dirPathMap.put(numDisks, dirPrefix + i);
               ++numDisks;
             }
@@ -152,7 +155,7 @@ public class CacheUtil
    * @param conf  The current Hadoop configuration.
    * @return True if caching should be skipped, false otherwise.
    */
-  public static boolean skipCache(Path path, Configuration conf)
+  public static boolean skipCache(String path, Configuration conf)
   {
     if (!CacheConfig.isCacheDataEnabled(conf)) {
       return true;
@@ -178,9 +181,9 @@ public class CacheUtil
    *
    * @param cacheDirPath  The path for which to create the directory.
    */
-  private static void createCacheDirectory(java.nio.file.Path cacheDirPath)
+  private static void createCacheDirectory(String cacheDirPath)
   {
-    final File cacheDir = cacheDirPath.toFile();
+    final File cacheDir = new File(cacheDirPath);
     cacheDir.mkdirs();
     cacheDir.setWritable(true, false);
   }
@@ -209,8 +212,7 @@ public class CacheUtil
     final String relLocation = parentPath.contains(":") ? parentPath.substring(parentPath.indexOf(':') + 3) : parentPath;
     final String absLocation = getLocalDirFor(remotePath, conf) + relLocation;
 
-    final java.nio.file.Path localCacheDir = Paths.get(absLocation);
-    createCacheDirectory(localCacheDir);
+    createCacheDirectory(absLocation);
 
     return absLocation;
   }
@@ -276,16 +278,16 @@ public class CacheUtil
    * @param conf  The current Hadoop configuration.
    * @return True if the location can be cached, false otherwise.
    */
-  private static boolean isLocationAllowedToCache(Path path, Configuration conf)
+  private static boolean isLocationAllowedToCache(String path, Configuration conf)
   {
     // Check whitelist first, if location matches both whitelist and blacklist, blacklist it
     final String whitelist = CacheConfig.getCacheDataLocationWhitelist(conf);
-    if (whitelist.length() > 0 && !path.toString().matches(whitelist)) {
+    if (whitelist.length() > 0 && !path.matches(whitelist)) {
       return false;
     }
 
     final String blacklist = CacheConfig.getCacheDataLocationBlacklist(conf);
-    if (blacklist.length() > 0 && path.toString().matches(blacklist)) {
+    if (blacklist.length() > 0 && path.matches(blacklist)) {
       return false;
     }
 

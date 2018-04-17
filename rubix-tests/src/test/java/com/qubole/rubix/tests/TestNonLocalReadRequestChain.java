@@ -86,6 +86,7 @@ public class TestNonLocalReadRequestChain
     CacheConfig.setLocalServerPort(conf, 2222);
     CacheConfig.setBlockSize(conf, blockSize);
     CacheConfig.setCacheDataDirPrefix(conf, testDirectoryPrefix + "dir");
+    CacheConfig.setMaxDisks(conf, 1);
     localDataTransferServer = new Thread()
     {
       public void run()

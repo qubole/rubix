@@ -86,6 +86,7 @@ public class TestCachingInputStream
     CacheConfig.setServerPort(conf, 3456);
     CacheConfig.setLocalServerPort(conf, 2222);
     CacheConfig.setCacheDataDirPrefix(conf, testDirectoryPrefix + "dir");
+    CacheConfig.setMaxDisks(conf, 1);
     Thread server = new Thread()
     {
       public void run()
