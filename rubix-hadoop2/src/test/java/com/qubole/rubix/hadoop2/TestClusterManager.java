@@ -46,12 +46,12 @@ public class TestClusterManager
 
   @Test
   /*
-   * Tests that the worker nodes returned are correctly handled by HadoopClusterManager and sorted list of hosts is returned
+   * Tests that the worker nodes returned are correctly handled by Hadoop2ClusterManager and sorted list of hosts is returned.
    */
-  public void testGetNodes()
+  public void testGetNodes_multipleWorkers()
       throws IOException
   {
-    final List<String> nodeHostnames = getNodeHostnamesFromCluster(CLUSTER_NODES_ENDPOINT, new MultipleWorkers());
+    final List<String> nodeHostnames = getNodeHostnamesFromCluster(CLUSTER_NODES_ENDPOINT, new MultipleRunningWorkers());
 
     assertTrue(nodeHostnames.size() == 2, "Should only have two nodes");
     assertTrue(nodeHostnames.get(0).equals(WORKER_HOSTNAME_1) && nodeHostnames.get(1).equals(WORKER_HOSTNAME_2), "Wrong nodes data");
@@ -59,12 +59,51 @@ public class TestClusterManager
 
   @Test
   /*
-   * Tests that in a single node cluster, master node is returned as worker
+   * Tests that the single worker node returned is correctly handled by Hadoop2ClusterManager.
+   */
+  public void testGetNodes_oneWorker()
+      throws IOException
+  {
+    final List<String> nodeHostnames = getNodeHostnamesFromCluster(CLUSTER_NODES_ENDPOINT, new OneRunningWorker());
+
+    assertTrue(nodeHostnames.size() == 1, "Should only have one node");
+    assertTrue(nodeHostnames.get(0).equals(WORKER_HOSTNAME_1));
+  }
+
+  @Test
+  /*
+   * Tests that the new worker nodes returned is correctly handled by Hadoop2ClusterManager and sorted list of hosts is returned.
+   */
+  public void testGetNodes_oneNewWorker()
+      throws IOException
+  {
+    final List<String> nodeHostnames = getNodeHostnamesFromCluster(CLUSTER_NODES_ENDPOINT, new MultipleWorkersOneNew());
+
+    assertTrue(nodeHostnames.size() == 2, "Should only have two nodes");
+    assertTrue(nodeHostnames.get(0).equals(WORKER_HOSTNAME_1) && nodeHostnames.get(1).equals(WORKER_HOSTNAME_2), "Wrong nodes data");
+  }
+
+  @Test
+  /*
+   * Tests that the rebooted worker node returned is correctly handled by Hadoop2ClusterManager and sorted list of hosts is returned.
+   */
+  public void testGetNodes_oneRebootedWorker()
+      throws IOException
+  {
+    final List<String> nodeHostnames = getNodeHostnamesFromCluster(CLUSTER_NODES_ENDPOINT, new MultipleWorkersOneRebooted());
+
+    assertTrue(nodeHostnames.size() == 2, "Should only have two nodes");
+    assertTrue(nodeHostnames.get(0).equals(WORKER_HOSTNAME_1) && nodeHostnames.get(1).equals(WORKER_HOSTNAME_2), "Wrong nodes data");
+  }
+
+  @Test
+  /*
+   * Tests that in a single node cluster, master node is returned as worker.
    */
   public void testMasterOnlyCluster()
       throws IOException
   {
-    final List<String> nodeHostnames = getNodeHostnamesFromCluster(CLUSTER_NODES_ENDPOINT, new NoWorker());
+    final List<String> nodeHostnames = getNodeHostnamesFromCluster(CLUSTER_NODES_ENDPOINT, new NoWorkers());
 
     assertTrue(nodeHostnames.size() == 1, "Should have added localhost in list");
     assertTrue(nodeHostnames.get(0).equals(InetAddress.getLocalHost().getHostAddress()), "Not added right hostname");
@@ -72,12 +111,51 @@ public class TestClusterManager
 
   @Test
   /*
-   * Tests that in a cluster with unhealthy node, unhealthy node is not returned
+   * Tests that in a cluster with decommissioned node, decommissioned node is not returned.
    */
-  public void testUnhealthyNodeCluster()
+  public void testUnhealthyNodeCluster_decommissioned()
       throws IOException
   {
-    final List<String> nodeHostnames = getNodeHostnamesFromCluster(CLUSTER_NODES_ENDPOINT, new OneUnhealthyWorker());
+    final List<String> nodeHostnames = getNodeHostnamesFromCluster(CLUSTER_NODES_ENDPOINT, new MultipleWorkersOneDecommissioned());
+
+    assertTrue(nodeHostnames.size() == 1, "Should only have one node");
+    assertTrue(nodeHostnames.get(0).equals(WORKER_HOSTNAME_2), "Wrong nodes data");
+  }
+
+  @Test
+  /*
+   * Tests that in a cluster with decommissioning node, decommissioning node is not returned.
+   */
+  public void testUnhealthyNodeCluster_decommissioning()
+      throws IOException
+  {
+    final List<String> nodeHostnames = getNodeHostnamesFromCluster(CLUSTER_NODES_ENDPOINT, new MultipleWorkersOneDecommissioning());
+
+    assertTrue(nodeHostnames.size() == 1, "Should only have one node");
+    assertTrue(nodeHostnames.get(0).equals(WORKER_HOSTNAME_2), "Wrong nodes data");
+  }
+
+  @Test
+  /*
+   * Tests that in a cluster with lost node, lost node is not returned.
+   */
+  public void testUnhealthyNodeCluster_lost()
+      throws IOException
+  {
+    final List<String> nodeHostnames = getNodeHostnamesFromCluster(CLUSTER_NODES_ENDPOINT, new MultipleWorkersOneLost());
+
+    assertTrue(nodeHostnames.size() == 1, "Should only have one node");
+    assertTrue(nodeHostnames.get(0).equals(WORKER_HOSTNAME_2), "Wrong nodes data");
+  }
+
+  @Test
+  /*
+   * Tests that in a cluster with unhealthy node, unhealthy node is not returned.
+   */
+  public void testUnhealthyNodeCluster_unhealthy()
+      throws IOException
+  {
+    final List<String> nodeHostnames = getNodeHostnamesFromCluster(CLUSTER_NODES_ENDPOINT, new MultipleWorkersOneUnhealthy());
 
     assertTrue(nodeHostnames.size() == 1, "Should only have one node");
     assertTrue(nodeHostnames.get(0).equals(WORKER_HOSTNAME_2), "Wrong nodes data");
@@ -160,35 +238,100 @@ public class TestClusterManager
   }
 
   /**
-   * Http response handler to represent a cluster with multiple worker nodes.
+   * Http response handler to represent a cluster with multiple running worker nodes.
    */
-  private class MultipleWorkers extends TestWorker
+  private class MultipleRunningWorkers extends TestWorker
   {
-    public MultipleWorkers()
+    public MultipleRunningWorkers()
     {
       super("{\"nodes\":{\"node\":[{\"nodeHostName\":\"" + WORKER_HOSTNAME_2 + "\",\"state\":\"RUNNING\"},{\"nodeHostName\":\"" + WORKER_HOSTNAME_1 + "\",\"state\":\"RUNNING\"}]}}\n");
     }
   }
+  /**
+   * Http response handler to represent a cluster with one decommissioning worker node.
+   */
+  private class MultipleWorkersOneDecommissioned extends TestWorker
+  {
+    public MultipleWorkersOneDecommissioned()
+    {
+      super("{\"nodes\":{\"node\":[{\"nodeHostName\":\"" + WORKER_HOSTNAME_2 + "\",\"state\":\"RUNNING\"},{\"nodeHostName\":\"" + WORKER_HOSTNAME_1 + "\",\"state\":\"DECOMMISSIONED\"}]}}\n");
+    }
+  }
 
   /**
-   * Http response handler to represent a cluster with no worker nodes.
+   * Http response handler to represent a cluster with one decommissioning worker node.
    */
-  private class NoWorker extends TestWorker
+  private class MultipleWorkersOneDecommissioning extends TestWorker
   {
-    public NoWorker()
+    public MultipleWorkersOneDecommissioning()
     {
-      super("{\"nodes\":{\"node\":[]}}\n");
+      super("{\"nodes\":{\"node\":[{\"nodeHostName\":\"" + WORKER_HOSTNAME_2 + "\",\"state\":\"RUNNING\"},{\"nodeHostName\":\"" + WORKER_HOSTNAME_1 + "\",\"state\":\"DECOMMISSIONING\"}]}}\n");
+    }
+  }
+
+  /**
+   * Http response handler to represent a cluster with one decommissioning worker node.
+   */
+  private class MultipleWorkersOneLost extends TestWorker
+  {
+    public MultipleWorkersOneLost()
+    {
+      super("{\"nodes\":{\"node\":[{\"nodeHostName\":\"" + WORKER_HOSTNAME_2 + "\",\"state\":\"RUNNING\"},{\"nodeHostName\":\"" + WORKER_HOSTNAME_1 + "\",\"state\":\"LOST\"}]}}\n");
+    }
+  }
+
+  /**
+   * Http response handler to represent a cluster with one decommissioning worker node.
+   */
+  private class MultipleWorkersOneNew extends TestWorker
+  {
+    public MultipleWorkersOneNew()
+    {
+      super("{\"nodes\":{\"node\":[{\"nodeHostName\":\"" + WORKER_HOSTNAME_2 + "\",\"state\":\"RUNNING\"},{\"nodeHostName\":\"" + WORKER_HOSTNAME_1 + "\",\"state\":\"NEW\"}]}}\n");
+    }
+  }
+
+  /**
+   * Http response handler to represent a cluster with one rebooted worker node.
+   */
+  private class MultipleWorkersOneRebooted extends TestWorker
+  {
+    public MultipleWorkersOneRebooted()
+    {
+      super("{\"nodes\":{\"node\":[{\"nodeHostName\":\"" + WORKER_HOSTNAME_2 + "\",\"state\":\"RUNNING\"},{\"nodeHostName\":\"" + WORKER_HOSTNAME_1 + "\",\"state\":\"REBOOTED\"}]}}\n");
     }
   }
 
   /**
    * Http response handler to represent a cluster with one unhealthy worker node.
    */
-  private class OneUnhealthyWorker extends TestWorker
+  private class MultipleWorkersOneUnhealthy extends TestWorker
   {
-    public OneUnhealthyWorker()
+    public MultipleWorkersOneUnhealthy()
     {
       super("{\"nodes\":{\"node\":[{\"nodeHostName\":\"" + WORKER_HOSTNAME_2 + "\",\"state\":\"RUNNING\"},{\"nodeHostName\":\"" + WORKER_HOSTNAME_1 + "\",\"state\":\"UNHEALTHY\"}]}}\n");
+    }
+  }
+
+  /**
+   * Http response handler to represent a cluster with no worker nodes.
+   */
+  private class NoWorkers extends TestWorker
+  {
+    public NoWorkers()
+    {
+      super("{\"nodes\":{\"node\":[]}}\n");
+    }
+  }
+
+  /**
+   * Http response handler to represent a cluster with one running worker node.
+   */
+  private class OneRunningWorker extends TestWorker
+  {
+    public OneRunningWorker()
+    {
+      super("{\"nodes\":{\"node\":[{\"nodeHostName\":\"" + WORKER_HOSTNAME_1 + "\",\"state\":\"RUNNING\"}]}}");
     }
   }
 }
