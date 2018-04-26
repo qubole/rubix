@@ -79,7 +79,7 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
   int currentNodeIndex = -1;
   static long splitSize;
 
-  public BookKeeper(Configuration conf)
+  public BookKeeper(Configuration conf) throws FileNotFoundException
   {
     this.conf = conf;
     initializeCache(conf);
@@ -348,15 +348,9 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
     return endBlock;
   }
 
-  private static synchronized void initializeCache(final Configuration conf)
+  private static synchronized void initializeCache(final Configuration conf) throws FileNotFoundException
   {
-    try {
-      CacheUtil.createCacheDirectories(conf);
-    }
-    catch (FileNotFoundException e) {
-      log.error("Cache directories could not be created", e);
-      System.exit(0);
-    }
+    CacheUtil.createCacheDirectories(conf);
 
     long avail = 0;
     for (int d = 0; d < CacheUtil.getCacheDiskCount(conf); d++) {
