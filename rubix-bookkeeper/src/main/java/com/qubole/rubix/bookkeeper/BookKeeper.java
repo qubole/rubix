@@ -12,6 +12,8 @@
  */
 package com.qubole.rubix.bookkeeper;
 
+import com.codahale.metrics.Counter;
+import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.cache.Cache;
@@ -53,6 +55,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import static com.codahale.metrics.MetricRegistry.name;
 import static com.qubole.rubix.spi.ClusterType.HADOOP2_CLUSTER_MANAGER;
 import static com.qubole.rubix.spi.ClusterType.PRESTO_CLUSTER_MANAGER;
 import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
@@ -62,6 +65,8 @@ import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
  */
 public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
 {
+  public static final String METRIC_TOTAL_BLOCK_HITS = name(BookKeeper.class, "total-block-hits");
+
   private static Cache<String, FileMetadata> fileMetadataCache;
   private static ClusterManager clusterManager;
   private static Log log = LogFactory.getLog(BookKeeper.class.getName());
@@ -77,10 +82,26 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
   int currentNodeIndex = -1;
   static long splitSize;
 
-  public BookKeeper(Configuration conf)
+  // Registry for gathering & storing necessary metrics
+  private final MetricRegistry metrics;
+
+  // Metrics counter to keep track of the total number of blocks hit
+  private Counter totalBlockHits;
+
+  public BookKeeper(Configuration conf, MetricRegistry metrics)
   {
     this.conf = conf;
+    this.metrics = metrics;
+    initializeMetrics();
     initializeCache(conf);
+  }
+
+  /**
+   * Initialize the instruments used for gathering desired metrics.
+   */
+  private void initializeMetrics()
+  {
+    totalBlockHits = metrics.counter(METRIC_TOTAL_BLOCK_HITS);
   }
 
   @Override
@@ -135,6 +156,8 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
     try {
       for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
         totalRequests++;
+        totalBlockHits.inc();
+
         long split = (blockNum * blockSize) / splitSize;
         if (!blockSplits.get(split).equalsIgnoreCase(nodeName)) {
           blockLocations.add(new BlockLocation(Location.NON_LOCAL, blockSplits.get(split)));

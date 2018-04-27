@@ -12,6 +12,7 @@
  */
 package com.qubole.rubix.bookkeeper;
 
+import com.codahale.metrics.MetricRegistry;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.qubole.rubix.spi.BookKeeperService;
@@ -38,6 +39,8 @@ public class BookKeeperServer extends Configured implements Tool
   public static BookKeeper bookKeeper;
   public static BookKeeperService.Processor processor;
 
+  // Registry for gathering & storing necessary metrics
+  private static MetricRegistry metrics = new MetricRegistry();
   public static Configuration conf;
 
   private static TServer server;
@@ -70,7 +73,7 @@ public class BookKeeperServer extends Configured implements Tool
 
   public static void startServer(Configuration conf)
   {
-    bookKeeper = new BookKeeper(conf);
+    bookKeeper = new BookKeeper(conf, metrics);
     DiskMonitorService diskMonitorService = new DiskMonitorService(conf, bookKeeper);
     diskMonitorService.startAsync();
     processor = new BookKeeperService.Processor(bookKeeper);
