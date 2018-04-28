@@ -41,6 +41,7 @@ public class BookKeeperServer extends Configured implements Tool
 
   // Registry for gathering & storing necessary metrics
   private static MetricRegistry metrics = new MetricRegistry();
+
   public static Configuration conf;
 
   private static TServer server;
