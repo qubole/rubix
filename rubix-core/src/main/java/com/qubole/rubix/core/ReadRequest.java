@@ -12,6 +12,8 @@
  */
 package com.qubole.rubix.core;
 
+import java.util.Arrays;
+
 /**
  * Created by stagra on 4/1/16.
  */
@@ -34,6 +36,8 @@ public class ReadRequest
   int destBufferOffset;
 
   long backendFileSize;
+
+  public ReadRequest() {};
 
   public ReadRequest(long backendReadStart, long backendReadEnd, long actualReadStart, long actualReadEnd, byte[] destBuffer, int destBufferOffset, long backendFileSize)
   {
@@ -124,5 +128,19 @@ public class ReadRequest
   public int getBackendReadLength()
   {
     return (int) (backendReadEnd - backendReadStart);
+  }
+
+  public ReadRequest clone()
+  {
+    ReadRequest otherRequest = new ReadRequest();
+    otherRequest.backendReadStart = this.backendReadStart;
+    otherRequest.backendReadEnd = this.backendReadEnd;
+    otherRequest.actualReadStart = this.actualReadStart;
+    otherRequest.actualReadEnd = this.actualReadEnd;
+    otherRequest.destBuffer = Arrays.copyOf(this.destBuffer, this.destBuffer.length);
+    otherRequest.destBufferOffset = this.destBufferOffset;
+    otherRequest.backendFileSize = this.backendFileSize;
+
+    return otherRequest;
   }
 }

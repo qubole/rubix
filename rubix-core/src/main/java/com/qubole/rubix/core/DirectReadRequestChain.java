@@ -48,6 +48,7 @@ public class DirectReadRequestChain extends ReadRequestChain
       throws Exception
   {
     Thread.currentThread().setName(threadName);
+    long startTime = System.currentTimeMillis();
 
     if (readRequests.size() == 0) {
       return 0;
@@ -64,6 +65,7 @@ public class DirectReadRequestChain extends ReadRequestChain
       while (nread < readRequest.getActualReadLength()) {
         int nbytes = inputStream.read(readRequest.getDestBuffer(), readRequest.getDestBufferOffset() + nread, readRequest.getActualReadLength() - nread);
         if (nbytes < 0) {
+          log.info(String.format("Returning Read %d bytes directly from remote, no caching", totalRead));
           return nread;
         }
         nread += nbytes;
@@ -71,6 +73,7 @@ public class DirectReadRequestChain extends ReadRequestChain
       totalRead += nread;
     }
     log.info(String.format("Read %d bytes directly from remote, no caching", totalRead));
+    log.debug("DirectReadRequest took : " + (System.currentTimeMillis() - startTime) + " msecs ");
     return totalRead;
   }
 }

@@ -76,11 +76,14 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
   private List<String> nodes;
   int currentNodeIndex = -1;
   static long splitSize;
+  private RemoteFetchProcessor fetchProcessor;
 
   public BookKeeper(Configuration conf)
   {
     this.conf = conf;
     initializeCache(conf);
+    fetchProcessor = new RemoteFetchProcessor(conf);
+    fetchProcessor.startAsync();
   }
 
   @Override
@@ -234,6 +237,7 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
       return;
     }
     endBlock = setCorrectEndBlock(endBlock, fileLength, remotePath);
+    log.debug("Updating cache for " + remotePath + " StarBlock : " + startBlock + " EndBlock : " + endBlock);
 
     try {
       md.setBlocksCached(startBlock, endBlock);
@@ -265,6 +269,19 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
   @Override
   public boolean readData(String remotePath, long offset, int length, long fileSize, long lastModified, int clusterType)
       throws TException
+  {
+    if (CacheConfig.isParallelWarmupEnabled(conf)) {
+      log.info("Adding to the queue Path : " + remotePath + " Offste : " + offset + " Length " + length);
+      fetchProcessor.addToProcessQueue(remotePath, offset, length, fileSize, lastModified);
+      return true;
+    }
+    else {
+      return readDataInternal(remotePath, offset, length, fileSize, lastModified, clusterType);
+    }
+  }
+
+  private boolean readDataInternal(String remotePath, long offset, int length, long fileSize,
+                                   long lastModified, int clusterType) throws TException
   {
     int blockSize = CacheConfig.getBlockSize(conf);
     byte[] buffer = new byte[blockSize];
