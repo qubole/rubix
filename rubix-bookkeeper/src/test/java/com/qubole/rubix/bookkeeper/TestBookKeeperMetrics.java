@@ -20,6 +20,10 @@ import org.apache.thrift.shaded.TException;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+
 import static org.testng.Assert.assertEquals;
 
 public class TestBookKeeperMetrics
@@ -32,10 +36,20 @@ public class TestBookKeeperMetrics
   private BookKeeper bookKeeper;
 
   @BeforeClass
-  public void setUp()
+  public void setUp() throws IOException
   {
-    conf.setInt(CacheConfig.blockSizeConf, BLOCK_SIZE);
     bookKeeper = new BookKeeper(conf, metrics);
+
+    // Set configuration values for testing
+    conf.set(CacheConfig.dataCacheDirprefixesConf, "/tmp/media/ephemeral");
+    conf.setInt(CacheConfig.maxDisksConf, 5);
+    conf.setInt(CacheConfig.blockSizeConf, BLOCK_SIZE);
+
+    // Create cache directories
+    Files.createDirectories(Paths.get(CacheConfig.getCacheDirPrefixList(conf)));
+    for (int i = 0; i < CacheConfig.getMaxDisks(conf); i++) {
+      Files.createDirectories(Paths.get(CacheConfig.getCacheDirPrefixList(conf) + i));
+    }
   }
 
   /**

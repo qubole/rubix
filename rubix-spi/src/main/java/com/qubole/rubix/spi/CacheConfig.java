@@ -70,7 +70,8 @@ public class CacheConfig
   public static String socketReadTimeOutConf = "hadoop.cache.network.socket.read.timeout";
   private static String diskMonitorIntervalConf = "hadoop.cache.disk.monitor.interval";
   static String fileCacheDirSuffixConf = "/fcache/";
-  static int maxDisksConf = 5;
+  public static String maxDisksConf = "hadoop.cache.data.max-disks";
+  static int maxDisks = 5;
 
   // default values
   private static final int dataCacheExpiry = Integer.MAX_VALUE;
@@ -91,6 +92,11 @@ public class CacheConfig
 
   private CacheConfig()
   {
+  }
+
+  public static int getMaxDisks(Configuration conf)
+  {
+    return conf.getInt(maxDisksConf, maxDisks);
   }
 
   public static int getSocketReadTimeOutDefault(Configuration conf)
@@ -164,7 +170,7 @@ public class CacheConfig
         int ndisks = 0;
         List<String> dirPrefixList = getDirPrefixList(conf);
         for (String dirPrefix : dirPrefixList) {
-          for (int i = 0; i < maxDisksConf; ++i) {
+          for (int i = 0; i < getMaxDisks(conf); ++i) {
             log.debug("Checking " + dirPrefix + i);
             if (exists(dirPrefix + i)) {
               File dir = new File(dirPrefix + i + fileCacheDirSuffixConf);
