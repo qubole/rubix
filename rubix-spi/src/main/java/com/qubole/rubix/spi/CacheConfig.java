@@ -76,6 +76,8 @@ public class CacheConfig
   public static String remoteFetchProcessInterval = "rubix.remotefetch.interval";
   public static String numRemoteFetchThreads = "rubix.remotefetch.threads";
 
+  public static String enableFileInvalidation = "rubix.enable.file.invalidation";
+
   static String fileCacheDirSuffixConf = "/fcache/";
   static int maxDisksConf = 5;
 
@@ -98,6 +100,8 @@ public class CacheConfig
   private static int processThreadIntervalDefault = 1000;
   private static int remoteFetchProcessIntervalDefault = 10000;
   private static int numRemoteFetchThreadsDefault = 10;
+
+  private static boolean enableFileInvalidationDefault = true;
 
   private static final Log log = LogFactory.getLog(CacheConfig.class.getName());
 
@@ -422,5 +426,10 @@ public class CacheConfig
   public static int getRemoteFetchNumThreads(Configuration conf)
   {
     return conf.getInt(numRemoteFetchThreads, numRemoteFetchThreadsDefault);
+  }
+
+  public static boolean isFileInvalidationEnabled(Configuration conf)
+  {
+    return conf.getBoolean(enableFileInvalidation, enableFileInvalidationDefault);
   }
 }

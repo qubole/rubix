@@ -120,7 +120,7 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
     FileMetadata md;
     try {
       md = fileMetadataCache.get(remotePath, new CreateFileMetadataCallable(remotePath, fileLength, lastModified, conf));
-      if (md.getLastModified() != lastModified) {
+      if (isInvalidationRequired(md.getLastModified(), lastModified)) {
         invalidate(remotePath);
         md = fileMetadataCache.get(remotePath, new CreateFileMetadataCallable(remotePath, fileLength, lastModified, conf));
       }
@@ -232,7 +232,7 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
     if (md == null) {
       return;
     }
-    if (md.getLastModified() != lastModified) {
+    if (isInvalidationRequired(md.getLastModified(), lastModified)) {
       invalidate(remotePath);
       return;
     }
@@ -434,6 +434,15 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
     {
       return new FileMetadata(path, fileLength, lastModified, conf);
     }
+  }
+
+  private boolean isInvalidationRequired(long metadataLastModifiedTime, long remoteLastModifiedTime)
+  {
+    if (CacheConfig.isFileInvalidationEnabled(conf) && (metadataLastModifiedTime != remoteLastModifiedTime)) {
+      return true;
+    }
+
+    return false;
   }
 
   public static void invalidate(String p)
