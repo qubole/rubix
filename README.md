@@ -3,15 +3,17 @@
 [![Build Status](https://travis-ci.org/qubole/rubix.svg?branch=master)](https://travis-ci.org/qubole/rubix)
 [![Coverage Status](https://coveralls.io/repos/github/qubole/rubix/badge.svg)](https://coveralls.io/github/qubole/rubix)
 
-RubiX is a light-weight data caching framework that can be used by Big-Data engines.
-RubiX can be extended to support any engine that accesses data in cloud stores using Hadoop FileSystem interface via plugins. 
-Using the same plugins, RubiX can also be extended to be used with any cloud store
+RubiX is a light-weight data caching framework that can be used by Big-Data engines. Rubix uses local disks to provide
+the best I/O bandwidth to the Big Data Engines. Rubix is useful in shared storage architectures where the data 
+execution engine is separate from storage. For example, on public clouds like AWS or Microsoft Azure, data is stored 
+in cloud store and the engine accesses the data over a network. Similarly in data centers [Presto](https://prestodb.io) 
+runs on a separate cluster from HDFS and access data over the network.
 
-Check the [User and Developer manual]
-## Usecase
+RubiX can be extended to support any engine that accesses data using Hadoop FileSystem interface via plugins. 
+There are plugins to access data on AWS S3, Microsoft Azure Blob Store and HDFS. RubiX can be extended to be 
+used with any other storage systems including other cloud stores
 
-RubiX provides disk or in-memory caching of data, which would otherwise be accessed over network when it resides in cloud store,
-thereby improving performance.
+Check the [User and Developer manual] for more more information on getting started. 
 
 ## Supported Engines and Cloud Stores
 
