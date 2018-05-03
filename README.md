@@ -13,7 +13,7 @@ RubiX can be extended to support any engine that accesses data using Hadoop File
 There are plugins to access data on AWS S3, Microsoft Azure Blob Store and HDFS. RubiX can be extended to be 
 used with any other storage systems including other cloud stores
 
-Check the [User and Developer manual] for more more information on getting started. 
+Check the [User and Developer manual](http://rubix.readthedocs.io/en/latest/index.html) for more more information on getting started. 
 
 ## Supported Engines and Cloud Stores
 
@@ -25,9 +25,10 @@ Check the [User and Developer manual] for more more information on getting start
 [Documentation](http://rubix.readthedocs.io/en/latest/index.html)  
 [User Group (Google)](https://groups.google.com/forum/#!forum/rubix-users)
 
-###Blog Posts
+### Blog Posts
 [Rubix Introduction](https://www.qubole.com/blog/rubix-fast-cache-access-for-big-data-analytics-on-cloud-storage/)  
 [Rubix on EMR](https://www.qubole.com/blog/caching-emr-using-rubix-performance-benchmark-benefits/)
+
 
 ### Developers
 [Slack Channel](https://join.slack.com/t/rubix-cache/signup?x=x-348094509318-348094608182)
