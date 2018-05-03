@@ -7,7 +7,7 @@ RubiX is a light-weight data caching framework that can be used by Big-Data engi
 the best I/O bandwidth to the Big Data Engines. Rubix is useful in shared storage architectures where the data 
 execution engine is separate from storage. For example, on public clouds like AWS or Microsoft Azure, data is stored 
 in cloud store and the engine accesses the data over a network. Similarly in data centers [Presto](https://prestodb.io) 
-runs on a separate cluster from HDFS and access data over the network.
+runs on a separate cluster from HDFS and accesses data over the network.
 
 RubiX can be extended to support any engine that accesses data using Hadoop FileSystem interface via plugins. 
 There are plugins to access data on AWS S3, Microsoft Azure Blob Store and HDFS. RubiX can be extended to be 
