@@ -88,7 +88,7 @@ public class TestNonLocalReadRequestChain
     CacheConfig.setBlockSize(conf, blockSize);
     CacheConfig.setCacheDataDirPrefix(conf, testDirectoryPrefix + "dir");
     CacheConfig.setMaxDisks(conf, 1);
-    conf.setBoolean(CacheConfig.parallelWarmupEnable, false);
+    CacheConfig.setIsParallelWarmupEnabled(conf, false);
 
     localDataTransferServer = new Thread()
     {

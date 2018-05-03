@@ -52,6 +52,11 @@ public class CacheConfig
   private static final String KEY_LOCAL_TRANSFER_BUFFER_SIZE = "hadoop.cache.data.buffer.size";
   private static final String KEY_LOCAL_SERVER_PORT = "hadoop.cache.data.local.server.port";
   private static final String KEY_MAX_RETRIES = "hadoop.cache.data.client.num-retries";
+  private static final String KEY_PARALLEL_WARMUP = "rubix.parallel.warmup";
+  private static final String KEY_PROCESS_THREAD_INITIAL_DELAY = "rubix.request.process.initial.delay";
+  private static final String KEY_PROCESS_THREAD_INTERVAL = "rubix.request.process.interval";
+  private static final String KEY_REMOTE_FETCH_PROCESS_INTERVAL = "rubix.remotefetch.interval";
+  private static final String KEY_REMOTE_FETCH_THREADS = "rubix.remotefetch.threads";
   private static final String KEY_SERVER_PORT = "hadoop.cache.data.bookkeeper.port";
   private static final String KEY_SERVER_MAX_THREADS = "hadoop.cache.data.bookkeeper.max-threads";
   private static final String KEY_SOCKET_READ_TIMEOUT = "hadoop.cache.network.socket.read.timeout";
@@ -80,21 +85,14 @@ public class CacheConfig
   private static final int DEFAULT_LOCAL_SERVER_PORT = 8898;
   private static final int DEFAULT_MAX_BUFFER_SIZE = 1024;
   private static final int DEFAULT_MAX_RETRIES = 3;
+  private static final boolean DEFAULT_PARALLEL_WARMUP = false;
+  private static final int DEFAULT_PROCESS_THREAD_INITIAL_DELAY = 1000; // ms
+  private static final int DEFAULT_PROCESS_THREAD_INTERVAL = 1000; // ms
+  private static final int DEFAULT_REMOTE_FETCH_PROCESS_INTERVAL = 10000; // ms
+  private static final int DEFAULT_REMOTE_FETCH_THREADS = 10;
   private static final int DEFAULT_SERVER_MAX_THREADS = Integer.MAX_VALUE;
   private static final int DEFAULT_SERVER_PORT = 8899;
   private static final int DEFAULT_SOCKET_READ_TIMEOUT = 30000; // ms
-  
-  // TODO: standardize
-  public static String parallelWarmupEnable = "rubix.parallel.warmup";
-  public static String processThreadInitalDelay = "rubix.request.process.inital.delay";
-  public static String processThreadInterval = "rubix.request.process.interval";
-  public static String remoteFetchProcessInterval = "rubix.remotefetch.interval";
-  public static String numRemoteFetchThreads = "rubix.remotefetch.threads";
-  
-  private static int processThreadInitalDelayDefault = 1000;
-  private static int processThreadIntervalDefault = 1000;
-  private static int remoteFetchProcessIntervalDefault = 10000;
-  private static int numRemoteFetchThreadsDefault = 10;
 
   private CacheConfig()
   {
@@ -200,6 +198,26 @@ public class CacheConfig
     return conf.getInt(KEY_MAX_RETRIES, DEFAULT_MAX_RETRIES);
   }
 
+  public static int getProcessThreadInitialDelay(Configuration conf)
+  {
+    return conf.getInt(KEY_PROCESS_THREAD_INITIAL_DELAY, DEFAULT_PROCESS_THREAD_INITIAL_DELAY);
+  }
+
+  public static int getProcessThreadInterval(Configuration conf)
+  {
+    return conf.getInt(KEY_PROCESS_THREAD_INTERVAL, DEFAULT_PROCESS_THREAD_INTERVAL);
+  }
+
+  public static int getRemoteFetchProcessInterval(Configuration conf)
+  {
+    return conf.getInt(KEY_REMOTE_FETCH_PROCESS_INTERVAL, DEFAULT_REMOTE_FETCH_PROCESS_INTERVAL);
+  }
+
+  public static int getRemoteFetchThreads(Configuration conf)
+  {
+    return conf.getInt(KEY_REMOTE_FETCH_THREADS, DEFAULT_REMOTE_FETCH_THREADS);
+  }
+
   public static int getServerMaxThreads(Configuration conf)
   {
     return conf.getInt(KEY_SERVER_MAX_THREADS, DEFAULT_SERVER_MAX_THREADS);
@@ -215,14 +233,19 @@ public class CacheConfig
     return conf.getInt(KEY_SOCKET_READ_TIMEOUT, DEFAULT_SOCKET_READ_TIMEOUT);
   }
 
+  public static boolean isCacheDataEnabled(Configuration conf)
+  {
+    return conf.getBoolean(KEY_CACHE_ENABLED, DEFAULT_DATA_CACHE_ENABLED);
+  }
+
   public static boolean isStrictMode(Configuration conf)
   {
     return conf.getBoolean(KEY_DATA_CACHE_STRICT_MODE, DEFAULT_DATA_CACHE_STRICT_MODE);
   }
 
-  public static boolean isCacheDataEnabled(Configuration conf)
+  public static boolean isParallelWarmupEnabled(Configuration conf)
   {
-    return conf.getBoolean(KEY_CACHE_ENABLED, DEFAULT_DATA_CACHE_ENABLED);
+    return conf.getBoolean(KEY_PARALLEL_WARMUP, DEFAULT_PARALLEL_WARMUP);
   }
 
   public static void setBlockSize(Configuration conf, int blockSize)
@@ -280,6 +303,11 @@ public class CacheConfig
     conf.setBoolean(KEY_DATA_CACHE_STRICT_MODE, isStrictMode);
   }
 
+  public static void setIsParallelWarmupEnabled(Configuration conf, boolean isParallelWarmupEnabled)
+  {
+    conf.setBoolean(KEY_DATA_CACHE_STRICT_MODE, isParallelWarmupEnabled);
+  }
+
   public static void setLocalServerPort(Configuration conf, int localServerPort)
   {
     conf.setInt(KEY_LOCAL_SERVER_PORT, localServerPort);
@@ -290,33 +318,13 @@ public class CacheConfig
     conf.setInt(KEY_DATA_CACHE_MAX_DISKS, maxDisks);
   }
 
+  public static void setRemoteFetchProcessInterval(Configuration conf, int interval)
+  {
+    conf.setInt(KEY_REMOTE_FETCH_PROCESS_INTERVAL, interval);
+  }
+
   public static void setServerPort(Configuration conf, int serverPort)
   {
     conf.setInt(KEY_SERVER_PORT, serverPort);
-  }
-
-  public static boolean isParallelWarmupEnabled(Configuration conf)
-  {
-    return conf.getBoolean(parallelWarmupEnable, false);
-  }
-
-  public static int getProcessThreadInitialDelayInMs(Configuration conf)
-  {
-    return conf.getInt(processThreadInitalDelay, processThreadInitalDelayDefault);
-  }
-
-  public static int getProcessThreadIntervalInMs(Configuration conf)
-  {
-    return conf.getInt(processThreadInterval, processThreadIntervalDefault);
-  }
-
-  public static int getRemoteFetchProcessIntervalInMS(Configuration conf)
-  {
-    return conf.getInt(remoteFetchProcessInterval, remoteFetchProcessIntervalDefault);
-  }
-
-  public static int getRemoteFetchNumThreads(Configuration conf)
-  {
-    return conf.getInt(numRemoteFetchThreads, numRemoteFetchThreadsDefault);
   }
 }

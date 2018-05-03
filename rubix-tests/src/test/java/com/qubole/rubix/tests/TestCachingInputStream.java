@@ -90,7 +90,7 @@ public class TestCachingInputStream
     CacheConfig.setLocalServerPort(conf, 2222);
     CacheConfig.setCacheDataDirPrefix(conf, testDirectoryPrefix + "dir");
     CacheConfig.setMaxDisks(conf, 1);
-    conf.setBoolean(CacheConfig.parallelWarmupEnable, false);
+    CacheConfig.setIsParallelWarmupEnabled(conf, false);
 
     Thread server = new Thread()
     {
