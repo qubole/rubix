@@ -19,10 +19,11 @@ package com.qubole.rubix.tests;
 
 import com.qubole.rubix.bookkeeper.BookKeeperServer;
 import com.qubole.rubix.bookkeeper.LocalDataTransferServer;
-import com.qubole.rubix.core.DataGen;
 import com.qubole.rubix.core.MockCachingFileSystem;
 import com.qubole.rubix.core.NonLocalReadRequestChain;
 import com.qubole.rubix.core.ReadRequest;
+import com.qubole.rubix.core.utils.DataGen;
+import com.qubole.rubix.core.utils.DeleteFileVisitor;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.ClusterType;
@@ -52,8 +53,8 @@ public class TestNonLocalReadRequestChain
   int blockSize = 100;
   private static final String testDirectoryPrefix = System.getProperty("java.io.tmpdir") + "/TestNonLocalReadRequestChain/";
   String backendFileName = testDirectoryPrefix + "backendFile";
-  Path backendPath = new Path("testfile:/" + backendFileName);
-  File backendFile = new File(backendFileName);
+  Path backendPath = new Path("file:///" + backendFileName.substring(1));
+  File backendFile;
   final Configuration conf = new Configuration();
   Thread localDataTransferServer;
 
@@ -87,6 +88,8 @@ public class TestNonLocalReadRequestChain
     CacheConfig.setBlockSize(conf, blockSize);
     CacheConfig.setCacheDataDirPrefix(conf, testDirectoryPrefix + "dir");
     CacheConfig.setMaxDisks(conf, 1);
+    conf.setBoolean(CacheConfig.parallelWarmupEnable, false);
+
     localDataTransferServer = new Thread()
     {
       public void run()
@@ -110,11 +113,12 @@ public class TestNonLocalReadRequestChain
 
     // Populate File
     DataGen.populateFile(backendFileName);
+    backendFile = new File(backendFileName);
 
     //set class for filepath beginning with testfile
     conf.setClass("fs.testfile.impl", MockCachingFileSystem.class, FileSystem.class);
     MockCachingFileSystem fs = new MockCachingFileSystem();
-    fs.initialize(null, conf);
+    fs.initialize(backendPath.toUri(), conf);
     nonLocalReadRequestChain = new NonLocalReadRequestChain("localhost", backendFile.length(),
         backendFile.lastModified(), conf, fs, backendPath.toString(),
         ClusterType.TEST_CLUSTER_MANAGER.ordinal(), false, null);

@@ -1,0 +1,132 @@
+/**
+ * Copyright (c) 2016. Qubole Inc
+ * Licensed under the Apache License, Version 2.0 (the License);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an AS IS BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
+ */
+
+package com.qubole.rubix.bookkeeper;
+
+import com.google.common.collect.Range;
+import com.google.common.util.concurrent.MoreExecutors;
+import com.qubole.rubix.core.FileDownloadRequestChain;
+import com.qubole.rubix.core.ReadRequest;
+import com.qubole.rubix.spi.CacheConfig;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.DirectBufferPool;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadPoolExecutor;
+
+/**
+ * Created by Abhishek on 3/9/18.
+ */
+class FileDownloader
+{
+  Configuration conf;
+  private ExecutorService processService;
+  int diskReadBufferSize;
+
+  private static final Log log = LogFactory.getLog(FileDownloader.class);
+  private static DirectBufferPool bufferPool = new DirectBufferPool();
+
+  public FileDownloader(Configuration conf)
+  {
+    this.conf = conf;
+    int numThreads = CacheConfig.getRemoteFetchNumThreads(conf);
+    this.diskReadBufferSize = CacheConfig.getDiskReadBufferSizeDefault(conf);
+
+    ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(numThreads);
+    processService = MoreExecutors.getExitingExecutorService(executor);
+  }
+
+  protected List<FileDownloadRequestChain> getFileDownloadRequestChains(ConcurrentMap<String, DownloadRequestContext> contextMap)
+      throws IOException
+  {
+    List<FileDownloadRequestChain> readRequestChainList = new ArrayList<FileDownloadRequestChain>();
+    for (Map.Entry<String, DownloadRequestContext> entry : contextMap.entrySet()) {
+      Path path = new Path(entry.getKey());
+      DownloadRequestContext context = entry.getValue();
+
+      // Creating a new instance of the filesystem object by calling FileSystem.newInstance
+      // This one makes sure we will get a new instance even if fs.%.impl.disable.cache is set to false
+      FileSystem fs = FileSystem.newInstance(path.toUri(), conf);
+      fs.initialize(path.toUri(), conf);
+
+      String localPath = CacheConfig.getLocalPath(entry.getKey(), conf);
+      log.info("Processing Request for File : " + path.toString() + " LocalFile : " + localPath);
+      ByteBuffer directWriteBuffer = bufferPool.getBuffer(diskReadBufferSize);
+
+      FileDownloadRequestChain requestChain = new FileDownloadRequestChain(fs, localPath,
+          directWriteBuffer, conf, context.getRemoteFilePath(), context.getFileSize(),
+          context.getLastModifiedTime());
+
+      for (Range<Long> range : context.getRanges().asRanges()) {
+        ReadRequest request = new ReadRequest(range.lowerEndpoint(), range.upperEndpoint(),
+            range.lowerEndpoint(), range.upperEndpoint(), null, 0, context.getFileSize());
+        requestChain.addReadRequest(request);
+      }
+
+      log.debug("Request added for file: " + requestChain.getRemotePath() + " Number of Requests : " +
+          requestChain.getReadRequests().size());
+
+      readRequestChainList.add(requestChain);
+    }
+
+    return readRequestChainList;
+  }
+
+  protected void processDownloadRequests(List<FileDownloadRequestChain> readRequestChainList)
+  {
+    int sizeRead = 0;
+    List<Future<Integer>> futures = new ArrayList<Future<Integer>>();
+
+    for (FileDownloadRequestChain requestChain : readRequestChainList) {
+      requestChain.lock();
+      Future<Integer> result = processService.submit(requestChain);
+      futures.add(result);
+    }
+
+    for (Future<Integer> future : futures) {
+      FileDownloadRequestChain requestChain = readRequestChainList.get(futures.indexOf(future));
+      long totalBytesToBeDownloaded = 0;
+      for (ReadRequest request : requestChain.getReadRequests()) {
+        totalBytesToBeDownloaded += request.getBackendReadLength();
+      }
+      try {
+        int read = future.get();
+        // Updating the cache only when we have downloaded the same amount of data that we requested
+        // This takes care of the scenario where the data is download partially but the cache
+        // metadata gets updated for all the requested blocks.
+        if (read == totalBytesToBeDownloaded) {
+          requestChain.updateCacheStatus(requestChain.getRemotePath(), requestChain.getFileSize(),
+              requestChain.getLastModified(), CacheConfig.getBlockSize(conf), conf);
+        }
+        sizeRead += read;
+      }
+      catch (ExecutionException | InterruptedException ex) {
+        log.error(ex.getStackTrace());
+        requestChain.cancel();
+      }
+    }
+  }
+}

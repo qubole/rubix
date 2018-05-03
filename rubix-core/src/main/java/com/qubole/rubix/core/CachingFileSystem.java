@@ -51,7 +51,7 @@ import static com.qubole.rubix.spi.CacheUtil.skipCache;
 public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
 {
   private static final Log log = LogFactory.getLog(CachingFileSystem.class);
-  private T fs;
+  protected T fs;
   private static ClusterManager clusterManager;
 
   private boolean cacheSkipped;

@@ -83,6 +83,18 @@ public class CacheConfig
   private static final int DEFAULT_SERVER_MAX_THREADS = Integer.MAX_VALUE;
   private static final int DEFAULT_SERVER_PORT = 8899;
   private static final int DEFAULT_SOCKET_READ_TIMEOUT = 30000; // ms
+  
+  // TODO: standardize
+  public static String parallelWarmupEnable = "rubix.parallel.warmup";
+  public static String processThreadInitalDelay = "rubix.request.process.inital.delay";
+  public static String processThreadInterval = "rubix.request.process.interval";
+  public static String remoteFetchProcessInterval = "rubix.remotefetch.interval";
+  public static String numRemoteFetchThreads = "rubix.remotefetch.threads";
+  
+  private static int processThreadInitalDelayDefault = 1000;
+  private static int processThreadIntervalDefault = 1000;
+  private static int remoteFetchProcessIntervalDefault = 10000;
+  private static int numRemoteFetchThreadsDefault = 10;
 
   private CacheConfig()
   {
@@ -281,5 +293,30 @@ public class CacheConfig
   public static void setServerPort(Configuration conf, int serverPort)
   {
     conf.setInt(KEY_SERVER_PORT, serverPort);
+  }
+
+  public static boolean isParallelWarmupEnabled(Configuration conf)
+  {
+    return conf.getBoolean(parallelWarmupEnable, false);
+  }
+
+  public static int getProcessThreadInitialDelayInMs(Configuration conf)
+  {
+    return conf.getInt(processThreadInitalDelay, processThreadInitalDelayDefault);
+  }
+
+  public static int getProcessThreadIntervalInMs(Configuration conf)
+  {
+    return conf.getInt(processThreadInterval, processThreadIntervalDefault);
+  }
+
+  public static int getRemoteFetchProcessIntervalInMS(Configuration conf)
+  {
+    return conf.getInt(remoteFetchProcessInterval, remoteFetchProcessIntervalDefault);
+  }
+
+  public static int getRemoteFetchNumThreads(Configuration conf)
+  {
+    return conf.getInt(numRemoteFetchThreads, numRemoteFetchThreadsDefault);
   }
 }
