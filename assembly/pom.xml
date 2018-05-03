@@ -20,11 +20,6 @@
 
         <dependency>
             <groupId>com.qubole.rubix</groupId>
-            <artifactId>rubix-hadoop1</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-presto</artifactId>
         </dependency>
 
@@ -79,21 +74,6 @@
                                     <finalName>rubix-presto-${project.version}</finalName>
                                     <descriptors>
                                         <descriptor>src/main/resources/assemblies/rubix-presto.xml</descriptor>
-                                    </descriptors>
-                                </configuration>
-                            </execution>
-
-                            <execution>
-                                <id>rubix-hadoop1</id>
-                                <phase>package</phase>
-                                <goals>
-                                    <goal>single</goal>
-                                </goals>
-                                <configuration>
-                                    <appendAssemblyId>false</appendAssemblyId>
-                                    <finalName>rubix-hadoop1-${project.version}</finalName>
-                                    <descriptors>
-                                        <descriptor>src/main/resources/assemblies/rubix-hadoop1.xml</descriptor>
                                     </descriptors>
                                 </configuration>
                             </execution>

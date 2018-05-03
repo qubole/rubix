@@ -22,11 +22,6 @@
 
         <dependency>
             <groupId>com.qubole.rubix</groupId>
-            <artifactId>rubix-hadoop1</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-presto</artifactId>
         </dependency>
 
@@ -79,7 +74,6 @@
                                     <dependency>
                                         <includes>
                                             <include>com.qubole.rubix:rubix-bookkeeper</include>
-                                            <include>com.qubole.rubix:rubix-hadoop1</include>
                                             <include>com.qubole.rubix:rubix-hadoop2</include>
                                             <include>com.qubole.rubix:rubix-spi</include>
                                             <include>com.qubole.rubix:rubix-presto</include>
