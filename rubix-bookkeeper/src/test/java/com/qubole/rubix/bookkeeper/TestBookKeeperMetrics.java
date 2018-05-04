@@ -67,8 +67,8 @@ public class TestBookKeeperMetrics
     final long endBlock = 23;
     final long totalRequests = endBlock - startBlock;
 
-    assertEquals(metrics.getCounters().get(BookKeeper.METRIC_TOTAL_BLOCK_HITS).getCount(), 0);
+    assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT).getCount(), 0);
     bookKeeper.getCacheStatus(remotePath, fileLength, lastModified, startBlock, endBlock, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
-    assertEquals(metrics.getCounters().get(BookKeeper.METRIC_TOTAL_BLOCK_HITS).getCount(), totalRequests);
+    assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT).getCount(), totalRequests);
   }
 }

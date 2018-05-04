@@ -65,7 +65,7 @@ import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
  */
 public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
 {
-  public static final String METRIC_TOTAL_BLOCK_HITS = name(BookKeeper.class, "total-block-hits");
+  public static final String METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT = "rubix.bookkeeper.local_cache.count";
 
   private static Cache<String, FileMetadata> fileMetadataCache;
   private static ClusterManager clusterManager;
@@ -86,7 +86,7 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
   private final MetricRegistry metrics;
 
   // Metrics counter to keep track of the total number of blocks hit
-  private Counter totalBlockHits;
+  private Counter localCacheCount;
 
   public BookKeeper(Configuration conf, MetricRegistry metrics)
   {
@@ -101,7 +101,7 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
    */
   private void initializeMetrics()
   {
-    totalBlockHits = metrics.counter(METRIC_TOTAL_BLOCK_HITS);
+    localCacheCount = metrics.counter(METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT);
   }
 
   @Override
@@ -156,7 +156,7 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
     try {
       for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
         totalRequests++;
-        totalBlockHits.inc();
+        localCacheCount.inc();
 
         long split = (blockNum * blockSize) / splitSize;
         if (!blockSplits.get(split).equalsIgnoreCase(nodeName)) {

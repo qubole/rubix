@@ -40,7 +40,7 @@ public class BookKeeperServer extends Configured implements Tool
   public static BookKeeperService.Processor processor;
 
   // Registry for gathering & storing necessary metrics
-  private static MetricRegistry metrics = new MetricRegistry();
+  private static MetricRegistry metrics;
 
   public static Configuration conf;
 
@@ -74,6 +74,7 @@ public class BookKeeperServer extends Configured implements Tool
 
   public static void startServer(Configuration conf)
   {
+    metrics = new MetricRegistry();
     bookKeeper = new BookKeeper(conf, metrics);
     DiskMonitorService diskMonitorService = new DiskMonitorService(conf, bookKeeper);
     diskMonitorService.startAsync();
