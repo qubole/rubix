@@ -12,7 +12,6 @@
  */
 package com.qubole.rubix.tests;
 
-import com.codahale.metrics.MetricRegistry;
 import com.qubole.rubix.bookkeeper.BookKeeperServer;
 import com.qubole.rubix.bookkeeper.LocalDataTransferServer;
 import com.qubole.rubix.core.CachingFileSystemStats;
@@ -102,7 +101,7 @@ public class TestCachingInputStream
     {
       public void run()
       {
-        BookKeeperServer.startServer(conf, new MetricRegistry());
+        BookKeeperServer.startServer(conf);
       }
     };
     thread.start();

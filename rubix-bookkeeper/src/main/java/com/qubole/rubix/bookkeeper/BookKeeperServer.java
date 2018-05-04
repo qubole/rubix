@@ -12,8 +12,6 @@
  */
 package com.qubole.rubix.bookkeeper;
 
-import com.codahale.metrics.Gauge;
-import com.codahale.metrics.MetricRegistry;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.qubole.rubix.spi.BookKeeperService;
@@ -29,10 +27,6 @@ import org.apache.thrift.shaded.transport.TServerSocket;
 import org.apache.thrift.shaded.transport.TServerTransport;
 import org.apache.thrift.shaded.transport.TTransportException;
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
 import static com.qubole.rubix.spi.CacheConfig.getServerMaxThreads;
 import static com.qubole.rubix.spi.CacheConfig.getServerPort;
 
@@ -41,14 +35,8 @@ import static com.qubole.rubix.spi.CacheConfig.getServerPort;
  */
 public class BookKeeperServer extends Configured implements Tool
 {
-  // Metric key for liveness of the BookKeeper daemon.
-  public static final String METRIC_BOOKKEEPER_LIVENESS_CHECK = "rubix.bookkeeper.liveness.gauge";
-
   public static BookKeeper bookKeeper;
   public static BookKeeperService.Processor processor;
-
-  // Registry for gathering & storing necessary metrics
-  private static MetricRegistry metrics;
 
   public static Configuration conf;
 
@@ -73,20 +61,16 @@ public class BookKeeperServer extends Configured implements Tool
     {
       public void run()
       {
-        startServer(conf, new MetricRegistry());
+        startServer(conf);
       }
     };
     new Thread(bookKeeperServer).run();
     return 0;
   }
 
-  public static void startServer(Configuration conf, MetricRegistry metricsRegistry)
+  public static void startServer(Configuration conf)
   {
     bookKeeper = new BookKeeper(conf);
-    metrics = metricsRegistry;
-
-    scheduleLivenessMetric();
-
     DiskMonitorService diskMonitorService = new DiskMonitorService(conf, bookKeeper);
     diskMonitorService.startAsync();
     processor = new BookKeeperService.Processor(bookKeeper);
@@ -106,30 +90,8 @@ public class BookKeeperServer extends Configured implements Tool
     }
   }
 
-  private static void scheduleLivenessMetric()
-  {
-    ScheduledExecutorService metricsService = Executors.newSingleThreadScheduledExecutor();
-    metricsService.scheduleAtFixedRate(new Runnable()
-    {
-      @Override
-      public void run()
-      {
-        log.debug("Emitting BookKeeper daemon liveness check");
-        metrics.register(METRIC_BOOKKEEPER_LIVENESS_CHECK, new Gauge<Integer>()
-          {
-            @Override
-            public Integer getValue()
-            {
-              return 1;
-            }
-          });
-      }
-    }, 0, 1000, TimeUnit.MILLISECONDS);
-  }
-
   public static void stopServer()
   {
-    metrics.remove(METRIC_BOOKKEEPER_LIVENESS_CHECK);
     server.stop();
   }
 
