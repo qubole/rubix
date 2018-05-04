@@ -17,6 +17,7 @@ package com.qubole.rubix.tests;
  * Created by sakshia on 25/11/16.
  */
 
+import com.codahale.metrics.MetricRegistry;
 import com.qubole.rubix.bookkeeper.BookKeeperServer;
 import com.qubole.rubix.bookkeeper.LocalDataTransferServer;
 import com.qubole.rubix.core.MockCachingFileSystem;
@@ -98,7 +99,7 @@ public class TestNonLocalReadRequestChain
     {
       public void run()
       {
-        BookKeeperServer.startServer(conf);
+        BookKeeperServer.startServer(conf, new MetricRegistry());
       }
     };
     thread.start();
