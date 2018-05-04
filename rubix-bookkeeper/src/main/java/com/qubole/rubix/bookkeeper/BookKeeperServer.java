@@ -27,6 +27,8 @@ import org.apache.thrift.shaded.transport.TServerSocket;
 import org.apache.thrift.shaded.transport.TServerTransport;
 import org.apache.thrift.shaded.transport.TTransportException;
 
+import java.io.FileNotFoundException;
+
 import static com.qubole.rubix.spi.CacheConfig.getServerMaxThreads;
 import static com.qubole.rubix.spi.CacheConfig.getServerPort;
 
@@ -70,7 +72,14 @@ public class BookKeeperServer extends Configured implements Tool
 
   public static void startServer(Configuration conf)
   {
-    bookKeeper = new BookKeeper(conf);
+    try {
+      bookKeeper = new BookKeeper(conf);
+    }
+    catch (FileNotFoundException e) {
+      log.error("Cache directories could not be created", e);
+      return;
+    }
+
     DiskMonitorService diskMonitorService = new DiskMonitorService(conf, bookKeeper);
     diskMonitorService.startAsync();
     processor = new BookKeeperService.Processor(bookKeeper);

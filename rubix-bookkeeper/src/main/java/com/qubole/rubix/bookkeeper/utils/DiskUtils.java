@@ -12,7 +12,7 @@
  */
 package com.qubole.rubix.bookkeeper.utils;
 
-import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.CacheUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -47,8 +47,8 @@ public class DiskUtils
   public static int getUsedSpaceMB(org.apache.hadoop.conf.Configuration conf)
   {
     long used = 0;
-    for (int d = 0; d < CacheConfig.numDisks(conf); d++) {
-      File localPath = new File(CacheConfig.getDirPath(conf, d));
+    for (int d = 0; d < CacheUtil.getCacheDiskCount(conf); d++) {
+      File localPath = new File(CacheUtil.getDirPath(d, conf));
       used += localPath.getTotalSpace() - localPath.getUsableSpace();
     }
     return (int) (used / 1024 / 1024);

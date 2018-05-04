@@ -16,7 +16,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.cache.Cache;
 import com.google.common.cache.RemovalCause;
 import com.google.common.util.concurrent.Striped;
-import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.CacheUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -59,8 +59,8 @@ public class FileMetadata
     this.remotePath = remotePath;
     this.size = fileLength;
     this.lastModified = lastModified;
-    localPath = CacheConfig.getLocalPath(remotePath, conf);
-    mdFilePath = CacheConfig.getMDFile(remotePath, conf);
+    localPath = CacheUtil.getLocalPath(remotePath, conf);
+    mdFilePath = CacheUtil.getMetadataFilePath(remotePath, conf);
 
     int bitsRequired = (int) Math.ceil((double) size / getBlockSize(conf)); //numBlocks
     bitmapFileSizeBytes = (int) Math.ceil((double) bitsRequired / 8);

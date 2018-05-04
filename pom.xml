@@ -227,7 +227,9 @@
             <configuration>
                 <instrumentation>
                     <excludes>
-                        <exclude>**/com/qubole/rubix/spi/*.class</exclude>
+                        <exclude>**/com/qubole/rubix/spi/BlockLocation*.class</exclude>
+                        <exclude>**/com/qubole/rubix/spi/BookKeeperService*.class</exclude>
+                        <exclude>**/com/qubole/rubix/spi/Location*.class</exclude>
                     </excludes>
                 </instrumentation>
                 <check>true</check>

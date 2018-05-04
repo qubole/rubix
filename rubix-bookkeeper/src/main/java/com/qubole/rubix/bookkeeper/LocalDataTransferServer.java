@@ -16,6 +16,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.DataTransferClientHelper;
 import com.qubole.rubix.spi.DataTransferHeader;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
@@ -186,7 +187,7 @@ public class LocalDataTransferServer extends Configured implements Tool
           }
         }
 
-        String filename = CacheConfig.getLocalPath(remotePath, conf);
+        String filename = CacheUtil.getLocalPath(remotePath, conf);
         FileChannel fc = new FileInputStream(filename).getChannel();
         int maxCount = CacheConfig.getLocalTransferBufferSize(conf);
         int lengthRemaining = readLength;
