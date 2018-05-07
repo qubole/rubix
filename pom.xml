@@ -5,7 +5,7 @@
     <groupId>com.qubole.rubix</groupId>
     <artifactId>rubix-root</artifactId>
     <packaging>pom</packaging>
-    <version>0.2.14-SNAPSHOT</version>
+    <version>0.3.1-SNAPSHOT</version>
     <name>rubix</name>
     <url>http://github.com/qubole/rubix</url>
     <description>Caching Framework for Big Data Engines</description>
@@ -58,7 +58,6 @@
         <module>rubix-bookkeeper</module>
         <module>rubix-core</module>
         <module>rubix-presto</module>
-        <module>rubix-hadoop1</module>
         <module>rubix-tests</module>
         <module>assembly</module>
         <module>rubix-rpm</module>
@@ -228,7 +227,9 @@
             <configuration>
                 <instrumentation>
                     <excludes>
-                        <exclude>**/com/qubole/rubix/spi/*.class</exclude>
+                        <exclude>**/com/qubole/rubix/spi/BlockLocation*.class</exclude>
+                        <exclude>**/com/qubole/rubix/spi/BookKeeperService*.class</exclude>
+                        <exclude>**/com/qubole/rubix/spi/Location*.class</exclude>
                     </excludes>
                 </instrumentation>
                 <check>true</check>

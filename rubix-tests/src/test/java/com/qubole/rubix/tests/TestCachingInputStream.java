@@ -16,16 +16,19 @@ import com.qubole.rubix.bookkeeper.BookKeeperServer;
 import com.qubole.rubix.bookkeeper.LocalDataTransferServer;
 import com.qubole.rubix.core.CachingFileSystemStats;
 import com.qubole.rubix.core.CachingInputStream;
-import com.qubole.rubix.core.DataGen;
 import com.qubole.rubix.core.LocalFSInputStream;
+import com.qubole.rubix.core.utils.DataGen;
+import com.qubole.rubix.core.utils.DeleteFileVisitor;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.ClusterType;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
@@ -36,6 +39,8 @@ import org.testng.annotations.Test;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -52,7 +57,7 @@ public class TestCachingInputStream
   int blockSize = 100;
   private static final String testDirectoryPrefix = System.getProperty("java.io.tmpdir") + "/TestCachingInputStream/";
   String backendFileName = testDirectoryPrefix + "backendFile";
-  Path backendPath = new Path("file://" + backendFileName.substring(1));
+  Path backendPath = new Path("file:///" + backendFileName.substring(1));
 
   CachingInputStream inputStream;
 
@@ -76,15 +81,17 @@ public class TestCachingInputStream
   }
 
   @BeforeMethod
-  public void setup()
-      throws IOException, InterruptedException
+  public void setup() throws IOException, InterruptedException, URISyntaxException
   {
     final Configuration conf = new Configuration();
 
-    conf.setBoolean(CacheConfig.DATA_CACHE_STRICT_MODE, true);
-    conf.setInt(CacheConfig.dataCacheBookkeeperPortConf, 3456);
-    conf.setInt(CacheConfig.localServerPortConf, 2222);
-    conf.set(CacheConfig.dataCacheDirprefixesConf, testDirectoryPrefix + "dir");
+    CacheConfig.setIsStrictMode(conf, true);
+    CacheConfig.setServerPort(conf, 3456);
+    CacheConfig.setLocalServerPort(conf, 2222);
+    CacheConfig.setCacheDataDirPrefix(conf, testDirectoryPrefix + "dir");
+    CacheConfig.setMaxDisks(conf, 1);
+    CacheConfig.setIsParallelWarmupEnabled(conf, false);
+
     Thread server = new Thread()
     {
       public void run()
@@ -113,20 +120,21 @@ public class TestCachingInputStream
   }
 
   public void createCachingStream(Configuration conf)
-      throws InterruptedException, IOException
+      throws InterruptedException, IOException, URISyntaxException
   {
-    conf.setBoolean(CacheConfig.DATA_CACHE_STRICT_MODE, true);
-    conf.setInt(CacheConfig.dataCacheBookkeeperPortConf, 3456);
+    CacheConfig.setIsStrictMode(conf, true);
+    CacheConfig.setServerPort(conf, 3456);
 
     File file = new File(backendFileName);
 
     LocalFSInputStream localFSInputStream = new LocalFSInputStream(backendFileName);
     FSDataInputStream fsDataInputStream = new FSDataInputStream(localFSInputStream);
-    conf.setInt(CacheConfig.blockSizeConf, blockSize);
+    CacheConfig.setBlockSize(conf, blockSize);
     // This should be after server comes up else client could not be created
     inputStream = new CachingInputStream(fsDataInputStream, conf, backendPath, file.length(),
         file.lastModified(), new CachingFileSystemStats(), ClusterType.TEST_CLUSTER_MANAGER,
-        new BookKeeperFactory(), null, CacheConfig.getBlockSize(conf), null);
+        new BookKeeperFactory(), FileSystem.get(new URI(backendFileName), conf),
+        CacheConfig.getBlockSize(conf), null);
   }
 
   @AfterMethod
@@ -135,21 +143,20 @@ public class TestCachingInputStream
     BookKeeperServer.stopServer();
     LocalDataTransferServer.stopServer();
     Configuration conf = new Configuration();
-    conf.set(CacheConfig.dataCacheDirprefixesConf, testDirectoryPrefix + "dir");
+    CacheConfig.setCacheDataDirPrefix(conf, testDirectoryPrefix + "dir");
     inputStream.close();
     File file = new File(backendFileName);
     file.delete();
 
-    File mdFile = new File(CacheConfig.getMDFile(backendPath.toString(), conf));
+    File mdFile = new File(CacheUtil.getMetadataFilePath(backendPath.toString(), conf));
     mdFile.delete();
 
-    File localFile = new File(CacheConfig.getLocalPath(backendPath.toString(), conf));
+    File localFile = new File(CacheUtil.getLocalPath(backendPath.toString(), conf));
     localFile.delete();
   }
 
   @Test
-  public void testCaching()
-      throws IOException
+  public void testCaching() throws IOException, InterruptedException
   {
     // 1. Seek and read
     testCachingHelper();
@@ -175,7 +182,7 @@ public class TestCachingInputStream
 
   @Test
   public void testChunkCachingAndEviction()
-      throws IOException, InterruptedException
+      throws IOException, InterruptedException, URISyntaxException
   {
     // 1. Seek and read some data
     testCachingHelper();
@@ -206,7 +213,7 @@ public class TestCachingInputStream
     //6. Close existing stream and start a new one to get the new lastModifiedDate of backend file
     inputStream.close();
     Configuration conf = new Configuration();
-    conf.set(CacheConfig.dataCacheDirprefixesConf, testDirectoryPrefix + "dir");
+    CacheConfig.setCacheDataDirPrefix(conf, testDirectoryPrefix + "dir");
     createCachingStream(conf);
     log.info("New stream started");
 
@@ -224,8 +231,7 @@ public class TestCachingInputStream
     assertions(readSize, 1000, buffer, expectedOutput);
   }
 
-  private void writeZeros(String filename, int start, int end)
-      throws IOException
+  private void writeZeros(String filename, int start, int end) throws IOException
   {
     File file = new File(filename);
     RandomAccessFile raf = new RandomAccessFile(file, "rw");
@@ -239,8 +245,7 @@ public class TestCachingInputStream
   }
 
   @Test
-  public void testEOF()
-      throws IOException
+  public void testEOF() throws IOException
   {
     inputStream.seek(2500);
     byte[] buffer = new byte[200];

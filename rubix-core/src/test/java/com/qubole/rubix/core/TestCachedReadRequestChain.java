@@ -20,8 +20,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 
-import static com.qubole.rubix.core.DataGen.getExpectedOutput;
-import static com.qubole.rubix.core.DataGen.populateFile;
+import static com.qubole.rubix.core.utils.DataGen.getExpectedOutput;
+import static com.qubole.rubix.core.utils.DataGen.populateFile;
 import static org.testng.Assert.assertTrue;
 
 /**

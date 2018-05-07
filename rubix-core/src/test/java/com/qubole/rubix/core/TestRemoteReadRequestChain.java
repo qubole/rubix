@@ -12,6 +12,7 @@
  */
 package com.qubole.rubix.core;
 
+import com.qubole.rubix.core.utils.DataGen;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;

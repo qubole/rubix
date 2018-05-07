@@ -29,6 +29,7 @@ import com.qubole.rubix.presto.PrestoClusterManager;
 import com.qubole.rubix.spi.BlockLocation;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.Location;
@@ -41,6 +42,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.thrift.shaded.TException;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -76,11 +78,14 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
   private List<String> nodes;
   int currentNodeIndex = -1;
   static long splitSize;
+  private RemoteFetchProcessor fetchProcessor;
 
-  public BookKeeper(Configuration conf)
+  public BookKeeper(Configuration conf) throws FileNotFoundException
   {
     this.conf = conf;
     initializeCache(conf);
+    fetchProcessor = new RemoteFetchProcessor(conf);
+    fetchProcessor.startAsync();
   }
 
   @Override
@@ -234,6 +239,7 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
       return;
     }
     endBlock = setCorrectEndBlock(endBlock, fileLength, remotePath);
+    log.debug("Updating cache for " + remotePath + " StarBlock : " + startBlock + " EndBlock : " + endBlock);
 
     try {
       md.setBlocksCached(startBlock, endBlock);
@@ -266,10 +272,23 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
   public boolean readData(String remotePath, long offset, int length, long fileSize, long lastModified, int clusterType)
       throws TException
   {
+    if (CacheConfig.isParallelWarmupEnabled(conf)) {
+      log.info("Adding to the queue Path : " + remotePath + " Offste : " + offset + " Length " + length);
+      fetchProcessor.addToProcessQueue(remotePath, offset, length, fileSize, lastModified);
+      return true;
+    }
+    else {
+      return readDataInternal(remotePath, offset, length, fileSize, lastModified, clusterType);
+    }
+  }
+
+  private boolean readDataInternal(String remotePath, long offset, int length, long fileSize,
+                                   long lastModified, int clusterType) throws TException
+  {
     int blockSize = CacheConfig.getBlockSize(conf);
     byte[] buffer = new byte[blockSize];
     ByteBuffer byteBuffer = null;
-    String localPath = CacheConfig.getLocalPath(remotePath, conf);
+    String localPath = CacheUtil.getLocalPath(remotePath, conf);
     FileSystem fs = null;
     FSDataInputStream inputStream = null;
     Path path = new Path(remotePath);
@@ -284,7 +303,7 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
         log.debug(" blockLocation is: " + blockLocations.get(idx).getLocation() + " for path " + remotePath + " offset " + offset + " length " + length);
         if (blockLocations.get(idx).getLocation() != Location.CACHED) {
           if (byteBuffer == null) {
-            byteBuffer = ByteBuffer.allocateDirect(CacheConfig.getDiskReadBufferSizeDefault(conf));
+            byteBuffer = ByteBuffer.allocateDirect(CacheConfig.getDiskReadBufferSize(conf));
           }
 
           if (fs == null) {
@@ -346,11 +365,13 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
     return endBlock;
   }
 
-  private static synchronized void initializeCache(final Configuration conf)
+  private static synchronized void initializeCache(final Configuration conf) throws FileNotFoundException
   {
+    CacheUtil.createCacheDirectories(conf);
+
     long avail = 0;
-    for (int d = 0; d < CacheConfig.numDisks(conf); d++) {
-      avail += new File(CacheConfig.getDirPath(conf, d)).getUsableSpace();
+    for (int d = 0; d < CacheUtil.getCacheDiskCount(conf); d++) {
+      avail += new File(CacheUtil.getDirPath(d, conf)).getUsableSpace();
     }
     avail = avail / 1024 / 1024;
     log.info("total free space " + avail + "MB");
@@ -369,7 +390,7 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
           }
         })
         .maximumWeight((long) (total * 1.0 * CacheConfig.getCacheDataFullnessPercentage(conf) / 100.0))
-        .expireAfterWrite(CacheConfig.getCacheDataExpirationAfterWrite(conf), TimeUnit.SECONDS)
+        .expireAfterWrite(CacheConfig.getCacheDataExpirationAfterWrite(conf), TimeUnit.MILLISECONDS)
         .removalListener(new RemovalListener<String, FileMetadata>()
         {
           public void onRemoval(final RemovalNotification<String, FileMetadata> notification)

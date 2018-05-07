@@ -10,45 +10,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-package com.qubole.rubix.hadoop1;
+package com.qubole.rubix.hadoop2;
 
 import com.qubole.rubix.core.CachingFileSystem;
 import com.qubole.rubix.spi.ClusterManager;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.s3native.NativeS3FileSystem;
+import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 
 import java.io.IOException;
 import java.net.URI;
 
 /**
- * Created by stagra on 9/2/16.
+ * Created by Abhishek on 12/19/17.
  */
-public class CachingNativeS3FileSystem extends CachingFileSystem<NativeS3FileSystem>
+
+public class CachingNativeAzureFileSystem extends CachingFileSystem<NativeAzureFileSystem>
 {
-  private static final Log LOG = LogFactory.getLog(CachingNativeS3FileSystem.class);
+  private static final Log LOG = LogFactory.getLog(CachingNativeAzureFileSystem.class);
+  private ClusterManager clusterManager;
 
-  private static ClusterManager clusterManager;
+  private static final String SCHEME = "wasb";
 
-  public CachingNativeS3FileSystem()
+  public CachingNativeAzureFileSystem() throws IOException
   {
     super();
   }
 
-  private static final String SCHEME = "s3n";
-
-  @Override
   public void initialize(URI uri, Configuration conf) throws IOException
   {
-    LOG.info("Initializing CachingNativeS3FileSystem");
-        /*ClusterManager clusterManager = new Hadoop1ClusterManager();
-        clusterManager.initialize(conf);*/
+    LOG.debug("Initializing CachingNativeAzureFileSystem - Hadoop2");
     if (clusterManager == null) {
       initializeClusterManager(conf);
     }
     setClusterManager(clusterManager);
-
     super.initialize(uri, conf);
   }
 
@@ -62,8 +58,7 @@ public class CachingNativeS3FileSystem extends CachingFileSystem<NativeS3FileSys
     if (clusterManager != null) {
       return;
     }
-
-    clusterManager = new Hadoop1ClusterManager();
+    clusterManager = new Hadoop2ClusterManager();
     clusterManager.initialize(conf);
   }
 }
