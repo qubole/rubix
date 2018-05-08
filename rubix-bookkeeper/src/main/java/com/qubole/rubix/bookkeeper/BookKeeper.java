@@ -57,7 +57,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import static com.codahale.metrics.MetricRegistry.name;
 import static com.qubole.rubix.spi.ClusterType.HADOOP2_CLUSTER_MANAGER;
 import static com.qubole.rubix.spi.ClusterType.PRESTO_CLUSTER_MANAGER;
 import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;

@@ -38,18 +38,18 @@ public class TestBookKeeperMetrics
   @BeforeClass
   public void setUp() throws IOException
   {
-    bookKeeper = new BookKeeper(conf, metrics);
-
     // Set configuration values for testing
-    conf.set(CacheConfig.dataCacheDirprefixesConf, "/tmp/media/ephemeral");
-    conf.setInt(CacheConfig.maxDisksConf, 5);
-    conf.setInt(CacheConfig.blockSizeConf, BLOCK_SIZE);
+    CacheConfig.setCacheDataDirPrefix(conf, "/tmp/media/ephemeral");
+    CacheConfig.setMaxDisks(conf, 5);
+    CacheConfig.setBlockSize(conf, BLOCK_SIZE);
 
     // Create cache directories
     Files.createDirectories(Paths.get(CacheConfig.getCacheDirPrefixList(conf)));
-    for (int i = 0; i < CacheConfig.getMaxDisks(conf); i++) {
+    for (int i = 0; i < CacheConfig.getCacheMaxDisks(conf); i++) {
       Files.createDirectories(Paths.get(CacheConfig.getCacheDirPrefixList(conf) + i));
     }
+
+    bookKeeper = new BookKeeper(conf, metrics);
   }
 
   /**
