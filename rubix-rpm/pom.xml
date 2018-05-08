@@ -3,7 +3,7 @@
     <parent>
         <artifactId>rubix-root</artifactId>
         <groupId>com.qubole.rubix</groupId>
-        <version>0.2.14-SNAPSHOT</version>
+        <version>0.3.1-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -18,11 +18,6 @@
         <dependency>
             <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-bookkeeper</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.qubole.rubix</groupId>
-            <artifactId>rubix-hadoop1</artifactId>
         </dependency>
 
         <dependency>
@@ -79,7 +74,6 @@
                                     <dependency>
                                         <includes>
                                             <include>com.qubole.rubix:rubix-bookkeeper</include>
-                                            <include>com.qubole.rubix:rubix-hadoop1</include>
                                             <include>com.qubole.rubix:rubix-hadoop2</include>
                                             <include>com.qubole.rubix:rubix-spi</include>
                                             <include>com.qubole.rubix:rubix-presto</include>

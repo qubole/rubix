@@ -16,6 +16,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.DataTransferClientHelper;
 import com.qubole.rubix.spi.DataTransferHeader;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
@@ -179,7 +180,14 @@ public class LocalDataTransferServer extends Configured implements Tool
           throw new Exception("Could not cache data required by non-local node");
         }
 
-        String filename = CacheConfig.getLocalPath(remotePath, conf);
+        if (!CacheConfig.isParallelWarmupEnabled(conf)) {
+          if (!bookKeeperClient.readData(remotePath, offset, readLength, header.getFileSize(),
+              header.getLastModified(), header.getClusterType())) {
+            throw new Exception("Could not cache data required by non-local node");
+          }
+        }
+
+        String filename = CacheUtil.getLocalPath(remotePath, conf);
         FileChannel fc = new FileInputStream(filename).getChannel();
         int maxCount = CacheConfig.getLocalTransferBufferSize(conf);
         int lengthRemaining = readLength;
@@ -188,6 +196,7 @@ public class LocalDataTransferServer extends Configured implements Tool
           fc.close();
           throw new Exception("File size is smaller than requested read");
         }
+
         int nread = 0;
         while (nread < readLength) {
           if (maxCount > lengthRemaining) {
