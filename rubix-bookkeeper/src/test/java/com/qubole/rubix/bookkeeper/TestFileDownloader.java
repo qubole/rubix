@@ -42,8 +42,9 @@ public class TestFileDownloader
   public void setUp() throws Exception
   {
     conf = new Configuration();
-    conf.set(CacheConfig.dataCacheDirprefixesConf, testDirectoryPrefix + "dir");
-    Files.createDirectories(Paths.get(testDirectory));
+    CacheConfig.setCacheDataDirPrefix(conf, testDirectoryPrefix + "dir");
+    CacheConfig.setMaxDisks(conf, 1);
+    Files.createDirectories(Paths.get(testDirectory, CacheConfig.getCacheDataDirSuffix(conf)));
   }
 
   @AfterMethod

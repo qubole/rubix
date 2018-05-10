@@ -66,7 +66,7 @@ public class DiskMonitorService extends AbstractScheduledService
   @Override
   protected Scheduler scheduler()
   {
-    return Scheduler.newFixedDelaySchedule(60, interval, TimeUnit.SECONDS);
+    return Scheduler.newFixedDelaySchedule(60000, interval, TimeUnit.MILLISECONDS);
   }
 
   static class FailureListener

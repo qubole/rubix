@@ -29,6 +29,7 @@ import org.apache.thrift.shaded.transport.TServerSocket;
 import org.apache.thrift.shaded.transport.TServerTransport;
 import org.apache.thrift.shaded.transport.TTransportException;
 
+import java.io.FileNotFoundException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -82,9 +83,14 @@ public class BookKeeperServer extends Configured implements Tool
 
   public static void startServer(Configuration conf, MetricRegistry metricsRegistry)
   {
-    bookKeeper = new BookKeeper(conf);
     metrics = metricsRegistry;
-
+    try {
+      bookKeeper = new BookKeeper(conf, metrics);
+    }
+    catch (FileNotFoundException e) {
+      log.error("Cache directories could not be created", e);
+      return;
+    }
     scheduleLivenessMetric();
 
     DiskMonitorService diskMonitorService = new DiskMonitorService(conf, bookKeeper);
