@@ -13,11 +13,16 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
+import com.qubole.rubix.spi.CacheConfig;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNull;
@@ -30,10 +35,20 @@ public class TestBookKeeperServer
   private Configuration conf;
 
   @BeforeMethod
-  public void setUp()
+  public void setUp() throws IOException
   {
     conf = new Configuration();
     metrics = new MetricRegistry();
+
+    // Set configuration values for testing
+    CacheConfig.setCacheDataDirPrefix(conf, "/tmp/media/ephemeral");
+    CacheConfig.setMaxDisks(conf, 5);
+
+    // Create cache directories
+    Files.createDirectories(Paths.get(CacheConfig.getCacheDirPrefixList(conf)));
+    for (int i = 0; i < CacheConfig.getCacheMaxDisks(conf); i++) {
+      Files.createDirectories(Paths.get(CacheConfig.getCacheDirPrefixList(conf) + i));
+    }
   }
 
   /**

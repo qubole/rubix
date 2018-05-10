@@ -112,27 +112,6 @@ public class BookKeeperServer extends Configured implements Tool
     }
   }
 
-  private static void scheduleLivenessMetric()
-  {
-    ScheduledExecutorService metricsService = Executors.newSingleThreadScheduledExecutor();
-    metricsService.scheduleAtFixedRate(new Runnable()
-    {
-      @Override
-      public void run()
-      {
-        log.debug("Emitting BookKeeper daemon liveness check");
-        metrics.register(METRIC_BOOKKEEPER_LIVENESS_CHECK, new Gauge<Integer>()
-          {
-            @Override
-            public Integer getValue()
-            {
-              return 1;
-            }
-          });
-      }
-    }, 0, 1000, TimeUnit.MILLISECONDS);
-  }
-
   public static void stopServer()
   {
     metrics.remove(METRIC_BOOKKEEPER_LIVENESS_CHECK);
@@ -147,5 +126,41 @@ public class BookKeeperServer extends Configured implements Tool
     }
 
     return false;
+  }
+
+  /**
+   * Starts a new thread to report the liveness metric at a fixed rate.
+   */
+  private static void scheduleLivenessMetric()
+  {
+    final ScheduledExecutorService metricsService = Executors.newSingleThreadScheduledExecutor();
+    metricsService.scheduleAtFixedRate(new LivenessCheck(), 0, 1000, TimeUnit.MILLISECONDS);
+  }
+
+  /**
+   * Class for emitting a liveness check for the BookKeeper server.
+   */
+  private static class LivenessCheck implements Runnable
+  {
+    @Override
+    public void run()
+    {
+      log.debug("Emitting BookKeeper daemon liveness check");
+      registerLivenessCheck();
+    }
+
+    private void registerLivenessCheck()
+    {
+      if (metrics.getGauges().get(METRIC_BOOKKEEPER_LIVENESS_CHECK) == null) {
+        metrics.register(METRIC_BOOKKEEPER_LIVENESS_CHECK, new Gauge<Integer>()
+        {
+          @Override
+          public Integer getValue()
+          {
+            return 1;
+          }
+        });
+      }
+    }
   }
 }
