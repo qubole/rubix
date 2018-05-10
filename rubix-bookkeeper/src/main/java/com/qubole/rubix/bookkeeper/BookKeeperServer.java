@@ -12,6 +12,7 @@
  */
 package com.qubole.rubix.bookkeeper;
 
+import com.codahale.metrics.MetricRegistry;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.qubole.rubix.spi.BookKeeperService;
@@ -39,6 +40,9 @@ public class BookKeeperServer extends Configured implements Tool
 {
   public static BookKeeper bookKeeper;
   public static BookKeeperService.Processor processor;
+
+  // Registry for gathering & storing necessary metrics
+  private static MetricRegistry metrics;
 
   public static Configuration conf;
 
@@ -72,8 +76,9 @@ public class BookKeeperServer extends Configured implements Tool
 
   public static void startServer(Configuration conf)
   {
+    metrics = new MetricRegistry();
     try {
-      bookKeeper = new BookKeeper(conf);
+      bookKeeper = new BookKeeper(conf, metrics);
     }
     catch (FileNotFoundException e) {
       log.error("Cache directories could not be created", e);

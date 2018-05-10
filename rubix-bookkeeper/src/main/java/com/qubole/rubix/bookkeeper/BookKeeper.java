@@ -12,6 +12,8 @@
  */
 package com.qubole.rubix.bookkeeper;
 
+import com.codahale.metrics.Counter;
+import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.cache.Cache;
@@ -64,6 +66,8 @@ import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
  */
 public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
 {
+  public static final String METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT = "rubix.bookkeeper.local_cache.count";
+
   private static Cache<String, FileMetadata> fileMetadataCache;
   private static ClusterManager clusterManager;
   private static Log log = LogFactory.getLog(BookKeeper.class.getName());
@@ -80,12 +84,28 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
   static long splitSize;
   private RemoteFetchProcessor fetchProcessor;
 
-  public BookKeeper(Configuration conf) throws FileNotFoundException
+  // Registry for gathering & storing necessary metrics
+  private final MetricRegistry metrics;
+
+  // Metrics counter to keep track of the total number of blocks hit
+  private Counter localCacheCount;
+
+  public BookKeeper(Configuration conf, MetricRegistry metrics) throws FileNotFoundException
   {
     this.conf = conf;
+    this.metrics = metrics;
+    initializeMetrics();
     initializeCache(conf);
     fetchProcessor = new RemoteFetchProcessor(conf);
     fetchProcessor.startAsync();
+  }
+
+  /**
+   * Initialize the instruments used for gathering desired metrics.
+   */
+  private void initializeMetrics()
+  {
+    localCacheCount = metrics.counter(METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT);
   }
 
   @Override
@@ -140,6 +160,8 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
     try {
       for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
         totalRequests++;
+        localCacheCount.inc();
+
         long split = (blockNum * blockSize) / splitSize;
         if (!blockSplits.get(split).equalsIgnoreCase(nodeName)) {
           blockLocations.add(new BlockLocation(Location.NON_LOCAL, blockSplits.get(split)));

@@ -50,6 +50,8 @@
         <commons-httpclient.version>3.0.1</commons-httpclient.version>
         <dep.hadoop1.version>1.2.0</dep.hadoop1.version>
         <dep.hadoop2.version>2.6.0</dep.hadoop2.version>
+        <dep.metrics.version>3.1.0</dep.metrics.version>
+        <dep.testng.version>6.9.8</dep.testng.version>
     </properties>
 
     <modules>
@@ -137,6 +139,12 @@
                 <version>${dep.hadoop2.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>io.dropwizard.metrics</groupId>
+                <artifactId>metrics-core</artifactId>
+                <version>${dep.metrics.version}</version>
+                <scope>provided</scope>
+            </dependency>
 
             <dependency>
                 <groupId>org.weakref</groupId>
