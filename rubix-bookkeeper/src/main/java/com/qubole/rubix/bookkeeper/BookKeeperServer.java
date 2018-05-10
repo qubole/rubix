@@ -12,6 +12,7 @@
  */
 package com.qubole.rubix.bookkeeper;
 
+import com.codahale.metrics.MetricRegistry;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.qubole.rubix.spi.BookKeeperService;
@@ -27,6 +28,8 @@ import org.apache.thrift.shaded.transport.TServerSocket;
 import org.apache.thrift.shaded.transport.TServerTransport;
 import org.apache.thrift.shaded.transport.TTransportException;
 
+import java.io.FileNotFoundException;
+
 import static com.qubole.rubix.spi.CacheConfig.getServerMaxThreads;
 import static com.qubole.rubix.spi.CacheConfig.getServerPort;
 
@@ -37,6 +40,9 @@ public class BookKeeperServer extends Configured implements Tool
 {
   public static BookKeeper bookKeeper;
   public static BookKeeperService.Processor processor;
+
+  // Registry for gathering & storing necessary metrics
+  private static MetricRegistry metrics;
 
   public static Configuration conf;
 
@@ -70,7 +76,15 @@ public class BookKeeperServer extends Configured implements Tool
 
   public static void startServer(Configuration conf)
   {
-    bookKeeper = new BookKeeper(conf);
+    metrics = new MetricRegistry();
+    try {
+      bookKeeper = new BookKeeper(conf, metrics);
+    }
+    catch (FileNotFoundException e) {
+      log.error("Cache directories could not be created", e);
+      return;
+    }
+
     DiskMonitorService diskMonitorService = new DiskMonitorService(conf, bookKeeper);
     diskMonitorService.startAsync();
     processor = new BookKeeperService.Processor(bookKeeper);

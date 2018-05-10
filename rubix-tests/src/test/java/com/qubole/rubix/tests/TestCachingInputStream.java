@@ -21,6 +21,7 @@ import com.qubole.rubix.core.utils.DataGen;
 import com.qubole.rubix.core.utils.DeleteFileVisitor;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.ClusterType;
 
 import org.apache.commons.logging.Log;
@@ -84,11 +85,13 @@ public class TestCachingInputStream
   {
     final Configuration conf = new Configuration();
 
-    conf.setBoolean(CacheConfig.DATA_CACHE_STRICT_MODE, true);
-    conf.setInt(CacheConfig.dataCacheBookkeeperPortConf, 3456);
-    conf.setInt(CacheConfig.localServerPortConf, 2222);
-    conf.set(CacheConfig.dataCacheDirprefixesConf, testDirectoryPrefix + "dir");
-    conf.setBoolean(CacheConfig.parallelWarmupEnable, false);
+    CacheConfig.setIsStrictMode(conf, true);
+    CacheConfig.setServerPort(conf, 3456);
+    CacheConfig.setLocalServerPort(conf, 2222);
+    CacheConfig.setCacheDataDirPrefix(conf, testDirectoryPrefix + "dir");
+    CacheConfig.setMaxDisks(conf, 1);
+    CacheConfig.setIsParallelWarmupEnabled(conf, false);
+
     Thread server = new Thread()
     {
       public void run()
@@ -119,14 +122,14 @@ public class TestCachingInputStream
   public void createCachingStream(Configuration conf)
       throws InterruptedException, IOException, URISyntaxException
   {
-    conf.setBoolean(CacheConfig.DATA_CACHE_STRICT_MODE, true);
-    conf.setInt(CacheConfig.dataCacheBookkeeperPortConf, 3456);
+    CacheConfig.setIsStrictMode(conf, true);
+    CacheConfig.setServerPort(conf, 3456);
 
     File file = new File(backendFileName);
 
     LocalFSInputStream localFSInputStream = new LocalFSInputStream(backendFileName);
     FSDataInputStream fsDataInputStream = new FSDataInputStream(localFSInputStream);
-    conf.setInt(CacheConfig.blockSizeConf, blockSize);
+    CacheConfig.setBlockSize(conf, blockSize);
     // This should be after server comes up else client could not be created
     inputStream = new CachingInputStream(fsDataInputStream, conf, backendPath, file.length(),
         file.lastModified(), new CachingFileSystemStats(), ClusterType.TEST_CLUSTER_MANAGER,
@@ -140,15 +143,15 @@ public class TestCachingInputStream
     BookKeeperServer.stopServer();
     LocalDataTransferServer.stopServer();
     Configuration conf = new Configuration();
-    conf.set(CacheConfig.dataCacheDirprefixesConf, testDirectoryPrefix + "dir");
+    CacheConfig.setCacheDataDirPrefix(conf, testDirectoryPrefix + "dir");
     inputStream.close();
     File file = new File(backendFileName);
     file.delete();
 
-    File mdFile = new File(CacheConfig.getMDFile(backendPath.toString(), conf));
+    File mdFile = new File(CacheUtil.getMetadataFilePath(backendPath.toString(), conf));
     mdFile.delete();
 
-    File localFile = new File(CacheConfig.getLocalPath(backendPath.toString(), conf));
+    File localFile = new File(CacheUtil.getLocalPath(backendPath.toString(), conf));
     localFile.delete();
   }
 
@@ -210,7 +213,7 @@ public class TestCachingInputStream
     //6. Close existing stream and start a new one to get the new lastModifiedDate of backend file
     inputStream.close();
     Configuration conf = new Configuration();
-    conf.set(CacheConfig.dataCacheDirprefixesConf, testDirectoryPrefix + "dir");
+    CacheConfig.setCacheDataDirPrefix(conf, testDirectoryPrefix + "dir");
     createCachingStream(conf);
     log.info("New stream started");
 

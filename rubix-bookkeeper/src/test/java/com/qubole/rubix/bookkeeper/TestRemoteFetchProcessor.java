@@ -17,6 +17,7 @@ import com.google.common.collect.RangeSet;
 import com.qubole.rubix.core.utils.DataGen;
 import com.qubole.rubix.core.utils.DeleteFileVisitor;
 import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.CacheUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -63,9 +64,10 @@ public class TestRemoteFetchProcessor
   public void setUp() throws Exception
   {
     conf = new Configuration();
-    conf.set(CacheConfig.dataCacheDirprefixesConf, testDirectoryPrefix + "dir");
-    conf.setInt(CacheConfig.blockSizeConf, blockSize);
-    Files.createDirectories(Paths.get(testDirectory));
+    CacheConfig.setCacheDataDirPrefix(conf, testDirectoryPrefix + "dir");
+    CacheConfig.setBlockSize(conf, blockSize);
+    CacheConfig.setMaxDisks(conf, 1);
+    Files.createDirectories(Paths.get(testDirectory, CacheConfig.getCacheDataDirSuffix(conf)));
   }
 
   @AfterMethod
@@ -79,7 +81,7 @@ public class TestRemoteFetchProcessor
   @Test
   public void testMergeRequests() throws Exception
   {
-    conf.setLong(CacheConfig.remoteFetchProcessInterval, 2000);
+    CacheConfig.setRemoteFetchProcessInterval(conf, 2000);
     RemoteFetchProcessor processor = new RemoteFetchProcessor(conf);
 
     log.info("Merge Test 1 when requests are all from different file");
@@ -141,7 +143,7 @@ public class TestRemoteFetchProcessor
     File file = new File(backendFileName);
     Path backendPath = new Path("file:///" + backendFileName);
 
-    conf.setLong(CacheConfig.remoteFetchProcessInterval, 2000);
+    CacheConfig.setRemoteFetchProcessInterval(conf, 2000);
     RemoteFetchProcessor processsor = new RemoteFetchProcessor(conf);
 
     processsor.addToProcessQueue(backendPath.toString(), 0, 100, file.length(), (long) 10000);
@@ -156,7 +158,7 @@ public class TestRemoteFetchProcessor
 
     processsor.processRequest(System.currentTimeMillis() + 2000);
 
-    String downloadedFile = CacheConfig.getLocalPath(backendPath.toString(), conf);
+    String downloadedFile = CacheUtil.getLocalPath(backendPath.toString(), conf);
     String resultString = new String(DataGen.readBytesFromFile(downloadedFile, 0, 500));
 
     String expected = DataGen.generateContent().substring(0, 500);
@@ -173,7 +175,7 @@ public class TestRemoteFetchProcessor
     File file = new File(backendFileName);
     Path backendPath = new Path("file:///" + backendFileName);
 
-    conf.setLong(CacheConfig.remoteFetchProcessInterval, 2000);
+    CacheConfig.setRemoteFetchProcessInterval(conf, 2000);
     RemoteFetchProcessor processsor = new RemoteFetchProcessor(conf);
 
     processsor.addToProcessQueue(backendPath.toString(), 0, 100, file.length(), (long) 10000);
@@ -185,7 +187,7 @@ public class TestRemoteFetchProcessor
 
     processsor.processRequest(System.currentTimeMillis() + 2000);
 
-    String downloadedFile = CacheConfig.getLocalPath(backendPath.toString(), conf);
+    String downloadedFile = CacheUtil.getLocalPath(backendPath.toString(), conf);
 
     String resultString = null;
     String expected = null;

@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
+import com.google.gson.annotations.SerializedName;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
@@ -31,6 +32,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
+import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collections;
@@ -60,7 +62,7 @@ public class Hadoop2ClusterManager extends ClusterManager
   public void initialize(Configuration conf)
   {
     super.initialize(conf);
-    yconf = new YarnConfiguration();
+    yconf = new YarnConfiguration(conf);
     this.address = yconf.get(addressConf, address);
     this.serverAddress = address.substring(0, address.indexOf(":"));
     this.serverPort = Integer.parseInt(address.substring(address.indexOf(":") + 1));
@@ -102,14 +104,20 @@ public class Hadoop2ClusterManager extends ClusterManager
                 return ImmutableList.of();
               }
               Gson gson = new Gson();
-              Type type = new TypeToken<Nodes>()
+              Type type = new TypeToken<NodesResponse>()
               {
               }.getType();
-              Nodes nodes = gson.fromJson(response.toString(), type);
-              List<Elements> allNodes = nodes.getNodes().getNode();
+              NodesResponse nodesResponse = gson.fromJson(response.toString(), type);
+              List<Node> allNodes = nodesResponse.getNodes().getNodeList();
               Set<String> hosts = new HashSet<>();
 
-              for (Elements node : allNodes) {
+              if (allNodes.isEmpty()) {
+                // Empty result set => server up and only master node running, return localhost has the only node
+                // Do not need to consider failed nodes list as 1node cluster and server is up since it replied to allNodesRequest
+                return ImmutableList.of(InetAddress.getLocalHost().getHostAddress());
+              }
+
+              for (Node node : allNodes) {
                 String state = node.getState();
                 log.debug("Hostname: " + node.getNodeHostName() + "State: " + state);
                 //keep only healthy data nodes
@@ -168,62 +176,76 @@ public class Hadoop2ClusterManager extends ClusterManager
     return ClusterType.HADOOP2_CLUSTER_MANAGER;
   }
 
-  public static class Nodes
+  public static class NodesResponse
   {
-    public Nodes()
-    {
-    }
+    @SerializedName("nodes")
+    private Nodes nodes;
 
-    private Node nodes;
-
-    public void setNodes(Node nodes)
+    // Necessary for GSON parsing
+    public NodesResponse(Nodes nodes)
     {
       this.nodes = nodes;
     }
 
-    public Node getNodes()
+    public void setNodes(Nodes nodes)
+    {
+      this.nodes = nodes;
+    }
+
+    public Nodes getNodes()
     {
       return nodes;
     }
   }
 
-  public static class Node
+  public static class Nodes
   {
-    public Node()
+    @SerializedName("node")
+    private List<Node> nodeList;
+
+    // Necessary for GSON parsing
+    public Nodes(List<Node> nodeStats)
     {
+      this.nodeList = nodeStats;
     }
 
-    private List<Elements> node;
-
-    public void setNode(List<Elements> node)
+    public void setNodeList(List<Node> nodeStats)
     {
-      this.node = node;
+      this.nodeList = nodeStats;
     }
 
-    public List<Elements> getNode()
+    public List<Node> getNodeList()
     {
-      return node;
+      return nodeList;
     }
   }
 
-  public static class Elements
+  public static class Node
   {
-        /*
-        rack             string
-        state            string
-        id               string
-        nodeHostName     string
-        nodeHTTPAddress  string
-        healthStatus     string
-        healthReport     string
-        lastHealthUpdate long
-        usedMemoryMB     long
-        availMemoryMB    long
-        numContainers    int
-        */
+    /*
+    /ws/v1/cluster/nodes REST endpoint fields:
+    rack             string
+    state            string
+    id               string
+    nodeHostName     string
+    nodeHTTPAddress  string
+    healthStatus     string
+    healthReport     string
+    lastHealthUpdate long
+    usedMemoryMB     long
+    availMemoryMB    long
+    numContainers    int
+    */
 
     String nodeHostName;
     String state;
+
+    // Necessary for GSON parsing
+    public Node(String nodeHostName, String state)
+    {
+      this.nodeHostName = nodeHostName;
+      this.state = state;
+    }
 
     String getState()
     {

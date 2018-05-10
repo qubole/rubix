@@ -25,6 +25,9 @@ Check the [User and Developer manual](http://rubix.readthedocs.io/en/latest/inde
 [Documentation](http://rubix.readthedocs.io/en/latest/index.html)  
 [User Group (Google)](https://groups.google.com/forum/#!forum/rubix-users)
 
+### Talks
+[Talk on Rubix at Strata 2017](https://www.slideshare.net/shubhamtagra/rubix-78333181)
+
 ### Blog Posts
 [Rubix Introduction](https://www.qubole.com/blog/rubix-fast-cache-access-for-big-data-analytics-on-cloud-storage/)  
 [Rubix on EMR](https://www.qubole.com/blog/caching-emr-using-rubix-performance-benchmark-benefits/)
