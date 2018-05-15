@@ -30,9 +30,6 @@ import org.apache.thrift.shaded.transport.TServerTransport;
 import org.apache.thrift.shaded.transport.TTransportException;
 
 import java.io.FileNotFoundException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 import static com.qubole.rubix.spi.CacheConfig.getServerMaxThreads;
 import static com.qubole.rubix.spi.CacheConfig.getServerPort;
@@ -91,7 +88,8 @@ public class BookKeeperServer extends Configured implements Tool
       log.error("Cache directories could not be created", e);
       return;
     }
-    scheduleLivenessMetric();
+
+    registerMetrics();
 
     DiskMonitorService diskMonitorService = new DiskMonitorService(conf, bookKeeper);
     diskMonitorService.startAsync();
@@ -112,6 +110,21 @@ public class BookKeeperServer extends Configured implements Tool
     }
   }
 
+  /**
+   * Register desired metrics.
+   */
+  private static void registerMetrics()
+  {
+    metrics.register(METRIC_BOOKKEEPER_LIVENESS_CHECK, new Gauge<Integer>()
+    {
+      @Override
+      public Integer getValue()
+      {
+        return 1;
+      }
+    });
+  }
+
   public static void stopServer()
   {
     metrics.remove(METRIC_BOOKKEEPER_LIVENESS_CHECK);
@@ -126,41 +139,5 @@ public class BookKeeperServer extends Configured implements Tool
     }
 
     return false;
-  }
-
-  /**
-   * Starts a new thread to report the liveness metric at a fixed rate.
-   */
-  private static void scheduleLivenessMetric()
-  {
-    final ScheduledExecutorService metricsService = Executors.newSingleThreadScheduledExecutor();
-    metricsService.scheduleAtFixedRate(new LivenessCheck(), 0, 1000, TimeUnit.MILLISECONDS);
-  }
-
-  /**
-   * Class for emitting a liveness check for the BookKeeper server.
-   */
-  private static class LivenessCheck implements Runnable
-  {
-    @Override
-    public void run()
-    {
-      log.debug("Emitting BookKeeper daemon liveness check");
-      registerLivenessCheck();
-    }
-
-    private void registerLivenessCheck()
-    {
-      if (metrics.getGauges().get(METRIC_BOOKKEEPER_LIVENESS_CHECK) == null) {
-        metrics.register(METRIC_BOOKKEEPER_LIVENESS_CHECK, new Gauge<Integer>()
-        {
-          @Override
-          public Integer getValue()
-          {
-            return 1;
-          }
-        });
-      }
-    }
   }
 }
