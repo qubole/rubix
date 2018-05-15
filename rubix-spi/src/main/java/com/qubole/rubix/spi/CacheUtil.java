@@ -48,16 +48,20 @@ public class CacheUtil
     final int maxDisks = CacheConfig.getCacheMaxDisks(conf);
 
     for (String dirPrefix : dirPrefixList) {
+      boolean parentDirectoryExists = false;
       for (int i = 0; i < maxDisks; ++i) {
         final String cacheParentDir = dirPrefix + i;
         log.debug("Checking for " + cacheParentDir);
 
         if (exists(cacheParentDir)) {
+          parentDirectoryExists = true;
           final String cacheDirPath = cacheParentDir + "/" + CacheConfig.getCacheDataDirSuffix(conf);
           createCacheDirectory(cacheDirPath);
         }
         else {
-          throw new FileNotFoundException(String.format("Cache parent directory %s does not exist", cacheParentDir));
+          if (!parentDirectoryExists) {
+            throw new FileNotFoundException(String.format("Cache parent directory %s does not exist", cacheParentDir));
+          }
         }
       }
     }
