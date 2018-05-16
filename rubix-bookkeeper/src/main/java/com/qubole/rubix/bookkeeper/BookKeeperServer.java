@@ -12,6 +12,7 @@
  */
 package com.qubole.rubix.bookkeeper;
 
+import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
@@ -38,6 +39,9 @@ import static com.qubole.rubix.spi.CacheConfig.getServerPort;
  */
 public class BookKeeperServer extends Configured implements Tool
 {
+  // Metric key for liveness of the BookKeeper daemon.
+  public static final String METRIC_BOOKKEEPER_LIVENESS_CHECK = "rubix.bookkeeper.liveness.gauge";
+
   public static BookKeeper bookKeeper;
   public static BookKeeperService.Processor processor;
 
@@ -67,16 +71,16 @@ public class BookKeeperServer extends Configured implements Tool
     {
       public void run()
       {
-        startServer(conf);
+        startServer(conf, new MetricRegistry());
       }
     };
     new Thread(bookKeeperServer).run();
     return 0;
   }
 
-  public static void startServer(Configuration conf)
+  public static void startServer(Configuration conf, MetricRegistry metricsRegistry)
   {
-    metrics = new MetricRegistry();
+    metrics = metricsRegistry;
     try {
       bookKeeper = new BookKeeper(conf, metrics);
     }
@@ -84,6 +88,8 @@ public class BookKeeperServer extends Configured implements Tool
       log.error("Cache directories could not be created", e);
       return;
     }
+
+    registerMetrics();
 
     DiskMonitorService diskMonitorService = new DiskMonitorService(conf, bookKeeper);
     diskMonitorService.startAsync();
@@ -104,8 +110,24 @@ public class BookKeeperServer extends Configured implements Tool
     }
   }
 
+  /**
+   * Register desired metrics.
+   */
+  private static void registerMetrics()
+  {
+    metrics.register(METRIC_BOOKKEEPER_LIVENESS_CHECK, new Gauge<Integer>()
+    {
+      @Override
+      public Integer getValue()
+      {
+        return 1;
+      }
+    });
+  }
+
   public static void stopServer()
   {
+    metrics.remove(METRIC_BOOKKEEPER_LIVENESS_CHECK);
     server.stop();
   }
 
