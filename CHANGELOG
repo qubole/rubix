@@ -27,27 +27,28 @@ Changes
 
 Other
 ~~~~~
-- #124: report liveness metric for BookKeeper daemon (#139) [Jordan
-  Wilson]
+- #124: report liveness metric for BookKeeper daemon (#139) [Jordan Wilson]
 
-  Add a liveness gauge that the daemon is up & alive. Right now, this is a simple check that a thread (reporter to be added in a subsequent commit) is alive. In the future, this simple framework will be used to add more comprehensive health checks. Ref: #140
-- #115: add tests to rubix-hadoop2 module to match rubix-presto (#118)
+  Add a liveness gauge that the daemon is up & alive. Right now, this is a 
+  simple check that a thread (reporter to be added in a subsequent commit) 
+  is alive. In the future, this simple framework will be used to add more 
+  comprehensive health checks. Ref: #140
+
+- #115: add tests to rubix-hadoop2 module to match rubix-presto (#118) 
   [Jordan Wilson]
 
   Fix #115
-- [maven-release-plugin] prepare for next development iteration.
-  [Abhishek Das]
 
 
 0.3.0 (2018-04-10)
------------------------------
+------------------
 
 New
 ~~~
 - #88: Added support for NativeAzure file system (#91) [Abhishek Das]
 
 0.2.14 (2018-04-09)
-------------------------------
+-------------------
 
 Fix
 ~~~
@@ -60,7 +61,7 @@ Other
 
 
 0.2.13 (2018-01-10)
-------------------------------
+-------------------
 
 New
 ~~~
@@ -87,12 +88,10 @@ Other
   [abhishekdas99]
 
   Document latest changes to rubix-admin to support open source Presto on EMR clusters.
-- [maven-release-plugin] prepare for next development iteration.
-  [Shubham Tagra]
 
 
 0.2.12 (2017-09-19)
-------------------------------
+-------------------
 
 New
 ~~~
@@ -142,7 +141,10 @@ Other
   Fix #75
 - EMR: move client config to independent file (#73) [Vamshi Pasunuru]
 
-  Whatever properties that are needed by rubix client can now be specified in pre-populated /etc/rubix/config.xml. Like in qubole, we dump req properties in this file during installation. This avoid the need for an explicit dependency on yarn config.
+  Whatever properties that are needed by rubix client can now be specified 
+  in pre-populated /etc/rubix/config.xml. Like in qubole, we dump req 
+  properties in this file during installation. This avoid the need for an 
+  explicit dependency on yarn config.
 
   Tested in Qubole and EMR clusters.
 - Support for Presto on EMR (#69) [Vamshi Pasunuru]
@@ -151,7 +153,8 @@ Other
   Also contains changes in rubix-rpm to correctly configure rubix.
 - Adding support for HDFS for hadoop2 cluster (#71) [abhishekdas99]
 
-  * fix: usr: Adding support for Distributed File System as remote file system for hadoop2 clusters
+  * fix: usr: Adding support for Distributed File System as remote file system 
+    for hadoop2 clusters
 - Fixed styiling issues (#65) [abhishekdas99]
 - Lazy loading of FSDataInputStream (#49) [abhishekdas99]
 
