@@ -1,4 +1,4 @@
-# Guideline for Contributors
+# How to contribute code on Github
 
 1. Fork your own copy of rubix into your github account by clicking on the "Fork" button
 2. Navigate to your account and clone that copy to your development box
