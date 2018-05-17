@@ -66,6 +66,19 @@
         </dependency>
 
         <dependency>
+            <groupId>com.readytalk</groupId>
+            <artifactId>metrics3-statsd</artifactId>
+            <version>${dep.metrics-statsd.version}</version>
+            <!--<scope>compile</scope>-->
+        </dependency>
+
+        <dependency>
+            <groupId>com.readytalk</groupId>
+            <artifactId>metrics-statsd-common</artifactId>
+            <version>${dep.metrics-statsd.version}</version>
+        </dependency>
+
+        <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
             <version>${dep.testng.version}</version>

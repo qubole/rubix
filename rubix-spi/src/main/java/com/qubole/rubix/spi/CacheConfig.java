@@ -60,6 +60,9 @@ public class CacheConfig
   private static final String KEY_SERVER_PORT = "hadoop.cache.data.bookkeeper.port";
   private static final String KEY_SERVER_MAX_THREADS = "hadoop.cache.data.bookkeeper.max-threads";
   private static final String KEY_SOCKET_READ_TIMEOUT = "hadoop.cache.network.socket.read.timeout";
+  private static final String KEY_STATSD_METRICS_HOST = "rubix.statsd.metrics.host";
+  private static final String KEY_STATSD_METRICS_INTERVAL = "rubix.statsd.metrics.interval";
+  private static final String KEY_STATSD_METRICS_PORT = "rubix.statsd.metrics.port";
 
   // default values
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
@@ -93,6 +96,9 @@ public class CacheConfig
   private static final int DEFAULT_SERVER_MAX_THREADS = Integer.MAX_VALUE;
   private static final int DEFAULT_SERVER_PORT = 8899;
   private static final int DEFAULT_SOCKET_READ_TIMEOUT = 30000; // ms
+  private static final String DEFAULT_STATSD_METRICS_HOST = "127.0.0.1"; // localhost
+  private static final int DEFAULT_STATSD_METRICS_INTERVAL = 10000; // ms
+  private static final int DEFAULT_STATSD_METRICS_PORT = 8125; // default StatsD port
 
   private CacheConfig()
   {
@@ -231,6 +237,21 @@ public class CacheConfig
   public static int getSocketReadTimeOut(Configuration conf)
   {
     return conf.getInt(KEY_SOCKET_READ_TIMEOUT, DEFAULT_SOCKET_READ_TIMEOUT);
+  }
+
+  public static String getStatsDMetricsHost(Configuration conf)
+  {
+    return conf.get(KEY_STATSD_METRICS_HOST, DEFAULT_STATSD_METRICS_HOST);
+  }
+
+  public static int getStatsDMetricsInterval(Configuration conf)
+  {
+    return conf.getInt(KEY_STATSD_METRICS_INTERVAL, DEFAULT_STATSD_METRICS_INTERVAL);
+  }
+
+  public static int getStatsDMetricsPort(Configuration conf)
+  {
+    return conf.getInt(KEY_STATSD_METRICS_PORT, DEFAULT_STATSD_METRICS_PORT);
   }
 
   public static boolean isCacheDataEnabled(Configuration conf)
