@@ -16,7 +16,7 @@ Using the same plugins, RubiX can also be extended to be used with any cloud sto
 
    intro.md
    emr.md
-   metrics.md
+   metrics.rst
    contrib.md
 
 Indices and tables
