@@ -69,7 +69,6 @@
             <groupId>com.readytalk</groupId>
             <artifactId>metrics3-statsd</artifactId>
             <version>${dep.metrics-statsd.version}</version>
-            <!--<scope>compile</scope>-->
         </dependency>
 
         <dependency>
