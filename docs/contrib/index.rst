@@ -16,6 +16,6 @@ This section provides guidelines to contribute to the project through code, issu
    develop.md
    coding.md
    commit.md
-   pr.md
    issues.md
+   doc.md
 
