@@ -18,9 +18,9 @@ Please read Contribution Guidelines in
 There are many other ways to contribute to RubiX besides code. We've outlined
 the most common ones below:
 
-* [Reporting Bugs]()
-* [Request Features]()
-* [Documentation]()
+* [Reporting Bugs](http://rubix.readthedocs.io/en/latest/contrib/issues.html)
+* Request Features (TBA)
+* [Documentation](http://rubix.readthedocs.io/en/latest/contrib/doc.html)
 
 For everything else, contact the maintainers on:
 * [User Group (Google)](https://groups.google.com/forum/#!forum/rubix-users)
