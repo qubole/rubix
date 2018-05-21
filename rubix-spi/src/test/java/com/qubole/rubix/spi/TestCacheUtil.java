@@ -61,7 +61,7 @@ public class TestCacheUtil
       CacheUtil.createCacheDirectories(conf);
     }
     catch (FileNotFoundException e) {
-      assertEquals(e.getMessage(), "Cache parent directory " + cacheTestDirPrefix + "doesNotExist/0" + " does not exist");
+      assertEquals(e.getMessage(), "None of the cache parent directories exists");
       return;
     }
 
