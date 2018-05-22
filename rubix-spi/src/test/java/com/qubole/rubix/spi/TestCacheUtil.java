@@ -13,14 +13,19 @@
 package com.qubole.rubix.spi;
 
 import org.apache.hadoop.conf.Configuration;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.HashMap;
 
 import static org.testng.Assert.assertEquals;
@@ -44,6 +49,12 @@ public class TestCacheUtil
     }
   }
 
+  @AfterClass
+  public void tearDownClass() throws IOException
+  {
+    cleanCacheDirectories(cacheTestDirPrefix);
+  }
+
   @BeforeMethod
   public void setUpConfiguration()
   {
@@ -51,9 +62,10 @@ public class TestCacheUtil
   }
 
   @Test
-  public void testCreateCacheDirectories_cacheParentDoesNotExist()
+  public void testCreateCacheDirectories_noCacheParentExists()
   {
-    CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix + "doesNotExist/");
+    String cacheDataDirs = cacheTestDirPrefix + "doesNotExist1/," + cacheTestDirPrefix + "doesNotExist2/";
+    CacheConfig.setCacheDataDirPrefix(conf, cacheDataDirs);
     CacheConfig.setCacheDataDirSuffix(conf, "/fcache/");
     CacheConfig.setMaxDisks(conf, maxDisks);
 
@@ -61,11 +73,26 @@ public class TestCacheUtil
       CacheUtil.createCacheDirectories(conf);
     }
     catch (FileNotFoundException e) {
-      assertEquals(e.getMessage(), "Cache parent directory " + cacheTestDirPrefix + "doesNotExist/0" + " does not exist");
+      assertEquals(e.getMessage(), "None of the cache parent directories exists");
       return;
     }
 
     fail("Cache directory creation should not succeed.");
+  }
+
+  @Test
+  public void testCreateCacheDirectories_oneCacheParentExists()
+  {
+    CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
+    CacheConfig.setCacheDataDirSuffix(conf, "/fcache/");
+    CacheConfig.setMaxDisks(conf, maxDisks + 1);
+
+    try {
+      CacheUtil.createCacheDirectories(conf);
+    }
+    catch (FileNotFoundException e) {
+      fail("One of the cache parent directories exists");
+    }
   }
 
   @Test
@@ -282,6 +309,29 @@ public class TestCacheUtil
     }
     catch (FileNotFoundException e) {
       fail("Could not create cache directories: " + e.getMessage());
+    }
+  }
+
+  private void cleanCacheDirectories(String rootDirPath) throws IOException
+  {
+    Files.walkFileTree(Paths.get(rootDirPath), new CacheCleanFileVisitor());
+    Files.deleteIfExists(Paths.get(rootDirPath));
+  }
+
+  public static class CacheCleanFileVisitor extends SimpleFileVisitor<Path>
+  {
+    @Override
+    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException
+    {
+      Files.delete(file);
+      return FileVisitResult.CONTINUE;
+    }
+
+    @Override
+    public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException
+    {
+      Files.delete(dir);
+      return FileVisitResult.CONTINUE;
     }
   }
 }
