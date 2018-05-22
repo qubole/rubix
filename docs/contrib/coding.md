@@ -1,4 +1,4 @@
-# Code conventions
+# Coding conventions
 
 * two spaces, no tabs
 * no trailing whitespaces, blank lines should have no spaces
