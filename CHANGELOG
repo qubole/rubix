@@ -7,6 +7,28 @@ Changelog
 
 New
 ~~~
+- Add more details to Contribution Guide and a markdown file  (#145)
+  [Rajat Venkatesh]
+
+  Add more details to contribution guide for code, issues, PR and documentation. 
+  Also add a CONTRIBUTING.md. This file will be hyperlinked when some one opens
+  an issue or PR. Check https://help.github.com/articles/setting-guidelines-for-repository-contributors/.
+  Heavily inspired by Discourse Guidelines: https://help.github.com/articles/setting-guidelines-for-repository-contributors/. 
+  This commit also makes a minor fix to metrics page.
+
+  Fix #130
+
+Other
+~~~~~
+- Edit and fix line wraps. [Rajat Venkatesh]
+- Add a changelog. I will add instructions to create it later. [Rajat Venkatesh]
+
+
+0.3.1 (2018-05-22)
+-----------------------------
+
+New
+~~~
 - Clean up README. Open issues to move most of the contents to docs
   (#133) [Rajat Venkatesh]
 
@@ -25,6 +47,11 @@ Changes
   It is not supported in production with QDS or outside. Remove code as Hadoop1
   is not used anymore.
 
+Fix
+~~~
+- ISS-141: Throwing exception only when none of the parent directories
+  exists (#142) [Abhishek Das]
+
 Other
 ~~~~~
 - #124: report liveness metric for BookKeeper daemon (#139) [Jordan Wilson]
@@ -33,8 +60,7 @@ Other
   simple check that a thread (reporter to be added in a subsequent commit) 
   is alive. In the future, this simple framework will be used to add more 
   comprehensive health checks. Ref: #140
-
-- #115: add tests to rubix-hadoop2 module to match rubix-presto (#118) 
+- #115: add tests to rubix-hadoop2 module to match rubix-presto (#118)
   [Jordan Wilson]
 
   Fix #115
@@ -96,8 +122,7 @@ Other
 New
 ~~~
 - #68:Add a basic documentation framework (#74) [Rajat Venkatesh]
-- Improve RPM package with configuration and scripts (#52) [Rajat
-  Venkatesh]
+- Improve RPM package with configuration and scripts (#52) [Rajat Venkatesh]
 
   This commit adds
   * configuration files for bookkeeper and lds.
