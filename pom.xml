@@ -66,6 +66,13 @@
         <module>rubix-rpm</module>
     </modules>
 
+    <repositories>
+        <repository>
+            <id>spring-plugins</id>
+            <url>http://repo.spring.io/libs-release/</url>
+        </repository>
+    </repositories>
+
     <dependencyManagement>
         <dependencies>
             <dependency>
