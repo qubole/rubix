@@ -3,7 +3,7 @@
     <parent>
         <groupId>com.qubole.rubix</groupId>
         <artifactId>rubix-root</artifactId>
-        <version>0.3.1-SNAPSHOT</version>
+        <version>0.3.2-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -16,11 +16,6 @@
         <dependency>
             <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-bookkeeper</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.qubole.rubix</groupId>
-            <artifactId>rubix-hadoop1</artifactId>
         </dependency>
 
         <dependency>
@@ -79,21 +74,6 @@
                                     <finalName>rubix-presto-${project.version}</finalName>
                                     <descriptors>
                                         <descriptor>src/main/resources/assemblies/rubix-presto.xml</descriptor>
-                                    </descriptors>
-                                </configuration>
-                            </execution>
-
-                            <execution>
-                                <id>rubix-hadoop1</id>
-                                <phase>package</phase>
-                                <goals>
-                                    <goal>single</goal>
-                                </goals>
-                                <configuration>
-                                    <appendAssemblyId>false</appendAssemblyId>
-                                    <finalName>rubix-hadoop1-${project.version}</finalName>
-                                    <descriptors>
-                                        <descriptor>src/main/resources/assemblies/rubix-hadoop1.xml</descriptor>
                                     </descriptors>
                                 </configuration>
                             </execution>

@@ -5,7 +5,7 @@
     <groupId>com.qubole.rubix</groupId>
     <artifactId>rubix-root</artifactId>
     <packaging>pom</packaging>
-    <version>0.3.1-SNAPSHOT</version>
+    <version>0.3.2-SNAPSHOT</version>
     <name>rubix</name>
     <url>http://github.com/qubole/rubix</url>
     <description>Caching Framework for Big Data Engines</description>
@@ -50,6 +50,8 @@
         <commons-httpclient.version>3.0.1</commons-httpclient.version>
         <dep.hadoop1.version>1.2.0</dep.hadoop1.version>
         <dep.hadoop2.version>2.6.0</dep.hadoop2.version>
+        <dep.metrics.version>3.1.0</dep.metrics.version>
+        <dep.testng.version>6.9.8</dep.testng.version>
     </properties>
 
     <modules>
@@ -58,7 +60,6 @@
         <module>rubix-bookkeeper</module>
         <module>rubix-core</module>
         <module>rubix-presto</module>
-        <module>rubix-hadoop1</module>
         <module>rubix-tests</module>
         <module>assembly</module>
         <module>rubix-rpm</module>
@@ -138,6 +139,12 @@
                 <version>${dep.hadoop2.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>io.dropwizard.metrics</groupId>
+                <artifactId>metrics-core</artifactId>
+                <version>${dep.metrics.version}</version>
+                <scope>provided</scope>
+            </dependency>
 
             <dependency>
                 <groupId>org.weakref</groupId>
@@ -228,7 +235,9 @@
             <configuration>
                 <instrumentation>
                     <excludes>
-                        <exclude>**/com/qubole/rubix/spi/*.class</exclude>
+                        <exclude>**/com/qubole/rubix/spi/BlockLocation*.class</exclude>
+                        <exclude>**/com/qubole/rubix/spi/BookKeeperService*.class</exclude>
+                        <exclude>**/com/qubole/rubix/spi/Location*.class</exclude>
                     </excludes>
                 </instrumentation>
                 <check>true</check>

@@ -3,7 +3,7 @@
     <parent>
         <groupId>com.qubole.rubix</groupId>
         <artifactId>rubix-root</artifactId>
-        <version>0.3.1-SNAPSHOT</version>
+        <version>0.3.2-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -20,14 +20,14 @@
             <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-core</artifactId>
             <scope>test</scope>
-            <version>0.3.1-SNAPSHOT</version>
+            <version>0.3.2-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-core</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
-            <version>0.3.1-SNAPSHOT</version>
+            <version>0.3.2-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.qubole.rubix</groupId>
@@ -36,9 +36,17 @@
         </dependency>
 
         <dependency>
+            <groupId>io.dropwizard.metrics</groupId>
+            <artifactId>metrics-core</artifactId>
+            <version>${dep.metrics.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
-            <version>6.9.8</version>
+            <version>${dep.testng.version}</version>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
