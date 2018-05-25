@@ -118,10 +118,11 @@ public class BookKeeperServer extends Configured implements Tool
    */
   private static void registerMetrics(Configuration conf)
   {
-    log.info("Setting up StatsDReporter");
-    StatsDReporter.forRegistry(metrics)
-        .build(CacheConfig.getStatsDMetricsHost(conf), CacheConfig.getStatsDMetricsPort(conf))
-        .start(CacheConfig.getStatsDMetricsInterval(conf), TimeUnit.MILLISECONDS);
+    if (CacheConfig.isOnMaster(conf)) {
+      StatsDReporter.forRegistry(metrics)
+          .build(CacheConfig.getStatsDMetricsHost(conf), CacheConfig.getStatsDMetricsPort(conf))
+          .start(CacheConfig.getStatsDMetricsInterval(conf), TimeUnit.MILLISECONDS);
+    }
 
     metrics.register(METRIC_BOOKKEEPER_LIVENESS_CHECK, new Gauge<Integer>()
     {

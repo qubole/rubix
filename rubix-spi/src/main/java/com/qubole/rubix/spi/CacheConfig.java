@@ -57,6 +57,7 @@ public class CacheConfig
   private static final String KEY_PROCESS_THREAD_INTERVAL = "rubix.request.process.interval";
   private static final String KEY_REMOTE_FETCH_PROCESS_INTERVAL = "rubix.remotefetch.interval";
   private static final String KEY_REMOTE_FETCH_THREADS = "rubix.remotefetch.threads";
+  private static final String KEY_RUBIX_ON_MASTER = "rubix.cluster.on-master";
   private static final String KEY_SERVER_PORT = "hadoop.cache.data.bookkeeper.port";
   private static final String KEY_SERVER_MAX_THREADS = "hadoop.cache.data.bookkeeper.max-threads";
   private static final String KEY_SOCKET_READ_TIMEOUT = "hadoop.cache.network.socket.read.timeout";
@@ -93,6 +94,7 @@ public class CacheConfig
   private static final int DEFAULT_PROCESS_THREAD_INTERVAL = 1000; // ms
   private static final int DEFAULT_REMOTE_FETCH_PROCESS_INTERVAL = 10000; // ms
   private static final int DEFAULT_REMOTE_FETCH_THREADS = 10;
+  private static final boolean DEFAULT_RUBIX_ON_MASTER = false;
   private static final int DEFAULT_SERVER_MAX_THREADS = Integer.MAX_VALUE;
   private static final int DEFAULT_SERVER_PORT = 8899;
   private static final int DEFAULT_SOCKET_READ_TIMEOUT = 30000; // ms
@@ -257,6 +259,11 @@ public class CacheConfig
   public static boolean isCacheDataEnabled(Configuration conf)
   {
     return conf.getBoolean(KEY_CACHE_ENABLED, DEFAULT_DATA_CACHE_ENABLED);
+  }
+
+  public static boolean isOnMaster(Configuration conf)
+  {
+    return conf.getBoolean(KEY_RUBIX_ON_MASTER, DEFAULT_RUBIX_ON_MASTER);
   }
 
   public static boolean isStrictMode(Configuration conf)
