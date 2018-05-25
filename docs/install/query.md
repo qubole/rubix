@@ -24,7 +24,7 @@
     ORDER BY avg_hits DESC
     LIMIT 10;
 
-## Rubix Stats (supported on Presto only)
+## RubiX Stats (supported on Presto only)
 
 The cache statistics are pushed to MBean named rubix:name=stats. To check the stats, execute
 
