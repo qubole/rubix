@@ -56,7 +56,6 @@ Other
   is alive. In the future, this simple framework will be used to add more 
   comprehensive health checks. Ref: #140
 
-
 - #115: add tests to rubix-hadoop2 module to match rubix-presto (#118) 
   [Jordan Wilson]
 
