@@ -18,14 +18,6 @@ New
 
   Fix #130
 
-<<<<<<< HEAD
-=======
-Other
-~~~~~
-- Edit and fix line wraps. [Rajat Venkatesh]
-- Add a changelog. I will add instructions to create it later. [Rajat Venkatesh]
-
->>>>>>> Add changelof for 3.1
 
 0.3.1 (2018-05-22)
 -----------------------------
@@ -58,26 +50,14 @@ Fix
 Other
 ~~~~~
 - #124: report liveness metric for BookKeeper daemon (#139) [Jordan Wilson]
-<<<<<<< HEAD
 
   Add a liveness gauge that the daemon is up & alive. Right now, this is a 
   simple check that a thread (reporter to be added in a subsequent commit) 
   is alive. In the future, this simple framework will be used to add more 
   comprehensive health checks. Ref: #140
 
-=======
 
-  Add a liveness gauge that the daemon is up & alive. Right now, this is a 
-  simple check that a thread (reporter to be added in a subsequent commit) 
-  is alive. In the future, this simple framework will be used to add more 
-  comprehensive health checks. Ref: #140
-<<<<<<< HEAD
-
->>>>>>> Edit and fix line wraps
 - #115: add tests to rubix-hadoop2 module to match rubix-presto (#118) 
-=======
-- #115: add tests to rubix-hadoop2 module to match rubix-presto (#118)
->>>>>>> Add changelof for 3.1
   [Jordan Wilson]
 
   Fix #115
