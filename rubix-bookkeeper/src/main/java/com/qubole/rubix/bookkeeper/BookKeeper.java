@@ -401,6 +401,7 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
     // In corner cases evictions might not make enough space for new entries
     // To minimize those cases, consider available space lower than actual
     final long total = (long) (0.95 * avail);
+    final int concurrencyLevel = CacheConfig.getCacheConcurrencyLevel(conf);
 
     fileMetadataCache = CacheBuilder.newBuilder()
         .weigher(new Weigher<String, FileMetadata>()
@@ -426,7 +427,7 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
             }
           }
         })
-        .concurrencyLevel(1)
+        .concurrencyLevel(concurrencyLevel)
         .build();
   }
 

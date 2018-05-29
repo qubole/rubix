@@ -110,8 +110,9 @@ public class DiskMonitorService extends AbstractScheduledService
        *  Since guava cache evicts LRU based and not weighted, actual entries will get removed
        */
       int weight = getUsedSpaceMB(conf);
-      log.info("UsedSpace " + weight);
-      return weight;
+      int weightPerSegment = weight / CacheConfig.getCacheConcurrencyLevel(conf);
+      log.info("UsedSpace " + weight + " Weight per segment -- " + weightPerSegment);
+      return weightPerSegment;
     }
 
     // Methods below should not be called on this class
