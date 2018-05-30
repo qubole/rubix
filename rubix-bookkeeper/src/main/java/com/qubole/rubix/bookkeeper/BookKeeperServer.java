@@ -118,7 +118,9 @@ public class BookKeeperServer extends Configured implements Tool
    */
   private static void registerMetrics(Configuration conf)
   {
-    if (CacheConfig.isOnMaster(conf)) {
+    if ((CacheConfig.isOnMaster(conf) && CacheConfig.isReportStatsdMetricsOnMaster(conf))
+        || (!CacheConfig.isOnMaster(conf) && CacheConfig.isReportStatsdMetricsOnWorker(conf))) {
+      log.info("Reporting metrics to StatsD");
       StatsDReporter.forRegistry(metrics)
           .build(CacheConfig.getStatsDMetricsHost(conf), CacheConfig.getStatsDMetricsPort(conf))
           .start(CacheConfig.getStatsDMetricsInterval(conf), TimeUnit.MILLISECONDS);
