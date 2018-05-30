@@ -52,11 +52,17 @@ public class CacheConfig
   private static final String KEY_LOCAL_TRANSFER_BUFFER_SIZE = "hadoop.cache.data.buffer.size";
   private static final String KEY_LOCAL_SERVER_PORT = "hadoop.cache.data.local.server.port";
   private static final String KEY_MAX_RETRIES = "hadoop.cache.data.client.num-retries";
+  private static final String KEY_METRICS_STATSD_HOST = "rubix.metrics.statsd.host";
+  private static final String KEY_METRICS_STATSD_INTERVAL = "rubix.metrics.statsd.interval";
+  private static final String KEY_METRICS_STATSD_PORT = "rubix.metrics.statsd.port";
+  private static final String KEY_METRICS_STATSD_REPORT_ON_MASTER = "rubix.metrics.statsd.report-master";
+  private static final String KEY_METRICS_STATSD_REPORT_ON_WORKER = "rubix.metrics.statsd.report-worker";
   private static final String KEY_PARALLEL_WARMUP = "rubix.parallel.warmup";
   private static final String KEY_PROCESS_THREAD_INITIAL_DELAY = "rubix.request.process.initial.delay";
   private static final String KEY_PROCESS_THREAD_INTERVAL = "rubix.request.process.interval";
   private static final String KEY_REMOTE_FETCH_PROCESS_INTERVAL = "rubix.remotefetch.interval";
   private static final String KEY_REMOTE_FETCH_THREADS = "rubix.remotefetch.threads";
+  private static final String KEY_RUBIX_ON_MASTER = "rubix.cluster.on-master";
   private static final String KEY_SERVER_PORT = "hadoop.cache.data.bookkeeper.port";
   private static final String KEY_SERVER_MAX_THREADS = "hadoop.cache.data.bookkeeper.max-threads";
   private static final String KEY_SOCKET_READ_TIMEOUT = "hadoop.cache.network.socket.read.timeout";
@@ -85,11 +91,17 @@ public class CacheConfig
   private static final int DEFAULT_LOCAL_SERVER_PORT = 8898;
   private static final int DEFAULT_MAX_BUFFER_SIZE = 1024;
   private static final int DEFAULT_MAX_RETRIES = 3;
+  private static final String DEFAULT_METRICS_STATSD_HOST = "127.0.0.1"; // localhost
+  private static final int DEFAULT_METRICS_STATSD_INTERVAL = 10000; // ms
+  private static final int DEFAULT_METRICS_STATSD_PORT = 8125; // default StatsD port
+  private static final boolean DEFAULT_METRICS_STATSD_REPORT_ON_MASTER = false;
+  private static final boolean DEFAULT_METRICS_STATSD_REPORT_ON_WORKER = false;
   private static final boolean DEFAULT_PARALLEL_WARMUP = false;
   private static final int DEFAULT_PROCESS_THREAD_INITIAL_DELAY = 1000; // ms
   private static final int DEFAULT_PROCESS_THREAD_INTERVAL = 1000; // ms
   private static final int DEFAULT_REMOTE_FETCH_PROCESS_INTERVAL = 10000; // ms
   private static final int DEFAULT_REMOTE_FETCH_THREADS = 10;
+  private static final boolean DEFAULT_RUBIX_ON_MASTER = false;
   private static final int DEFAULT_SERVER_MAX_THREADS = Integer.MAX_VALUE;
   private static final int DEFAULT_SERVER_PORT = 8899;
   private static final int DEFAULT_SOCKET_READ_TIMEOUT = 30000; // ms
@@ -233,9 +245,39 @@ public class CacheConfig
     return conf.getInt(KEY_SOCKET_READ_TIMEOUT, DEFAULT_SOCKET_READ_TIMEOUT);
   }
 
+  public static String getStatsDMetricsHost(Configuration conf)
+  {
+    return conf.get(KEY_METRICS_STATSD_HOST, DEFAULT_METRICS_STATSD_HOST);
+  }
+
+  public static int getStatsDMetricsInterval(Configuration conf)
+  {
+    return conf.getInt(KEY_METRICS_STATSD_INTERVAL, DEFAULT_METRICS_STATSD_INTERVAL);
+  }
+
+  public static int getStatsDMetricsPort(Configuration conf)
+  {
+    return conf.getInt(KEY_METRICS_STATSD_PORT, DEFAULT_METRICS_STATSD_PORT);
+  }
+
   public static boolean isCacheDataEnabled(Configuration conf)
   {
     return conf.getBoolean(KEY_CACHE_ENABLED, DEFAULT_DATA_CACHE_ENABLED);
+  }
+
+  public static boolean isOnMaster(Configuration conf)
+  {
+    return conf.getBoolean(KEY_RUBIX_ON_MASTER, DEFAULT_RUBIX_ON_MASTER);
+  }
+
+  public static boolean isReportStatsdMetricsOnMaster(Configuration conf)
+  {
+    return conf.getBoolean(KEY_METRICS_STATSD_REPORT_ON_MASTER, DEFAULT_METRICS_STATSD_REPORT_ON_MASTER);
+  }
+
+  public static boolean isReportStatsdMetricsOnWorker(Configuration conf)
+  {
+    return conf.getBoolean(KEY_METRICS_STATSD_REPORT_ON_WORKER, DEFAULT_METRICS_STATSD_REPORT_ON_WORKER);
   }
 
   public static boolean isStrictMode(Configuration conf)
@@ -318,6 +360,11 @@ public class CacheConfig
     conf.setInt(KEY_DATA_CACHE_MAX_DISKS, maxDisks);
   }
 
+  public static void setOnMaster(Configuration conf, boolean onMaster)
+  {
+    conf.setBoolean(KEY_RUBIX_ON_MASTER, onMaster);
+  }
+
   public static void setRemoteFetchProcessInterval(Configuration conf, int interval)
   {
     conf.setInt(KEY_REMOTE_FETCH_PROCESS_INTERVAL, interval);
@@ -326,5 +373,25 @@ public class CacheConfig
   public static void setServerPort(Configuration conf, int serverPort)
   {
     conf.setInt(KEY_SERVER_PORT, serverPort);
+  }
+
+  public static void setStatsDMetricsInterval(Configuration conf, int interval)
+  {
+    conf.setInt(KEY_METRICS_STATSD_INTERVAL, interval);
+  }
+
+  public static void setStatsDMetricsPort(Configuration conf, int port)
+  {
+    conf.setInt(KEY_METRICS_STATSD_PORT, port);
+  }
+
+  public static void setReportStatsdMetricsOnMaster(Configuration conf, boolean reportOnMaster)
+  {
+    conf.setBoolean(KEY_METRICS_STATSD_REPORT_ON_MASTER, reportOnMaster);
+  }
+
+  public static void setReportStatsdMetricsOnWorker(Configuration conf, boolean reportOnWorker)
+  {
+    conf.setBoolean(KEY_METRICS_STATSD_REPORT_ON_WORKER, reportOnWorker);
   }
 }

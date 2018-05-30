@@ -52,6 +52,7 @@
         <dep.hadoop2.version>2.6.0</dep.hadoop2.version>
         <dep.metrics.version>3.1.0</dep.metrics.version>
         <dep.testng.version>6.9.8</dep.testng.version>
+        <dep.metrics-statsd.version>4.2.0</dep.metrics-statsd.version>
     </properties>
 
     <modules>
@@ -64,6 +65,13 @@
         <module>assembly</module>
         <module>rubix-rpm</module>
     </modules>
+
+    <repositories>
+        <repository>
+            <id>spring-plugins</id>
+            <url>http://repo.spring.io/libs-release/</url>
+        </repository>
+    </repositories>
 
     <dependencyManagement>
         <dependencies>
@@ -144,6 +152,18 @@
                 <artifactId>metrics-core</artifactId>
                 <version>${dep.metrics.version}</version>
                 <scope>provided</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>com.readytalk</groupId>
+                <artifactId>metrics3-statsd</artifactId>
+                <version>${dep.metrics-statsd.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.readytalk</groupId>
+                <artifactId>metrics-statsd-common</artifactId>
+                <version>${dep.metrics-statsd.version}</version>
             </dependency>
 
             <dependency>
