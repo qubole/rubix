@@ -66,6 +66,7 @@ public class CacheConfig
   private static final String KEY_SERVER_PORT = "hadoop.cache.data.bookkeeper.port";
   private static final String KEY_SERVER_MAX_THREADS = "hadoop.cache.data.bookkeeper.max-threads";
   private static final String KEY_SOCKET_READ_TIMEOUT = "hadoop.cache.network.socket.read.timeout";
+  private static final String KEY_CACHE_CONCURRENCY_LEVEL = "rubix.cache.concurrency.level";
 
   // default values
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
@@ -105,6 +106,7 @@ public class CacheConfig
   private static final int DEFAULT_SERVER_MAX_THREADS = Integer.MAX_VALUE;
   private static final int DEFAULT_SERVER_PORT = 8899;
   private static final int DEFAULT_SOCKET_READ_TIMEOUT = 30000; // ms
+  private static final int DEFAULT_CACHE_CONCURRENCY_LEVEL = 4;
 
   private CacheConfig()
   {
@@ -288,6 +290,16 @@ public class CacheConfig
   public static boolean isParallelWarmupEnabled(Configuration conf)
   {
     return conf.getBoolean(KEY_PARALLEL_WARMUP, DEFAULT_PARALLEL_WARMUP);
+  }
+
+  public static int getCacheConcurrencyLevel(Configuration conf)
+  {
+    return conf.getInt(KEY_CACHE_CONCURRENCY_LEVEL, DEFAULT_CACHE_CONCURRENCY_LEVEL);
+  }
+
+  private static void setCacheConcurrencyLevel(Configuration conf, int segmentNum)
+  {
+    conf.setInt(KEY_CACHE_CONCURRENCY_LEVEL, segmentNum);
   }
 
   public static void setBlockSize(Configuration conf, int blockSize)
