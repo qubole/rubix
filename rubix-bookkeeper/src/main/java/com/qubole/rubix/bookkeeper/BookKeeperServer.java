@@ -16,6 +16,8 @@ import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
+import com.qubole.rubix.bookkeeper.manager.CoordinatorManager;
+import com.qubole.rubix.bookkeeper.manager.WorkerManager;
 import com.qubole.rubix.spi.BookKeeperService;
 import com.qubole.rubix.spi.CacheConfig;
 import com.readytalk.metrics.StatsDReporter;
@@ -51,6 +53,12 @@ public class BookKeeperServer extends Configured implements Tool
   // Registry for gathering & storing necessary metrics
   private static MetricRegistry metrics;
 
+  // The manager used when running on a coordinator node.
+  private static CoordinatorManager coordinatorManager;
+
+  // The manager used when running on a worker node.
+  private static WorkerManager workerManager;
+
   public static Configuration conf;
 
   private static TServer server;
@@ -85,7 +93,15 @@ public class BookKeeperServer extends Configured implements Tool
   {
     metrics = metricsRegistry;
     try {
-      bookKeeper = new BookKeeper(conf, metrics);
+      if (CacheConfig.isOnMaster(conf)) {
+        coordinatorManager = new CoordinatorManager(conf, metrics);
+        bookKeeper = new BookKeeper(conf, metrics, coordinatorManager);
+      }
+      else {
+        workerManager = new WorkerManager(conf);
+        workerManager.startHeartbeatService();
+        bookKeeper = new BookKeeper(conf, metrics, workerManager);
+      }
     }
     catch (FileNotFoundException e) {
       log.error("Cache directories could not be created", e);

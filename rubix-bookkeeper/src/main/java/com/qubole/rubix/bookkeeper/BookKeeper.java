@@ -24,6 +24,8 @@ import com.google.common.cache.Weigher;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
+import com.qubole.rubix.bookkeeper.manager.CoordinatorManager;
+import com.qubole.rubix.bookkeeper.manager.WorkerManager;
 import com.qubole.rubix.core.ReadRequest;
 import com.qubole.rubix.core.RemoteReadRequestChain;
 import com.qubole.rubix.hadoop2.Hadoop2ClusterManager;
@@ -90,7 +92,25 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
   // Metrics counter to keep track of the total number of blocks hit
   private Counter localCacheCount;
 
-  public BookKeeper(Configuration conf, MetricRegistry metrics) throws FileNotFoundException
+  // The manager used when running on a coordinator node.
+  private CoordinatorManager coordinatorManager;
+
+  // The manager used when running on a worker node.
+  private WorkerManager workerManager;
+
+  public BookKeeper(Configuration conf, MetricRegistry metrics, CoordinatorManager coordinatorManager) throws FileNotFoundException
+  {
+    this(conf, metrics);
+    this.coordinatorManager = coordinatorManager;
+  }
+
+  public BookKeeper(Configuration conf, MetricRegistry metrics, WorkerManager workerManager) throws FileNotFoundException
+  {
+    this(conf, metrics);
+    this.workerManager = workerManager;
+  }
+
+  private BookKeeper(Configuration conf, MetricRegistry metrics) throws FileNotFoundException
   {
     this.conf = conf;
     this.metrics = metrics;
@@ -301,6 +321,17 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
     }
     else {
       return readDataInternal(remotePath, offset, length, fileSize, lastModified, clusterType);
+    }
+  }
+
+  @Override
+  public void handleHeartbeat(String workerHostname)
+  {
+    if (CacheConfig.isOnMaster(conf)) {
+      coordinatorManager.handleHeartbeat(workerHostname);
+    }
+    else {
+      log.error("Should not handle heartbeat on worker node");
     }
   }
 

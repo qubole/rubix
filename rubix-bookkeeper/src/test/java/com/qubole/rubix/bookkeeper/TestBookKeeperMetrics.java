@@ -13,6 +13,7 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
+import com.qubole.rubix.bookkeeper.manager.CoordinatorManager;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterType;
 import org.apache.hadoop.conf.Configuration;
@@ -49,7 +50,7 @@ public class TestBookKeeperMetrics
       Files.createDirectories(Paths.get(CacheConfig.getCacheDirPrefixList(conf) + i));
     }
 
-    bookKeeper = new BookKeeper(conf, metrics);
+    bookKeeper = new BookKeeper(conf, metrics, new CoordinatorManager(conf, metrics));
   }
 
   /**
