@@ -24,7 +24,6 @@ import com.google.common.cache.Weigher;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import com.qubole.rubix.bookkeeper.manager.CoordinatorManager;
 import com.qubole.rubix.bookkeeper.manager.NodeManager;
 import com.qubole.rubix.core.ReadRequest;
 import com.qubole.rubix.core.RemoteReadRequestChain;
@@ -313,12 +312,7 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
   @Override
   public void handleHeartbeat(String workerHostname)
   {
-    if (nodeManager instanceof CoordinatorManager) {
-      ((CoordinatorManager) nodeManager).handleHeartbeat(workerHostname);
-    }
-    else {
-      throw new RuntimeException("Should not handle heartbeat on worker node");
-    }
+    nodeManager.handleHeartbeat(workerHostname);
   }
 
   private boolean readDataInternal(String remotePath, long offset, int length, long fileSize,

@@ -15,4 +15,10 @@ package com.qubole.rubix.bookkeeper.manager;
 
 public interface NodeManager
 {
+  /**
+   * Handle the heartbeat received from a worker node.
+   *
+   * @param workerHostname The hostname for the worker node.
+   */
+  void handleHeartbeat(String workerHostname);
 }

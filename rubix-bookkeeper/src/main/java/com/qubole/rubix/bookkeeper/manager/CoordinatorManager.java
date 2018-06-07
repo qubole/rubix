@@ -60,11 +60,7 @@ public class CoordinatorManager implements NodeManager
     scheduleWorkerCountMetric();
   }
 
-  /**
-   * Handle the heartbeat received from a worker node.
-   *
-   * @param workerHostname The hostname for the worker node.
-   */
+  @Override
   public void handleHeartbeat(String workerHostname)
   {
     liveWorkerCache.put(workerHostname, true);

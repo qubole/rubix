@@ -24,8 +24,6 @@ import org.apache.thrift.shaded.TException;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -37,8 +35,14 @@ public class HeartbeatService extends AbstractScheduledService
 {
   private static Log log = LogFactory.getLog(HeartbeatService.class.getName());
 
+  private static final String KEY_MASTER_HOSTNAME = "master.hostname";
+  private static final String KEY_YARN_RESOURCEMANAGER_ADDRESS = "yarn.resourcemanager.address";
+
   // The executor used for running listener callbacks.
   private final Executor executor = Executors.newSingleThreadExecutor();
+
+  // The client for interacting with the master BookKeeper.
+  private RetryingBookkeeperClient bookkeeperClient;
 
   // The initial delay for sending heartbeats.
   private final int heartbeatInitialDelay;
@@ -68,11 +72,17 @@ public class HeartbeatService extends AbstractScheduledService
   }
 
   @Override
-  protected void runOneIteration() throws IOException, TException
+  protected void runOneIteration() throws TException
   {
-    try (RetryingBookkeeperClient client = new BookKeeperFactory().createBookKeeperClient(masterHostname, conf)) {
+    if (bookkeeperClient == null) {
+      this.bookkeeperClient = new BookKeeperFactory().createBookKeeperClient(masterHostname, conf)
+    }
+    try {
       log.info("Sending heartbeat to " + masterHostname);
-      client.handleHeartbeat(InetAddress.getLocalHost().getCanonicalHostName());
+      bookkeeperClient.handleHeartbeat(InetAddress.getLocalHost().getCanonicalHostName());
+    }
+    catch (IOException e) {
+      log.error("Could not send heartbeat", e);
     }
   }
 
@@ -89,13 +99,22 @@ public class HeartbeatService extends AbstractScheduledService
    */
   private String getMasterHostname()
   {
-    try {
-      URI masterHostURI = new URI(conf.get("fs.defaultFS", "localhost"));
-      return masterHostURI.getHost();
+    // TODO move to common place (used in PrestoClusterManager)
+    String host;
+
+    log.debug("Trying master.hostname");
+    host = conf.get(KEY_MASTER_HOSTNAME);
+    if (host != null) {
+      return host;
     }
-    catch (URISyntaxException e) {
-      log.fatal("Problem with syntax for master hostname", e);
+
+    log.debug("Trying yarn.resourcemanager.address");
+    host = conf.get(KEY_YARN_RESOURCEMANAGER_ADDRESS);
+    if (host != null) {
+      return host.substring(0, host.indexOf(":"));
     }
+
+    log.debug("No hostname found in etc/*-site.xml, returning localhost");
     return "localhost";
   }
 

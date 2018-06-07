@@ -196,6 +196,7 @@ public class PrestoClusterManager extends ClusterManager
 
   private String getMasterHostname(Configuration conf)
   {
+    // TODO move to common place (used in HeartbeatService)
     String host;
     log.debug("Trying master.hostname");
     host = conf.get(serverAddressConf);

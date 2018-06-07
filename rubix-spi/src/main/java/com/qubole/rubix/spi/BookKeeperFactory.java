@@ -12,6 +12,8 @@
  */
 package com.qubole.rubix.spi;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
@@ -22,6 +24,8 @@ import org.apache.thrift.transport.TTransportException;
  */
 public class BookKeeperFactory
 {
+  private static Log log = LogFactory.getLog(BookKeeperFactory.class.getName());
+
   BookKeeperService.Iface bookKeeper;
 
   public BookKeeperFactory()
@@ -36,6 +40,7 @@ public class BookKeeperFactory
   public RetryingBookkeeperClient createBookKeeperClient(String host, Configuration conf) throws TTransportException
   {
     TTransport transport = new TSocket(host, CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf));
+    log.info("Opening socket to " + host + ":" + CacheConfig.getServerPort(conf));
     transport.open();
     RetryingBookkeeperClient retryingBookkeeperClient = new RetryingBookkeeperClient(transport, CacheConfig.getMaxRetries(conf));
     return retryingBookkeeperClient;

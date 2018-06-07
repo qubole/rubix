@@ -29,6 +29,12 @@ public class WorkerManager implements NodeManager
     this.conf = conf;
   }
 
+  @Override
+  public void handleHeartbeat(String workerHostname)
+  {
+    throw new UnsupportedOperationException("Heartbeat should not be handled on a worker node.");
+  }
+
   /**
    * Start the {@link HeartbeatService} for this worker node.
    */
