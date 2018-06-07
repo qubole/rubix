@@ -25,7 +25,7 @@ import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.qubole.rubix.bookkeeper.manager.CoordinatorManager;
-import com.qubole.rubix.bookkeeper.manager.WorkerManager;
+import com.qubole.rubix.bookkeeper.manager.NodeManager;
 import com.qubole.rubix.core.ReadRequest;
 import com.qubole.rubix.core.RemoteReadRequestChain;
 import com.qubole.rubix.hadoop2.Hadoop2ClusterManager;
@@ -93,27 +93,13 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
   private Counter localCacheCount;
 
   // The manager used when running on a coordinator node.
-  private CoordinatorManager coordinatorManager;
+  private final NodeManager nodeManager;
 
-  // The manager used when running on a worker node.
-  private WorkerManager workerManager;
-
-  public BookKeeper(Configuration conf, MetricRegistry metrics, CoordinatorManager coordinatorManager) throws FileNotFoundException
-  {
-    this(conf, metrics);
-    this.coordinatorManager = coordinatorManager;
-  }
-
-  public BookKeeper(Configuration conf, MetricRegistry metrics, WorkerManager workerManager) throws FileNotFoundException
-  {
-    this(conf, metrics);
-    this.workerManager = workerManager;
-  }
-
-  private BookKeeper(Configuration conf, MetricRegistry metrics) throws FileNotFoundException
+  public BookKeeper(Configuration conf, MetricRegistry metrics, NodeManager nodeManager) throws FileNotFoundException
   {
     this.conf = conf;
     this.metrics = metrics;
+    this.nodeManager = nodeManager;
     initializeMetrics();
     initializeCache(conf);
     fetchProcessor = new RemoteFetchProcessor(conf);
@@ -327,11 +313,11 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
   @Override
   public void handleHeartbeat(String workerHostname)
   {
-    if (CacheConfig.isOnMaster(conf)) {
-      coordinatorManager.handleHeartbeat(workerHostname);
+    if (nodeManager instanceof CoordinatorManager) {
+      ((CoordinatorManager) nodeManager).handleHeartbeat(workerHostname);
     }
     else {
-      log.error("Should not handle heartbeat on worker node");
+      throw new RuntimeException("Should not handle heartbeat on worker node");
     }
   }
 

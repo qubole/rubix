@@ -13,28 +13,6 @@
 
 package com.qubole.rubix.bookkeeper.manager;
 
-import com.qubole.rubix.bookkeeper.HeartbeatService;
-import org.apache.hadoop.conf.Configuration;
-
-/**
- * Class to manage components on a worker node.
- */
-public class WorkerManager implements NodeManager
+public interface NodeManager
 {
-  // The current Hadoop configuration.
-  private final Configuration conf;
-
-  public WorkerManager(Configuration conf)
-  {
-    this.conf = conf;
-  }
-
-  /**
-   * Start the {@link HeartbeatService} for this worker node.
-   */
-  public void startHeartbeatService()
-  {
-    HeartbeatService heartbeatService = new HeartbeatService(conf);
-    heartbeatService.startAsync();
-  }
 }

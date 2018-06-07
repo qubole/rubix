@@ -53,12 +53,6 @@ public class BookKeeperServer extends Configured implements Tool
   // Registry for gathering & storing necessary metrics
   private static MetricRegistry metrics;
 
-  // The manager used when running on a coordinator node.
-  private static CoordinatorManager coordinatorManager;
-
-  // The manager used when running on a worker node.
-  private static WorkerManager workerManager;
-
   public static Configuration conf;
 
   private static TServer server;
@@ -94,11 +88,10 @@ public class BookKeeperServer extends Configured implements Tool
     metrics = metricsRegistry;
     try {
       if (CacheConfig.isOnMaster(conf)) {
-        coordinatorManager = new CoordinatorManager(conf, metrics);
-        bookKeeper = new BookKeeper(conf, metrics, coordinatorManager);
+        bookKeeper = new BookKeeper(conf, metrics, new CoordinatorManager(conf, metrics));
       }
       else {
-        workerManager = new WorkerManager(conf);
+        WorkerManager workerManager = new WorkerManager(conf);
         workerManager.startHeartbeatService();
         bookKeeper = new BookKeeper(conf, metrics, workerManager);
       }

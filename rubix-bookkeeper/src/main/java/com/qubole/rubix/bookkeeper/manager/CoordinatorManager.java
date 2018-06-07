@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Class to manage components on the coordinator node.
  */
-public class CoordinatorManager
+public class CoordinatorManager implements NodeManager
 {
   private static Log log = LogFactory.getLog(CoordinatorManager.class.getName());
 

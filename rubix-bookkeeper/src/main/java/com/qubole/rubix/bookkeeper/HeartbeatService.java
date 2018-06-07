@@ -20,6 +20,7 @@ import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.thrift.shaded.TException;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -62,26 +63,16 @@ public class HeartbeatService extends AbstractScheduledService
   @Override
   protected void startUp()
   {
-    log.info("Starting service " + serviceName() + " in thread " + Thread.currentThread().getId());
+    log.info(String.format("Starting service %s in thread %s", serviceName(), Thread.currentThread().getId()));
     addListener(new FailureListener(), executor);
   }
 
   @Override
-  protected void runOneIteration() throws IOException
+  protected void runOneIteration() throws IOException, TException
   {
-    RetryingBookkeeperClient client = null;
-    try {
-      client = new BookKeeperFactory().createBookKeeperClient(masterHostname, conf);
+    try (RetryingBookkeeperClient client = new BookKeeperFactory().createBookKeeperClient(masterHostname, conf)) {
       log.info("Sending heartbeat to " + masterHostname);
       client.handleHeartbeat(InetAddress.getLocalHost().getCanonicalHostName());
-    }
-    catch (Exception e) {
-      log.error("Could not send heartbeat", e);
-    }
-    finally {
-      if (client != null) {
-        client.close();
-      }
     }
   }
 
@@ -103,7 +94,7 @@ public class HeartbeatService extends AbstractScheduledService
       return masterHostURI.getHost();
     }
     catch (URISyntaxException e) {
-      log.error("Problem with syntax for master hostname", e);
+      log.fatal("Problem with syntax for master hostname", e);
     }
     return "localhost";
   }
