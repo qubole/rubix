@@ -75,7 +75,7 @@ public class HeartbeatService extends AbstractScheduledService
   protected void runOneIteration() throws TException
   {
     if (bookkeeperClient == null) {
-      this.bookkeeperClient = new BookKeeperFactory().createBookKeeperClient(masterHostname, conf)
+      this.bookkeeperClient = new BookKeeperFactory().createBookKeeperClient(masterHostname, conf);
     }
     try {
       log.info("Sending heartbeat to " + masterHostname);
