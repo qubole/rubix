@@ -24,7 +24,6 @@ import com.google.common.cache.Weigher;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import com.qubole.rubix.bookkeeper.manager.NodeManager;
 import com.qubole.rubix.core.ReadRequest;
 import com.qubole.rubix.core.RemoteReadRequestChain;
 import com.qubole.rubix.hadoop2.Hadoop2ClusterManager;
@@ -65,7 +64,7 @@ import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
 /**
  * Created by stagra on 12/2/16.
  */
-public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
+public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
 {
   public static final String METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT = "rubix.bookkeeper.local_cache.count";
 
@@ -91,14 +90,10 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
   // Metrics counter to keep track of the total number of blocks hit
   private Counter localCacheCount;
 
-  // The manager used when running on a coordinator node.
-  private final NodeManager nodeManager;
-
-  public BookKeeper(Configuration conf, MetricRegistry metrics, NodeManager nodeManager) throws FileNotFoundException
+  public BookKeeper(Configuration conf, MetricRegistry metrics) throws FileNotFoundException
   {
     this.conf = conf;
     this.metrics = metrics;
-    this.nodeManager = nodeManager;
     initializeMetrics();
     initializeCache(conf);
     fetchProcessor = new RemoteFetchProcessor(conf);
@@ -307,12 +302,6 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
     else {
       return readDataInternal(remotePath, offset, length, fileSize, lastModified, clusterType);
     }
-  }
-
-  @Override
-  public void handleHeartbeat(String workerHostname)
-  {
-    nodeManager.handleHeartbeat(workerHostname);
   }
 
   private boolean readDataInternal(String remotePath, long offset, int length, long fileSize,

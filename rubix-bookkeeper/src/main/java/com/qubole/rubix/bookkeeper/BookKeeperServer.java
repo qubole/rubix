@@ -88,12 +88,10 @@ public class BookKeeperServer extends Configured implements Tool
     metrics = metricsRegistry;
     try {
       if (CacheConfig.isOnMaster(conf)) {
-        bookKeeper = new BookKeeper(conf, metrics, new CoordinatorManager(conf, metrics));
+        bookKeeper = new CoordinatorBookKeeper(conf, metrics, new CoordinatorManager(conf, metrics));
       }
       else {
-        WorkerManager workerManager = new WorkerManager(conf);
-        workerManager.startHeartbeatService();
-        bookKeeper = new BookKeeper(conf, metrics, workerManager);
+        bookKeeper = new WorkerBookKeeper(conf, metrics, new WorkerManager(conf));
       }
     }
     catch (FileNotFoundException e) {

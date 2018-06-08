@@ -14,10 +14,15 @@
 package com.qubole.rubix.bookkeeper.manager;
 
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.base.Ticker;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.testing.FakeTicker;
 import com.qubole.rubix.spi.CacheConfig;
 import org.apache.hadoop.conf.Configuration;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+
+import java.util.concurrent.TimeUnit;
 
 import static org.testng.Assert.assertEquals;
 
@@ -52,26 +57,40 @@ public class TestCoordinatorManager
 
   /**
    * Verify that the worker liveness status properly expires.
-   *
-   * @throws InterruptedException if the current thread is interrupted while sleeping.
    */
   @Test
-  public void testWorkerLivenessCountMetric_workerLivenessExpired() throws InterruptedException
+  public void testWorkerLivenessCountMetric_workerLivenessExpired()
   {
+    final FakeTicker ticker = new FakeTicker();
     final int workerLivenessExpiry = 5000; // ms
     CacheConfig.setWorkerLivenessExpiry(conf, workerLivenessExpiry);
 
-    final CoordinatorManager coordinatorManager = new CoordinatorManager(conf, metrics);
+    final MockCoordinatorManager coordinatorManager = new MockCoordinatorManager(conf, metrics, ticker);
     coordinatorManager.handleHeartbeat(WORKER1_HOSTNAME);
     coordinatorManager.handleHeartbeat(WORKER2_HOSTNAME);
 
     int workerCount = (int) metrics.getGauges().get(CoordinatorManager.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE).getValue();
     assertEquals(workerCount, 2, "Incorrect number of workers reporting heartbeat");
 
-    Thread.sleep(workerLivenessExpiry);
+    ticker.advance(workerLivenessExpiry, TimeUnit.MILLISECONDS);
     coordinatorManager.handleHeartbeat(WORKER1_HOSTNAME);
 
     workerCount = (int) metrics.getGauges().get(CoordinatorManager.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE).getValue();
     assertEquals(workerCount, 1, "Incorrect number of workers reporting heartbeat");
+  }
+
+  /**
+   * Class to mock a {@link CoordinatorManager} and customize the ticker associated with the worker liveness cache.
+   */
+  private static class MockCoordinatorManager extends CoordinatorManager
+  {
+    public MockCoordinatorManager(Configuration conf, MetricRegistry metrics, Ticker ticker)
+    {
+      super(conf, metrics);
+      super.liveWorkerCache = CacheBuilder.newBuilder()
+          .expireAfterWrite(CacheConfig.getWorkerLivenessExpiry(conf), TimeUnit.MILLISECONDS)
+          .ticker(ticker)
+          .build();
+    }
   }
 }

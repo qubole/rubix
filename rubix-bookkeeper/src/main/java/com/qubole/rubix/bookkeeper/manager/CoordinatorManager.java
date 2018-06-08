@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Class to manage components on the coordinator node.
  */
-public class CoordinatorManager implements NodeManager
+public class CoordinatorManager
 {
   private static Log log = LogFactory.getLog(CoordinatorManager.class.getName());
 
@@ -35,7 +35,7 @@ public class CoordinatorManager implements NodeManager
   public static final String METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE = "rubix.bookkeeper.live-workers.gauge";
 
   // Cache to store hostnames of live workers in the cluster.
-  private final Cache<String, Boolean> liveWorkerCache;
+  protected Cache<String, Boolean> liveWorkerCache;
 
   // Registry for gathering & storing necessary metrics.
   private final MetricRegistry metrics;
@@ -50,7 +50,11 @@ public class CoordinatorManager implements NodeManager
     registerMetrics();
   }
 
-  @Override
+  /**
+   * Handle the heartbeat received from a worker node.
+   *
+   * @param workerHostname The hostname for the worker node.
+   */
   public void handleHeartbeat(String workerHostname)
   {
     liveWorkerCache.put(workerHostname, true);

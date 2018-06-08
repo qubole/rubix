@@ -50,7 +50,7 @@ public class TestBookKeeperMetrics
       Files.createDirectories(Paths.get(CacheConfig.getCacheDirPrefixList(conf) + i));
     }
 
-    bookKeeper = new BookKeeper(conf, metrics, new CoordinatorManager(conf, metrics));
+    bookKeeper = new CoordinatorBookKeeper(conf, metrics, new CoordinatorManager(conf, metrics));
   }
 
   /**
