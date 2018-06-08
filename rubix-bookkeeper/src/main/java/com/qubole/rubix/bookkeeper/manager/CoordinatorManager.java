@@ -22,8 +22,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -42,22 +40,14 @@ public class CoordinatorManager implements NodeManager
   // Registry for gathering & storing necessary metrics.
   private final MetricRegistry metrics;
 
-  // The initial delay for reporting the number of live workers in the cluster.
-  private final int workerLivenessMetricInitialDelay;
-
-  // The interval at which to report the number of live workers in the cluster.
-  private final int workerLivenessMetricInterval;
-
   public CoordinatorManager(Configuration conf, MetricRegistry metrics)
   {
     this.metrics = metrics;
     this.liveWorkerCache = CacheBuilder.newBuilder()
         .expireAfterWrite(CacheConfig.getWorkerLivenessExpiry(conf), TimeUnit.MILLISECONDS)
         .build();
-    this.workerLivenessMetricInitialDelay = CacheConfig.getWorkerLivenessMetricInitialDelay(conf);
-    this.workerLivenessMetricInterval = CacheConfig.getWorkerLivenessMetricInterval(conf);
 
-    scheduleWorkerCountMetric();
+    registerMetrics();
   }
 
   @Override
@@ -68,28 +58,10 @@ public class CoordinatorManager implements NodeManager
   }
 
   /**
-   * Schedule a service to update the live worker count metric periodically.
+   * Register desired metrics.
    */
-  private void scheduleWorkerCountMetric()
+  private void registerMetrics()
   {
-    ScheduledExecutorService metricRegisterService = Executors.newSingleThreadScheduledExecutor();
-    metricRegisterService.scheduleAtFixedRate(new Runnable()
-    {
-      @Override
-      public void run()
-      {
-        updateWorkerCountMetric();
-        log.info("Registered live worker count: " + liveWorkerCache.asMap().size() + " workers");
-      }
-    }, workerLivenessMetricInitialDelay, workerLivenessMetricInterval, TimeUnit.MILLISECONDS);
-  }
-
-  /**
-   * Update the value of the live worker count metric.
-   */
-  private void updateWorkerCountMetric()
-  {
-    metrics.remove(METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE);
     metrics.register(METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE, new Gauge<Integer>()
     {
       @Override

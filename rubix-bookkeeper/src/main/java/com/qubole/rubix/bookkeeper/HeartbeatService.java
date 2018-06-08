@@ -78,7 +78,7 @@ public class HeartbeatService extends AbstractScheduledService
       this.bookkeeperClient = new BookKeeperFactory().createBookKeeperClient(masterHostname, conf);
     }
     try {
-      log.info("Sending heartbeat to " + masterHostname);
+      log.info(String.format("Sending heartbeat to %s", masterHostname));
       bookkeeperClient.handleHeartbeat(InetAddress.getLocalHost().getCanonicalHostName());
     }
     catch (IOException e) {

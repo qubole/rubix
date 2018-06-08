@@ -69,8 +69,6 @@ public class CacheConfig
   private static final String KEY_SERVER_MAX_THREADS = "hadoop.cache.data.bookkeeper.max-threads";
   private static final String KEY_SOCKET_READ_TIMEOUT = "hadoop.cache.network.socket.read.timeout";
   private static final String KEY_WORKER_LIVENESS_EXPIRY = "rubix.monitor.worker.liveness.expiry";
-  private static final String KEY_WORKER_LIVENESS_METRIC_INITIAL_DELAY = "rubix.monitor.worker.liveness.initial.delay";
-  private static final String KEY_WORKER_LIVENESS_METRIC_INTERVAL = "rubix.monitor.worker.liveness.interval";
 
   // default values
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
@@ -285,16 +283,6 @@ public class CacheConfig
     return conf.getInt(KEY_WORKER_LIVENESS_EXPIRY, DEFAULT_WORKER_LIVENESS_EXPIRY);
   }
 
-  public static int getWorkerLivenessMetricInitialDelay(Configuration conf)
-  {
-    return conf.getInt(KEY_WORKER_LIVENESS_METRIC_INITIAL_DELAY, DEFAULT_WORKER_LIVENESS_METRIC_INITIAL_DELAY);
-  }
-
-  public static int getWorkerLivenessMetricInterval(Configuration conf)
-  {
-    return conf.getInt(KEY_WORKER_LIVENESS_METRIC_INTERVAL, DEFAULT_WORKER_LIVENESS_METRIC_INTERVAL);
-  }
-
   public static boolean isCacheDataEnabled(Configuration conf)
   {
     return conf.getBoolean(KEY_CACHE_ENABLED, DEFAULT_DATA_CACHE_ENABLED);
@@ -375,6 +363,16 @@ public class CacheConfig
     conf.set(KEY_DATA_CACHE_TABLE_WHITELIST, tableWhitelist);
   }
 
+  public static void setHeartbeatInitialDelay(Configuration conf, int initialDelay)
+  {
+    conf.setInt(KEY_HEARTBEAT_INITIAL_DELAY, initialDelay);
+  }
+
+  public static void setHeartbeatInterval(Configuration conf, int interval)
+  {
+    conf.setInt(KEY_HEARTBEAT_INTERVAL, interval);
+  }
+
   public static void setIsStrictMode(Configuration conf, boolean isStrictMode)
   {
     conf.setBoolean(KEY_DATA_CACHE_STRICT_MODE, isStrictMode);
@@ -428,5 +426,10 @@ public class CacheConfig
   public static void setReportStatsdMetricsOnWorker(Configuration conf, boolean reportOnWorker)
   {
     conf.setBoolean(KEY_METRICS_STATSD_REPORT_ON_WORKER, reportOnWorker);
+  }
+
+  public static void setWorkerLivenessExpiry(Configuration conf, int expiryTime)
+  {
+    conf.setInt(KEY_WORKER_LIVENESS_EXPIRY, expiryTime);
   }
 }
