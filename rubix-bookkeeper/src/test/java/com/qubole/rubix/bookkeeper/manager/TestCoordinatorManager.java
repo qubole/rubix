@@ -19,6 +19,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.testing.FakeTicker;
 import com.qubole.rubix.bookkeeper.CoordinatorBookKeeper;
 import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.CacheUtil;
 import org.apache.hadoop.conf.Configuration;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -27,6 +28,7 @@ import java.io.FileNotFoundException;
 import java.util.concurrent.TimeUnit;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.fail;
 
 public class TestCoordinatorManager
 {
@@ -41,6 +43,8 @@ public class TestCoordinatorManager
   {
     this.conf = new Configuration();
     this.metrics = new MetricRegistry();
+
+    createCacheDirectoriesForTest(conf);
   }
 
   /**
@@ -79,6 +83,21 @@ public class TestCoordinatorManager
 
     workerCount = (int) metrics.getGauges().get(CoordinatorBookKeeper.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE).getValue();
     assertEquals(workerCount, 1, "Incorrect number of workers reporting heartbeat");
+  }
+
+  /**
+   * Create the cache directories necessary for running the test.
+   *
+   * @param conf  The current Hadoop configuration.
+   */
+  private void createCacheDirectoriesForTest(Configuration conf)
+  {
+    try {
+      CacheUtil.createCacheDirectories(conf);
+    }
+    catch (FileNotFoundException e) {
+      fail("Could not create cache directories: " + e.getMessage());
+    }
   }
 
   /**
