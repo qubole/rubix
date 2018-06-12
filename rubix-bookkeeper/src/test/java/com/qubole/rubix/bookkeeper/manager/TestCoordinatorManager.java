@@ -21,10 +21,14 @@ import com.qubole.rubix.bookkeeper.CoordinatorBookKeeper;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
 import org.apache.hadoop.conf.Configuration;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
 
 import static org.testng.Assert.assertEquals;
@@ -32,19 +36,31 @@ import static org.testng.Assert.fail;
 
 public class TestCoordinatorManager
 {
+  private static final String cacheTestDirPrefix = System.getProperty("java.io.tmpdir") + "/coordinatorManagerTest/";
+  private static final int maxDisks = 5;
   private static final String WORKER1_HOSTNAME = "worker1";
   private static final String WORKER2_HOSTNAME = "worker2";
 
   private Configuration conf;
   private MetricRegistry metrics;
 
+  @BeforeClass
+  public void initializeCacheDirectories() throws IOException
+  {
+    this.conf = new Configuration();
+    Files.createDirectories(Paths.get(cacheTestDirPrefix));
+    for (int i = 0; i < maxDisks; i++) {
+      Files.createDirectories(Paths.get(cacheTestDirPrefix, String.valueOf(i)));
+    }
+
+    createCacheDirectoriesForTest(conf);
+  }
+
   @BeforeMethod
   public void setUp()
   {
-    this.conf = new Configuration();
+    conf.clear();
     this.metrics = new MetricRegistry();
-
-    createCacheDirectoriesForTest(conf);
   }
 
   /**
@@ -53,6 +69,8 @@ public class TestCoordinatorManager
   @Test
   public void testWorkerLivenessCountMetric() throws FileNotFoundException
   {
+    CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
+
     final CoordinatorBookKeeper coordinatorBookKeeper = new CoordinatorBookKeeper(conf, metrics);
     coordinatorBookKeeper.handleHeartbeat(WORKER1_HOSTNAME);
     coordinatorBookKeeper.handleHeartbeat(WORKER2_HOSTNAME);
@@ -70,6 +88,7 @@ public class TestCoordinatorManager
     final FakeTicker ticker = new FakeTicker();
     final int workerLivenessExpiry = 5000; // ms
     CacheConfig.setWorkerLivenessExpiry(conf, workerLivenessExpiry);
+    CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
 
     final MockCoordinatorBookKeeper coordinatorManager = new MockCoordinatorBookKeeper(conf, metrics, ticker);
     coordinatorManager.handleHeartbeat(WORKER1_HOSTNAME);
