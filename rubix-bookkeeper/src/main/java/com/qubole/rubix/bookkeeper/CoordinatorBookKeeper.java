@@ -13,26 +13,58 @@
 
 package com.qubole.rubix.bookkeeper;
 
+import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
-import com.qubole.rubix.bookkeeper.manager.CoordinatorManager;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.qubole.rubix.spi.CacheConfig;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
 import java.io.FileNotFoundException;
+import java.util.concurrent.TimeUnit;
 
 public class CoordinatorBookKeeper extends BookKeeper
 {
-  // The manager used when running on a coordinator node.
-  private final CoordinatorManager coordinatorManager;
+  private static Log log = LogFactory.getLog(CoordinatorBookKeeper.class.getName());
 
-  public CoordinatorBookKeeper(Configuration conf, MetricRegistry metrics, CoordinatorManager coordinatorManager) throws FileNotFoundException
+  // Metric key for the number of live workers in the cluster.
+  public static final String METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE = "rubix.bookkeeper.live_workers.gauge";
+
+  // Cache to store hostnames of live workers in the cluster.
+  protected Cache<String, Boolean> liveWorkerCache;
+
+  public CoordinatorBookKeeper(Configuration conf, MetricRegistry metrics) throws FileNotFoundException
   {
     super(conf, metrics);
-    this.coordinatorManager = coordinatorManager;
+    this.liveWorkerCache = CacheBuilder.newBuilder()
+        .expireAfterWrite(CacheConfig.getWorkerLivenessExpiry(conf), TimeUnit.MILLISECONDS)
+        .build();
+
+    registerMetrics();
   }
 
   @Override
   public void handleHeartbeat(String workerHostname)
   {
-    coordinatorManager.handleHeartbeat(workerHostname);
+    liveWorkerCache.put(workerHostname, true);
+    log.debug("Received heartbeat from " + workerHostname);
+  }
+
+  /**
+   * Register desired metrics.
+   */
+  private void registerMetrics()
+  {
+    metrics.register(METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE, new Gauge<Integer>()
+    {
+      @Override
+      public Integer getValue()
+      {
+        return liveWorkerCache.asMap().size();
+      }
+    });
+    log.debug(String.format("Reporting %s workers", liveWorkerCache.asMap().size()));
   }
 }

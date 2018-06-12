@@ -16,8 +16,6 @@ import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
-import com.qubole.rubix.bookkeeper.manager.CoordinatorManager;
-import com.qubole.rubix.bookkeeper.manager.WorkerManager;
 import com.qubole.rubix.spi.BookKeeperService;
 import com.qubole.rubix.spi.CacheConfig;
 import com.readytalk.metrics.StatsDReporter;
@@ -88,10 +86,10 @@ public class BookKeeperServer extends Configured implements Tool
     metrics = metricsRegistry;
     try {
       if (CacheConfig.isOnMaster(conf)) {
-        bookKeeper = new CoordinatorBookKeeper(conf, metrics, new CoordinatorManager(conf, metrics));
+        bookKeeper = new CoordinatorBookKeeper(conf, metrics);
       }
       else {
-        bookKeeper = new WorkerBookKeeper(conf, metrics, new WorkerManager(conf));
+        bookKeeper = new WorkerBookKeeper(conf, metrics);
       }
     }
     catch (FileNotFoundException e) {

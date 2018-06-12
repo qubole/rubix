@@ -85,7 +85,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
   private RemoteFetchProcessor fetchProcessor;
 
   // Registry for gathering & storing necessary metrics
-  private final MetricRegistry metrics;
+  protected final MetricRegistry metrics;
 
   // Metrics counter to keep track of the total number of blocks hit
   private Counter localCacheCount;

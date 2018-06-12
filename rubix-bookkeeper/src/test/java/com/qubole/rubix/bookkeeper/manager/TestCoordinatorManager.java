@@ -17,11 +17,13 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Ticker;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.testing.FakeTicker;
+import com.qubole.rubix.bookkeeper.CoordinatorBookKeeper;
 import com.qubole.rubix.spi.CacheConfig;
 import org.apache.hadoop.conf.Configuration;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.io.FileNotFoundException;
 import java.util.concurrent.TimeUnit;
 
 import static org.testng.Assert.assertEquals;
@@ -45,13 +47,13 @@ public class TestCoordinatorManager
    * Verify that the worker liveness count metric is correctly registered.
    */
   @Test
-  public void testWorkerLivenessCountMetric()
+  public void testWorkerLivenessCountMetric() throws FileNotFoundException
   {
-    final CoordinatorManager coordinatorManager = new CoordinatorManager(conf, metrics);
-    coordinatorManager.handleHeartbeat(WORKER1_HOSTNAME);
-    coordinatorManager.handleHeartbeat(WORKER2_HOSTNAME);
+    final CoordinatorBookKeeper coordinatorBookKeeper = new CoordinatorBookKeeper(conf, metrics);
+    coordinatorBookKeeper.handleHeartbeat(WORKER1_HOSTNAME);
+    coordinatorBookKeeper.handleHeartbeat(WORKER2_HOSTNAME);
 
-    int workerCount = (int) metrics.getGauges().get(CoordinatorManager.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE).getValue();
+    int workerCount = (int) metrics.getGauges().get(CoordinatorBookKeeper.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE).getValue();
     assertEquals(workerCount, 2, "Incorrect number of workers reporting heartbeat");
   }
 
@@ -59,32 +61,32 @@ public class TestCoordinatorManager
    * Verify that the worker liveness status properly expires.
    */
   @Test
-  public void testWorkerLivenessCountMetric_workerLivenessExpired()
+  public void testWorkerLivenessCountMetric_workerLivenessExpired() throws FileNotFoundException
   {
     final FakeTicker ticker = new FakeTicker();
     final int workerLivenessExpiry = 5000; // ms
     CacheConfig.setWorkerLivenessExpiry(conf, workerLivenessExpiry);
 
-    final MockCoordinatorManager coordinatorManager = new MockCoordinatorManager(conf, metrics, ticker);
+    final MockCoordinatorBookKeeper coordinatorManager = new MockCoordinatorBookKeeper(conf, metrics, ticker);
     coordinatorManager.handleHeartbeat(WORKER1_HOSTNAME);
     coordinatorManager.handleHeartbeat(WORKER2_HOSTNAME);
 
-    int workerCount = (int) metrics.getGauges().get(CoordinatorManager.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE).getValue();
+    int workerCount = (int) metrics.getGauges().get(CoordinatorBookKeeper.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE).getValue();
     assertEquals(workerCount, 2, "Incorrect number of workers reporting heartbeat");
 
     ticker.advance(workerLivenessExpiry, TimeUnit.MILLISECONDS);
     coordinatorManager.handleHeartbeat(WORKER1_HOSTNAME);
 
-    workerCount = (int) metrics.getGauges().get(CoordinatorManager.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE).getValue();
+    workerCount = (int) metrics.getGauges().get(CoordinatorBookKeeper.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE).getValue();
     assertEquals(workerCount, 1, "Incorrect number of workers reporting heartbeat");
   }
 
   /**
-   * Class to mock a {@link CoordinatorManager} and customize the ticker associated with the worker liveness cache.
+   * Class to mock a {@link CoordinatorBookKeeper} and customize the ticker associated with the worker liveness cache.
    */
-  private static class MockCoordinatorManager extends CoordinatorManager
+  private static class MockCoordinatorBookKeeper extends CoordinatorBookKeeper
   {
-    public MockCoordinatorManager(Configuration conf, MetricRegistry metrics, Ticker ticker)
+    public MockCoordinatorBookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker) throws FileNotFoundException
     {
       super(conf, metrics);
       super.liveWorkerCache = CacheBuilder.newBuilder()
