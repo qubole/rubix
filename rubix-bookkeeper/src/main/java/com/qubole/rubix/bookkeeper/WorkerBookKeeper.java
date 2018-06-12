@@ -97,7 +97,6 @@ public class WorkerBookKeeper extends BookKeeper
       this.heartbeatInitialDelay = CacheConfig.getHeartbeatInitialDelay(conf);
       this.heartbeatInterval = CacheConfig.getHeartbeatInterval(conf);
       this.masterHostname = getMasterHostname();
-      log.debug(String.format("Creating client for %s:%s", masterHostname, CacheConfig.getServerPort(conf)));
       this.bookkeeperClient = new BookKeeperFactory().createBookKeeperClient(masterHostname, conf);
     }
 
