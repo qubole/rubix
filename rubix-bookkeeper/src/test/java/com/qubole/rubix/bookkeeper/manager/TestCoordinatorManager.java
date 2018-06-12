@@ -53,6 +53,7 @@ public class TestCoordinatorManager
       Files.createDirectories(Paths.get(cacheTestDirPrefix, String.valueOf(i)));
     }
 
+    CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
     createCacheDirectoriesForTest(conf);
   }
 
