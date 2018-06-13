@@ -85,7 +85,12 @@ public class BookKeeperServer extends Configured implements Tool
   {
     metrics = metricsRegistry;
     try {
-      bookKeeper = new BookKeeper(conf, metrics);
+      if (CacheConfig.isOnMaster(conf)) {
+        bookKeeper = new CoordinatorBookKeeper(conf, metrics);
+      }
+      else {
+        bookKeeper = new WorkerBookKeeper(conf, metrics);
+      }
     }
     catch (FileNotFoundException e) {
       log.error("Cache directories could not be created", e);

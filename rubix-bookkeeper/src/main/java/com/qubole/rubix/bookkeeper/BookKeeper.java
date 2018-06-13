@@ -64,7 +64,7 @@ import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
 /**
  * Created by stagra on 12/2/16.
  */
-public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
+public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
 {
   public static final String METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT = "rubix.bookkeeper.local_cache.count";
 
@@ -85,7 +85,7 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
   private RemoteFetchProcessor fetchProcessor;
 
   // Registry for gathering & storing necessary metrics
-  private final MetricRegistry metrics;
+  protected final MetricRegistry metrics;
 
   // Metrics counter to keep track of the total number of blocks hit
   private Counter localCacheCount;

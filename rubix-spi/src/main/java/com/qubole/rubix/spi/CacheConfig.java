@@ -49,6 +49,8 @@ public class CacheConfig
   private static final String KEY_DATA_MAX_HEADER_SIZE = "hadoop.cache.data.transfer.header.size";
   private static final String KEY_DISK_MONITOR_INTERVAL = "hadoop.cache.disk.monitor.interval";
   private static final String KEY_DISK_READ_BUFFER_SIZE = "hadoop.cache.data.disk.read.buffer.size";
+  private static final String KEY_HEARTBEAT_INITIAL_DELAY = "rubix.monitor.heartbeat.initial.delay";
+  private static final String KEY_HEARTBEAT_INTERVAL = "rubix.monitor.heartbeat.interval";
   private static final String KEY_LOCAL_TRANSFER_BUFFER_SIZE = "hadoop.cache.data.buffer.size";
   private static final String KEY_LOCAL_SERVER_PORT = "hadoop.cache.data.local.server.port";
   private static final String KEY_MAX_RETRIES = "hadoop.cache.data.client.num-retries";
@@ -66,6 +68,7 @@ public class CacheConfig
   private static final String KEY_SERVER_PORT = "hadoop.cache.data.bookkeeper.port";
   private static final String KEY_SERVER_MAX_THREADS = "hadoop.cache.data.bookkeeper.max-threads";
   private static final String KEY_SOCKET_READ_TIMEOUT = "hadoop.cache.network.socket.read.timeout";
+  private static final String KEY_WORKER_LIVENESS_EXPIRY = "rubix.monitor.worker.liveness.expiry";
 
   // default values
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
@@ -87,6 +90,8 @@ public class CacheConfig
   private static final String DEFAULT_DATA_CACHE_TABLE_WHITELIST = ".*"; // regex
   private static final int DEFAULT_DISK_MONITOR_INTERVAL = 10000; // ms
   private static final int DEFAULT_DISK_READ_BUFFER_SIZE = 1024;
+  private static final int DEFAULT_HEARTBEAT_INITIAL_DELAY = 30000; // ms
+  private static final int DEFAULT_HEARTBEAT_INTERVAL = 30000; // ms
   private static final int DEFAULT_LOCAL_TRANSFER_BUFFER_SIZE = 10 * 1024 * 1024; // 10MB
   private static final int DEFAULT_LOCAL_SERVER_PORT = 8898;
   private static final int DEFAULT_MAX_BUFFER_SIZE = 1024;
@@ -105,6 +110,9 @@ public class CacheConfig
   private static final int DEFAULT_SERVER_MAX_THREADS = Integer.MAX_VALUE;
   private static final int DEFAULT_SERVER_PORT = 8899;
   private static final int DEFAULT_SOCKET_READ_TIMEOUT = 30000; // ms
+  private static final int DEFAULT_WORKER_LIVENESS_EXPIRY = 60000; // ms
+  private static final int DEFAULT_WORKER_LIVENESS_METRIC_INITIAL_DELAY = 30000; // ms
+  private static final int DEFAULT_WORKER_LIVENESS_METRIC_INTERVAL = 30000; // ms
 
   private CacheConfig()
   {
@@ -190,6 +198,16 @@ public class CacheConfig
     return conf.getInt(KEY_DISK_READ_BUFFER_SIZE, DEFAULT_DISK_READ_BUFFER_SIZE);
   }
 
+  public static int getHeartbeatInitialDelay(Configuration conf)
+  {
+    return conf.getInt(KEY_HEARTBEAT_INITIAL_DELAY, DEFAULT_HEARTBEAT_INITIAL_DELAY);
+  }
+
+  public static int getHeartbeatInterval(Configuration conf)
+  {
+    return conf.getInt(KEY_HEARTBEAT_INTERVAL, DEFAULT_HEARTBEAT_INTERVAL);
+  }
+
   public static int getLocalServerPort(Configuration conf)
   {
     return conf.getInt(KEY_LOCAL_SERVER_PORT, DEFAULT_LOCAL_SERVER_PORT);
@@ -258,6 +276,11 @@ public class CacheConfig
   public static int getStatsDMetricsPort(Configuration conf)
   {
     return conf.getInt(KEY_METRICS_STATSD_PORT, DEFAULT_METRICS_STATSD_PORT);
+  }
+
+  public static int getWorkerLivenessExpiry(Configuration conf)
+  {
+    return conf.getInt(KEY_WORKER_LIVENESS_EXPIRY, DEFAULT_WORKER_LIVENESS_EXPIRY);
   }
 
   public static boolean isCacheDataEnabled(Configuration conf)
@@ -340,6 +363,16 @@ public class CacheConfig
     conf.set(KEY_DATA_CACHE_TABLE_WHITELIST, tableWhitelist);
   }
 
+  public static void setHeartbeatInitialDelay(Configuration conf, int initialDelay)
+  {
+    conf.setInt(KEY_HEARTBEAT_INITIAL_DELAY, initialDelay);
+  }
+
+  public static void setHeartbeatInterval(Configuration conf, int interval)
+  {
+    conf.setInt(KEY_HEARTBEAT_INTERVAL, interval);
+  }
+
   public static void setIsStrictMode(Configuration conf, boolean isStrictMode)
   {
     conf.setBoolean(KEY_DATA_CACHE_STRICT_MODE, isStrictMode);
@@ -393,5 +426,10 @@ public class CacheConfig
   public static void setReportStatsdMetricsOnWorker(Configuration conf, boolean reportOnWorker)
   {
     conf.setBoolean(KEY_METRICS_STATSD_REPORT_ON_WORKER, reportOnWorker);
+  }
+
+  public static void setWorkerLivenessExpiry(Configuration conf, int expiryTime)
+  {
+    conf.setInt(KEY_WORKER_LIVENESS_EXPIRY, expiryTime);
   }
 }
