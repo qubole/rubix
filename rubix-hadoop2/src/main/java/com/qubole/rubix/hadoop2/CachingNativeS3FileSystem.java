@@ -13,7 +13,9 @@
 package com.qubole.rubix.hadoop2;
 
 import com.qubole.rubix.core.CachingFileSystem;
+import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.spi.ClusterManager;
+import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -47,20 +49,12 @@ public class CachingNativeS3FileSystem extends CachingFileSystem<NativeS3FileSys
   public void initialize(URI uri, Configuration conf)
       throws IOException
   {
-    LOG.debug("Initializing CachingNativeS3FileSystem - Hadoop2");
-    if (clusterManager == null) {
-      initializeClusterManager(conf);
+    try {
+      initializeClusterManager(conf, ClusterType.HADOOP2_CLUSTER_MANAGER);
+      super.initialize(uri, conf);
     }
-    setClusterManager(clusterManager);
-    super.initialize(uri, conf);
-  }
-
-  private synchronized void initializeClusterManager(Configuration conf)
-  {
-    if (clusterManager != null) {
-      return;
+    catch (ClusterManagerInitilizationException ex) {
+      throw new IOException(ex);
     }
-    clusterManager = new Hadoop2ClusterManager();
-    clusterManager.initialize(conf);
   }
 }

@@ -14,6 +14,8 @@ package com.qubole.rubix.presto;
 
 import com.facebook.presto.hive.PrestoS3FileSystem;
 import com.qubole.rubix.core.CachingFileSystem;
+import com.qubole.rubix.core.ClusterManagerInitilizationException;
+import com.qubole.rubix.spi.ClusterType;
 import org.apache.hadoop.conf.Configuration;
 
 import java.io.IOException;
@@ -36,24 +38,17 @@ public class CachingPrestoS3FileSystem extends CachingFileSystem<PrestoS3FileSys
   @Override
   public void initialize(URI uri, Configuration conf) throws IOException
   {
-    if (clusterManager == null) {
-      initializeClusterManager(conf);
+    try {
+      initializeClusterManager(conf, ClusterType.HADOOP2_CLUSTER_MANAGER);
+      super.initialize(uri, conf);
     }
-    setClusterManager(clusterManager);
-
-    super.initialize(uri, conf);
+    catch (ClusterManagerInitilizationException ex) {
+      throw new IOException(ex);
+    }
   }
 
   public String getScheme()
   {
     return SCHEME;
-  }
-
-  private synchronized void initializeClusterManager(Configuration conf)
-  {
-    if (clusterManager == null) {
-      clusterManager = new PrestoClusterManager();
-      clusterManager.initialize(conf);
-    }
   }
 }
