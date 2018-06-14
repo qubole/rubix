@@ -14,7 +14,6 @@ package com.qubole.rubix.hadoop2;
 
 import com.qubole.rubix.core.CachingFileSystem;
 import com.qubole.rubix.core.ClusterManagerInitilizationException;
-import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,8 +30,6 @@ public class CachingNativeS3FileSystem extends CachingFileSystem<NativeS3FileSys
 {
   private static final Log LOG = LogFactory.getLog(CachingNativeS3FileSystem.class);
   private static final String SCHEME = "s3n";
-
-  private ClusterManager clusterManager;
 
   public CachingNativeS3FileSystem()
       throws IOException

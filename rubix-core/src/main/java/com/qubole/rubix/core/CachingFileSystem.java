@@ -98,6 +98,11 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
     this.clusterManager = clusterManager;
   }
 
+  public ClusterManager getClusterManager()
+  {
+    return clusterManager;
+  }
+
   public void setBookKeeper(BookKeeperFactory bookKeeperFactory, Configuration conf)
   {
     this.bookKeeperFactory = bookKeeperFactory;
@@ -131,10 +136,10 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
     try {
       Class clusterManagerClass = conf.getClassByName(clusterManagerClassName);
       Constructor constructor = clusterManagerClass.getConstructor();
-      ClusterManager clusterManager = (ClusterManager) constructor.newInstance();
+      ClusterManager manager = (ClusterManager) constructor.newInstance();
 
-      clusterManager.initialize(conf);
-      setClusterManager(clusterManager);
+      manager.initialize(conf);
+      setClusterManager(manager);
     }
     catch (ClassNotFoundException | NoSuchMethodException | InstantiationException |
             IllegalAccessException | InvocationTargetException ex) {

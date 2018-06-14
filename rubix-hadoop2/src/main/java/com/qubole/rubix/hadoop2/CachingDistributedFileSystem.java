@@ -15,7 +15,6 @@ package com.qubole.rubix.hadoop2;
 
 import com.qubole.rubix.core.CachingFileSystem;
 import com.qubole.rubix.core.ClusterManagerInitilizationException;
-import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -28,7 +27,6 @@ import java.net.URI;
 public class CachingDistributedFileSystem extends CachingFileSystem<DistributedFileSystem>
 {
   private static final Log LOG = LogFactory.getLog(CachingDistributedFileSystem.class);
-  private ClusterManager clusterManager;
   private static final String SCHEME = "hdfs";
 
   @Override
