@@ -14,6 +14,7 @@ package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.cache.Cache;
@@ -216,7 +217,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
             return;
           }
           else {
-            manager = getClusterManagerInstance(ClusterType.findByValue(clusterType));
+            manager = getClusterManagerInstance(ClusterType.findByValue(clusterType), conf);
 
             // set the global manager only after it is inited
             this.clusterManager = manager;
@@ -244,7 +245,8 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
     }
   }
 
-  private ClusterManager getClusterManagerInstance(ClusterType clusterType)
+  @VisibleForTesting
+  public ClusterManager getClusterManagerInstance(ClusterType clusterType, Configuration config)
       throws ClusterManagerInitilizationException
   {
     String clusterManagerClassName = CacheConfig.getClusterManagerClass(conf, clusterType);
@@ -256,7 +258,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
       Constructor constructor = clusterManagerClass.getConstructor();
       manager = (ClusterManager) constructor.newInstance();
 
-      manager.initialize(conf);
+      manager.initialize(config);
     }
     catch (ClassNotFoundException | NoSuchMethodException | InstantiationException |
         IllegalAccessException | InvocationTargetException ex) {
