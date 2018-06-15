@@ -266,7 +266,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
       throw new ClusterManagerInitilizationException(errorMessage, ex);
     }
 
-    return clusterManager;
+    return manager;
   }
 
   @Override
