@@ -12,6 +12,10 @@
  */
 package com.qubole.rubix.spi;
 
+import com.google.common.base.Charsets;
+import com.google.common.hash.HashCode;
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hashing;
 import org.apache.hadoop.conf.Configuration;
 
 import java.util.List;
@@ -47,6 +51,22 @@ public abstract class ClusterManager
     nodeRefreshTime = conf.getInt(nodeRefreshTimeConf, nodeRefreshTime);
   }
 
+  public int getNodeIndex(int numNodes, String key)
+  {
+    HashFunction hf = Hashing.md5();
+    HashCode hc = hf.hashString(key, Charsets.UTF_8);
+    int initialNodeIndex = Hashing.consistentHash(hc, numNodes);
+    int finalNodeIndex = initialNodeIndex;
+    if (hc.asInt() % 2 == 0) {
+      finalNodeIndex = getNextRunningNodeIndex(initialNodeIndex);
+    }
+    else {
+      finalNodeIndex = getPreviousRunningNodeIndex(initialNodeIndex);
+    }
+
+    return finalNodeIndex;
+  }
+
   // This is the size in which the file will be logically divided into splits
   public long getSplitSize()
   {
@@ -64,4 +84,8 @@ public abstract class ClusterManager
   // Nodes format as per the note above
   // Should return sorted list
   public abstract List<String> getNodes();
+
+  public abstract Integer getNextRunningNodeIndex(int startIndex);
+
+  public abstract Integer getPreviousRunningNodeIndex(int startIndex);
 }
