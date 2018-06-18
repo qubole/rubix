@@ -13,7 +13,6 @@
 package com.qubole.rubix.core;
 
 import com.qubole.rubix.spi.CacheConfig;
-import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -26,8 +25,6 @@ import org.apache.hadoop.fs.RawLocalFileSystem;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Created by sakshia on 25/11/16.
@@ -37,29 +34,19 @@ public class MockCachingFileSystem extends CachingFileSystem<RawLocalFileSystem>
 {
   private static final Log log = LogFactory.getLog(MockCachingFileSystem.class);
   Configuration conf;
-  private static ClusterManager clusterManager;
   private static final String SCHEME = "file";
 
   @Override
   public void initialize(URI uri, Configuration conf) throws IOException
   {
     this.conf = conf;
-    log.debug("Initializing MockCachingFileSystem");
-    if (clusterManager == null) {
-      initializeClusterManager(conf);
+    try {
+      initializeClusterManager(conf, ClusterType.TEST_CLUSTER_MANAGER);
+      super.initialize(uri, conf);
     }
-    setClusterManager(clusterManager);
-    super.initialize(uri, conf);
-  }
-
-  private synchronized void initializeClusterManager(Configuration conf)
-  {
-    if (clusterManager != null) {
-      return;
+    catch (ClusterManagerInitilizationException ex) {
+      throw new IOException(ex);
     }
-
-    clusterManager = new TestClusterManager();
-    clusterManager.initialize(conf);
   }
 
   public String getScheme()
@@ -88,23 +75,5 @@ public class MockCachingFileSystem extends CachingFileSystem<RawLocalFileSystem>
   {
     FSDataInputStream stream = fs.open(path, CacheConfig.getBlockSize(conf));
     return stream;
-  }
-
-  class TestClusterManager extends ClusterManager
-  {
-    @Override
-    public List<String> getNodes()
-    {
-      List<String> list = new ArrayList<String>();
-      list.add("localhost");
-
-      return list;
-    }
-
-    @Override
-    public boolean isMaster()
-    {
-      return false;
-    }
   }
 }

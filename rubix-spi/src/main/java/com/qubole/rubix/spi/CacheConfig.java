@@ -69,6 +69,9 @@ public class CacheConfig
   private static final String KEY_SERVER_MAX_THREADS = "hadoop.cache.data.bookkeeper.max-threads";
   private static final String KEY_SOCKET_READ_TIMEOUT = "hadoop.cache.network.socket.read.timeout";
   private static final String KEY_WORKER_LIVENESS_EXPIRY = "rubix.monitor.worker.liveness.expiry";
+  private static final String KEY_PRESTO_CLUSTER_MANAGER = "rubix.presto.clustermanager.class";
+  private static final String KEY_HADOOP_CLUSTER_MANAGER = "rubix.hadoop.clustermanager.class";
+  private static final String KEY_DUMMY_CLUSTER_MANAGER = "rubix.dummy.clustermanager.class";
 
   // default values
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
@@ -113,6 +116,9 @@ public class CacheConfig
   private static final int DEFAULT_WORKER_LIVENESS_EXPIRY = 60000; // ms
   private static final int DEFAULT_WORKER_LIVENESS_METRIC_INITIAL_DELAY = 30000; // ms
   private static final int DEFAULT_WORKER_LIVENESS_METRIC_INTERVAL = 30000; // ms
+  private static final String DEFAULT_PRESTO_CLUSTER_MANAGER = "com.qubole.rubix.presto.PrestoClusterManager";
+  private static final String DEFAULT_HADOOP_CLUSTER_MANAGER = "com.qubole.rubix.hadoop2.Hadoop2ClusterManager";
+  private static final String DEFAULT_DUMMY_CLUSTER_MANAGER = "com.qubole.rubix.core.utils.DummyClusterManager";
 
   private CacheConfig()
   {
@@ -313,6 +319,35 @@ public class CacheConfig
     return conf.getBoolean(KEY_PARALLEL_WARMUP, DEFAULT_PARALLEL_WARMUP);
   }
 
+  public static String getPrestoClusterManager(Configuration conf)
+  {
+    return conf.get(KEY_PRESTO_CLUSTER_MANAGER, DEFAULT_PRESTO_CLUSTER_MANAGER);
+  }
+
+  public static String getHadoopClusterManager(Configuration conf)
+  {
+    return conf.get(KEY_HADOOP_CLUSTER_MANAGER, DEFAULT_HADOOP_CLUSTER_MANAGER);
+  }
+
+  public static String getDummyClusterManager(Configuration conf)
+  {
+    return conf.get(KEY_DUMMY_CLUSTER_MANAGER, DEFAULT_DUMMY_CLUSTER_MANAGER);
+  }
+
+  public static String getClusterManagerClass(Configuration conf, ClusterType clusterType)
+  {
+    switch (clusterType) {
+      case HADOOP2_CLUSTER_MANAGER:
+        return conf.get(KEY_HADOOP_CLUSTER_MANAGER, DEFAULT_HADOOP_CLUSTER_MANAGER);
+      case PRESTO_CLUSTER_MANAGER:
+        return conf.get(KEY_PRESTO_CLUSTER_MANAGER, DEFAULT_PRESTO_CLUSTER_MANAGER);
+      case TEST_CLUSTER_MANAGER:
+        return conf.get(KEY_DUMMY_CLUSTER_MANAGER, DEFAULT_DUMMY_CLUSTER_MANAGER);
+      default:
+        return null;
+    }
+  }
+
   public static void setBlockSize(Configuration conf, int blockSize)
   {
     conf.setInt(KEY_BLOCK_SIZE, blockSize);
@@ -431,5 +466,20 @@ public class CacheConfig
   public static void setWorkerLivenessExpiry(Configuration conf, int expiryTime)
   {
     conf.setInt(KEY_WORKER_LIVENESS_EXPIRY, expiryTime);
+  }
+
+  public static void setPrestoClusterManager(Configuration conf, String clusterManager)
+  {
+    conf.set(KEY_PRESTO_CLUSTER_MANAGER, clusterManager);
+  }
+
+  public static void setHadoopClusterManager(Configuration conf, String clusterManager)
+  {
+    conf.set(KEY_HADOOP_CLUSTER_MANAGER, clusterManager);
+  }
+
+  public static void setDummyClusterManager(Configuration conf, String clusterManager)
+  {
+    conf.set(KEY_DUMMY_CLUSTER_MANAGER, clusterManager);
   }
 }
