@@ -218,6 +218,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
           }
           else {
             manager = getClusterManagerInstance(ClusterType.findByValue(clusterType), conf);
+            manager.initialize(conf);
 
             // set the global manager only after it is inited
             this.clusterManager = manager;
@@ -257,8 +258,6 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
       Class clusterManagerClass = conf.getClassByName(clusterManagerClassName);
       Constructor constructor = clusterManagerClass.getConstructor();
       manager = (ClusterManager) constructor.newInstance();
-
-      manager.initialize(config);
     }
     catch (ClassNotFoundException | NoSuchMethodException | InstantiationException |
         IllegalAccessException | InvocationTargetException ex) {

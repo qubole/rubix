@@ -16,6 +16,8 @@ import com.codahale.metrics.MetricRegistry;
 import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.core.utils.DeleteFileVisitor;
 import com.qubole.rubix.core.utils.DummyClusterManager;
+import com.qubole.rubix.hadoop2.Hadoop2ClusterManager;
+import com.qubole.rubix.presto.PrestoClusterManager;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
@@ -64,7 +66,7 @@ public class TestBookKeeper
   }
 
   @Test
-  public void testGetClusterManagerValidInstance() throws Exception
+  public void testGetDummyClusterManagerValidInstance() throws Exception
   {
     ClusterType type = ClusterType.TEST_CLUSTER_MANAGER;
     BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);
@@ -75,10 +77,52 @@ public class TestBookKeeper
   }
 
   @Test(expectedExceptions = ClusterManagerInitilizationException.class)
-  public void testGetClusterManagerInValidInstance() throws Exception
+  public void testGetDummyClusterManagerInValidInstance() throws Exception
   {
     ClusterType type = ClusterType.TEST_CLUSTER_MANAGER;
     CacheConfig.setDummyClusterManager(conf, "com.qubole.rubix.core.DoesNotExistClusterManager");
+    BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);
+
+    ClusterManager manager = bookKeeper.getClusterManagerInstance(type, conf);
+  }
+
+  @Test
+  public void testGetHadoop2ClusterManagerValidInstance() throws Exception
+  {
+    ClusterType type = ClusterType.HADOOP2_CLUSTER_MANAGER;
+    BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);
+    ClusterManager manager = bookKeeper.getClusterManagerInstance(type, conf);
+
+    assertTrue(manager instanceof Hadoop2ClusterManager, " Didn't initialize the correct cluster manager class." +
+        " Expected : " + Hadoop2ClusterManager.class + " Got : " + manager.getClass());
+  }
+
+  @Test(expectedExceptions = ClusterManagerInitilizationException.class)
+  public void testGetHadoop2ClusterManagerInValidInstance() throws Exception
+  {
+    ClusterType type = ClusterType.HADOOP2_CLUSTER_MANAGER;
+    CacheConfig.setHadoopClusterManager(conf, "com.qubole.rubix.core.DoesNotExistClusterManager");
+    BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);
+
+    ClusterManager manager = bookKeeper.getClusterManagerInstance(type, conf);
+  }
+
+  @Test
+  public void testGetPrestoClusterManagerValidInstance() throws Exception
+  {
+    ClusterType type = ClusterType.PRESTO_CLUSTER_MANAGER;
+    BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);
+    ClusterManager manager = bookKeeper.getClusterManagerInstance(type, conf);
+
+    assertTrue(manager instanceof PrestoClusterManager, " Didn't initialize the correct cluster manager class." +
+        " Expected : " + PrestoClusterManager.class + " Got : " + manager.getClass());
+  }
+
+  @Test(expectedExceptions = ClusterManagerInitilizationException.class)
+  public void testGetPrestoClusterManagerInValidInstance() throws Exception
+  {
+    ClusterType type = ClusterType.PRESTO_CLUSTER_MANAGER;
+    CacheConfig.setPrestoClusterManager(conf, "com.qubole.rubix.core.DoesNotExistClusterManager");
     BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);
 
     ClusterManager manager = bookKeeper.getClusterManagerInstance(type, conf);
