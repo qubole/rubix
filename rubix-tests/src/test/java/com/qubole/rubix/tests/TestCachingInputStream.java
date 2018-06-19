@@ -86,6 +86,7 @@ public class TestCachingInputStream
   {
     final Configuration conf = new Configuration();
 
+    CacheConfig.setOnMaster(conf, true);
     CacheConfig.setIsStrictMode(conf, true);
     CacheConfig.setServerPort(conf, 3456);
     CacheConfig.setLocalServerPort(conf, 2222);
