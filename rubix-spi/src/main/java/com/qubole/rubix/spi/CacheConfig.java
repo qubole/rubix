@@ -112,7 +112,7 @@ public class CacheConfig
   private static final int DEFAULT_SERVER_MAX_THREADS = Integer.MAX_VALUE;
   private static final int DEFAULT_SERVER_PORT = 8899;
   private static final int DEFAULT_SERVICE_RETRY_INTERVAL = 30000; // ms
-  private static final int DEFAULT_SERVICE_MAX_RETRIES = 5; // ms
+  private static final int DEFAULT_SERVICE_MAX_RETRIES = 100;
   private static final int DEFAULT_SOCKET_READ_TIMEOUT = 30000; // ms
   private static final int DEFAULT_WORKER_LIVENESS_EXPIRY = 60000; // ms
   private static final int DEFAULT_WORKER_LIVENESS_METRIC_INITIAL_DELAY = 30000; // ms

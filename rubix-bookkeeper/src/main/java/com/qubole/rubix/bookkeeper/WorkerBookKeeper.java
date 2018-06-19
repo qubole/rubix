@@ -55,10 +55,9 @@ public class WorkerBookKeeper extends BookKeeper
   private void startHeartbeatService(Configuration conf)
   {
     final int retryInterval = CacheConfig.getServiceRetryInterval(conf);
-    final int retries = CacheConfig.getServiceMaxRetries(conf);
+    final int maxRetries = CacheConfig.getServiceMaxRetries(conf);
 
-    int failedStarts = 0;
-    while (failedStarts < retries) {
+    for (int failedStarts = 0; failedStarts < maxRetries;) {
       try {
         this.heartbeatService = new HeartbeatService(conf);
         heartbeatService.startAsync();
@@ -68,14 +67,17 @@ public class WorkerBookKeeper extends BookKeeper
         log.fatal("Could not start client for heartbeat service", e);
       }
 
+      failedStarts++;
+      if (failedStarts == maxRetries) {
+        break;
+      }
+
       try {
         Thread.sleep(retryInterval);
       }
       catch (InterruptedException e) {
-        log.error("Thread interrupted while waiting for HeartbeatService to start", e);
+        Thread.currentThread().interrupt();
       }
-
-      failedStarts++;
     }
 
     throw new RuntimeException("Could not start heartbeat service");
