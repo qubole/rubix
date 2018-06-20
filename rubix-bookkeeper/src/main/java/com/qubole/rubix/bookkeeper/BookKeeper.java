@@ -14,6 +14,7 @@ package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.cache.Cache;
@@ -24,10 +25,9 @@ import com.google.common.cache.Weigher;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
+import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.core.ReadRequest;
 import com.qubole.rubix.core.RemoteReadRequestChain;
-import com.qubole.rubix.hadoop2.Hadoop2ClusterManager;
-import com.qubole.rubix.presto.PrestoClusterManager;
 import com.qubole.rubix.spi.BlockLocation;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
@@ -46,6 +46,8 @@ import org.apache.thrift.shaded.TException;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
@@ -57,8 +59,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import static com.qubole.rubix.spi.ClusterType.HADOOP2_CLUSTER_MANAGER;
-import static com.qubole.rubix.spi.ClusterType.PRESTO_CLUSTER_MANAGER;
 import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
 
 /**
@@ -112,7 +112,14 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
   public List<BlockLocation> getCacheStatus(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock, int clusterType)
       throws TException
   {
-    initializeClusterManager(clusterType);
+    try {
+      initializeClusterManager(clusterType);
+    }
+    catch (ClusterManagerInitilizationException ex) {
+      log.error("Not able to initialize ClusterManager for cluster type : " + ClusterType.findByValue(clusterType) +
+          " with Exception : " + ex);
+      return null;
+    }
     if (nodeName == null) {
       log.error("Node name is null for Cluster Type" + ClusterType.findByValue(clusterType));
       return null;
@@ -185,10 +192,10 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
     return blockLocations;
   }
 
-  private void initializeClusterManager(int clusterType)
+  private void initializeClusterManager(int clusterType) throws ClusterManagerInitilizationException
   {
     if (this.clusterManager == null) {
-      ClusterManager clusterManager = null;
+      ClusterManager manager = null;
       synchronized (lock) {
         if (this.clusterManager == null) {
           try {
@@ -210,17 +217,12 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
             return;
           }
           else {
-            if (clusterType == HADOOP2_CLUSTER_MANAGER.ordinal()) {
-              clusterManager = new Hadoop2ClusterManager();
-            }
-            else if (clusterType == PRESTO_CLUSTER_MANAGER.ordinal()) {
-              clusterManager = new PrestoClusterManager();
-            }
+            manager = getClusterManagerInstance(ClusterType.findByValue(clusterType), conf);
+            manager.initialize(conf);
 
-            clusterManager.initialize(conf);
-            // set the global clusterManager only after it is inited
-            this.clusterManager = clusterManager;
-            splitSize = clusterManager.getSplitSize();
+            // set the global manager only after it is inited
+            this.clusterManager = manager;
+            splitSize = manager.getSplitSize();
           }
         }
       }
@@ -242,6 +244,30 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
       log.error(String.format("Could not initialize cluster nodes=%s nodeHostName=%s nodeHostAddress=%s " +
           "currentNodeIndex=%d", nodes, nodeHostName, nodeHostAddress, currentNodeIndex));
     }
+  }
+
+  @VisibleForTesting
+  public ClusterManager getClusterManagerInstance(ClusterType clusterType, Configuration config)
+      throws ClusterManagerInitilizationException
+  {
+    String clusterManagerClassName = CacheConfig.getClusterManagerClass(conf, clusterType);
+    log.info("Initializing cluster manager : " + clusterManagerClassName);
+    ClusterManager manager = null;
+
+    try {
+      Class clusterManagerClass = conf.getClassByName(clusterManagerClassName);
+      Constructor constructor = clusterManagerClass.getConstructor();
+      manager = (ClusterManager) constructor.newInstance();
+    }
+    catch (ClassNotFoundException | NoSuchMethodException | InstantiationException |
+        IllegalAccessException | InvocationTargetException ex) {
+      String errorMessage = String.format("Not able to initialize ClusterManager class : {0} ",
+          clusterManagerClassName);
+      log.error(errorMessage);
+      throw new ClusterManagerInitilizationException(errorMessage, ex);
+    }
+
+    return manager;
   }
 
   @Override
