@@ -57,7 +57,7 @@ public class WorkerBookKeeper extends BookKeeper
     final int retryInterval = CacheConfig.getServiceRetryInterval(conf);
     final int maxRetries = CacheConfig.getServiceMaxRetries(conf);
 
-    for (int failedStarts = 0; failedStarts < maxRetries;) {
+    for (int failedStarts = 0; failedStarts < maxRetries; ) {
       try {
         this.heartbeatService = new HeartbeatService(conf);
         heartbeatService.startAsync();
