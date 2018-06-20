@@ -23,7 +23,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.shaded.TException;
-import org.apache.thrift.shaded.transport.TTransportException;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -54,33 +53,8 @@ public class WorkerBookKeeper extends BookKeeper
    */
   private void startHeartbeatService(Configuration conf)
   {
-    final int retryInterval = CacheConfig.getServiceRetryInterval(conf);
-    final int maxRetries = CacheConfig.getServiceMaxRetries(conf);
-
-    for (int failedStarts = 0; failedStarts < maxRetries; ) {
-      try {
-        this.heartbeatService = new HeartbeatService(conf);
-        heartbeatService.startAsync();
-        return;
-      }
-      catch (TTransportException e) {
-        log.fatal("Could not start client for heartbeat service", e);
-      }
-
-      failedStarts++;
-      if (failedStarts == maxRetries) {
-        break;
-      }
-
-      try {
-        Thread.sleep(retryInterval);
-      }
-      catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-      }
-    }
-
-    throw new RuntimeException("Could not start heartbeat service");
+    this.heartbeatService = new HeartbeatService(conf);
+    heartbeatService.startAsync();
   }
 
   /**
@@ -111,13 +85,12 @@ public class WorkerBookKeeper extends BookKeeper
     // The hostname of the master node.
     private String masterHostname;
 
-    public HeartbeatService(Configuration conf) throws TTransportException
+    public HeartbeatService(Configuration conf)
     {
       this.conf = conf;
       this.heartbeatInitialDelay = CacheConfig.getHeartbeatInitialDelay(conf);
       this.heartbeatInterval = CacheConfig.getHeartbeatInterval(conf);
       this.masterHostname = getMasterHostname();
-      this.bookkeeperClient = new BookKeeperFactory().createBookKeeperClient(masterHostname, conf);
     }
 
     @Override
@@ -128,14 +101,21 @@ public class WorkerBookKeeper extends BookKeeper
     }
 
     @Override
-    protected void runOneIteration() throws TException
+    protected void runOneIteration()
     {
       try {
+        if (bookkeeperClient == null) {
+          this.bookkeeperClient = new BookKeeperFactory().createBookKeeperClient(masterHostname, conf);
+          log.debug(String.format("Connected to master node [%s]", masterHostname));
+        }
         log.debug(String.format("Sending heartbeat to %s", masterHostname));
         bookkeeperClient.handleHeartbeat(InetAddress.getLocalHost().getCanonicalHostName());
       }
       catch (IOException e) {
         log.error("Could not send heartbeat", e);
+      }
+      catch (TException te) {
+        log.error(String.format("Could not connect to master node [%s]; will reattempt on next heartbeat", masterHostname));
       }
     }
 
