@@ -13,6 +13,7 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.Counter;
+import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
@@ -66,14 +67,18 @@ import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
  */
 public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
 {
+  public static final String METRIC_BOOKKEEPER_CACHE_EVICTION_COUNT = "rubix.bookkeeper.cache_eviction.count";
+  public static final String METRIC_BOOKKEEPER_CACHE_HIT_RATE_GAUGE = "rubix.bookkeeper.cache_hit_rate.gauge";
+  public static final String METRIC_BOOKKEEPER_CACHE_MISS_RATE_GAUGE = "rubix.bookkeeper.cache_miss_rate.gauge";
+  public static final String METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE = "rubix.bookkeeper.cache_size.gauge";
   public static final String METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT = "rubix.bookkeeper.local_cache.count";
+  public static final String METRIC_BOOKKEEPER_LOCAL_REQUEST_COUNT = "rubix.bookkeeper.local_request.count";
+  public static final String METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT = "rubix.bookkeeper.nonlocal_request.count";
+  public static final String METRIC_BOOKKEEPER_REMOTE_REQUEST_COUNT = "rubix.bookkeeper.remote_request.count";
 
   private static Cache<String, FileMetadata> fileMetadataCache;
   private static ClusterManager clusterManager;
   private static Log log = LogFactory.getLog(BookKeeper.class.getName());
-  private long totalRequests;
-  private long cachedRequests;
-  private long remoteRequests;
   String nodeName;
   static String nodeHostName;
   static String nodeHostAddress;
@@ -87,8 +92,12 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
   // Registry for gathering & storing necessary metrics
   protected final MetricRegistry metrics;
 
-  // Metrics counter to keep track of the total number of blocks hit
+  // Metrics to keep track of cache interactions
+  private static Counter cacheEvictionCount;
   private Counter localCacheCount;
+  private Counter remoteRequestCount;
+  private Counter localRequestCount;
+  private Counter nonlocalRequestCount;
 
   public BookKeeper(Configuration conf, MetricRegistry metrics) throws FileNotFoundException
   {
@@ -105,7 +114,36 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
    */
   private void initializeMetrics()
   {
+    cacheEvictionCount = metrics.counter(METRIC_BOOKKEEPER_CACHE_EVICTION_COUNT);
     localCacheCount = metrics.counter(METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT);
+    localRequestCount = metrics.counter(METRIC_BOOKKEEPER_LOCAL_REQUEST_COUNT);
+    nonlocalRequestCount = metrics.counter(METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT);
+    remoteRequestCount = metrics.counter(METRIC_BOOKKEEPER_REMOTE_REQUEST_COUNT);
+
+    metrics.register(METRIC_BOOKKEEPER_CACHE_HIT_RATE_GAUGE, new Gauge<Double>()
+    {
+      @Override
+      public Double getValue()
+      {
+        return ((double) localRequestCount.getCount() / (localRequestCount.getCount() + remoteRequestCount.getCount()));
+      }
+    });
+    metrics.register(METRIC_BOOKKEEPER_CACHE_MISS_RATE_GAUGE, new Gauge<Double>()
+    {
+      @Override
+      public Double getValue()
+      {
+        return ((double) remoteRequestCount.getCount() / (localRequestCount.getCount() + remoteRequestCount.getCount()));
+      }
+    });
+    metrics.register(METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE, new Gauge<Long>()
+    {
+      @Override
+      public Long getValue()
+      {
+        return fileMetadataCache.size();
+      }
+    });
   }
 
   @Override
@@ -166,21 +204,21 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
 
     try {
       for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
-        totalRequests++;
         localCacheCount.inc();
 
         long split = (blockNum * blockSize) / splitSize;
         if (!blockSplits.get(split).equalsIgnoreCase(nodeName)) {
           blockLocations.add(new BlockLocation(Location.NON_LOCAL, blockSplits.get(split)));
+          nonlocalRequestCount.inc();
         }
         else {
           if (md.isBlockCached(blockNum)) {
             blockLocations.add(new BlockLocation(Location.CACHED, blockSplits.get(split)));
-            cachedRequests++;
+            localRequestCount.inc();
           }
           else {
             blockLocations.add(new BlockLocation(Location.LOCAL, blockSplits.get(split)));
-            remoteRequests++;
+            remoteRequestCount.inc();
           }
         }
       }
@@ -300,6 +338,10 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
   @Override
   public Map getCacheStats()
   {
+    final long cachedRequests = localRequestCount.getCount();
+    final long remoteRequests = remoteRequestCount.getCount();
+    final long totalRequests = localCacheCount.getCount();
+
     Map<String, Double> stats = new HashMap<String, Double>();
     stats.put("Cache Hit Rate", ((double) cachedRequests / (cachedRequests + remoteRequests)));
     stats.put("Cache Miss Rate", ((double) (remoteRequests) / (cachedRequests + remoteRequests)));
@@ -446,6 +488,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
             FileMetadata md = notification.getValue();
             try {
               md.closeAndCleanup(notification.getCause(), fileMetadataCache);
+              cacheEvictionCount.inc();
             }
             catch (IOException e) {
               log.warn("Could not cleanup FileMetadata for " + notification.getKey(), e);

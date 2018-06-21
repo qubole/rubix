@@ -16,6 +16,7 @@ package com.qubole.rubix.bookkeeper;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import com.google.common.util.concurrent.Service;
+import com.qubole.rubix.core.utils.ClusterUtil;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
@@ -96,7 +97,7 @@ public class WorkerBookKeeper extends BookKeeper
       this.conf = conf;
       this.heartbeatInitialDelay = CacheConfig.getHeartbeatInitialDelay(conf);
       this.heartbeatInterval = CacheConfig.getHeartbeatInterval(conf);
-      this.masterHostname = getMasterHostname();
+      this.masterHostname = ClusterUtil.getMasterHostname(conf);
       this.bookkeeperClient = new BookKeeperFactory().createBookKeeperClient(masterHostname, conf);
     }
 
@@ -123,32 +124,6 @@ public class WorkerBookKeeper extends BookKeeper
     protected AbstractScheduledService.Scheduler scheduler()
     {
       return AbstractScheduledService.Scheduler.newFixedDelaySchedule(heartbeatInitialDelay, heartbeatInterval, TimeUnit.MILLISECONDS);
-    }
-
-    /**
-     * Get the hostname for the master node in the cluster.
-     *
-     * @return The hostname of the master node, or <code>localhost</code> if the hostname could not be found.
-     */
-    private String getMasterHostname()
-    {
-      // TODO move to common place (used in PrestoClusterManager)
-      String host;
-
-      log.debug("Trying master.hostname");
-      host = conf.get(KEY_MASTER_HOSTNAME);
-      if (host != null) {
-        return host;
-      }
-
-      log.debug("Trying yarn.resourcemanager.address");
-      host = conf.get(KEY_YARN_RESOURCEMANAGER_ADDRESS);
-      if (host != null) {
-        return host.substring(0, host.indexOf(":"));
-      }
-
-      log.debug("No hostname found in etc/*-site.xml, returning localhost");
-      return "localhost";
     }
 
     /**

@@ -443,6 +443,11 @@ public class CacheConfig
     conf.setInt(KEY_SERVER_PORT, serverPort);
   }
 
+  public static void setStatsDMetricsHost(Configuration conf, String hostname)
+  {
+    conf.set(KEY_METRICS_STATSD_HOST, hostname);
+  }
+
   public static void setStatsDMetricsInterval(Configuration conf, int interval)
   {
     conf.setInt(KEY_METRICS_STATSD_INTERVAL, interval);
