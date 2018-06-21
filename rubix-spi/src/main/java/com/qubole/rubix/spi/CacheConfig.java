@@ -373,6 +373,11 @@ public class CacheConfig
     conf.setBoolean(KEY_CACHE_ENABLED, cacheEnabled);
   }
 
+  public static void setCacheDataExpirationAfterWrite(Configuration conf, int expiryAfterWrite)
+  {
+    conf.setInt(KEY_DATA_CACHE_EXPIRY_AFTER_WRITE, expiryAfterWrite);
+  }
+
   public static void setCacheDataLocationWhitelist(Configuration conf, String whitelist)
   {
     conf.set(KEY_DATA_CACHE_LOCATION_WHITELIST, whitelist);

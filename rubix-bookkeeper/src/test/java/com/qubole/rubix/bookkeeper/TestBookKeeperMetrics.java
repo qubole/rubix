@@ -12,44 +12,75 @@
  */
 package com.qubole.rubix.bookkeeper;
 
+import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.base.Ticker;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.Weigher;
+import com.google.common.testing.FakeTicker;
+import com.qubole.rubix.core.utils.DeleteFileVisitor;
 import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.ClusterType;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.shaded.TException;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.concurrent.TimeUnit;
 
 import static org.testng.Assert.assertEquals;
 
 public class TestBookKeeperMetrics
 {
-  private static final int BLOCK_SIZE = 100;
+  private static final String TEST_DIRECTORY_PREFIX = System.getProperty("java.io.tmpdir") + "/TestBookKeeperMetrics/";
+  private static final int TEST_BLOCK_SIZE = 100;
 
-  private final MetricRegistry metrics = new MetricRegistry();
+  private static final String TEST_REMOTE_PATH = "/tmp/testPath";
+  private static final long TEST_LAST_MODIFIED = 1514764800; // 2018-01-01T00:00:00
+  private static final long TEST_FILE_LENGTH = 5000;
+  private static final long TEST_START_BLOCK = 20;
+  private static final long TEST_END_BLOCK = 23;
+
   private final Configuration conf = new Configuration();
-
+  private MetricRegistry metrics = new MetricRegistry();
   private BookKeeper bookKeeper;
 
   @BeforeClass
-  public void setUp() throws IOException
+  public void setUp()
   {
     // Set configuration values for testing
-    CacheConfig.setCacheDataDirPrefix(conf, "/tmp/media/ephemeral");
+    CacheConfig.setCacheDataDirPrefix(conf, TEST_DIRECTORY_PREFIX);
     CacheConfig.setMaxDisks(conf, 5);
-    CacheConfig.setBlockSize(conf, BLOCK_SIZE);
+    CacheConfig.setBlockSize(conf, TEST_BLOCK_SIZE);
+  }
 
+  @BeforeMethod
+  public void setUpForNextTest() throws IOException
+  {
     // Create cache directories
     Files.createDirectories(Paths.get(CacheConfig.getCacheDirPrefixList(conf)));
     for (int i = 0; i < CacheConfig.getCacheMaxDisks(conf); i++) {
       Files.createDirectories(Paths.get(CacheConfig.getCacheDirPrefixList(conf) + i));
     }
 
+    // Reset test values
+    metrics = new MetricRegistry();
     bookKeeper = new CoordinatorBookKeeper(conf, metrics);
+  }
+
+  @AfterMethod
+  public void clearForNextTest() throws IOException
+  {
+    Files.walkFileTree(Paths.get(TEST_DIRECTORY_PREFIX), new DeleteFileVisitor());
+    Files.deleteIfExists(Paths.get(TEST_DIRECTORY_PREFIX));
   }
 
   /**
@@ -60,15 +91,171 @@ public class TestBookKeeperMetrics
   @Test
   public void verifyBlockHitsMetricIsReported() throws TException
   {
-    final String remotePath = "/tmp/testPath";
-    final long lastModified = 1514764800; // 2018-01-01T00:00:00
-    final long fileLength = 5000;
-    final long startBlock = 20;
-    final long endBlock = 23;
-    final long totalRequests = endBlock - startBlock;
+    final long totalRequests = TEST_END_BLOCK - TEST_START_BLOCK;
 
     assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT).getCount(), 0);
-    bookKeeper.getCacheStatus(remotePath, fileLength, lastModified, startBlock, endBlock, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+
+    bookKeeper.getCacheStatus(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+
     assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT).getCount(), totalRequests);
+  }
+
+  /**
+   * Verify that the metric representing total remote requests is correctly registered & incremented.
+   *
+   * @throws TException when file metadata cannot be fetched or refreshed.
+   */
+  @Test
+  public void verifyRemoteRequestMetricIsReported() throws TException
+  {
+    final long totalRequests = TEST_END_BLOCK - TEST_START_BLOCK;
+
+    assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_REMOTE_REQUEST_COUNT).getCount(), 0);
+
+    bookKeeper.getCacheStatus(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+
+    assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_REMOTE_REQUEST_COUNT).getCount(), totalRequests);
+  }
+
+  /**
+   * Verify that the metric representing total local requests is correctly registered & incremented.
+   *
+   * @throws TException when file metadata cannot be fetched or refreshed.
+   */
+  @Test
+  public void verifyLocalRequestMetricIsReported() throws TException
+  {
+    final long totalRequests = TEST_END_BLOCK - TEST_START_BLOCK;
+
+    assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_LOCAL_REQUEST_COUNT).getCount(), 0);
+
+    bookKeeper.getCacheStatus(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+    bookKeeper.setAllCached(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, TEST_START_BLOCK, TEST_END_BLOCK);
+    bookKeeper.getCacheStatus(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+
+    assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_LOCAL_REQUEST_COUNT).getCount(), totalRequests);
+  }
+
+  /**
+   * Verify that the metric representing total non-local requests is correctly registered & incremented.
+   *
+   * @throws TException when file metadata cannot be fetched or refreshed.
+   */
+  @Test
+  public void verifyNonlocalRequestMetricIsReported() throws TException
+  {
+    final long totalRequests = TEST_END_BLOCK - TEST_START_BLOCK;
+
+    assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT).getCount(), 0);
+    assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_LOCAL_REQUEST_COUNT).getCount(), 0);
+
+    bookKeeper.getCacheStatus(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER_MULTINODE.ordinal());
+
+    assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT).getCount(), totalRequests);
+    assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_LOCAL_REQUEST_COUNT).getCount(), 0);
+  }
+
+  /**
+   * Verify that the metric representing the current cache size is correctly registered & reports expected values.
+   *
+   * @throws TException when file metadata cannot be fetched or refreshed.
+   */
+  @Test
+  public void verifyCacheSizeMetricIsReported() throws TException
+  {
+    // Since the value returned from a gauge metric is an object rather than a primitive, boxing is required here to properly compare the values.
+    assertEquals(metrics.getGauges().get(BookKeeper.METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE).getValue(), new Long(0));
+
+    bookKeeper.getCacheStatus(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+
+    assertEquals(metrics.getGauges().get(BookKeeper.METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE).getValue(), new Long(1));
+  }
+
+  /**
+   * Verify that the metric representing total cache evictions is correctly registered & incremented.
+   *
+   * @throws TException when file metadata cannot be fetched or refreshed.
+   * @throws FileNotFoundException when cache directories cannot be created.
+   */
+  @Test
+  public void verifyCacheEvictionMetricIsReported() throws TException, FileNotFoundException
+  {
+    final FakeTicker ticker = new FakeTicker();
+    CacheConfig.setCacheDataExpirationAfterWrite(conf, 1000);
+    metrics.removeMatching(MetricFilter.ALL);
+    bookKeeper = new MockBookKeeper(conf, metrics, ticker);
+
+    assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_CACHE_EVICTION_COUNT).getCount(), 0);
+
+    bookKeeper.getCacheStatus(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+    ticker.advance(30000, TimeUnit.MILLISECONDS);
+    bookKeeper.fileMetadataCache.cleanUp();
+
+    assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_CACHE_EVICTION_COUNT).getCount(), 1);
+  }
+
+  /**
+   * Verify that the metrics representing cache hits & misses are correctly registered and report expected values.
+   *
+   * @throws TException when file metadata cannot be fetched or refreshed.
+   */
+  @Test
+  public void verifyCacheHitAndMissMetricsAreReported() throws TException
+  {
+    assertEquals(metrics.getGauges().get(BookKeeper.METRIC_BOOKKEEPER_CACHE_HIT_RATE_GAUGE).getValue(), Double.NaN);
+    assertEquals(metrics.getGauges().get(BookKeeper.METRIC_BOOKKEEPER_CACHE_MISS_RATE_GAUGE).getValue(), Double.NaN);
+
+    bookKeeper.getCacheStatus(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+
+    assertEquals(metrics.getGauges().get(BookKeeper.METRIC_BOOKKEEPER_CACHE_HIT_RATE_GAUGE).getValue(), 0.0);
+    assertEquals(metrics.getGauges().get(BookKeeper.METRIC_BOOKKEEPER_CACHE_MISS_RATE_GAUGE).getValue(), 1.0);
+
+    bookKeeper.setAllCached(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, TEST_START_BLOCK, TEST_END_BLOCK);
+    bookKeeper.getCacheStatus(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+
+    assertEquals(metrics.getGauges().get(BookKeeper.METRIC_BOOKKEEPER_CACHE_HIT_RATE_GAUGE).getValue(), 0.5);
+    assertEquals(metrics.getGauges().get(BookKeeper.METRIC_BOOKKEEPER_CACHE_MISS_RATE_GAUGE).getValue(), 0.5);
+  }
+
+  /**
+   * Class to mock a {@link BookKeeper} and customize the ticker associated with the file metadata cache.
+   */
+  private static class MockBookKeeper extends BookKeeper
+  {
+    public MockBookKeeper(final Configuration conf, MetricRegistry metrics, Ticker ticker) throws FileNotFoundException
+    {
+      super(conf, metrics);
+      super.fileMetadataCache = CacheBuilder.newBuilder()
+          .weigher(new Weigher<String, FileMetadata>()
+          {
+            @Override
+            public int weigh(String key, FileMetadata md)
+            {
+              return md.getWeight(conf);
+            }
+          })
+          .maximumWeight((long) (getAvailableCacheSpace(conf) * 1.0 * CacheConfig.getCacheDataFullnessPercentage(conf) / 100.0))
+          .expireAfterWrite(CacheConfig.getCacheDataExpirationAfterWrite(conf), TimeUnit.MILLISECONDS)
+          .removalListener(new CacheRemovalListener())
+          .ticker(ticker)
+          .build();
+    }
+
+    private long getAvailableCacheSpace(Configuration conf)
+    {
+      long avail = 0;
+      for (int d = 0; d < CacheUtil.getCacheDiskCount(conf); d++) {
+        avail += new File(CacheUtil.getDirPath(d, conf)).getUsableSpace();
+      }
+      avail = avail / 1024 / 1024;
+
+      return (long) (0.95 * avail);
+    }
+
+    @Override
+    public void handleHeartbeat(String workerHostname)
+    {
+      // This operation is not needed during testing.
+    }
   }
 }

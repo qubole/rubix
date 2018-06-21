@@ -61,6 +61,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
+import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER_MULTINODE;
 
 /**
  * Created by stagra on 12/2/16.
@@ -76,7 +77,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
   public static final String METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT = "rubix.bookkeeper.nonlocal_request.count";
   public static final String METRIC_BOOKKEEPER_REMOTE_REQUEST_COUNT = "rubix.bookkeeper.remote_request.count";
 
-  private static Cache<String, FileMetadata> fileMetadataCache;
+  protected static Cache<String, FileMetadata> fileMetadataCache;
   private static ClusterManager clusterManager;
   private static Log log = LogFactory.getLog(BookKeeper.class.getName());
   String nodeName;
@@ -93,7 +94,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
   protected final MetricRegistry metrics;
 
   // Metrics to keep track of cache interactions
-  private static Counter cacheEvictionCount;
+  private Counter cacheEvictionCount;
   private Counter localCacheCount;
   private Counter remoteRequestCount;
   private Counter localRequestCount;
@@ -250,6 +251,15 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
             nodes = new ArrayList<>();
             nodeName = nodeHostName;
             nodes.add(nodeName);
+            splitSize = 64 * 1024 * 1024;
+            currentNodeIndex = 0;
+            return;
+          }
+          else if (clusterType == TEST_CLUSTER_MANAGER_MULTINODE.ordinal()) {
+            nodes = new ArrayList<>();
+            nodeName = nodeHostName;
+            nodes.add(nodeName);
+            nodes.add(nodeName + "_copy");
             splitSize = 64 * 1024 * 1024;
             currentNodeIndex = 0;
             return;
@@ -455,7 +465,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
     return endBlock;
   }
 
-  private static synchronized void initializeCache(final Configuration conf) throws FileNotFoundException
+  private synchronized void initializeCache(final Configuration conf) throws FileNotFoundException
   {
     CacheUtil.createCacheDirectories(conf);
 
@@ -481,21 +491,24 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
         })
         .maximumWeight((long) (total * 1.0 * CacheConfig.getCacheDataFullnessPercentage(conf) / 100.0))
         .expireAfterWrite(CacheConfig.getCacheDataExpirationAfterWrite(conf), TimeUnit.MILLISECONDS)
-        .removalListener(new RemovalListener<String, FileMetadata>()
-        {
-          public void onRemoval(final RemovalNotification<String, FileMetadata> notification)
-          {
-            FileMetadata md = notification.getValue();
-            try {
-              md.closeAndCleanup(notification.getCause(), fileMetadataCache);
-              cacheEvictionCount.inc();
-            }
-            catch (IOException e) {
-              log.warn("Could not cleanup FileMetadata for " + notification.getKey(), e);
-            }
-          }
-        })
+        .removalListener(new CacheRemovalListener())
         .build();
+  }
+
+  protected class CacheRemovalListener implements RemovalListener<String, FileMetadata>
+  {
+    @Override
+    public void onRemoval(RemovalNotification<String, FileMetadata> notification)
+    {
+      FileMetadata md = notification.getValue();
+      try {
+        md.closeAndCleanup(notification.getCause(), fileMetadataCache);
+        cacheEvictionCount.inc();
+      }
+      catch (IOException e) {
+        log.warn("Could not cleanup FileMetadata for " + notification.getKey(), e);
+      }
+    }
   }
 
   public void invalidateEntry(String key)

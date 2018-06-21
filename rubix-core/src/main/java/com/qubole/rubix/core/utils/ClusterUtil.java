@@ -35,10 +35,8 @@ public class ClusterUtil
    */
   public static String getMasterHostname(Configuration conf)
   {
-    String host;
-
     log.debug("Trying master.hostname");
-    host = conf.get(KEY_MASTER_HOSTNAME);
+    String host = conf.get(KEY_MASTER_HOSTNAME);
     if (host != null) {
       return host;
     }
