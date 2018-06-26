@@ -29,6 +29,9 @@ public class CoordinatorBookKeeper extends BookKeeper
 {
   private static Log log = LogFactory.getLog(CoordinatorBookKeeper.class.getName());
 
+  // Metric key for liveness of the BookKeeper daemon.
+  public static final String METRIC_BOOKKEEPER_LIVENESS_CHECK = "rubix.bookkeeper.liveness.gauge";
+
   // Metric key for the number of live workers in the cluster.
   public static final String METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE = "rubix.bookkeeper.live_workers.gauge";
 
@@ -57,6 +60,14 @@ public class CoordinatorBookKeeper extends BookKeeper
    */
   private void registerMetrics()
   {
+    metrics.register(METRIC_BOOKKEEPER_LIVENESS_CHECK, new Gauge<Integer>()
+    {
+      @Override
+      public Integer getValue()
+      {
+        return 1;
+      }
+    });
     metrics.register(METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE, new Gauge<Integer>()
     {
       @Override

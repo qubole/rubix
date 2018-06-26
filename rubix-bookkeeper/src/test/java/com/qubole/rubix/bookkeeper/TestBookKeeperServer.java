@@ -67,15 +67,15 @@ public class TestBookKeeperServer
   @Test
   public void verifyLivenessCheck() throws InterruptedException
   {
-    assertNull(metrics.getGauges().get(BookKeeperServer.METRIC_BOOKKEEPER_LIVENESS_CHECK), "Metric should not exist before server has started");
+    assertNull(metrics.getGauges().get(CoordinatorBookKeeper.METRIC_BOOKKEEPER_LIVENESS_CHECK), "Metric should not exist before server has started");
 
     startBookKeeperServer();
 
-    assertEquals(metrics.getGauges().get(BookKeeperServer.METRIC_BOOKKEEPER_LIVENESS_CHECK).getValue(), 1, "Metric should return a value once the server has started");
+    assertEquals(metrics.getGauges().get(CoordinatorBookKeeper.METRIC_BOOKKEEPER_LIVENESS_CHECK).getValue(), 1, "Metric should return a value once the server has started");
 
     stopBookKeeperServer();
 
-    assertNull(metrics.getGauges().get(BookKeeperServer.METRIC_BOOKKEEPER_LIVENESS_CHECK), "Metric should not exist after server has stopped");
+    assertNull(metrics.getGauges().get(CoordinatorBookKeeper.METRIC_BOOKKEEPER_LIVENESS_CHECK), "Metric should not exist after server has stopped");
   }
 
   /**
