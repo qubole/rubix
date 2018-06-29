@@ -23,9 +23,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.shaded.transport.TSocket;
 import org.apache.thrift.shaded.transport.TTransportException;
 import org.mockito.ArgumentMatchers;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -34,8 +38,20 @@ import static org.mockito.Mockito.when;
 public class TestWorkerBookKeeper
 {
   private static final Log log = LogFactory.getLog(TestBookKeeperServer.class.getName());
+  private static final String cacheTestDirPrefix = System.getProperty("java.io.tmpdir") + "/workerBookKeeperTest/";
 
   private final Configuration conf = new Configuration();
+
+  @BeforeClass
+  public void initializeCacheDirectories() throws IOException
+  {
+    CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
+
+    Files.createDirectories(Paths.get(cacheTestDirPrefix));
+    for (int i = 0; i < CacheConfig.getCacheMaxDisks(conf); i++) {
+      Files.createDirectories(Paths.get(cacheTestDirPrefix, String.valueOf(i)));
+    }
+  }
 
   /**
    * Verify that WorkerBookKeeper throws the correct exception when asked to handle heartbeats.
@@ -74,6 +90,22 @@ public class TestWorkerBookKeeper
 
     startBookKeeperServer();
     final WorkerBookKeeper.HeartbeatService heartbeatService = new WorkerBookKeeper.HeartbeatService(conf, bookKeeperFactory);
+  }
+
+  /**
+   * Verify that the heartbeat service correctly makes a connection using a BookKeeper client after a number of retries.
+   */
+  @Test
+  public void testHeartbeatRetryLogic_connectAfterRetries()
+  {
+    final int retryInterval = 500;
+    CacheConfig.setServiceRetryInterval(conf, retryInterval);
+    CacheConfig.setServiceMaxRetries(conf, 10);
+    CacheConfig.setOnMaster(conf, true);
+
+    startBookKeeperServerWithDelay(retryInterval * 5);
+
+    final WorkerBookKeeper.HeartbeatService heartbeatService = new WorkerBookKeeper.HeartbeatService(conf, new BookKeeperFactory());
   }
 
   /**
@@ -116,6 +148,29 @@ public class TestWorkerBookKeeper
       Thread.sleep(200);
       log.info("Waiting for BookKeeper Server to come up");
     }
+  }
+
+  /**
+   * Start an instance of the BookKeeper server with an initial delay.
+   */
+  private void startBookKeeperServerWithDelay(final int initialDelay)
+  {
+    final Thread thread = new Thread()
+    {
+      public void run()
+      {
+        try {
+          Thread.sleep(initialDelay);
+        }
+        catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
+
+        System.out.println("BKS started!");
+        BookKeeperServer.startServer(conf, new MetricRegistry());
+      }
+    };
+    thread.start();
   }
 
   /**

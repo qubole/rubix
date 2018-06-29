@@ -111,9 +111,7 @@ public class WorkerBookKeeper extends BookKeeper
           return bookKeeperFactory.createBookKeeperClient(masterHostname, conf);
         }
         catch (TTransportException e) {
-          System.out.println("Could not start client for heartbeat service: ");
-          e.printStackTrace();
-          log.fatal("Could not start client for heartbeat service", e);
+          log.warn("Could not start client for heartbeat service", e);
         }
 
         failedStarts++;
@@ -129,6 +127,7 @@ public class WorkerBookKeeper extends BookKeeper
         }
       }
 
+      log.fatal("Heartbeat service ran out of retries to connect to the master BookKeeper");
       throw new RuntimeException("Could not start heartbeat service");
     }
 
