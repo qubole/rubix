@@ -60,16 +60,4 @@ public class DummyClusterManager extends ClusterManager
   {
     return splitSize;
   }
-
-  @Override
-  public Integer getNextRunningNodeIndex(int startIndex)
-  {
-    return startIndex;
-  }
-
-  @Override
-  public Integer getPreviousRunningNodeIndex(int startIndex)
-  {
-    return startIndex;
-  }
 }

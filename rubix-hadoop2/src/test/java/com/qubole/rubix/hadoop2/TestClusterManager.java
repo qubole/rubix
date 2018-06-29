@@ -161,6 +161,17 @@ public class TestClusterManager
     assertTrue(nodeHostnames.get(0).equals(WORKER_HOSTNAME_2), "Wrong nodes data");
   }
 
+  @Test
+  public void testClusterIndex()
+      throws IOException
+  {
+    final List<String> nodeHostnames = getNodeHostnamesFromCluster(CLUSTER_NODES_ENDPOINT, new MultipleWorkersOneNew());
+    ClusterManager manager = buildHadoop2ClusterManager();
+    int index = manager.getNodeIndex(nodeHostnames.size(), "1");
+
+    assertTrue(index == 1, "Consistent Hasing logic returned wrong node index");
+  }
+
   /**
    * Initializes a {@link Hadoop2ClusterManager} for testing.
    *
