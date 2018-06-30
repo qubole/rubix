@@ -67,6 +67,8 @@ public class TestBookKeeperServer
   @Test
   public void verifyLivenessCheck() throws InterruptedException
   {
+    CacheConfig.setOnMaster(conf, true);
+
     assertNull(metrics.getGauges().get(CoordinatorBookKeeper.METRIC_BOOKKEEPER_LIVENESS_CHECK), "Metric should not exist before server has started");
 
     startBookKeeperServer();
