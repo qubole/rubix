@@ -21,8 +21,8 @@ public class ClusterUtil
 {
   private static final Log log = LogFactory.getLog(ClusterUtil.class.getName());
 
-  private static final String KEY_MASTER_HOSTNAME = "master.hostname";
-  private static final String KEY_YARN_RESOURCEMANAGER_ADDRESS = "yarn.resourcemanager.address";
+  protected static final String KEY_MASTER_HOSTNAME = "master.hostname";
+  protected static final String KEY_YARN_RESOURCEMANAGER_ADDRESS = "yarn.resourcemanager.address";
 
   private ClusterUtil()
   {
