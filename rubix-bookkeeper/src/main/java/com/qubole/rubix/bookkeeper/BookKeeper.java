@@ -15,16 +15,12 @@ package com.qubole.rubix.bookkeeper;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.cache.Weigher;
-import com.google.common.hash.HashCode;
-import com.google.common.hash.HashFunction;
-import com.google.common.hash.Hashing;
 import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.core.ReadRequest;
 import com.qubole.rubix.core.RemoteReadRequestChain;
@@ -139,9 +135,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
         end = fileLength;
       }
       String key = remotePath + i + end;
-      HashFunction hf = Hashing.md5();
-      HashCode hc = hf.hashString(key, Charsets.UTF_8);
-      int nodeIndex = Hashing.consistentHash(hc, nodes.size());
+      int nodeIndex = clusterManager.getNodeIndex(nodes.size(), key);
       blockSplits.put(blockNumber, nodes.get(nodeIndex));
       blockNumber++;
     }
@@ -208,21 +202,16 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
             return;
           }
 
-          if (clusterType == TEST_CLUSTER_MANAGER.ordinal()) {
-            nodes = new ArrayList<>();
-            nodeName = nodeHostName;
-            nodes.add(nodeName);
-            splitSize = 64 * 1024 * 1024;
-            currentNodeIndex = 0;
-            return;
-          }
-          else {
-            manager = getClusterManagerInstance(ClusterType.findByValue(clusterType), conf);
-            manager.initialize(conf);
+          manager = getClusterManagerInstance(ClusterType.findByValue(clusterType), conf);
+          manager.initialize(conf);
+          this.clusterManager = manager;
+          splitSize = clusterManager.getSplitSize();
 
-            // set the global manager only after it is inited
-            this.clusterManager = manager;
-            splitSize = manager.getSplitSize();
+          if (clusterType == TEST_CLUSTER_MANAGER.ordinal()) {
+            currentNodeIndex = 0;
+            nodes = clusterManager.getNodes();
+            nodeName = nodes.get(currentNodeIndex);
+            return;
           }
         }
       }
