@@ -16,16 +16,12 @@ import com.codahale.metrics.Counter;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.cache.Weigher;
-import com.google.common.hash.HashCode;
-import com.google.common.hash.HashFunction;
-import com.google.common.hash.Hashing;
 import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.core.ReadRequest;
 import com.qubole.rubix.core.RemoteReadRequestChain;
@@ -94,7 +90,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
   protected final MetricRegistry metrics;
 
   // Metrics to keep track of cache interactions
-  private Counter cacheEvictionCount;
+  private static Counter cacheEvictionCount;
   private Counter localCacheCount;
   private Counter remoteRequestCount;
   private Counter localRequestCount;
@@ -178,9 +174,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
         end = fileLength;
       }
       String key = remotePath + i + end;
-      HashFunction hf = Hashing.md5();
-      HashCode hc = hf.hashString(key, Charsets.UTF_8);
-      int nodeIndex = Hashing.consistentHash(hc, nodes.size());
+      int nodeIndex = clusterManager.getNodeIndex(nodes.size(), key);
       blockSplits.put(blockNumber, nodes.get(nodeIndex));
       blockNumber++;
     }
@@ -247,30 +241,26 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
             return;
           }
 
+          manager = getClusterManagerInstance(ClusterType.findByValue(clusterType), conf);
+          manager.initialize(conf);
+          this.clusterManager = manager;
+          splitSize = clusterManager.getSplitSize();
+
           if (clusterType == TEST_CLUSTER_MANAGER.ordinal()) {
-            nodes = new ArrayList<>();
-            nodeName = nodeHostName;
-            nodes.add(nodeName);
-            splitSize = 64 * 1024 * 1024;
             currentNodeIndex = 0;
+            nodes = clusterManager.getNodes();
+            nodeName = nodes.get(currentNodeIndex);
             return;
           }
           else if (clusterType == TEST_CLUSTER_MANAGER_MULTINODE.ordinal()) {
+            // TODO clean up
+            currentNodeIndex = 0;
             nodes = new ArrayList<>();
             nodeName = nodeHostName;
             nodes.add(nodeName);
             nodes.add(nodeName + "_copy");
             splitSize = 64 * 1024 * 1024;
-            currentNodeIndex = 0;
             return;
-          }
-          else {
-            manager = getClusterManagerInstance(ClusterType.findByValue(clusterType), conf);
-            manager.initialize(conf);
-
-            // set the global manager only after it is inited
-            this.clusterManager = manager;
-            splitSize = manager.getSplitSize();
           }
         }
       }
@@ -465,7 +455,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
     return endBlock;
   }
 
-  private synchronized void initializeCache(final Configuration conf) throws FileNotFoundException
+  private static synchronized void initializeCache(final Configuration conf) throws FileNotFoundException
   {
     CacheUtil.createCacheDirectories(conf);
 
@@ -495,7 +485,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
         .build();
   }
 
-  protected class CacheRemovalListener implements RemovalListener<String, FileMetadata>
+  protected static class CacheRemovalListener implements RemovalListener<String, FileMetadata>
   {
     @Override
     public void onRemoval(RemovalNotification<String, FileMetadata> notification)
