@@ -173,9 +173,9 @@ public class TestThriftServerJVM extends Configured
                     log.info( " backendDataFile file is present ");
                 }
             }*/
-
+            int lastBlock = 4;//file.length()/200 +1;
             log.debug("The File name in remoteFile variable is : " + file.toString() + " file size " + file.length() + " last modified : " + file.lastModified());
-            result = client.getCacheStatus(file.toString(), file.length(), file.lastModified(), 0, file.length()/200, 3);
+            result = client.getCacheStatus(file.toString(), file.length(), file.lastModified(), 0, lastBlock, 3);
             assertTrue(result.get(0).remoteLocation == "LOCAL", "File already cached, before readData call");
 
             /*log.info("After get status call : Size of result : " + result.size());
@@ -192,14 +192,15 @@ public class TestThriftServerJVM extends Configured
                 log.debug("Key is : " + pair.getKey() + " /// Value is : " + pair.getValue());
             }
 
+            int readSize = 1000;
             log.info("Downloading data from path : " + file.toString());
-            dataDownloaded = client.readData(file.toString(), 0, file.length(), file.length(), file.lastModified(), 3);
+            dataDownloaded = client.readData(file.toString(), 0, readSize, file.length(), file.lastModified(), 3);
             if (!dataDownloaded) {
                 log.info("Failed to read Data from the location");
             }
 
             log.debug("The File name in remoteFile variable is : " + file.toString() + " file size " + file.length() + " last modified : " + file.lastModified());
-            result = client.getCacheStatus(file.toString(), file.length(), file.lastModified(), 0, file.length()/200, 3);
+            result = client.getCacheStatus(file.toString(), file.length(), file.lastModified(), 0, lastBlock, 3);
             assertTrue(result.get(0).remoteLocation == "CACHED", "File not cached properly");
 
         }
