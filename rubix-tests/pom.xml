@@ -59,7 +59,7 @@
             <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-spi</artifactId>
         </dependency>
-        
+
     </dependencies>
 
     <build>

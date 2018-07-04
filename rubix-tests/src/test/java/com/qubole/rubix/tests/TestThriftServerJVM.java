@@ -24,6 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.DirectBufferPool;
 import org.apache.thrift.shaded.TException;
 import org.apache.thrift.shaded.transport.TTransportException;
 import org.testng.annotations.AfterClass;
@@ -40,6 +41,20 @@ import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
+import java.io.BufferedWriter;
+import java.io.FileInputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 
 import static org.testng.Assert.assertTrue;
 
@@ -144,7 +159,6 @@ public class TestThriftServerJVM extends Configured
         //CacheConfig.get
 
         String host = "localhost";
-        String remotePath = "/Users/kvankayala/src/rubix/rubix-tests/output";//backendFileName;
         boolean dataDownloaded;
         File file = new File(backendFileName);
         List<BlockLocation> result;
@@ -152,25 +166,22 @@ public class TestThriftServerJVM extends Configured
         try {
             client = bookKeeperFactory.createBookKeeperClient(host, conf);
 
-      /*dataDownloaded = client.readData(file.toString(), 0, 200, file.length(), file.lastModified(), 3);
-      if (!dataDownloaded) {
-        log.info("Failed to read Data from the location");
-      }*/
-
-            File folder = new File(testDirectoryPrefix);
+            /*File folder = new File(testDirectoryPrefix);
             File[] listOfFiles = folder.listFiles();
             for (int i = 0; i < listOfFiles.length; i++) {
                 if (listOfFiles[i].isFile() && listOfFiles[i].toString().contains("backendDataFile")) {
                     log.info( " backendDataFile file is present ");
                 }
-            }
+            }*/
 
             log.debug("The File name in remoteFile variable is : " + file.toString() + " file size " + file.length() + " last modified : " + file.lastModified());
-            result = client.getCacheStatus(file.toString(), file.length(), file.lastModified(), 0, 1, 3);
-      /*log.info("After get status call : Size of result : " + result.size());
-      log.info("Remote Location in result : " + result.get(0).remoteLocation);
-      log.info("Location in result : " + result.get(0).location);
-      log.info("Values in result : " + result.get(0).toString());*/
+            result = client.getCacheStatus(file.toString(), file.length(), file.lastModified(), 0, file.length()/200, 3);
+            assertTrue(result.get(0).remoteLocation == "LOCAL", "File already cached, before readData call");
+
+            /*log.info("After get status call : Size of result : " + result.size());
+            log.info("Remote Location in result : " + result.get(0).remoteLocation);
+            log.info("Location in result : " + result.get(0).location);
+            log.info("Values in result : " + result.get(0).toString());*/
             /*assertTrue(result.size() == 1, "Wrong Size of return value getCacheStatus function " + statsMap.size() + " was expecting 1 ");*/
 
             Map<String, Double> statsMap = client.getCacheStats();
@@ -180,6 +191,17 @@ public class TestThriftServerJVM extends Configured
                 Map.Entry<String, Double> pair = it.next();
                 log.debug("Key is : " + pair.getKey() + " /// Value is : " + pair.getValue());
             }
+
+            log.info("Downloading data from path : " + file.toString());
+            dataDownloaded = client.readData(file.toString(), 0, file.length(), file.length(), file.lastModified(), 3);
+            if (!dataDownloaded) {
+                log.info("Failed to read Data from the location");
+            }
+
+            log.debug("The File name in remoteFile variable is : " + file.toString() + " file size " + file.length() + " last modified : " + file.lastModified());
+            result = client.getCacheStatus(file.toString(), file.length(), file.lastModified(), 0, file.length()/200, 3);
+            assertTrue(result.get(0).remoteLocation == "CACHED", "File not cached properly");
+
         }
         catch (TTransportException ex) {
             log.error("Error while creating bookkeeper client");
