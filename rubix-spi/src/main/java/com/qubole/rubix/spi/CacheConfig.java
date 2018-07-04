@@ -342,6 +342,7 @@ public class CacheConfig
       case PRESTO_CLUSTER_MANAGER:
         return conf.get(KEY_PRESTO_CLUSTER_MANAGER, DEFAULT_PRESTO_CLUSTER_MANAGER);
       case TEST_CLUSTER_MANAGER:
+      case TEST_CLUSTER_MANAGER_MULTINODE:
         return conf.get(KEY_DUMMY_CLUSTER_MANAGER, DEFAULT_DUMMY_CLUSTER_MANAGER);
       default:
         return null;

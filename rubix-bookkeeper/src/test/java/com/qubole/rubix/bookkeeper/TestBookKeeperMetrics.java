@@ -74,6 +74,7 @@ public class TestBookKeeperMetrics
     // Reset test values
     metrics = new MetricRegistry();
     bookKeeper = new CoordinatorBookKeeper(conf, metrics);
+    bookKeeper.clusterManager = null;
   }
 
   @AfterMethod

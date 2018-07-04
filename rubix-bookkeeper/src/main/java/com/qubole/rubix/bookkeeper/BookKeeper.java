@@ -74,7 +74,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
   public static final String METRIC_BOOKKEEPER_REMOTE_REQUEST_COUNT = "rubix.bookkeeper.remote_request.count";
 
   protected static Cache<String, FileMetadata> fileMetadataCache;
-  private static ClusterManager clusterManager;
+  protected static ClusterManager clusterManager;
   private static Log log = LogFactory.getLog(BookKeeper.class.getName());
   String nodeName;
   static String nodeHostName;
@@ -246,20 +246,13 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
           this.clusterManager = manager;
           splitSize = clusterManager.getSplitSize();
 
-          if (clusterType == TEST_CLUSTER_MANAGER.ordinal()) {
+          if (clusterType == TEST_CLUSTER_MANAGER.ordinal() || clusterType == TEST_CLUSTER_MANAGER_MULTINODE.ordinal()) {
             currentNodeIndex = 0;
             nodes = clusterManager.getNodes();
             nodeName = nodes.get(currentNodeIndex);
-            return;
-          }
-          else if (clusterType == TEST_CLUSTER_MANAGER_MULTINODE.ordinal()) {
-            // TODO clean up
-            currentNodeIndex = 0;
-            nodes = new ArrayList<>();
-            nodeName = nodeHostName;
-            nodes.add(nodeName);
-            nodes.add(nodeName + "_copy");
-            splitSize = 64 * 1024 * 1024;
+            if (clusterType == TEST_CLUSTER_MANAGER_MULTINODE.ordinal()) {
+              nodes.add(nodeName + "_copy");
+            }
             return;
           }
         }
