@@ -14,8 +14,12 @@ package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.jvm.CachedThreadStatesGaugeSet;
+import com.codahale.metrics.jvm.GarbageCollectorMetricSet;
+import com.codahale.metrics.jvm.MemoryUsageGaugeSet;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
+import com.qubole.rubix.core.utils.ClusterUtil;
 import com.qubole.rubix.spi.BookKeeperService;
 import com.qubole.rubix.spi.CacheConfig;
 import com.readytalk.metrics.StatsDReporter;
@@ -126,6 +130,9 @@ public class BookKeeperServer extends Configured implements Tool
     if ((CacheConfig.isOnMaster(conf) && CacheConfig.isReportStatsdMetricsOnMaster(conf))
         || (!CacheConfig.isOnMaster(conf) && CacheConfig.isReportStatsdMetricsOnWorker(conf))) {
       log.info("Reporting metrics to StatsD");
+      if (!CacheConfig.isOnMaster(conf)) {
+        CacheConfig.setStatsDMetricsHost(conf, ClusterUtil.getMasterHostname(conf));
+      }
       StatsDReporter.forRegistry(metrics)
           .build(CacheConfig.getStatsDMetricsHost(conf), CacheConfig.getStatsDMetricsPort(conf))
           .start(CacheConfig.getStatsDMetricsInterval(conf), TimeUnit.MILLISECONDS);
@@ -139,6 +146,9 @@ public class BookKeeperServer extends Configured implements Tool
         return 1;
       }
     });
+    metrics.register("rubix.bookkeeper.gc", new GarbageCollectorMetricSet());
+    metrics.register("rubix.bookkeeper.threads", new CachedThreadStatesGaugeSet(CacheConfig.getStatsDMetricsInterval(conf), TimeUnit.MILLISECONDS));
+    metrics.register("rubix.bookkeeper.memory", new MemoryUsageGaugeSet());
   }
 
   public static void stopServer()

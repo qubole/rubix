@@ -66,6 +66,12 @@
         </dependency>
 
         <dependency>
+            <groupId>io.dropwizard.metrics</groupId>
+            <artifactId>metrics-jvm</artifactId>
+            <version>${dep.metrics.version}</version>
+        </dependency>
+
+        <dependency>
             <groupId>com.readytalk</groupId>
             <artifactId>metrics3-statsd</artifactId>
             <version>${dep.metrics-statsd.version}</version>
@@ -121,6 +127,7 @@
                                     <include>com.google.guava:guava</include>
                                     <include>com.readytalk:metrics-statsd-common</include>
                                     <include>com.readytalk:metrics3-statsd</include>
+                                    <include>io.dropwizard.metrics:metrics-jvm</include>
                                 </includes>
                             </artifactSet>
                             <relocations>
