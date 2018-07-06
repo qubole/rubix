@@ -43,7 +43,7 @@ import static org.testng.Assert.assertTrue;
 
 public class TestThriftServerJVM extends Configured
 {
-  private static final String testDirectoryPrefix = "/Users/kvankayala/Downloads/TestThriftServerJVM/"; //System.getProperty("java.io.tmpdir") + "/TestThriftServerJVM/";
+  private static final String testDirectoryPrefix = System.getProperty("java.io.tmpdir") + "/TestThriftServerJVM/";
   private static String backendFileName = testDirectoryPrefix + "backendDataFile";
   private static Path backendPath = new Path("file:///" + backendFileName.substring(1));
 
