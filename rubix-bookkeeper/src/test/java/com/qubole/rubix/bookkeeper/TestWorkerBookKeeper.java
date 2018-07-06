@@ -14,6 +14,7 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
+import com.qubole.rubix.core.utils.DeleteFileVisitor;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
@@ -23,7 +24,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.shaded.transport.TSocket;
 import org.apache.thrift.shaded.transport.TTransportException;
 import org.mockito.ArgumentMatchers;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 
 import java.io.FileNotFoundException;
@@ -40,6 +44,9 @@ public class TestWorkerBookKeeper
   private static final Log log = LogFactory.getLog(TestBookKeeperServer.class.getName());
   private static final String cacheTestDirPrefix = System.getProperty("java.io.tmpdir") + "/workerBookKeeperTest/";
 
+  private static final int TEST_RETRY_INTERVAL = 500;
+  private static final int TEST_MAX_RETRIES = 5;
+
   private final Configuration conf = new Configuration();
 
   @BeforeClass
@@ -53,19 +60,37 @@ public class TestWorkerBookKeeper
     }
   }
 
+  @AfterClass
+  public void cleanUpCacheDirectories() throws IOException
+  {
+    Files.walkFileTree(Paths.get(cacheTestDirPrefix), new DeleteFileVisitor());
+    Files.deleteIfExists(Paths.get(cacheTestDirPrefix));
+  }
+
+  @BeforeTest
+  public void startBookKeeperServerForTest() throws InterruptedException
+  {
+    CacheConfig.setServiceRetryInterval(conf, TEST_RETRY_INTERVAL);
+    CacheConfig.setServiceMaxRetries(conf, TEST_MAX_RETRIES);
+    CacheConfig.setOnMaster(conf, true);
+
+    startBookKeeperServer();
+  }
+
+  @AfterTest
+  public void stopBookKeeperServerForTest()
+  {
+    stopBookKeeperServer();
+  }
+
   /**
    * Verify that WorkerBookKeeper throws the correct exception when asked to handle heartbeats.
    *
    * @throws FileNotFoundException if the parent directory for the cache cannot be found when initializing the BookKeeper.
-   * @throws InterruptedException if the current thread is interrupted while starting the BookKeeper server.
    */
   @Test(expectedExceptions = UnsupportedOperationException.class)
-  public void testHandleHeartbeat() throws FileNotFoundException, InterruptedException
+  public void testHandleHeartbeat_shouldNotBeHandled() throws FileNotFoundException
   {
-    CacheConfig.setServiceRetryInterval(conf, 2000);
-    CacheConfig.setOnMaster(conf, true);
-
-    startBookKeeperServer();
     final WorkerBookKeeper workerBookKeeper = new WorkerBookKeeper(conf, new MetricRegistry());
     workerBookKeeper.handleHeartbeat("");
   }
@@ -74,21 +99,16 @@ public class TestWorkerBookKeeper
    * Verify that the heartbeat service correctly makes a connection using a BookKeeper client.
    *
    * @throws TTransportException if the BookKeeper client cannot be created.
-   * @throws InterruptedException if the current thread is interrupted while starting the BookKeeper server.
    */
   @Test
-  public void testHeartbeatRetryLogic_noRetriesNeeded() throws TTransportException, InterruptedException
+  public void testHeartbeatRetryLogic_noRetriesNeeded() throws TTransportException
   {
     final BookKeeperFactory bookKeeperFactory = mock(BookKeeperFactory.class);
-    CacheConfig.setServiceRetryInterval(conf, 2000);
-    CacheConfig.setOnMaster(conf, true);
-
     when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
         new RetryingBookkeeperClient(
             new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf)),
             CacheConfig.getMaxRetries(conf)));
 
-    startBookKeeperServer();
     final WorkerBookKeeper.HeartbeatService heartbeatService = new WorkerBookKeeper.HeartbeatService(conf, bookKeeperFactory);
   }
 
@@ -98,12 +118,8 @@ public class TestWorkerBookKeeper
   @Test
   public void testHeartbeatRetryLogic_connectAfterRetries()
   {
-    final int retryInterval = 500;
-    CacheConfig.setServiceRetryInterval(conf, retryInterval);
-    CacheConfig.setServiceMaxRetries(conf, 10);
-    CacheConfig.setOnMaster(conf, true);
-
-    startBookKeeperServerWithDelay(retryInterval * 5);
+    stopBookKeeperServer();
+    startBookKeeperServerWithDelay(TEST_RETRY_INTERVAL * 2);
 
     final WorkerBookKeeper.HeartbeatService heartbeatService = new WorkerBookKeeper.HeartbeatService(conf, new BookKeeperFactory());
   }
@@ -118,13 +134,8 @@ public class TestWorkerBookKeeper
   public void testHeartbeatRetryLogic_outOfRetries() throws TTransportException, InterruptedException
   {
     final BookKeeperFactory bookKeeperFactory = mock(BookKeeperFactory.class);
-    CacheConfig.setServiceRetryInterval(conf, 1000);
-    CacheConfig.setServiceMaxRetries(conf, 3);
-    CacheConfig.setOnMaster(conf, true);
-
     when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenThrow(TTransportException.class);
 
-    startBookKeeperServer();
     final WorkerBookKeeper.HeartbeatService heartbeatService = new WorkerBookKeeper.HeartbeatService(conf, bookKeeperFactory);
   }
 
@@ -175,15 +186,9 @@ public class TestWorkerBookKeeper
 
   /**
    * Stop the currently running BookKeeper server instance.
-   *
-   * @throws InterruptedException if the current thread is interrupted while sleeping.
    */
-  private void stopBookKeeperServer() throws InterruptedException
+  private void stopBookKeeperServer()
   {
     BookKeeperServer.stopServer();
-    while (BookKeeperServer.isServerUp()) {
-      Thread.sleep(200);
-      log.info("Waiting for BookKeeper Server to shut down");
-    }
   }
 }

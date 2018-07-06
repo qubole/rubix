@@ -17,6 +17,7 @@ import com.qubole.rubix.spi.CacheConfig;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -59,13 +60,17 @@ public class TestBookKeeperServer
     }
   }
 
+  @AfterMethod
+  public void stopBookKeeperServerForTest()
+  {
+    stopBookKeeperServer();
+  }
+
   /**
    * Verify that liveness status of the BookKeeper daemon is correctly reported.
-   *
-   * @throws InterruptedException if the current thread is interrupted while sleeping.
    */
   @Test
-  public void verifyLivenessCheck() throws InterruptedException
+  public void verifyLivenessCheck()
   {
     CacheConfig.setOnMaster(conf, true);
 
@@ -82,38 +87,18 @@ public class TestBookKeeperServer
 
   /**
    * Start an instance of the BookKeeper server.
-   *
-   * @throws InterruptedException if the current thread is interrupted while sleeping.
    */
-  private void startBookKeeperServer() throws InterruptedException
+  private void startBookKeeperServer()
   {
-    final Thread thread = new Thread()
-    {
-      public void run()
-      {
-        BookKeeperServer.startServer(conf, metrics);
-      }
-    };
-    thread.start();
-
-    while (!BookKeeperServer.isServerUp()) {
-      Thread.sleep(200);
-      log.info("Waiting for BookKeeper Server to come up");
-    }
+    MockBookKeeperServer.startServer(conf, metrics);
   }
 
   /**
    * Stop the currently running BookKeeper server instance.
-   *
-   * @throws InterruptedException if the current thread is interrupted while sleeping.
    */
-  private void stopBookKeeperServer() throws InterruptedException
+  private void stopBookKeeperServer()
   {
-    BookKeeperServer.stopServer();
-    while (BookKeeperServer.isServerUp()) {
-      Thread.sleep(200);
-      log.info("Waiting for BookKeeper Server to shut down");
-    }
+    MockBookKeeperServer.stopServer();
   }
 
   /**
@@ -261,6 +246,23 @@ public class TestBookKeeperServer
     }
 
     return true;
+  }
+
+  /**
+   * Class to mock the behaviour of {@link BookKeeperServer} for testing registering & reporting metrics.
+   */
+  private static class MockBookKeeperServer extends BookKeeperServer
+  {
+    public static void startServer(Configuration conf, MetricRegistry metricRegistry)
+    {
+      metrics = metricRegistry;
+      registerMetrics(conf);
+    }
+
+    public static void stopServer()
+    {
+      removeMetrics();
+    }
   }
 
   /**
