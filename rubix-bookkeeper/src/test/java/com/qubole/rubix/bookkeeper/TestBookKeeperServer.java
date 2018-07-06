@@ -174,6 +174,23 @@ public class TestBookKeeperServer
   }
 
   /**
+   * Verify that all registered metrics are removed once the BookKeeper server has stopped.
+   */
+  @Test
+  public void verifyMetricsAreRemoved()
+  {
+    assertTrue(metrics.getNames().size() == 0, "Metrics should not be registered before server is started.");
+
+    startBookKeeperServer();
+
+    assertTrue(metrics.getNames().size() > 0, "Metrics should be registered once server is started.");
+
+    stopBookKeeperServer();
+
+    assertTrue(metrics.getNames().size() == 0, "Metrics should not be registered after server has stopped.");
+  }
+
+  /**
    * Start & configure the servers necessary for running & testing StatsDReporter on a master node.
    *
    * @param statsDPort The port to send StatsD metrics to.
