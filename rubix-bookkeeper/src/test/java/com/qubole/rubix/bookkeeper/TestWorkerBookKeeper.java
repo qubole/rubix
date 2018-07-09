@@ -176,8 +176,6 @@ public class TestWorkerBookKeeper
         catch (InterruptedException e) {
           Thread.currentThread().interrupt();
         }
-
-        System.out.println("BKS started!");
         BookKeeperServer.startServer(conf, new MetricRegistry());
       }
     };
