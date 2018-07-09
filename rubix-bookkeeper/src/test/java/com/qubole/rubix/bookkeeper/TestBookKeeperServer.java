@@ -13,11 +13,14 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
+import com.qubole.rubix.core.utils.DeleteFileVisitor;
 import com.qubole.rubix.spi.CacheConfig;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -36,34 +39,45 @@ import static org.testng.Assert.assertTrue;
 
 public class TestBookKeeperServer
 {
+  private static final String cacheTestDirPrefix = System.getProperty("java.io.tmpdir") + "/bookKeeperServerTest/";
   private static final Log log = LogFactory.getLog(TestBookKeeperServer.class.getName());
   private static final int PACKET_SIZE = 32;
   private static final int SOCKET_TIMEOUT = 5000;
 
   private MetricRegistry metrics;
-  private Configuration conf;
+  private Configuration conf = new Configuration();
 
-  @BeforeMethod
-  public void setUp() throws IOException
+  @BeforeClass
+  public void initializeCacheDirectories() throws IOException
   {
-    conf = new Configuration();
-    metrics = new MetricRegistry();
-
     // Set configuration values for testing
-    CacheConfig.setCacheDataDirPrefix(conf, "/tmp/media/ephemeral");
+    CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
     CacheConfig.setMaxDisks(conf, 5);
 
     // Create cache directories
-    Files.createDirectories(Paths.get(CacheConfig.getCacheDirPrefixList(conf)));
+    Files.createDirectories(Paths.get(cacheTestDirPrefix));
     for (int i = 0; i < CacheConfig.getCacheMaxDisks(conf); i++) {
-      Files.createDirectories(Paths.get(CacheConfig.getCacheDirPrefixList(conf) + i));
+      Files.createDirectories(Paths.get(cacheTestDirPrefix, String.valueOf(i)));
     }
+  }
+
+  @BeforeMethod
+  public void setUp()
+  {
+    metrics = new MetricRegistry();
   }
 
   @AfterMethod
   public void stopBookKeeperServerForTest()
   {
     stopBookKeeperServer();
+  }
+
+  @AfterClass
+  public void cleanUpCacheDirectories() throws IOException
+  {
+    Files.walkFileTree(Paths.get(cacheTestDirPrefix), new DeleteFileVisitor());
+    Files.deleteIfExists(Paths.get(cacheTestDirPrefix));
   }
 
   /**
