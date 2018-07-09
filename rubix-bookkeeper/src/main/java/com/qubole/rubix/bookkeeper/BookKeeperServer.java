@@ -13,6 +13,7 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.Gauge;
+import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
@@ -49,7 +50,7 @@ public class BookKeeperServer extends Configured implements Tool
   public static BookKeeperService.Processor processor;
 
   // Registry for gathering & storing necessary metrics
-  private static MetricRegistry metrics;
+  protected static MetricRegistry metrics;
 
   public static Configuration conf;
 
@@ -57,7 +58,7 @@ public class BookKeeperServer extends Configured implements Tool
 
   private static Log log = LogFactory.getLog(BookKeeperServer.class.getName());
 
-  private BookKeeperServer()
+  protected BookKeeperServer()
   {
   }
 
@@ -121,7 +122,7 @@ public class BookKeeperServer extends Configured implements Tool
   /**
    * Register desired metrics.
    */
-  private static void registerMetrics(Configuration conf)
+  protected static void registerMetrics(Configuration conf)
   {
     if ((CacheConfig.isOnMaster(conf) && CacheConfig.isReportStatsdMetricsOnMaster(conf))
         || (!CacheConfig.isOnMaster(conf) && CacheConfig.isReportStatsdMetricsOnWorker(conf))) {
@@ -143,8 +144,13 @@ public class BookKeeperServer extends Configured implements Tool
 
   public static void stopServer()
   {
-    metrics.remove(METRIC_BOOKKEEPER_LIVENESS_CHECK);
+    removeMetrics();
     server.stop();
+  }
+
+  protected static void removeMetrics()
+  {
+    metrics.removeMatching(MetricFilter.ALL);
   }
 
   @VisibleForTesting
