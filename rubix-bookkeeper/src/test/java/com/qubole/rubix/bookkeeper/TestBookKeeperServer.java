@@ -198,7 +198,9 @@ public class TestBookKeeperServer
   private void startServersForTestingStatsDReporterOnMaster(int statsDPort, int testCasePort, boolean shouldReportMetrics) throws SocketException, InterruptedException
   {
     CacheConfig.setOnMaster(conf, true);
-    CacheConfig.setReportStatsdMetricsOnMaster(conf, shouldReportMetrics);
+    if (shouldReportMetrics) {
+      CacheConfig.setMetricsReporters(conf, "STATSD");
+    }
 
     startServersForTestingStatsDReporter(statsDPort, testCasePort);
   }
@@ -215,7 +217,9 @@ public class TestBookKeeperServer
   private void startServersForTestingStatsDReporterForWorker(int statsDPort, int testCasePort, boolean shouldReportMetrics) throws SocketException, InterruptedException
   {
     CacheConfig.setOnMaster(conf, false);
-    CacheConfig.setReportStatsdMetricsOnWorker(conf, shouldReportMetrics);
+    if (shouldReportMetrics) {
+      CacheConfig.setMetricsReporters(conf, "STATSD");
+    }
 
     startServersForTestingStatsDReporter(statsDPort, testCasePort);
   }

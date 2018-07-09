@@ -57,8 +57,7 @@ public class CacheConfig
   private static final String KEY_METRICS_STATSD_HOST = "rubix.metrics.statsd.host";
   private static final String KEY_METRICS_STATSD_INTERVAL = "rubix.metrics.statsd.interval";
   private static final String KEY_METRICS_STATSD_PORT = "rubix.metrics.statsd.port";
-  private static final String KEY_METRICS_STATSD_REPORT_ON_MASTER = "rubix.metrics.statsd.report-master";
-  private static final String KEY_METRICS_STATSD_REPORT_ON_WORKER = "rubix.metrics.statsd.report-worker";
+  private static final String KEY_METRICS_REPORTERS = "rubix.metrics.reporters";
   private static final String KEY_PARALLEL_WARMUP = "rubix.parallel.warmup";
   private static final String KEY_PROCESS_THREAD_INITIAL_DELAY = "rubix.request.process.initial.delay";
   private static final String KEY_PROCESS_THREAD_INTERVAL = "rubix.request.process.interval";
@@ -102,8 +101,7 @@ public class CacheConfig
   private static final String DEFAULT_METRICS_STATSD_HOST = "127.0.0.1"; // localhost
   private static final int DEFAULT_METRICS_STATSD_INTERVAL = 10000; // ms
   private static final int DEFAULT_METRICS_STATSD_PORT = 8125; // default StatsD port
-  private static final boolean DEFAULT_METRICS_STATSD_REPORT_ON_MASTER = false;
-  private static final boolean DEFAULT_METRICS_STATSD_REPORT_ON_WORKER = false;
+  private static final String DEFAULT_METRICS_REPORTERS = "";
   private static final boolean DEFAULT_PARALLEL_WARMUP = false;
   private static final int DEFAULT_PROCESS_THREAD_INITIAL_DELAY = 1000; // ms
   private static final int DEFAULT_PROCESS_THREAD_INTERVAL = 1000; // ms
@@ -234,6 +232,11 @@ public class CacheConfig
     return conf.getInt(KEY_MAX_RETRIES, DEFAULT_MAX_RETRIES);
   }
 
+  public static String getMetricsReporters(Configuration conf)
+  {
+    return conf.get(KEY_METRICS_REPORTERS, DEFAULT_METRICS_REPORTERS);
+  }
+
   public static int getProcessThreadInitialDelay(Configuration conf)
   {
     return conf.getInt(KEY_PROCESS_THREAD_INITIAL_DELAY, DEFAULT_PROCESS_THREAD_INITIAL_DELAY);
@@ -297,16 +300,6 @@ public class CacheConfig
   public static boolean isOnMaster(Configuration conf)
   {
     return conf.getBoolean(KEY_RUBIX_ON_MASTER, DEFAULT_RUBIX_ON_MASTER);
-  }
-
-  public static boolean isReportStatsdMetricsOnMaster(Configuration conf)
-  {
-    return conf.getBoolean(KEY_METRICS_STATSD_REPORT_ON_MASTER, DEFAULT_METRICS_STATSD_REPORT_ON_MASTER);
-  }
-
-  public static boolean isReportStatsdMetricsOnWorker(Configuration conf)
-  {
-    return conf.getBoolean(KEY_METRICS_STATSD_REPORT_ON_WORKER, DEFAULT_METRICS_STATSD_REPORT_ON_WORKER);
   }
 
   public static boolean isStrictMode(Configuration conf)
@@ -428,6 +421,11 @@ public class CacheConfig
     conf.setInt(KEY_DATA_CACHE_MAX_DISKS, maxDisks);
   }
 
+  public static void setMetricsReporters(Configuration conf, String reporters)
+  {
+    conf.set(KEY_METRICS_REPORTERS, reporters);
+  }
+
   public static void setOnMaster(Configuration conf, boolean onMaster)
   {
     conf.setBoolean(KEY_RUBIX_ON_MASTER, onMaster);
@@ -456,16 +454,6 @@ public class CacheConfig
   public static void setStatsDMetricsPort(Configuration conf, int port)
   {
     conf.setInt(KEY_METRICS_STATSD_PORT, port);
-  }
-
-  public static void setReportStatsdMetricsOnMaster(Configuration conf, boolean reportOnMaster)
-  {
-    conf.setBoolean(KEY_METRICS_STATSD_REPORT_ON_MASTER, reportOnMaster);
-  }
-
-  public static void setReportStatsdMetricsOnWorker(Configuration conf, boolean reportOnWorker)
-  {
-    conf.setBoolean(KEY_METRICS_STATSD_REPORT_ON_WORKER, reportOnWorker);
   }
 
   public static void setWorkerLivenessExpiry(Configuration conf, int expiryTime)

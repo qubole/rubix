@@ -18,14 +18,13 @@ import com.codahale.metrics.jvm.GarbageCollectorMetricSet;
 import com.codahale.metrics.jvm.MemoryUsageGaugeSet;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
-import com.qubole.rubix.core.utils.ClusterUtil;
+import com.qubole.rubix.bookkeeper.metrics.BookKeeperMetrics;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.DataTransferClientHelper;
 import com.qubole.rubix.spi.DataTransferHeader;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
-import com.readytalk.metrics.StatsDReporter;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -55,6 +54,7 @@ public class LocalDataTransferServer extends Configured implements Tool
   private static Configuration conf;
   private static LocalServer localServer;
   private static MetricRegistry metrics;
+  private static BookKeeperMetrics bookKeeperMetrics;
 
   private LocalDataTransferServer()
   {
@@ -89,15 +89,7 @@ public class LocalDataTransferServer extends Configured implements Tool
    */
   private static void registerMetrics(Configuration conf)
   {
-    if ((CacheConfig.isOnMaster(conf) && CacheConfig.isReportStatsdMetricsOnMaster(conf))
-        || (!CacheConfig.isOnMaster(conf) && CacheConfig.isReportStatsdMetricsOnWorker(conf))) {
-      if (!CacheConfig.isOnMaster(conf)) {
-        CacheConfig.setStatsDMetricsHost(conf, ClusterUtil.getMasterHostname(conf));
-      }
-      StatsDReporter.forRegistry(metrics)
-          .build(CacheConfig.getStatsDMetricsHost(conf), CacheConfig.getStatsDMetricsPort(conf))
-          .start(CacheConfig.getStatsDMetricsInterval(conf), TimeUnit.MILLISECONDS);
-    }
+    bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
 
     metrics.register("rubix.ldts.gc", new GarbageCollectorMetricSet());
     metrics.register("rubix.ldts.threads", new CachedThreadStatesGaugeSet(CacheConfig.getStatsDMetricsInterval(conf), TimeUnit.MILLISECONDS));
@@ -107,6 +99,12 @@ public class LocalDataTransferServer extends Configured implements Tool
   public static void stopServer()
   {
     if (localServer != null) {
+      try {
+        bookKeeperMetrics.closeReporters();
+      }
+      catch (IOException e) {
+        log.error("Metrics reporters could not be closed", e);
+      }
       localServer.stop();
     }
   }

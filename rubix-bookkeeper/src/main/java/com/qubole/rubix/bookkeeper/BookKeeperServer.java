@@ -19,10 +19,9 @@ import com.codahale.metrics.jvm.GarbageCollectorMetricSet;
 import com.codahale.metrics.jvm.MemoryUsageGaugeSet;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
-import com.qubole.rubix.core.utils.ClusterUtil;
+import com.qubole.rubix.bookkeeper.metrics.BookKeeperMetrics;
 import com.qubole.rubix.spi.BookKeeperService;
 import com.qubole.rubix.spi.CacheConfig;
-import com.readytalk.metrics.StatsDReporter;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -36,6 +35,7 @@ import org.apache.thrift.shaded.transport.TServerTransport;
 import org.apache.thrift.shaded.transport.TTransportException;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import static com.qubole.rubix.spi.CacheConfig.getServerMaxThreads;
@@ -60,6 +60,7 @@ public class BookKeeperServer extends Configured implements Tool
   private static TServer server;
 
   private static Log log = LogFactory.getLog(BookKeeperServer.class.getName());
+  private static BookKeeperMetrics bookKeeperMetrics;
 
   private BookKeeperServer()
   {
@@ -127,16 +128,7 @@ public class BookKeeperServer extends Configured implements Tool
    */
   private static void registerMetrics(Configuration conf)
   {
-    if ((CacheConfig.isOnMaster(conf) && CacheConfig.isReportStatsdMetricsOnMaster(conf))
-        || (!CacheConfig.isOnMaster(conf) && CacheConfig.isReportStatsdMetricsOnWorker(conf))) {
-      log.info("Reporting metrics to StatsD");
-      if (!CacheConfig.isOnMaster(conf)) {
-        CacheConfig.setStatsDMetricsHost(conf, ClusterUtil.getMasterHostname(conf));
-      }
-      StatsDReporter.forRegistry(metrics)
-          .build(CacheConfig.getStatsDMetricsHost(conf), CacheConfig.getStatsDMetricsPort(conf))
-          .start(CacheConfig.getStatsDMetricsInterval(conf), TimeUnit.MILLISECONDS);
-    }
+    bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
 
     metrics.register(METRIC_BOOKKEEPER_LIVENESS_CHECK, new Gauge<Integer>()
     {
@@ -154,6 +146,12 @@ public class BookKeeperServer extends Configured implements Tool
   public static void stopServer()
   {
     metrics.remove(METRIC_BOOKKEEPER_LIVENESS_CHECK);
+    try {
+      bookKeeperMetrics.closeReporters();
+    }
+    catch (IOException e) {
+      log.error("Metrics reporters could not be closed", e);
+    }
     server.stop();
   }
 
