@@ -32,7 +32,6 @@ import org.testng.annotations.Test;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
@@ -69,10 +68,8 @@ public class TestWorkerBookKeeper
   }
 
   @BeforeMethod
-  public void startBookKeeperServerForTest(Method method) throws InterruptedException
+  public void startBookKeeperServerForTest() throws InterruptedException
   {
-    log.info("Starting test " + method.getName());
-
     CacheConfig.setServiceRetryInterval(conf, TEST_RETRY_INTERVAL);
     CacheConfig.setServiceMaxRetries(conf, TEST_MAX_RETRIES);
     CacheConfig.setOnMaster(conf, true);

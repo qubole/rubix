@@ -29,7 +29,6 @@ import org.testng.annotations.Test;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
@@ -63,10 +62,8 @@ public class TestCoordinatorManager
   }
 
   @BeforeMethod
-  public void setUp(Method method)
+  public void setUp()
   {
-    log.info("Starting test " + method.getName());
-
     conf.clear();
     this.metrics = new MetricRegistry();
   }

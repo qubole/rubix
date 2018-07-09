@@ -20,11 +20,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.shaded.TException;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
@@ -56,12 +54,6 @@ public class TestBookKeeperMetrics
     }
 
     bookKeeper = new CoordinatorBookKeeper(conf, metrics);
-  }
-
-  @BeforeMethod
-  public void setUpForTest(Method method)
-  {
-    log.info("Starting test " + method.getName());
   }
 
   /**

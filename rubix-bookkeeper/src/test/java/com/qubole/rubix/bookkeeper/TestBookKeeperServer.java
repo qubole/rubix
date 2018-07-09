@@ -25,7 +25,6 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
@@ -63,10 +62,8 @@ public class TestBookKeeperServer
   }
 
   @BeforeMethod
-  public void setUp(Method method)
+  public void setUp()
   {
-    log.info("Starting test " + method.getName());
-
     metrics = new MetricRegistry();
   }
 
