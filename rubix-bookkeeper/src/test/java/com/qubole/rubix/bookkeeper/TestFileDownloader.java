@@ -16,6 +16,8 @@ package com.qubole.rubix.bookkeeper;
 import com.qubole.rubix.core.FileDownloadRequestChain;
 import com.qubole.rubix.core.utils.DeleteFileVisitor;
 import com.qubole.rubix.spi.CacheConfig;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -34,6 +36,8 @@ import static org.testng.Assert.assertTrue;
  */
 public class TestFileDownloader
 {
+  private static final Log log = LogFactory.getLog(TestFileDownloader.class);
+
   private static final String testDirectoryPrefix = System.getProperty("java.io.tmpdir") + "/TestFileDownloader/";
   private static final String testDirectory = testDirectoryPrefix + "dir0";
   private Configuration conf;

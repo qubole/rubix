@@ -83,6 +83,7 @@ public class TestNonLocalReadRequestChain
   public void setup()
       throws Exception
   {
+    CacheConfig.setOnMaster(conf, true);
     CacheConfig.setIsStrictMode(conf, true);
     CacheConfig.setServerPort(conf, 3456);
     CacheConfig.setLocalServerPort(conf, 2222);

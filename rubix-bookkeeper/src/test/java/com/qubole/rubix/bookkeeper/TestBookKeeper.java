@@ -21,6 +21,8 @@ import com.qubole.rubix.presto.PrestoClusterManager;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -36,6 +38,8 @@ import static org.testng.Assert.assertTrue;
  */
 public class TestBookKeeper
 {
+  private static final Log log = LogFactory.getLog(TestBookKeeper.class);
+
   private MetricRegistry metrics;
   private Configuration conf;
 

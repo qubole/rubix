@@ -62,9 +62,9 @@ public class CoordinatorBookKeeper extends BookKeeper
       @Override
       public Integer getValue()
       {
+        log.debug(String.format("Reporting %s workers", liveWorkerCache.asMap().size()));
         return liveWorkerCache.asMap().size();
       }
     });
-    log.debug(String.format("Reporting %s workers", liveWorkerCache.asMap().size()));
   }
 }
