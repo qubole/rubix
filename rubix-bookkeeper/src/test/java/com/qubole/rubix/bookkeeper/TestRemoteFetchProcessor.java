@@ -30,6 +30,7 @@ import org.testng.annotations.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.concurrent.ConcurrentMap;
@@ -61,8 +62,10 @@ public class TestRemoteFetchProcessor
   }
 
   @BeforeMethod
-  public void setUp() throws Exception
+  public void setUp(Method method) throws Exception
   {
+    log.info("Starting test " + method.getName());
+
     conf = new Configuration();
     CacheConfig.setCacheDataDirPrefix(conf, testDirectoryPrefix + "dir");
     CacheConfig.setBlockSize(conf, blockSize);

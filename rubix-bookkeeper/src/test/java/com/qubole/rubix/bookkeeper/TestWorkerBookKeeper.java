@@ -25,13 +25,14 @@ import org.apache.thrift.shaded.transport.TSocket;
 import org.apache.thrift.shaded.transport.TTransportException;
 import org.mockito.ArgumentMatchers;
 import org.testng.annotations.AfterClass;
-import org.testng.annotations.AfterTest;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.BeforeTest;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
@@ -41,7 +42,7 @@ import static org.mockito.Mockito.when;
 
 public class TestWorkerBookKeeper
 {
-  private static final Log log = LogFactory.getLog(TestBookKeeperServer.class.getName());
+  private static final Log log = LogFactory.getLog(TestWorkerBookKeeper.class);
   private static final String cacheTestDirPrefix = System.getProperty("java.io.tmpdir") + "/workerBookKeeperTest/";
 
   private static final int TEST_RETRY_INTERVAL = 500;
@@ -67,9 +68,11 @@ public class TestWorkerBookKeeper
     Files.deleteIfExists(Paths.get(cacheTestDirPrefix));
   }
 
-  @BeforeTest
-  public void startBookKeeperServerForTest() throws InterruptedException
+  @BeforeMethod
+  public void startBookKeeperServerForTest(Method method) throws InterruptedException
   {
+    log.info("Starting test " + method.getName());
+
     CacheConfig.setServiceRetryInterval(conf, TEST_RETRY_INTERVAL);
     CacheConfig.setServiceMaxRetries(conf, TEST_MAX_RETRIES);
     CacheConfig.setOnMaster(conf, true);
@@ -77,7 +80,7 @@ public class TestWorkerBookKeeper
     startBookKeeperServer();
   }
 
-  @AfterTest
+  @AfterMethod
   public void stopBookKeeperServerForTest()
   {
     stopBookKeeperServer();
