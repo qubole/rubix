@@ -171,9 +171,11 @@ public class TestThriftServerJVM extends Configured
     }
     catch (TTransportException ex) {
       log.error("Error while creating bookkeeper client");
+      assertTrue(false, "Failed due to TTransportException");
     }
     catch (TException ex) {
       log.error("Error while invoking getCacheStatus");
+      assertTrue(false, "Failed due to TException");
     }
   }
 }
