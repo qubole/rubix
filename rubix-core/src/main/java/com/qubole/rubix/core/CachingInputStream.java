@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016. Qubole Inc
+ * Copyright (c) 2018. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -21,6 +21,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.qubole.rubix.spi.BlockLocation;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.Location;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
@@ -130,8 +131,8 @@ public class CachingInputStream extends FSInputStream
       bookKeeperClient = null;
     }
     this.blockSize = CacheConfig.getBlockSize(conf);
-    this.localPath = CacheConfig.getLocalPath(remotePath, conf);
-    this.diskReadBufferSize = CacheConfig.getDiskReadBufferSizeDefault(conf);
+    this.localPath = CacheUtil.getLocalPath(remotePath, conf);
+    this.diskReadBufferSize = CacheConfig.getDiskReadBufferSize(conf);
   }
 
   private FSDataInputStream getParentDataInputStream() throws IOException

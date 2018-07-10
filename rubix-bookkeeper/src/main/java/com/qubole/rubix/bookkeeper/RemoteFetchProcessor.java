@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016. Qubole Inc
+ * Copyright (c) 2018. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -46,9 +46,9 @@ public class RemoteFetchProcessor extends AbstractScheduledService
     this.processQueue = new ConcurrentLinkedQueue<FetchRequest>();
     this.downloader = new FileDownloader(conf);
 
-    this.processThreadInitalDelay = CacheConfig.getProcessThreadInitialDelayInMs(conf);
-    this.processThreadInterval = CacheConfig.getProcessThreadIntervalInMs(conf);
-    this.requestProcessDelay = CacheConfig.getRemoteFetchProcessIntervalInMS(conf);
+    this.processThreadInitalDelay = CacheConfig.getProcessThreadInitialDelay(conf);
+    this.processThreadInterval = CacheConfig.getProcessThreadInterval(conf);
+    this.requestProcessDelay = CacheConfig.getRemoteFetchProcessInterval(conf);
   }
 
   public void addToProcessQueue(String remotePath, long offset, int length, long fileSize, long lastModified)

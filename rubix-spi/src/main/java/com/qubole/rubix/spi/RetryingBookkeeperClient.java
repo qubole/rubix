@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016. Qubole Inc
+ * Copyright (c) 2018. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -66,6 +66,20 @@ public class RetryingBookkeeperClient extends BookKeeperService.Client implement
           throws Exception
       {
         RetryingBookkeeperClient.super.setAllCached(remotePath, fileLength, lastModified, startBlock, endBlock);
+        return null;
+      }
+    });
+  }
+
+  @Override
+  public void handleHeartbeat(final String workerHostname) throws TException
+  {
+    retryConnection(new Callable<Void>()
+    {
+      @Override
+      public Void call() throws Exception
+      {
+        RetryingBookkeeperClient.super.handleHeartbeat(workerHostname);
         return null;
       }
     });

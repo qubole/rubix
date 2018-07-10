@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016. Qubole Inc
+ * Copyright (c) 2018. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,6 +18,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.qubole.rubix.core.FileDownloadRequestChain;
 import com.qubole.rubix.core.ReadRequest;
 import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.CacheUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -52,8 +53,8 @@ class FileDownloader
   public FileDownloader(Configuration conf)
   {
     this.conf = conf;
-    int numThreads = CacheConfig.getRemoteFetchNumThreads(conf);
-    this.diskReadBufferSize = CacheConfig.getDiskReadBufferSizeDefault(conf);
+    int numThreads = CacheConfig.getRemoteFetchThreads(conf);
+    this.diskReadBufferSize = CacheConfig.getDiskReadBufferSize(conf);
 
     ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(numThreads);
     processService = MoreExecutors.getExitingExecutorService(executor);
@@ -72,7 +73,7 @@ class FileDownloader
       FileSystem fs = FileSystem.newInstance(path.toUri(), conf);
       fs.initialize(path.toUri(), conf);
 
-      String localPath = CacheConfig.getLocalPath(entry.getKey(), conf);
+      String localPath = CacheUtil.getLocalPath(entry.getKey(), conf);
       log.info("Processing Request for File : " + path.toString() + " LocalFile : " + localPath);
       ByteBuffer directWriteBuffer = bufferPool.getBuffer(diskReadBufferSize);
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016. Qubole Inc
+ * Copyright (c) 2018. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -34,7 +34,7 @@ public class DataTransferClientHelper
   {
     SocketAddress sad = new InetSocketAddress(remoteNodeName, CacheConfig.getLocalServerPort(conf));
     SocketChannel sc = SocketChannel.open();
-    sc.socket().setSoTimeout(CacheConfig.getSocketReadTimeOutDefault(conf));
+    sc.socket().setSoTimeout(CacheConfig.getSocketReadTimeOut(conf));
     sc.configureBlocking(true);
     sc.socket().connect(sad, CacheConfig.getClientTimeout(conf));
     return sc;

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016. Qubole Inc
+ * Copyright (c) 2018. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -66,7 +66,7 @@ public class DiskMonitorService extends AbstractScheduledService
   @Override
   protected Scheduler scheduler()
   {
-    return Scheduler.newFixedDelaySchedule(60, interval, TimeUnit.SECONDS);
+    return Scheduler.newFixedDelaySchedule(60000, interval, TimeUnit.MILLISECONDS);
   }
 
   static class FailureListener

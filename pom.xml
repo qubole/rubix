@@ -5,7 +5,7 @@
     <groupId>com.qubole.rubix</groupId>
     <artifactId>rubix-root</artifactId>
     <packaging>pom</packaging>
-    <version>0.3.1-SNAPSHOT</version>
+    <version>0.3.2-SNAPSHOT</version>
     <name>rubix</name>
     <url>http://github.com/qubole/rubix</url>
     <description>Caching Framework for Big Data Engines</description>
@@ -48,8 +48,12 @@
         <dep.presto.version>0.142</dep.presto.version>
         <dep.airlift.version>0.98</dep.airlift.version>
         <commons-httpclient.version>3.0.1</commons-httpclient.version>
-        <dep.hadoop1.version>1.2.0</dep.hadoop1.version>
+        <dep.guava.version>18.0</dep.guava.version>
         <dep.hadoop2.version>2.6.0</dep.hadoop2.version>
+        <dep.metrics.version>3.1.0</dep.metrics.version>
+        <dep.testng.version>6.9.8</dep.testng.version>
+        <dep.mockito.version>2.18.3</dep.mockito.version>
+        <dep.metrics-statsd.version>4.2.0</dep.metrics-statsd.version>
     </properties>
 
     <modules>
@@ -58,11 +62,17 @@
         <module>rubix-bookkeeper</module>
         <module>rubix-core</module>
         <module>rubix-presto</module>
-        <module>rubix-hadoop1</module>
         <module>rubix-tests</module>
         <module>assembly</module>
         <module>rubix-rpm</module>
     </modules>
+
+    <repositories>
+        <repository>
+            <id>spring-plugins</id>
+            <url>http://repo.spring.io/libs-release/</url>
+        </repository>
+    </repositories>
 
     <dependencyManagement>
         <dependencies>
@@ -81,12 +91,6 @@
             <dependency>
                 <groupId>com.qubole.rubix</groupId>
                 <artifactId>rubix-presto</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.qubole.rubix</groupId>
-                <artifactId>rubix-hadoop1</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
@@ -116,12 +120,6 @@
 
             <dependency>
                 <groupId>org.apache.hadoop</groupId>
-                <artifactId>hadoop-core</artifactId>
-                <version>${dep.hadoop1.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.apache.hadoop</groupId>
                 <artifactId>hadoop-aws</artifactId>
                 <version>${dep.hadoop2.version}</version>
             </dependency>
@@ -138,6 +136,24 @@
                 <version>${dep.hadoop2.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>io.dropwizard.metrics</groupId>
+                <artifactId>metrics-core</artifactId>
+                <version>${dep.metrics.version}</version>
+                <scope>provided</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>com.readytalk</groupId>
+                <artifactId>metrics3-statsd</artifactId>
+                <version>${dep.metrics-statsd.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.readytalk</groupId>
+                <artifactId>metrics-statsd-common</artifactId>
+                <version>${dep.metrics-statsd.version}</version>
+            </dependency>
 
             <dependency>
                 <groupId>org.weakref</groupId>
@@ -148,7 +164,7 @@
             <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
-                <version>18.0</version>
+                <version>${dep.guava.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -228,7 +244,9 @@
             <configuration>
                 <instrumentation>
                     <excludes>
-                        <exclude>**/com/qubole/rubix/spi/*.class</exclude>
+                        <exclude>**/com/qubole/rubix/spi/BlockLocation*.class</exclude>
+                        <exclude>**/com/qubole/rubix/spi/BookKeeperService*.class</exclude>
+                        <exclude>**/com/qubole/rubix/spi/Location*.class</exclude>
                     </excludes>
                 </instrumentation>
                 <check>true</check>

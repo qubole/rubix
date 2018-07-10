@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016. Qubole Inc
+ * Copyright (c) 2018. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,23 +12,22 @@
  */
 package com.qubole.rubix.bookkeeper;
 
-import com.google.common.base.Charsets;
+import com.codahale.metrics.Counter;
+import com.codahale.metrics.MetricRegistry;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.cache.Weigher;
-import com.google.common.hash.HashCode;
-import com.google.common.hash.HashFunction;
-import com.google.common.hash.Hashing;
+import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.core.ReadRequest;
 import com.qubole.rubix.core.RemoteReadRequestChain;
-import com.qubole.rubix.hadoop2.Hadoop2ClusterManager;
-import com.qubole.rubix.presto.PrestoClusterManager;
 import com.qubole.rubix.spi.BlockLocation;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.Location;
@@ -41,7 +40,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.thrift.shaded.TException;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
@@ -53,15 +55,15 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import static com.qubole.rubix.spi.ClusterType.HADOOP2_CLUSTER_MANAGER;
-import static com.qubole.rubix.spi.ClusterType.PRESTO_CLUSTER_MANAGER;
 import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
 
 /**
  * Created by stagra on 12/2/16.
  */
-public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
+public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
 {
+  public static final String METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT = "rubix.bookkeeper.local_cache.count";
+
   private static Cache<String, FileMetadata> fileMetadataCache;
   private static ClusterManager clusterManager;
   private static Log log = LogFactory.getLog(BookKeeper.class.getName());
@@ -78,19 +80,42 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
   static long splitSize;
   private RemoteFetchProcessor fetchProcessor;
 
-  public BookKeeper(Configuration conf)
+  // Registry for gathering & storing necessary metrics
+  protected final MetricRegistry metrics;
+
+  // Metrics counter to keep track of the total number of blocks hit
+  private Counter localCacheCount;
+
+  public BookKeeper(Configuration conf, MetricRegistry metrics) throws FileNotFoundException
   {
     this.conf = conf;
+    this.metrics = metrics;
+    initializeMetrics();
     initializeCache(conf);
     fetchProcessor = new RemoteFetchProcessor(conf);
     fetchProcessor.startAsync();
+  }
+
+  /**
+   * Initialize the instruments used for gathering desired metrics.
+   */
+  private void initializeMetrics()
+  {
+    localCacheCount = metrics.counter(METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT);
   }
 
   @Override
   public List<BlockLocation> getCacheStatus(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock, int clusterType)
       throws TException
   {
-    initializeClusterManager(clusterType);
+    try {
+      initializeClusterManager(clusterType);
+    }
+    catch (ClusterManagerInitilizationException ex) {
+      log.error("Not able to initialize ClusterManager for cluster type : " + ClusterType.findByValue(clusterType) +
+          " with Exception : " + ex);
+      return null;
+    }
     if (nodeName == null) {
       log.error("Node name is null for Cluster Type" + ClusterType.findByValue(clusterType));
       return null;
@@ -110,9 +135,7 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
         end = fileLength;
       }
       String key = remotePath + i + end;
-      HashFunction hf = Hashing.md5();
-      HashCode hc = hf.hashString(key, Charsets.UTF_8);
-      int nodeIndex = Hashing.consistentHash(hc, nodes.size());
+      int nodeIndex = clusterManager.getNodeIndex(nodes.size(), key);
       blockSplits.put(blockNumber, nodes.get(nodeIndex));
       blockNumber++;
     }
@@ -138,6 +161,8 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
     try {
       for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
         totalRequests++;
+        localCacheCount.inc();
+
         long split = (blockNum * blockSize) / splitSize;
         if (!blockSplits.get(split).equalsIgnoreCase(nodeName)) {
           blockLocations.add(new BlockLocation(Location.NON_LOCAL, blockSplits.get(split)));
@@ -161,10 +186,10 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
     return blockLocations;
   }
 
-  private void initializeClusterManager(int clusterType)
+  private void initializeClusterManager(int clusterType) throws ClusterManagerInitilizationException
   {
     if (this.clusterManager == null) {
-      ClusterManager clusterManager = null;
+      ClusterManager manager = null;
       synchronized (lock) {
         if (this.clusterManager == null) {
           try {
@@ -177,26 +202,16 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
             return;
           }
 
-          if (clusterType == TEST_CLUSTER_MANAGER.ordinal()) {
-            nodes = new ArrayList<>();
-            nodeName = nodeHostName;
-            nodes.add(nodeName);
-            splitSize = 64 * 1024 * 1024;
-            currentNodeIndex = 0;
-            return;
-          }
-          else {
-            if (clusterType == HADOOP2_CLUSTER_MANAGER.ordinal()) {
-              clusterManager = new Hadoop2ClusterManager();
-            }
-            else if (clusterType == PRESTO_CLUSTER_MANAGER.ordinal()) {
-              clusterManager = new PrestoClusterManager();
-            }
+          manager = getClusterManagerInstance(ClusterType.findByValue(clusterType), conf);
+          manager.initialize(conf);
+          this.clusterManager = manager;
+          splitSize = clusterManager.getSplitSize();
 
-            clusterManager.initialize(conf);
-            // set the global clusterManager only after it is inited
-            this.clusterManager = clusterManager;
-            splitSize = clusterManager.getSplitSize();
+          if (clusterType == TEST_CLUSTER_MANAGER.ordinal()) {
+            currentNodeIndex = 0;
+            nodes = clusterManager.getNodes();
+            nodeName = nodes.get(currentNodeIndex);
+            return;
           }
         }
       }
@@ -218,6 +233,30 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
       log.error(String.format("Could not initialize cluster nodes=%s nodeHostName=%s nodeHostAddress=%s " +
           "currentNodeIndex=%d", nodes, nodeHostName, nodeHostAddress, currentNodeIndex));
     }
+  }
+
+  @VisibleForTesting
+  public ClusterManager getClusterManagerInstance(ClusterType clusterType, Configuration config)
+      throws ClusterManagerInitilizationException
+  {
+    String clusterManagerClassName = CacheConfig.getClusterManagerClass(conf, clusterType);
+    log.info("Initializing cluster manager : " + clusterManagerClassName);
+    ClusterManager manager = null;
+
+    try {
+      Class clusterManagerClass = conf.getClassByName(clusterManagerClassName);
+      Constructor constructor = clusterManagerClass.getConstructor();
+      manager = (ClusterManager) constructor.newInstance();
+    }
+    catch (ClassNotFoundException | NoSuchMethodException | InstantiationException |
+        IllegalAccessException | InvocationTargetException ex) {
+      String errorMessage = String.format("Not able to initialize ClusterManager class : {0} ",
+          clusterManagerClassName);
+      log.error(errorMessage);
+      throw new ClusterManagerInitilizationException(errorMessage, ex);
+    }
+
+    return manager;
   }
 
   @Override
@@ -286,7 +325,7 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
     int blockSize = CacheConfig.getBlockSize(conf);
     byte[] buffer = new byte[blockSize];
     ByteBuffer byteBuffer = null;
-    String localPath = CacheConfig.getLocalPath(remotePath, conf);
+    String localPath = CacheUtil.getLocalPath(remotePath, conf);
     FileSystem fs = null;
     FSDataInputStream inputStream = null;
     Path path = new Path(remotePath);
@@ -301,7 +340,7 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
         log.debug(" blockLocation is: " + blockLocations.get(idx).getLocation() + " for path " + remotePath + " offset " + offset + " length " + length);
         if (blockLocations.get(idx).getLocation() != Location.CACHED) {
           if (byteBuffer == null) {
-            byteBuffer = ByteBuffer.allocateDirect(CacheConfig.getDiskReadBufferSizeDefault(conf));
+            byteBuffer = ByteBuffer.allocateDirect(CacheConfig.getDiskReadBufferSize(conf));
           }
 
           if (fs == null) {
@@ -363,11 +402,13 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
     return endBlock;
   }
 
-  private static synchronized void initializeCache(final Configuration conf)
+  private static synchronized void initializeCache(final Configuration conf) throws FileNotFoundException
   {
+    CacheUtil.createCacheDirectories(conf);
+
     long avail = 0;
-    for (int d = 0; d < CacheConfig.numDisks(conf); d++) {
-      avail += new File(CacheConfig.getDirPath(conf, d)).getUsableSpace();
+    for (int d = 0; d < CacheUtil.getCacheDiskCount(conf); d++) {
+      avail += new File(CacheUtil.getDirPath(d, conf)).getUsableSpace();
     }
     avail = avail / 1024 / 1024;
     log.info("total free space " + avail + "MB");
@@ -386,7 +427,7 @@ public class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
           }
         })
         .maximumWeight((long) (total * 1.0 * CacheConfig.getCacheDataFullnessPercentage(conf) / 100.0))
-        .expireAfterWrite(CacheConfig.getCacheDataExpirationAfterWrite(conf), TimeUnit.SECONDS)
+        .expireAfterWrite(CacheConfig.getCacheDataExpirationAfterWrite(conf), TimeUnit.MILLISECONDS)
         .removalListener(new RemovalListener<String, FileMetadata>()
         {
           public void onRemoval(final RemovalNotification<String, FileMetadata> notification)

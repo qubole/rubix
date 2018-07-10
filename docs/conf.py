@@ -47,7 +47,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Rubix'
-copyright = u'2017, Qubole'
+copyright = u'2018, Qubole'
 author = u'Qubole'
 
 # The version info for the project you're documenting, acts as replacement for
