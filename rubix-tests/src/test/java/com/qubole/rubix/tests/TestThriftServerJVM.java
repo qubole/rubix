@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016. Qubole Inc
+ * Copyright (c) 2018. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -41,6 +41,10 @@ import java.util.List;
 
 import static org.testng.Assert.assertTrue;
 
+/**
+ * Created by kvankayala on 10 Jul 2018.
+ * TestThriftServerJVM Class created to test separate JVMs for bookKeeper and LDS servers
+ */
 public class TestThriftServerJVM extends Configured
 {
   private static final String testDirectoryPrefix = System.getProperty("java.io.tmpdir") + "/TestThriftServerJVM/";
@@ -83,7 +87,7 @@ public class TestThriftServerJVM extends Configured
     }
     log.debug(" Located Bookkeeper Jar is : " + bookKeeperJarPath);
     /*
-     * Spinning up the separate JVMs for bookKeeper and Local Data Transfer
+     * Spinning up the separate JVMs for bookKeeper and Local Data Transfer Servers
      * */
     String[] bookKeeperStartCmd = {hadoopDirectory, "jar", bookKeeperJarPath, bookKeeperClass, setDataBlockSize, setCacheMaxDisks};
     String[] localDataTransferStartCmd = {hadoopDirectory, "jar", bookKeeperJarPath, localDataTransferServerClass, setDataBlockSize, setCacheMaxDisks};
@@ -159,9 +163,8 @@ public class TestThriftServerJVM extends Configured
       log.info(" Value of Result : " + result);
       log.info("Downloading file from path : " + file.toString());
       dataDownloaded = client.readData("file:///" + backendFileName, 0, readSize, file.length(), file.lastModified(), 3);
-      if (!dataDownloaded) {
-        log.info("Failed to read Data from the location");
-      }
+      assertTrue(dataDownloaded == true, "readData() function call failed. File not downloaded properly");
+
       result = client.getCacheStatus("file:///" + backendFileName, file.length(), file.lastModified(), 0, lastBlock, 3);
       assertTrue(result.get(0).getLocation() == Location.CACHED, "File not cached properly");
       log.info(" Value of Result : " + result);
