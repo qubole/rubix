@@ -138,7 +138,7 @@ public class TestThriftServerJVM extends Configured
     file.delete();
   }
 
-  @Test
+  @Test(enabled = false)
   public void testJVMCommunication() throws IOException, InterruptedException
   {
     log.info("Value of Path " + this.backendFileName);
