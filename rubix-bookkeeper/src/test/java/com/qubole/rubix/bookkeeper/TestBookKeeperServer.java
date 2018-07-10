@@ -20,13 +20,18 @@ import org.apache.hadoop.conf.Configuration;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
+
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Set;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -38,6 +43,7 @@ public class TestBookKeeperServer
   private static final Log log = LogFactory.getLog(TestBookKeeperServer.class.getName());
   private static final int PACKET_SIZE = 32;
   private static final int SOCKET_TIMEOUT = 5000;
+  private static final String JMX_METRIC_NAME_PATTERN = "metrics:*";
 
   private MetricRegistry metrics;
   private Configuration conf;
@@ -76,42 +82,6 @@ public class TestBookKeeperServer
     stopBookKeeperServer();
 
     assertNull(metrics.getGauges().get(BookKeeperServer.METRIC_BOOKKEEPER_LIVENESS_CHECK), "Metric should not exist after server has stopped");
-  }
-
-  /**
-   * Start an instance of the BookKeeper server.
-   *
-   * @throws InterruptedException if the current thread is interrupted while sleeping.
-   */
-  private void startBookKeeperServer() throws InterruptedException
-  {
-    final Thread thread = new Thread()
-    {
-      public void run()
-      {
-        BookKeeperServer.startServer(conf, metrics);
-      }
-    };
-    thread.start();
-
-    while (!BookKeeperServer.isServerUp()) {
-      Thread.sleep(200);
-      log.info("Waiting for BookKeeper Server to come up");
-    }
-  }
-
-  /**
-   * Stop the currently running BookKeeper server instance.
-   *
-   * @throws InterruptedException if the current thread is interrupted while sleeping.
-   */
-  private void stopBookKeeperServer() throws InterruptedException
-  {
-    BookKeeperServer.stopServer();
-    while (BookKeeperServer.isServerUp()) {
-      Thread.sleep(200);
-      log.info("Waiting for BookKeeper Server to shut down");
-    }
   }
 
   /**
@@ -184,6 +154,92 @@ public class TestBookKeeperServer
     startServersForTestingStatsDReporterForWorker(statsDPort, testCasePort, shouldReport);
 
     assertFalse(isStatsDReporterFiring(testCasePort), "BookKeeperServer should not report to StatsD");
+  }
+
+  /**
+   * Verify that JmxReporter reports metrics to JMX when configured to.
+   *
+   * @throws MalformedObjectNameException if the format of the pattern string does not correspond to a valid ObjectName.
+   * @throws InterruptedException if the current thread is interrupted while sleeping.
+   */
+  @Test
+  public void verifyMetricsAreReportedToJMX() throws MalformedObjectNameException, InterruptedException
+  {
+    CacheConfig.setMetricsReporters(conf, "JMX");
+
+    Set<ObjectName> metricsObjectNames = getJmxObjectNamesWithPattern(JMX_METRIC_NAME_PATTERN);
+    for (ObjectName name : metricsObjectNames) {
+      System.out.println("YES: " + name.toString());
+    }
+    assertTrue(metricsObjectNames.size() == 0, "Metrics should not be registered with JMX before server starts.");
+
+    startBookKeeperServer();
+
+    metricsObjectNames = getJmxObjectNamesWithPattern(JMX_METRIC_NAME_PATTERN);
+    assertTrue(metricsObjectNames.size() > 0, "Metrics should be registered with JMX after server starts.");
+
+    stopBookKeeperServer();
+
+    metricsObjectNames = getJmxObjectNamesWithPattern(JMX_METRIC_NAME_PATTERN);
+    assertTrue(metricsObjectNames.size() == 0, "Metrics should not be registered with JMX after server stops.");
+  }
+
+  /**
+   * Verify that JmxReporter does not report metrics to JMX when configured not to.
+   *
+   * @throws MalformedObjectNameException if the format of the pattern string does not correspond to a valid ObjectName.
+   * @throws InterruptedException if the current thread is interrupted while sleeping.
+   */
+  @Test
+  public void verifyMetricsAreNotReportedToJMX() throws MalformedObjectNameException, InterruptedException
+  {
+    CacheConfig.setMetricsReporters(conf, "");
+
+    startBookKeeperServer();
+
+    final Set<ObjectName> metricsObjectNames = getJmxObjectNamesWithPattern(JMX_METRIC_NAME_PATTERN);
+    for (ObjectName name : metricsObjectNames) {
+      System.out.println("NO: " + name.toString());
+    }
+    assertTrue(metricsObjectNames.size() == 0, "Metrics should not be registered with JMX.");
+
+    stopBookKeeperServer();
+  }
+
+  /**
+   * Start an instance of the BookKeeper server.
+   *
+   * @throws InterruptedException if the current thread is interrupted while sleeping.
+   */
+  private void startBookKeeperServer() throws InterruptedException
+  {
+    final Thread thread = new Thread()
+    {
+      public void run()
+      {
+        BookKeeperServer.startServer(conf, metrics);
+      }
+    };
+    thread.start();
+
+    while (!BookKeeperServer.isServerUp()) {
+      Thread.sleep(200);
+      log.info("Waiting for BookKeeper Server to come up");
+    }
+  }
+
+  /**
+   * Stop the currently running BookKeeper server instance.
+   *
+   * @throws InterruptedException if the current thread is interrupted while sleeping.
+   */
+  private void stopBookKeeperServer() throws InterruptedException
+  {
+    BookKeeperServer.stopServer();
+    while (BookKeeperServer.isServerUp()) {
+      Thread.sleep(200);
+      log.info("Waiting for BookKeeper Server to shut down");
+    }
   }
 
   /**
@@ -263,6 +319,18 @@ public class TestBookKeeperServer
     }
 
     return true;
+  }
+
+  /**
+   * Get the set of JMX object names matching the provided pattern.
+   *
+   * @param pattern The object name pattern to match.
+   * @return The set of ObjectNames that match the given pattern.
+   * @throws MalformedObjectNameException if the format of the pattern string does not correspond to a valid ObjectName.
+   */
+  private Set<ObjectName> getJmxObjectNamesWithPattern(String pattern) throws MalformedObjectNameException
+  {
+    return ManagementFactory.getPlatformMBeanServer().queryNames(new ObjectName(pattern), null);
   }
 
   /**

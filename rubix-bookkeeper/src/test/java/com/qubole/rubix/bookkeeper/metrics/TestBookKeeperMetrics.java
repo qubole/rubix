@@ -104,35 +104,45 @@ public class TestBookKeeperMetrics
 
   /**
    * Verify that a JMX reporter is correctly registered when the configuration option is set.
+   *
+   * @throws IOException if an I/O error occurs while closing a reporter.
    */
   @Test
-  public void testInitializeReporters_initializeJMX()
+  public void testInitializeReporters_initializeJMX() throws IOException
   {
     CacheConfig.setMetricsReporters(conf, "JMX");
 
     final BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
 
     assertTrue(containsReporterType(bookKeeperMetrics.reporters, JmxReporter.class));
+
+    bookKeeperMetrics.closeReporters();
   }
 
   /**
    * Verify that a StatsD reporter is correctly registered when the configuration option is set.
+   *
+   * @throws IOException if an I/O error occurs while closing a reporter.
    */
   @Test
-  public void testInitializeReporters_initializeStatsD()
+  public void testInitializeReporters_initializeStatsD() throws IOException
   {
     CacheConfig.setMetricsReporters(conf, "STATSD");
 
     final BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
 
     assertTrue(containsReporterType(bookKeeperMetrics.reporters, StatsDReporter.class));
+
+    bookKeeperMetrics.closeReporters();
   }
 
   /**
    * Verify that both JMX and StatsD reporters are correctly registered when the configuration option is set.
+   *
+   * @throws IOException if an I/O error occurs while closing a reporter.
    */
   @Test
-  public void testInitializeReporters_initializeJMXAndStatsD()
+  public void testInitializeReporters_initializeJMXAndStatsD() throws IOException
   {
     CacheConfig.setMetricsReporters(conf, "STATSD,JMX");
 
@@ -140,13 +150,17 @@ public class TestBookKeeperMetrics
 
     assertTrue(containsReporterType(bookKeeperMetrics.reporters, StatsDReporter.class));
     assertTrue(containsReporterType(bookKeeperMetrics.reporters, JmxReporter.class));
+
+    bookKeeperMetrics.closeReporters();
   }
 
   /**
    * Verify that no reporters are registered when the configuration option is set.
+   *
+   * @throws IOException if an I/O error occurs while closing a reporter.
    */
   @Test
-  public void testInitializeReporters_noneInitialized()
+  public void testInitializeReporters_noneInitialized() throws IOException
   {
     CacheConfig.setMetricsReporters(conf, "");
 
@@ -154,6 +168,8 @@ public class TestBookKeeperMetrics
 
     assertFalse(containsReporterType(bookKeeperMetrics.reporters, StatsDReporter.class));
     assertFalse(containsReporterType(bookKeeperMetrics.reporters, JmxReporter.class));
+
+    bookKeeperMetrics.closeReporters();
   }
 
   /**
