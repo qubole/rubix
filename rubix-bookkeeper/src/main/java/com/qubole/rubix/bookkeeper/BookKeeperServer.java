@@ -147,7 +147,7 @@ public class BookKeeperServer extends Configured implements Tool
   {
     metrics.remove(METRIC_BOOKKEEPER_LIVENESS_CHECK);
     try {
-      bookKeeperMetrics.closeReporters();
+      bookKeeperMetrics.close();
     }
     catch (IOException e) {
       log.error("Metrics reporters could not be closed", e);

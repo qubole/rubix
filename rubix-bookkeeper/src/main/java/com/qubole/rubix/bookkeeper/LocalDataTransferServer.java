@@ -100,7 +100,7 @@ public class LocalDataTransferServer extends Configured implements Tool
   {
     if (localServer != null) {
       try {
-        bookKeeperMetrics.closeReporters();
+        bookKeeperMetrics.close();
       }
       catch (IOException e) {
         log.error("Metrics reporters could not be closed", e);
