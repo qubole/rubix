@@ -50,7 +50,7 @@ public class TestThriftServerJVM extends Configured
   private static final String testDirectory = testDirectoryPrefix + "dir0";
   private static final Log log = LogFactory.getLog(TestThriftServerJVM.class.getName());
 
-  private static final String jarsPath = "/usr/lib/hadoop2/share/hadoop/tools/lib/";  // Use HADOOP_PREFIX for jarsPath
+  private static final String jarsPath = "/usr/lib/hadoop2/share/hadoop/tools/lib/";
   private static final String hadoopDirectory = "/usr/lib/hadoop2/bin/hadoop";
   private static final String bookKeeperClass = "com.qubole.rubix.bookkeeper.BookKeeperServer";
   private static final String localDataTransferServerClass = "com.qubole.rubix.bookkeeper.BookKeeperServer";
@@ -123,6 +123,12 @@ public class TestThriftServerJVM extends Configured
   {
     DataGen.populateFile(backendFileName);
     log.info("BackendPath: " + backendPath);
+
+    CacheConfig.setIsStrictMode(conf, true);
+    CacheConfig.setCacheDataDirPrefix(conf, testDirectoryPrefix + "dir");
+    CacheConfig.setMaxDisks(conf, 2);
+    CacheConfig.setIsParallelWarmupEnabled(conf, false);
+    CacheConfig.setBlockSize(conf, 200);
   }
 
   @AfterMethod
@@ -137,12 +143,6 @@ public class TestThriftServerJVM extends Configured
   {
     log.info("Value of Path " + this.backendFileName);
     log.debug(" backendPath to string : " + this.backendPath.toString());
-    Configuration conf = new Configuration();
-    CacheConfig.setIsStrictMode(conf, true);
-    CacheConfig.setCacheDataDirPrefix(conf, testDirectoryPrefix + "dir");
-    CacheConfig.setMaxDisks(conf, 2);
-    CacheConfig.setIsParallelWarmupEnabled(conf, false);
-    CacheConfig.setBlockSize(conf, 200);
 
     String host = "localhost";
     boolean dataDownloaded;
@@ -154,15 +154,15 @@ public class TestThriftServerJVM extends Configured
     try {
       client = bookKeeperFactory.createBookKeeperClient(host, conf);
 
-      result = client.getCacheStatus("file:///" + file.toString(), file.length(), file.lastModified(), 0, lastBlock, 3);
+      result = client.getCacheStatus("file:///" + backendFileName, file.length(), file.lastModified(), 0, lastBlock, 3);
       assertTrue(result.get(0).getLocation() == Location.LOCAL, "File already cached, before readData call");
       log.info(" Value of Result : " + result);
       log.info("Downloading file from path : " + file.toString());
-      dataDownloaded = client.readData("file:///" + file.toString(), 0, readSize, file.length(), file.lastModified(), 3);
+      dataDownloaded = client.readData("file:///" + backendFileName, 0, readSize, file.length(), file.lastModified(), 3);
       if (!dataDownloaded) {
         log.info("Failed to read Data from the location");
       }
-      result = client.getCacheStatus("file:///" + file.toString(), file.length(), file.lastModified(), 0, lastBlock, 3);
+      result = client.getCacheStatus("file:///" + backendFileName, file.length(), file.lastModified(), 0, lastBlock, 3);
       assertTrue(result.get(0).getLocation() == Location.CACHED, "File not cached properly");
       log.info(" Value of Result : " + result);
     }
