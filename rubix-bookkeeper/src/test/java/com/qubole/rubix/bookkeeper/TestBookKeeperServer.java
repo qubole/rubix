@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016. Qubole Inc
+ * Copyright (c) 2018. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,10 +13,14 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
+import com.qubole.rubix.core.utils.DeleteFileVisitor;
 import com.qubole.rubix.spi.CacheConfig;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -35,38 +39,55 @@ import static org.testng.Assert.assertTrue;
 
 public class TestBookKeeperServer
 {
+  private static final String cacheTestDirPrefix = System.getProperty("java.io.tmpdir") + "/bookKeeperServerTest/";
   private static final Log log = LogFactory.getLog(TestBookKeeperServer.class.getName());
   private static final int PACKET_SIZE = 32;
   private static final int SOCKET_TIMEOUT = 5000;
 
   private MetricRegistry metrics;
-  private Configuration conf;
+  private Configuration conf = new Configuration();
 
-  @BeforeMethod
-  public void setUp() throws IOException
+  @BeforeClass
+  public void initializeCacheDirectories() throws IOException
   {
-    conf = new Configuration();
-    metrics = new MetricRegistry();
-
     // Set configuration values for testing
-    CacheConfig.setCacheDataDirPrefix(conf, "/tmp/media/ephemeral");
+    CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
     CacheConfig.setMaxDisks(conf, 5);
 
     // Create cache directories
-    Files.createDirectories(Paths.get(CacheConfig.getCacheDirPrefixList(conf)));
+    Files.createDirectories(Paths.get(cacheTestDirPrefix));
     for (int i = 0; i < CacheConfig.getCacheMaxDisks(conf); i++) {
-      Files.createDirectories(Paths.get(CacheConfig.getCacheDirPrefixList(conf) + i));
+      Files.createDirectories(Paths.get(cacheTestDirPrefix, String.valueOf(i)));
     }
+  }
+
+  @BeforeMethod
+  public void setUp()
+  {
+    metrics = new MetricRegistry();
+  }
+
+  @AfterMethod
+  public void stopBookKeeperServerForTest()
+  {
+    stopBookKeeperServer();
+  }
+
+  @AfterClass
+  public void cleanUpCacheDirectories() throws IOException
+  {
+    Files.walkFileTree(Paths.get(cacheTestDirPrefix), new DeleteFileVisitor());
+    Files.deleteIfExists(Paths.get(cacheTestDirPrefix));
   }
 
   /**
    * Verify that liveness status of the BookKeeper daemon is correctly reported.
-   *
-   * @throws InterruptedException if the current thread is interrupted while sleeping.
    */
   @Test
-  public void verifyLivenessCheck() throws InterruptedException
+  public void verifyLivenessCheck()
   {
+    CacheConfig.setOnMaster(conf, true);
+
     assertNull(metrics.getGauges().get(BookKeeperServer.METRIC_BOOKKEEPER_LIVENESS_CHECK), "Metric should not exist before server has started");
 
     startBookKeeperServer();
@@ -80,38 +101,18 @@ public class TestBookKeeperServer
 
   /**
    * Start an instance of the BookKeeper server.
-   *
-   * @throws InterruptedException if the current thread is interrupted while sleeping.
    */
-  private void startBookKeeperServer() throws InterruptedException
+  private void startBookKeeperServer()
   {
-    final Thread thread = new Thread()
-    {
-      public void run()
-      {
-        BookKeeperServer.startServer(conf, metrics);
-      }
-    };
-    thread.start();
-
-    while (!BookKeeperServer.isServerUp()) {
-      Thread.sleep(200);
-      log.info("Waiting for BookKeeper Server to come up");
-    }
+    MockBookKeeperServer.startServer(conf, metrics);
   }
 
   /**
    * Stop the currently running BookKeeper server instance.
-   *
-   * @throws InterruptedException if the current thread is interrupted while sleeping.
    */
-  private void stopBookKeeperServer() throws InterruptedException
+  private void stopBookKeeperServer()
   {
-    BookKeeperServer.stopServer();
-    while (BookKeeperServer.isServerUp()) {
-      Thread.sleep(200);
-      log.info("Waiting for BookKeeper Server to shut down");
-    }
+    MockBookKeeperServer.stopServer();
   }
 
   /**
@@ -187,6 +188,23 @@ public class TestBookKeeperServer
   }
 
   /**
+   * Verify that all registered metrics are removed once the BookKeeper server has stopped.
+   */
+  @Test
+  public void verifyMetricsAreRemoved()
+  {
+    assertTrue(metrics.getNames().size() == 0, "Metrics should not be registered before server is started.");
+
+    startBookKeeperServer();
+
+    assertTrue(metrics.getNames().size() > 0, "Metrics should be registered once server is started.");
+
+    stopBookKeeperServer();
+
+    assertTrue(metrics.getNames().size() == 0, "Metrics should not be registered after server has stopped.");
+  }
+
+  /**
    * Start & configure the servers necessary for running & testing StatsDReporter on a master node.
    *
    * @param statsDPort The port to send StatsD metrics to.
@@ -259,6 +277,23 @@ public class TestBookKeeperServer
     }
 
     return true;
+  }
+
+  /**
+   * Class to mock the behaviour of {@link BookKeeperServer} for testing registering & reporting metrics.
+   */
+  private static class MockBookKeeperServer extends BookKeeperServer
+  {
+    public static void startServer(Configuration conf, MetricRegistry metricRegistry)
+    {
+      metrics = metricRegistry;
+      registerMetrics(conf);
+    }
+
+    public static void stopServer()
+    {
+      removeMetrics();
+    }
   }
 
   /**

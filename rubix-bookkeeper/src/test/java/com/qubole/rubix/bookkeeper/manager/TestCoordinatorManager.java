@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016. Qubole Inc
+ * Copyright (c) 2018. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,6 +20,8 @@ import com.google.common.testing.FakeTicker;
 import com.qubole.rubix.bookkeeper.CoordinatorBookKeeper;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -36,6 +38,8 @@ import static org.testng.Assert.fail;
 
 public class TestCoordinatorManager
 {
+  private static final Log log = LogFactory.getLog(TestCoordinatorManager.class);
+
   private static final String cacheTestDirPrefix = System.getProperty("java.io.tmpdir") + "/coordinatorManagerTest/";
   private static final int maxDisks = 5;
   private static final String WORKER1_HOSTNAME = "worker1";

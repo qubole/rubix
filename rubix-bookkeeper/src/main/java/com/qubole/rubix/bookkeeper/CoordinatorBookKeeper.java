@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016. Qubole Inc
+ * Copyright (c) 2018. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -62,9 +62,9 @@ public class CoordinatorBookKeeper extends BookKeeper
       @Override
       public Integer getValue()
       {
+        log.debug(String.format("Reporting %s workers", liveWorkerCache.asMap().size()));
         return liveWorkerCache.asMap().size();
       }
     });
-    log.debug(String.format("Reporting %s workers", liveWorkerCache.asMap().size()));
   }
 }
