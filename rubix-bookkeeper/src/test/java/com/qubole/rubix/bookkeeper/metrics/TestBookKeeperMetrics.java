@@ -12,6 +12,7 @@
  */
 package com.qubole.rubix.bookkeeper.metrics;
 
+import com.codahale.metrics.Counter;
 import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Joiner;
@@ -29,9 +30,11 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.Closeable;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
 
@@ -41,7 +44,8 @@ import static org.testng.Assert.assertTrue;
 
 public class TestBookKeeperMetrics
 {
-  private static final String cacheTestDirPrefix = System.getProperty("java.io.tmpdir") + "/bookKeeperMetricsTest/";
+  private static final String cacheTestDirPrefix = Joiner.on(File.separator).join(System.getProperty("java.io.tmpdir"), "bookKeeperMetricsTest");
+  private static final Path cacheTestDirPath = Paths.get(cacheTestDirPrefix);
   private static final int BLOCK_SIZE = 100;
   private static final int MAX_DISKS = 5;
 
@@ -56,9 +60,9 @@ public class TestBookKeeperMetrics
     CacheConfig.setMaxDisks(conf, MAX_DISKS);
 
     // Create cache directories
-    Files.createDirectories(Paths.get(cacheTestDirPrefix));
-    for (int i = 0; i < CacheConfig.getCacheMaxDisks(conf); i++) {
-      Files.createDirectories(Paths.get(cacheTestDirPrefix, String.valueOf(i)));
+    Files.createDirectories(cacheTestDirPath);
+    for (int i = 0; i < MAX_DISKS; i++) {
+      Files.createDirectories(cacheTestDirPath.resolve(String.valueOf(i)));
     }
   }
 
@@ -98,9 +102,11 @@ public class TestBookKeeperMetrics
     final long endBlock = 23;
     final long totalRequests = endBlock - startBlock;
 
-    assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT).getCount(), 0);
+    final Counter localCacheCounter = metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT);
+
+    assertEquals(localCacheCounter.getCount(), 0);
     bookKeeper.getCacheStatus(remotePath, fileLength, lastModified, startBlock, endBlock, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
-    assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT).getCount(), totalRequests);
+    assertEquals(localCacheCounter.getCount(), totalRequests);
   }
 
   /**
@@ -113,11 +119,9 @@ public class TestBookKeeperMetrics
   {
     CacheConfig.setMetricsReporters(conf, MetricsReporter.JMX.name());
 
-    final BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
-
-    assertTrue(containsReporterType(bookKeeperMetrics.reporters, JmxReporter.class));
-
-    bookKeeperMetrics.closeReporters();
+    try (final BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, metrics)) {
+      assertTrue(containsReporterType(bookKeeperMetrics.reporters, JmxReporter.class));
+    }
   }
 
   /**
@@ -130,11 +134,9 @@ public class TestBookKeeperMetrics
   {
     CacheConfig.setMetricsReporters(conf, MetricsReporter.STATSD.name());
 
-    final BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
-
-    assertTrue(containsReporterType(bookKeeperMetrics.reporters, StatsDReporter.class));
-
-    bookKeeperMetrics.closeReporters();
+    try (final BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, metrics)) {
+      assertTrue(containsReporterType(bookKeeperMetrics.reporters, StatsDReporter.class));
+    }
   }
 
   /**
@@ -147,12 +149,10 @@ public class TestBookKeeperMetrics
   {
     CacheConfig.setMetricsReporters(conf, Joiner.on(",").join(MetricsReporter.STATSD.name(), MetricsReporter.JMX.name()));
 
-    final BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
-
-    assertTrue(containsReporterType(bookKeeperMetrics.reporters, StatsDReporter.class));
-    assertTrue(containsReporterType(bookKeeperMetrics.reporters, JmxReporter.class));
-
-    bookKeeperMetrics.closeReporters();
+    try (final BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, metrics)) {
+      assertTrue(containsReporterType(bookKeeperMetrics.reporters, StatsDReporter.class));
+      assertTrue(containsReporterType(bookKeeperMetrics.reporters, JmxReporter.class));
+    }
   }
 
   /**
@@ -165,12 +165,10 @@ public class TestBookKeeperMetrics
   {
     CacheConfig.setMetricsReporters(conf, "");
 
-    final BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
-
-    assertFalse(containsReporterType(bookKeeperMetrics.reporters, StatsDReporter.class));
-    assertFalse(containsReporterType(bookKeeperMetrics.reporters, JmxReporter.class));
-
-    bookKeeperMetrics.closeReporters();
+    try (final BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, metrics)) {
+      assertFalse(containsReporterType(bookKeeperMetrics.reporters, StatsDReporter.class));
+      assertFalse(containsReporterType(bookKeeperMetrics.reporters, JmxReporter.class));
+    }
   }
 
   /**

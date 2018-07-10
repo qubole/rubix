@@ -17,7 +17,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
-public class ClusterUtil
+public final class ClusterUtil
 {
   private static final Log log = LogFactory.getLog(ClusterUtil.class.getName());
 
@@ -44,7 +44,9 @@ public class ClusterUtil
     log.debug("Trying yarn.resourcemanager.address");
     host = conf.get(KEY_YARN_RESOURCEMANAGER_ADDRESS);
     if (host != null) {
-      return host.substring(0, host.indexOf(":"));
+      return host.contains(":")
+          ? host.substring(0, host.indexOf(":"))
+          : host;
     }
 
     log.debug("No hostname found in etc/*-site.xml, returning localhost");

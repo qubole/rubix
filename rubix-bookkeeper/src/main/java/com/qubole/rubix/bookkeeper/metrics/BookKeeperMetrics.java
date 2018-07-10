@@ -29,7 +29,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-public class BookKeeperMetrics
+public class BookKeeperMetrics implements AutoCloseable
 {
   private static Log log = LogFactory.getLog(BookKeeperMetrics.class);
 
@@ -85,12 +85,8 @@ public class BookKeeperMetrics
     }
   }
 
-  /**
-   * Close all open reporters.
-   *
-   * @throws IOException if an I/O error occurs while closing a reporter.
-   */
-  public void closeReporters() throws IOException
+  @Override
+  public void close() throws IOException
   {
     for (Closeable reporter : reporters) {
       reporter.close();
