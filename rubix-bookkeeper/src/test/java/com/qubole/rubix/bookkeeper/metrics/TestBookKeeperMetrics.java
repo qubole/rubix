@@ -14,6 +14,7 @@ package com.qubole.rubix.bookkeeper.metrics;
 
 import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.base.Joiner;
 import com.qubole.rubix.bookkeeper.BookKeeper;
 import com.qubole.rubix.bookkeeper.CoordinatorBookKeeper;
 import com.qubole.rubix.core.utils.DeleteFileVisitor;
@@ -110,7 +111,7 @@ public class TestBookKeeperMetrics
   @Test
   public void testInitializeReporters_initializeJMX() throws IOException
   {
-    CacheConfig.setMetricsReporters(conf, "JMX");
+    CacheConfig.setMetricsReporters(conf, MetricsReporter.JMX.name());
 
     final BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
 
@@ -127,7 +128,7 @@ public class TestBookKeeperMetrics
   @Test
   public void testInitializeReporters_initializeStatsD() throws IOException
   {
-    CacheConfig.setMetricsReporters(conf, "STATSD");
+    CacheConfig.setMetricsReporters(conf, MetricsReporter.STATSD.name());
 
     final BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
 
@@ -144,7 +145,7 @@ public class TestBookKeeperMetrics
   @Test
   public void testInitializeReporters_initializeJMXAndStatsD() throws IOException
   {
-    CacheConfig.setMetricsReporters(conf, "STATSD,JMX");
+    CacheConfig.setMetricsReporters(conf, Joiner.on(",").join(MetricsReporter.STATSD.name(), MetricsReporter.JMX.name()));
 
     final BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
 

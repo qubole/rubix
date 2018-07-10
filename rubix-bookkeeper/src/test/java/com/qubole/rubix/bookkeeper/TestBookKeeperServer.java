@@ -13,6 +13,7 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
+import com.qubole.rubix.bookkeeper.metrics.MetricsReporter;
 import com.qubole.rubix.spi.CacheConfig;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -165,7 +166,7 @@ public class TestBookKeeperServer
   @Test
   public void verifyMetricsAreReportedToJMX() throws MalformedObjectNameException, InterruptedException
   {
-    CacheConfig.setMetricsReporters(conf, "JMX");
+    CacheConfig.setMetricsReporters(conf, MetricsReporter.JMX.name());
 
     Set<ObjectName> metricsObjectNames = getJmxObjectNamesWithPattern(JMX_METRIC_NAME_PATTERN);
     for (ObjectName name : metricsObjectNames) {
@@ -255,7 +256,7 @@ public class TestBookKeeperServer
   {
     CacheConfig.setOnMaster(conf, true);
     if (shouldReportMetrics) {
-      CacheConfig.setMetricsReporters(conf, "STATSD");
+      CacheConfig.setMetricsReporters(conf, MetricsReporter.STATSD.name());
     }
 
     startServersForTestingStatsDReporter(statsDPort, testCasePort);
@@ -274,7 +275,7 @@ public class TestBookKeeperServer
   {
     CacheConfig.setOnMaster(conf, false);
     if (shouldReportMetrics) {
-      CacheConfig.setMetricsReporters(conf, "STATSD");
+      CacheConfig.setMetricsReporters(conf, MetricsReporter.STATSD.name());
     }
 
     startServersForTestingStatsDReporter(statsDPort, testCasePort);
