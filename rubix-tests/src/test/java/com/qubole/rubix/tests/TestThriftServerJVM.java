@@ -39,6 +39,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
 
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 /**
@@ -62,7 +63,6 @@ public class TestThriftServerJVM extends Configured
   private static final String setCacheMaxDisks = "-Dhadoop.cache.data.max.disks=2";
 
   public BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
-  public RetryingBookkeeperClient client;
 
   static Process bookKeeperJvm;
   static Process localDataTransferJvm;
@@ -118,8 +118,10 @@ public class TestThriftServerJVM extends Configured
     Files.walkFileTree(Paths.get(testDirectory), new DeleteFileVisitor());
     Files.deleteIfExists(Paths.get(testDirectory));
 
-    Files.walkFileTree(Paths.get(cacheDir + "/" + testDirectoryPrefix), new DeleteFileVisitor());
-    Files.deleteIfExists(Paths.get(cacheDir + "/" + testDirectoryPrefix));
+    if (new File(cacheDir + "/" + testDirectoryPrefix).exists()) {
+      Files.walkFileTree(Paths.get(cacheDir + "/" + testDirectoryPrefix), new DeleteFileVisitor());
+      Files.deleteIfExists(Paths.get(cacheDir + "/" + testDirectoryPrefix));
+    }
   }
 
   @BeforeMethod
@@ -142,12 +144,15 @@ public class TestThriftServerJVM extends Configured
     file.delete();
   }
 
-  @Test(enabled = false)
-  public void testJVMCommunication() throws IOException, InterruptedException
+  @Test(enabled = true)
+  public void testJVMCommunication() throws IOException, InterruptedException, TTransportException, TException
   {
     log.info("Value of Path " + this.backendFileName);
     log.debug(" backendPath to string : " + this.backendPath.toString());
-
+    File mdFile = new File(cacheDir + "/" + testDirectoryPrefix + "backendDataFile_mdfile");
+    if (mdFile.exists()) {
+      mdFile.delete();
+    }
     String host = "localhost";
     boolean dataDownloaded;
     File file = new File(backendFileName);
@@ -155,27 +160,43 @@ public class TestThriftServerJVM extends Configured
     int lastBlock = 4;
     int readSize = 1000;
 
+    RetryingBookkeeperClient client;
+    client = bookKeeperFactory.createBookKeeperClient(host, conf);
+
+    result = client.getCacheStatus("file:///" + backendFileName, file.length(), file.lastModified(), 0, lastBlock, 3);
+    assertTrue(result.get(0).getLocation() == Location.LOCAL, "File already cached, before readData call");
+    log.info(" Value of Result : " + result);
+    log.info("Downloading file from path : " + file.toString());
+    dataDownloaded = client.readData("file:///" + backendFileName, 0, readSize, file.length(), file.lastModified(), 3);
+    assertTrue(dataDownloaded == true, "readData() function call failed. File not downloaded properly");
+
+    result = client.getCacheStatus("file:///" + backendFileName, file.length(), file.lastModified(), 0, lastBlock, 3);
+    assertTrue(result.get(0).getLocation() == Location.CACHED, "File not cached properly");
+    log.info(" Value of Result : " + result);
+  }
+
+  @Test(enabled = true)
+  public void testTTransportException() throws IOException, InterruptedException
+  {
+    //1234 is a random port to test if TTransportException is being thrown or not
+    CacheConfig.setServerPort(conf, 1234);
+
+    String host = "localhost";
+    File file = new File(backendFileName);
+    List<BlockLocation> result;
+    int lastBlock = 4;
+
     try {
+      RetryingBookkeeperClient client;
       client = bookKeeperFactory.createBookKeeperClient(host, conf);
-
       result = client.getCacheStatus("file:///" + backendFileName, file.length(), file.lastModified(), 0, lastBlock, 3);
-      assertTrue(result.get(0).getLocation() == Location.LOCAL, "File already cached, before readData call");
-      log.info(" Value of Result : " + result);
-      log.info("Downloading file from path : " + file.toString());
-      dataDownloaded = client.readData("file:///" + backendFileName, 0, readSize, file.length(), file.lastModified(), 3);
-      assertTrue(dataDownloaded == true, "readData() function call failed. File not downloaded properly");
-
-      result = client.getCacheStatus("file:///" + backendFileName, file.length(), file.lastModified(), 0, lastBlock, 3);
-      assertTrue(result.get(0).getLocation() == Location.CACHED, "File not cached properly");
-      log.info(" Value of Result : " + result);
+      assertTrue(false, "Unexpected behavior : Communicating with random port :" + result.toString());
     }
     catch (TTransportException ex) {
-      log.error("Error while creating bookkeeper client");
-      assertTrue(false, "Failed due to TTransportException");
+      assertFalse(false);
     }
     catch (TException ex) {
-      log.error("Error while invoking getCacheStatus");
-      assertTrue(false, "Failed due to TException");
+      assertFalse(false);
     }
   }
 }
