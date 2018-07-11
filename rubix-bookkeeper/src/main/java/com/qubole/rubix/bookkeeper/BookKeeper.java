@@ -30,11 +30,13 @@ import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
+import com.qubole.rubix.spi.FileInfo;
 import com.qubole.rubix.spi.Location;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.thrift.shaded.TException;
@@ -65,6 +67,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
   public static final String METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT = "rubix.bookkeeper.local_cache.count";
 
   private static Cache<String, FileMetadata> fileMetadataCache;
+  private static Cache<String, FileInfo> fileInfoCache;
   private static ClusterManager clusterManager;
   private static Log log = LogFactory.getLog(BookKeeper.class.getName());
   private long totalRequests;
@@ -319,6 +322,31 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
     }
   }
 
+  @Override
+  public FileInfo getFileInfo(String remotePath) throws TException
+  {
+    if (CacheConfig.isFileInvalidationEnabled(conf)) {
+      try {
+        Path path = new Path(remotePath);
+        FileSystem fs = path.getFileSystem(conf);
+        FileStatus status = fs.getFileStatus(path);
+        FileInfo info = new FileInfo(status.getLen(), status.getModificationTime());
+        return info;
+      }
+      catch (Exception ex) {
+        log.error(String.format("Could not fetch FileStatus from remote file system for %s : %s", remotePath, Throwables.getStackTraceAsString(e)));
+      }
+    }
+    else {
+      try {
+        return fileInfoCache.get(remotePath, new FetchFileInfoCallable(remotePath, conf));
+      } catch (ExecutionException e) {
+        log.error(String.format("Could not fetch FileInfo from Cache for %s : %s", remotePath, Throwables.getStackTraceAsString(e)));
+        throw new TException(e);
+      }
+    }
+  }
+
   private boolean readDataInternal(String remotePath, long offset, int length, long fileSize,
                                    long lastModified, int clusterType) throws TException
   {
@@ -417,6 +445,8 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
     // To minimize those cases, consider available space lower than actual
     final long total = (long) (0.95 * avail);
 
+    initializeFileInfoCache(conf);
+
     fileMetadataCache = CacheBuilder.newBuilder()
         .weigher(new Weigher<String, FileMetadata>()
         {
@@ -439,6 +469,21 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
             catch (IOException e) {
               log.warn("Could not cleanup FileMetadata for " + notification.getKey(), e);
             }
+          }
+        })
+        .build();
+  }
+
+  private static void initializeFileInfoCache(final Configuration conf)
+  {
+    fileInfoCache = CacheBuilder.newBuilder()
+        .expireAfterWrite(36000, TimeUnit.SECONDS)
+        .removalListener(new RemovalListener<String, FileInfo>()
+        {
+          @Override
+          public void onRemoval(RemovalNotification<String, FileInfo> notification)
+          {
+            log.info("removed FileInfo for path " + notification.getKey() + " due to " + notification.getCause());
           }
         })
         .build();
@@ -477,13 +522,24 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
     }
   }
 
-  private boolean isInvalidationRequired(long metadataLastModifiedTime, long remoteLastModifiedTime)
+  private static class FetchFileInfoCallable implements Callable<FileInfo>
   {
-    if (CacheConfig.isFileInvalidationEnabled(conf) && (metadataLastModifiedTime != remoteLastModifiedTime)) {
-      return true;
+    String remotePath;
+    Configuration conf;
+
+    public FetchFileInfoCallable(String remotePath, Configuration conf)
+    {
+      this.remotePath = remotePath;
     }
 
-    return false;
+    public FileInfo call() throws Exception
+    {
+      Path path = new Path(remotePath);
+      FileSystem fs = path.getFileSystem(conf);
+      FileStatus status = fs.getFileStatus(path);
+      FileInfo info = new FileInfo(status.getLen(), status.getModificationTime());
+      return info;
+    }
   }
 
   public static void invalidate(String p)
@@ -492,5 +548,14 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
     if (fileMetadataCache != null) {
       fileMetadataCache.invalidate(p);
     }
+  }
+
+  private boolean isInvalidationRequired(long metadataLastModifiedTime, long remoteLastModifiedTime)
+  {
+    if (CacheConfig.isFileInvalidationEnabled(conf) && (metadataLastModifiedTime != remoteLastModifiedTime)) {
+      return true;
+    }
+
+    return false;
   }
 }
