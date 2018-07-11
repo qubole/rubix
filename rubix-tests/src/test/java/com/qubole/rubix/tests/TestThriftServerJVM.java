@@ -144,7 +144,7 @@ public class TestThriftServerJVM extends Configured
     file.delete();
   }
 
-  @Test(enabled = true)
+  @Test(enabled = false)
   public void testJVMCommunication() throws IOException, InterruptedException, TTransportException, TException
   {
     log.info("Value of Path " + this.backendFileName);
@@ -175,7 +175,7 @@ public class TestThriftServerJVM extends Configured
     log.info(" Value of Result : " + result);
   }
 
-  @Test(enabled = true)
+  @Test(enabled = false)
   public void testTTransportException() throws IOException, InterruptedException
   {
     //1234 is a random port to test if TTransportException is being thrown or not
