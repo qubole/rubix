@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016. Qubole Inc
+ * Copyright (c) 2018. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -54,19 +54,14 @@ public class WorkerBookKeeper extends BookKeeper
    */
   private void startHeartbeatService(Configuration conf)
   {
-    try {
-      this.heartbeatService = new HeartbeatService(conf);
-      heartbeatService.startAsync();
-    }
-    catch (TTransportException e) {
-      log.fatal("Could not start heartbeat service", e);
-    }
+    this.heartbeatService = new HeartbeatService(conf, new BookKeeperFactory());
+    heartbeatService.startAsync();
   }
 
   /**
    * Class to send a heartbeat to the master node in the cluster.
    */
-  private static class HeartbeatService extends AbstractScheduledService
+  protected static class HeartbeatService extends AbstractScheduledService
   {
     private static Log log = LogFactory.getLog(HeartbeatService.class.getName());
 
@@ -91,13 +86,49 @@ public class WorkerBookKeeper extends BookKeeper
     // The hostname of the master node.
     private String masterHostname;
 
-    public HeartbeatService(Configuration conf) throws TTransportException
+    public HeartbeatService(Configuration conf, BookKeeperFactory bookKeeperFactory)
     {
       this.conf = conf;
       this.heartbeatInitialDelay = CacheConfig.getHeartbeatInitialDelay(conf);
       this.heartbeatInterval = CacheConfig.getHeartbeatInterval(conf);
       this.masterHostname = getMasterHostname();
-      this.bookkeeperClient = new BookKeeperFactory().createBookKeeperClient(masterHostname, conf);
+      this.bookkeeperClient = initializeClientWithRetry(bookKeeperFactory);
+    }
+
+    /**
+     * Attempt to initialize the client for communicating with the master BookKeeper.
+     *
+     * @param bookKeeperFactory   The factory to use for creating a BookKeeper client.
+     * @return The client used for communication with the master node.
+     */
+    private RetryingBookkeeperClient initializeClientWithRetry(BookKeeperFactory bookKeeperFactory)
+    {
+      final int retryInterval = CacheConfig.getServiceRetryInterval(conf);
+      final int maxRetries = CacheConfig.getServiceMaxRetries(conf);
+
+      for (int failedStarts = 0; failedStarts < maxRetries; ) {
+        try {
+          return bookKeeperFactory.createBookKeeperClient(masterHostname, conf);
+        }
+        catch (TTransportException e) {
+          log.warn("Could not start client for heartbeat service", e);
+        }
+
+        failedStarts++;
+        if (failedStarts == maxRetries) {
+          break;
+        }
+
+        try {
+          Thread.sleep(retryInterval);
+        }
+        catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
+      }
+
+      log.fatal("Heartbeat service ran out of retries to connect to the master BookKeeper");
+      throw new RuntimeException("Could not start heartbeat service");
     }
 
     @Override
@@ -108,7 +139,7 @@ public class WorkerBookKeeper extends BookKeeper
     }
 
     @Override
-    protected void runOneIteration() throws TException
+    protected void runOneIteration()
     {
       try {
         log.debug(String.format("Sending heartbeat to %s", masterHostname));
@@ -116,6 +147,9 @@ public class WorkerBookKeeper extends BookKeeper
       }
       catch (IOException e) {
         log.error("Could not send heartbeat", e);
+      }
+      catch (TException te) {
+        log.error(String.format("Could not connect to master node [%s]; will reattempt on next heartbeat", masterHostname));
       }
     }
 

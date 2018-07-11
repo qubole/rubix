@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016. Qubole Inc
+ * Copyright (c) 2018. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,11 +12,7 @@
  */
 package com.qubole.rubix.core;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
-import com.google.common.hash.HashCode;
-import com.google.common.hash.HashFunction;
-import com.google.common.hash.Hashing;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterManager;
@@ -318,9 +314,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
             end = file.getLen();
           }
           String key = file.getPath().toString() + i + end;
-          HashFunction hf = Hashing.md5();
-          HashCode hc = hf.hashString(key, Charsets.UTF_8);
-          int nodeIndex = Hashing.consistentHash(hc, nodes.size());
+          int nodeIndex = clusterManager.getNodeIndex(nodes.size(), key);
           String[] name = new String[]{nodes.get(nodeIndex)};
           String[] host = new String[]{nodes.get(nodeIndex)};
           blockLocations[blockNumber++] = new BlockLocation(name, host, i, end - i);
