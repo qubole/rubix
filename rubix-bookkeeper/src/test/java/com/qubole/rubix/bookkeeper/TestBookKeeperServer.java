@@ -71,6 +71,7 @@ public class TestBookKeeperServer
   @BeforeMethod
   public void setUp()
   {
+    conf.clear();
     metrics = new MetricRegistry();
   }
 
