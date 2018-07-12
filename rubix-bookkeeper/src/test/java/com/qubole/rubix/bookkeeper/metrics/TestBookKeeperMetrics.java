@@ -57,13 +57,10 @@ public class TestBookKeeperMetrics
   @BeforeClass
   public void initializeCacheDirectories() throws IOException
   {
-    CacheConfig.setMaxDisks(conf, MAX_DISKS);
-    CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
-
     // Create cache directories
     Files.createDirectories(cacheTestDirPath);
     for (int i = 0; i < MAX_DISKS; i++) {
-      Files.createDirectories(cacheTestDirPath.resolve(String.valueOf(i)));
+      Files.createDirectories(Paths.get(cacheTestDirPrefix + i));
     }
   }
 
@@ -74,6 +71,7 @@ public class TestBookKeeperMetrics
     conf.clear();
 
     // Set configuration values for testing
+    CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
     CacheConfig.setMaxDisks(conf, MAX_DISKS);
     CacheConfig.setBlockSize(conf, BLOCK_SIZE);
 
