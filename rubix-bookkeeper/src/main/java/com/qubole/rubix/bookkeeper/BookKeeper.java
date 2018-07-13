@@ -333,18 +333,21 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
         FileInfo info = new FileInfo(status.getLen(), status.getModificationTime());
         return info;
       }
-      catch (Exception ex) {
+      catch (Exception e) {
         log.error(String.format("Could not fetch FileStatus from remote file system for %s : %s", remotePath, Throwables.getStackTraceAsString(e)));
       }
     }
     else {
       try {
         return fileInfoCache.get(remotePath, new FetchFileInfoCallable(remotePath, conf));
-      } catch (ExecutionException e) {
+      }
+      catch (ExecutionException e) {
         log.error(String.format("Could not fetch FileInfo from Cache for %s : %s", remotePath, Throwables.getStackTraceAsString(e)));
         throw new TException(e);
       }
     }
+
+    return null;
   }
 
   private boolean readDataInternal(String remotePath, long offset, int length, long fileSize,
@@ -534,6 +537,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
 
     public FileInfo call() throws Exception
     {
+      log.info("Fetching FileStatus for : " + remotePath);
       Path path = new Path(remotePath);
       FileSystem fs = path.getFileSystem(conf);
       FileStatus status = fs.getFileStatus(path);
