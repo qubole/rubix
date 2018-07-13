@@ -13,9 +13,10 @@
 
 package com.qubole.rubix.bookkeeper;
 
+import com.qubole.rubix.bookkeeper.test.BookKeeperTestUtils;
 import com.qubole.rubix.core.FileDownloadRequestChain;
-import com.qubole.rubix.core.utils.DeleteFileVisitor;
 import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.CacheUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -23,8 +24,6 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -38,38 +37,44 @@ public class TestFileDownloader
 {
   private static final Log log = LogFactory.getLog(TestFileDownloader.class);
 
-  private static final String testDirectoryPrefix = System.getProperty("java.io.tmpdir") + "/TestFileDownloader/";
-  private static final String testDirectory = testDirectoryPrefix + "dir0";
-  private Configuration conf;
+  private static final String TEST_CACHE_DIR_PREFIX = BookKeeperTestUtils.getTestCacheDirPrefix("TestFileDownloader");
+  private static final int TEST_MAX_DISKS = 1;
+
+  private final Configuration conf = new Configuration();
 
   @BeforeMethod
   public void setUp() throws Exception
   {
-    conf = new Configuration();
-    CacheConfig.setCacheDataDirPrefix(conf, testDirectoryPrefix + "dir");
-    CacheConfig.setMaxDisks(conf, 1);
-    Files.createDirectories(Paths.get(testDirectory, CacheConfig.getCacheDataDirSuffix(conf)));
+    conf.clear();
+
+    CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
+    CacheConfig.setMaxDisks(conf, TEST_MAX_DISKS);
+
+    BookKeeperTestUtils.createCacheParentDirectories(TEST_CACHE_DIR_PREFIX, TEST_MAX_DISKS);
+    CacheUtil.createCacheDirectories(conf);
   }
 
   @AfterMethod
   public void tearDown() throws Exception
   {
-    Files.walkFileTree(Paths.get(testDirectory), new DeleteFileVisitor());
-    Files.deleteIfExists(Paths.get(testDirectory));
+    BookKeeperTestUtils.removeCacheParentDirectories(TEST_CACHE_DIR_PREFIX);
   }
 
   @Test
   public void testGetFileDownloadRequestChains() throws Exception
   {
-    ConcurrentMap<String, DownloadRequestContext> contextMap = new ConcurrentHashMap<String, DownloadRequestContext>();
-    DownloadRequestContext context = new DownloadRequestContext("file:///Files/file-1", 1000, 1000);
-    contextMap.put("file:///Files/file-1", context);
+    final String remoteFilePath1 = "file:///Files/file-1";
+    final String remoteFilePath2 = "file:///Files/file-2";
+    ConcurrentMap<String, DownloadRequestContext> contextMap = new ConcurrentHashMap<>();
+
+    DownloadRequestContext context = new DownloadRequestContext(remoteFilePath1, 1000, 1000);
+    contextMap.put(remoteFilePath1, context);
     context.addDownloadRange(100, 300);
     context.addDownloadRange(250, 400);
     context.addDownloadRange(500, 800);
 
-    context = new DownloadRequestContext("file:///Files/file-2", 1000, 1000);
-    contextMap.put("file:///Files/file-2", context);
+    context = new DownloadRequestContext(remoteFilePath2, 1000, 1000);
+    contextMap.put(remoteFilePath2, context);
     context.addDownloadRange(100, 200);
     context.addDownloadRange(500, 800);
 

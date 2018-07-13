@@ -14,7 +14,7 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
-import com.qubole.rubix.core.utils.DeleteFileVisitor;
+import com.qubole.rubix.bookkeeper.test.BookKeeperTestUtils;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
@@ -32,8 +32,6 @@ import org.testng.annotations.Test;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -42,38 +40,31 @@ import static org.mockito.Mockito.when;
 public class TestWorkerBookKeeper
 {
   private static final Log log = LogFactory.getLog(TestWorkerBookKeeper.class);
-  private static final String cacheTestDirPrefix = System.getProperty("java.io.tmpdir") + "/workerBookKeeperTest/";
 
-  private static final int TEST_RETRY_INTERVAL = 500;
+  private static final String TEST_CACHE_DIR_PREFIX = BookKeeperTestUtils.getTestCacheDirPrefix("TestWorkerBookKeeper");
+  private static final int TEST_MAX_DISKS = 1;
   private static final int TEST_MAX_RETRIES = 5;
+  private static final int TEST_RETRY_INTERVAL = 500;
 
   private final Configuration conf = new Configuration();
 
   @BeforeClass
   public void initializeCacheDirectories() throws IOException
   {
-    CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
-
-    Files.createDirectories(Paths.get(cacheTestDirPrefix));
-    for (int i = 0; i < CacheConfig.getCacheMaxDisks(conf); i++) {
-      Files.createDirectories(Paths.get(cacheTestDirPrefix, String.valueOf(i)));
-    }
-  }
-
-  @AfterClass
-  public void cleanUpCacheDirectories() throws IOException
-  {
-    Files.walkFileTree(Paths.get(cacheTestDirPrefix), new DeleteFileVisitor());
-    Files.deleteIfExists(Paths.get(cacheTestDirPrefix));
+    BookKeeperTestUtils.createCacheParentDirectories(TEST_CACHE_DIR_PREFIX, TEST_MAX_DISKS);
   }
 
   @BeforeMethod
   public void startBookKeeperServerForTest() throws InterruptedException
   {
+    conf.clear();
+
+    CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
+    CacheConfig.setMaxDisks(conf, TEST_MAX_DISKS);
     CacheConfig.setServiceRetryInterval(conf, TEST_RETRY_INTERVAL);
     CacheConfig.setServiceMaxRetries(conf, TEST_MAX_RETRIES);
-    CacheConfig.setOnMaster(conf, true);
 
+    CacheConfig.setOnMaster(conf, true);
     startBookKeeperServer();
   }
 
@@ -81,6 +72,12 @@ public class TestWorkerBookKeeper
   public void stopBookKeeperServerForTest()
   {
     stopBookKeeperServer();
+  }
+
+  @AfterClass
+  public void cleanUpCacheDirectories() throws IOException
+  {
+    BookKeeperTestUtils.removeCacheParentDirectories(TEST_CACHE_DIR_PREFIX);
   }
 
   /**
@@ -128,10 +125,9 @@ public class TestWorkerBookKeeper
    * Verify that the heartbeat service no longer attempts to connect once it runs out of retry attempts.
    *
    * @throws TTransportException if the BookKeeper client cannot be created.
-   * @throws InterruptedException if the current thread is interrupted while starting the BookKeeper server.
    */
   @Test(expectedExceptions = RuntimeException.class)
-  public void testHeartbeatRetryLogic_outOfRetries() throws TTransportException, InterruptedException
+  public void testHeartbeatRetryLogic_outOfRetries() throws TTransportException
   {
     final BookKeeperFactory bookKeeperFactory = mock(BookKeeperFactory.class);
     when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenThrow(TTransportException.class);

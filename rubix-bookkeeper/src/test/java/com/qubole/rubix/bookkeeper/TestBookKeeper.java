@@ -12,9 +12,10 @@
  */
 package com.qubole.rubix.bookkeeper;
 
+import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
+import com.qubole.rubix.bookkeeper.test.BookKeeperTestUtils;
 import com.qubole.rubix.core.ClusterManagerInitilizationException;
-import com.qubole.rubix.core.utils.DeleteFileVisitor;
 import com.qubole.rubix.core.utils.DummyClusterManager;
 import com.qubole.rubix.hadoop2.Hadoop2ClusterManager;
 import com.qubole.rubix.presto.PrestoClusterManager;
@@ -28,9 +29,6 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import java.nio.file.Files;
-import java.nio.file.Paths;
-
 import static org.testng.Assert.assertTrue;
 
 /**
@@ -40,33 +38,30 @@ public class TestBookKeeper
 {
   private static final Log log = LogFactory.getLog(TestBookKeeper.class);
 
-  private MetricRegistry metrics;
-  private Configuration conf;
+  private static final String TEST_CACHE_DIR_PREFIX = BookKeeperTestUtils.getTestCacheDirPrefix("bookKeeperTest");
+  private static final String TEST_DNE_CLUSTER_MANAGER = "com.qubole.rubix.core.DoesNotExistClusterManager";
+  private static final int TEST_MAX_DISKS = 1;
+
+  private final Configuration conf = new Configuration();
+  private final MetricRegistry metrics = new MetricRegistry();
 
   @BeforeMethod
   public void setUp() throws Exception
   {
-    conf = new Configuration();
-    metrics = new MetricRegistry();
+    conf.clear();
+    metrics.removeMatching(MetricFilter.ALL);
 
     // Set configuration values for testing
-    CacheConfig.setCacheDataDirPrefix(conf, "/tmp/media/ephemeral");
-    CacheConfig.setMaxDisks(conf, 1);
+    CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
+    CacheConfig.setMaxDisks(conf, TEST_MAX_DISKS);
 
-    // Create cache directories
-    Files.createDirectories(Paths.get(CacheConfig.getCacheDirPrefixList(conf)));
-    for (int i = 0; i < CacheConfig.getCacheMaxDisks(conf); i++) {
-      Files.createDirectories(Paths.get(CacheConfig.getCacheDirPrefixList(conf) + i));
-    }
+    BookKeeperTestUtils.createCacheParentDirectories(TEST_CACHE_DIR_PREFIX, TEST_MAX_DISKS);
   }
 
   @AfterMethod
   public void tearDown() throws Exception
   {
-    for (int i = 0; i < CacheConfig.getCacheMaxDisks(conf); i++) {
-      Files.walkFileTree(Paths.get(CacheConfig.getCacheDirPrefixList(conf) + i), new DeleteFileVisitor());
-      Files.deleteIfExists(Paths.get(CacheConfig.getCacheDirPrefixList(conf) + i));
-    }
+    BookKeeperTestUtils.removeCacheParentDirectories(TEST_CACHE_DIR_PREFIX);
   }
 
   @Test
@@ -84,7 +79,7 @@ public class TestBookKeeper
   public void testGetDummyClusterManagerInValidInstance() throws Exception
   {
     ClusterType type = ClusterType.TEST_CLUSTER_MANAGER;
-    CacheConfig.setDummyClusterManager(conf, "com.qubole.rubix.core.DoesNotExistClusterManager");
+    CacheConfig.setDummyClusterManager(conf, TEST_DNE_CLUSTER_MANAGER);
     BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);
 
     ClusterManager manager = bookKeeper.getClusterManagerInstance(type, conf);
@@ -105,7 +100,7 @@ public class TestBookKeeper
   public void testGetHadoop2ClusterManagerInValidInstance() throws Exception
   {
     ClusterType type = ClusterType.HADOOP2_CLUSTER_MANAGER;
-    CacheConfig.setHadoopClusterManager(conf, "com.qubole.rubix.core.DoesNotExistClusterManager");
+    CacheConfig.setHadoopClusterManager(conf, TEST_DNE_CLUSTER_MANAGER);
     BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);
 
     ClusterManager manager = bookKeeper.getClusterManagerInstance(type, conf);
@@ -126,7 +121,7 @@ public class TestBookKeeper
   public void testGetPrestoClusterManagerInValidInstance() throws Exception
   {
     ClusterType type = ClusterType.PRESTO_CLUSTER_MANAGER;
-    CacheConfig.setPrestoClusterManager(conf, "com.qubole.rubix.core.DoesNotExistClusterManager");
+    CacheConfig.setPrestoClusterManager(conf, TEST_DNE_CLUSTER_MANAGER);
     BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);
 
     ClusterManager manager = bookKeeper.getClusterManagerInstance(type, conf);

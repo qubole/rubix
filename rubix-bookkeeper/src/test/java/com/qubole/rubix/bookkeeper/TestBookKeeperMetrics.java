@@ -12,19 +12,22 @@
  */
 package com.qubole.rubix.bookkeeper;
 
+import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
+import com.qubole.rubix.bookkeeper.test.BookKeeperTestUtils;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.shaded.TException;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 
 import static org.testng.Assert.assertEquals;
 
@@ -32,28 +35,38 @@ public class TestBookKeeperMetrics
 {
   private static final Log log = LogFactory.getLog(TestBookKeeperMetrics.class);
 
-  private static final int BLOCK_SIZE = 100;
+  private static final String TEST_CACHE_DIR_PREFIX = BookKeeperTestUtils.getTestCacheDirPrefix("TestBookKeeperMetrics");
+  private static final int TEST_BLOCK_SIZE = 100;
+  private static final int TEST_MAX_DISKS = 1;
 
-  private final MetricRegistry metrics = new MetricRegistry();
   private final Configuration conf = new Configuration();
+  private final MetricRegistry metrics = new MetricRegistry();
 
   private BookKeeper bookKeeper;
 
   @BeforeClass
-  public void setUp() throws IOException
+  public void initializeCacheDirectories() throws IOException
   {
-    // Set configuration values for testing
-    CacheConfig.setCacheDataDirPrefix(conf, "/tmp/media/ephemeral");
-    CacheConfig.setMaxDisks(conf, 5);
-    CacheConfig.setBlockSize(conf, BLOCK_SIZE);
+    BookKeeperTestUtils.createCacheParentDirectories(TEST_CACHE_DIR_PREFIX, TEST_MAX_DISKS);
+  }
 
-    // Create cache directories
-    Files.createDirectories(Paths.get(CacheConfig.getCacheDirPrefixList(conf)));
-    for (int i = 0; i < CacheConfig.getCacheMaxDisks(conf); i++) {
-      Files.createDirectories(Paths.get(CacheConfig.getCacheDirPrefixList(conf) + i));
-    }
+  @BeforeMethod
+  public void setUpForTest() throws FileNotFoundException
+  {
+    conf.clear();
+    metrics.removeMatching(MetricFilter.ALL);
+
+    CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
+    CacheConfig.setMaxDisks(conf, TEST_MAX_DISKS);
+    CacheConfig.setBlockSize(conf, TEST_BLOCK_SIZE);
 
     bookKeeper = new CoordinatorBookKeeper(conf, metrics);
+  }
+
+  @AfterClass
+  public void cleanCacheDirectories() throws IOException
+  {
+    BookKeeperTestUtils.removeCacheParentDirectories(TEST_CACHE_DIR_PREFIX);
   }
 
   /**
