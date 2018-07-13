@@ -39,7 +39,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
 
-import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 /**
@@ -58,9 +57,10 @@ public class TestThriftServerJVM extends Configured
   private static final String jarsPath = "/usr/lib/hadoop2/share/hadoop/tools/lib/";
   private static final String hadoopDirectory = "/usr/lib/hadoop2/bin/hadoop";
   private static final String bookKeeperClass = "com.qubole.rubix.bookkeeper.BookKeeperServer";
-  private static final String localDataTransferServerClass = "com.qubole.rubix.bookkeeper.BookKeeperServer";
+  private static final String localDataTransferServerClass = "com.qubole.rubix.bookkeeper.LocalDataTransferServer";
   private static final String setDataBlockSize = "-Dhadoop.cache.data.block-size=200";
-  private static final String setCacheMaxDisks = "-Dhadoop.cache.data.max.disks=2";
+  private static final String setCacheMaxDisks = "-Dhadoop.cache.data.max.disks=1";
+  private static final String setCacheDirectory = "-Dhadoop.cache.data.dirprefix.list=" + testDirectoryPrefix + "dir";
 
   public BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
 
@@ -68,7 +68,6 @@ public class TestThriftServerJVM extends Configured
   static Process localDataTransferJvm;
 
   private static Configuration conf = new Configuration();
-  private static String cacheDir = CacheConfig.getCacheDirPrefixList(conf) + "0" + CacheConfig.getCacheDataDirSuffix(conf);
 
   @BeforeClass
   public static void setupClass() throws IOException, InterruptedException
@@ -76,7 +75,6 @@ public class TestThriftServerJVM extends Configured
     /*
      * Dynamically, retrieving bookkeeper jar from /usr/lib/hadoop2/share/hadoop/tools/lib/ folder
      * */
-
     File folder = new File(jarsPath);
     File[] listOfFiles = folder.listFiles();
     String bookKeeperJarPath = null;
@@ -89,8 +87,8 @@ public class TestThriftServerJVM extends Configured
     /*
      * Spinning up the separate JVMs for bookKeeper and Local Data Transfer Servers
      * */
-    String[] bookKeeperStartCmd = {hadoopDirectory, "jar", bookKeeperJarPath, bookKeeperClass, setDataBlockSize, setCacheMaxDisks};
-    String[] localDataTransferStartCmd = {hadoopDirectory, "jar", bookKeeperJarPath, localDataTransferServerClass, setDataBlockSize, setCacheMaxDisks};
+    String[] bookKeeperStartCmd = {hadoopDirectory, "jar", bookKeeperJarPath, bookKeeperClass, setDataBlockSize, setCacheMaxDisks, setCacheDirectory};
+    String[] localDataTransferStartCmd = {hadoopDirectory, "jar", bookKeeperJarPath, localDataTransferServerClass, setDataBlockSize, setCacheMaxDisks, setCacheDirectory};
 
     ProcessBuilder pJVMBuilder = new ProcessBuilder();
     pJVMBuilder.redirectErrorStream(true);
@@ -101,7 +99,7 @@ public class TestThriftServerJVM extends Configured
     localDataTransferJvm = pJVMBuilder.start();
 
     log.info("Test Directory : " + testDirectory);
-    Files.createDirectories(Paths.get(testDirectory));
+    Files.createDirectories(Paths.get(testDirectoryPrefix + "dir0/fcache/"));
     Thread.sleep(3000);
   }
 
@@ -117,11 +115,6 @@ public class TestThriftServerJVM extends Configured
     log.info("Deleting files in " + testDirectory);
     Files.walkFileTree(Paths.get(testDirectory), new DeleteFileVisitor());
     Files.deleteIfExists(Paths.get(testDirectory));
-
-    if (new File(cacheDir + "/" + testDirectoryPrefix).exists()) {
-      Files.walkFileTree(Paths.get(cacheDir + "/" + testDirectoryPrefix), new DeleteFileVisitor());
-      Files.deleteIfExists(Paths.get(cacheDir + "/" + testDirectoryPrefix));
-    }
   }
 
   @BeforeMethod
@@ -132,8 +125,7 @@ public class TestThriftServerJVM extends Configured
 
     CacheConfig.setIsStrictMode(conf, true);
     CacheConfig.setCacheDataDirPrefix(conf, testDirectoryPrefix + "dir");
-    CacheConfig.setMaxDisks(conf, 2);
-    CacheConfig.setIsParallelWarmupEnabled(conf, false);
+    CacheConfig.setMaxDisks(conf, 1);
     CacheConfig.setBlockSize(conf, 200);
   }
 
@@ -149,10 +141,6 @@ public class TestThriftServerJVM extends Configured
   {
     log.info("Value of Path " + this.backendFileName);
     log.debug(" backendPath to string : " + this.backendPath.toString());
-    File mdFile = new File(cacheDir + "/" + testDirectoryPrefix + "backendDataFile_mdfile");
-    if (mdFile.exists()) {
-      mdFile.delete();
-    }
     String host = "localhost";
     boolean dataDownloaded;
     File file = new File(backendFileName);
@@ -175,28 +163,12 @@ public class TestThriftServerJVM extends Configured
     log.info(" Value of Result : " + result);
   }
 
-  @Test(enabled = false)
-  public void testTTransportException() throws IOException, InterruptedException
+  @Test(enabled = false, expectedExceptions = org.apache.thrift.shaded.transport.TTransportException.class)
+  public void testTTransportException() throws IOException, InterruptedException, Exception
   {
     //1234 is a random port to test if TTransportException is being thrown or not
     CacheConfig.setServerPort(conf, 1234);
-
     String host = "localhost";
-    File file = new File(backendFileName);
-    List<BlockLocation> result;
-    int lastBlock = 4;
-
-    try {
-      RetryingBookkeeperClient client;
-      client = bookKeeperFactory.createBookKeeperClient(host, conf);
-      result = client.getCacheStatus("file:///" + backendFileName, file.length(), file.lastModified(), 0, lastBlock, 3);
-      assertTrue(false, "Unexpected behavior : Communicating with random port :" + result.toString());
-    }
-    catch (TTransportException ex) {
-      assertFalse(false);
-    }
-    catch (TException ex) {
-      assertFalse(false);
-    }
+    bookKeeperFactory.createBookKeeperClient(host, conf);
   }
 }
