@@ -48,9 +48,6 @@ public class TestBookKeeper
   @BeforeMethod
   public void setUp() throws Exception
   {
-    conf.clear();
-    metrics.removeMatching(MetricFilter.ALL);
-
     // Set configuration values for testing
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     CacheConfig.setMaxDisks(conf, TEST_MAX_DISKS);
@@ -61,6 +58,9 @@ public class TestBookKeeper
   @AfterMethod
   public void tearDown() throws Exception
   {
+    conf.clear();
+    metrics.removeMatching(MetricFilter.ALL);
+
     BookKeeperTestUtils.removeCacheParentDirectories(TEST_CACHE_DIR_PREFIX);
   }
 

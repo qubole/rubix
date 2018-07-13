@@ -45,8 +45,6 @@ public class TestFileDownloader
   @BeforeMethod
   public void setUp() throws Exception
   {
-    conf.clear();
-
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     CacheConfig.setMaxDisks(conf, TEST_MAX_DISKS);
 
@@ -57,6 +55,8 @@ public class TestFileDownloader
   @AfterMethod
   public void tearDown() throws Exception
   {
+    conf.clear();
+
     BookKeeperTestUtils.removeCacheParentDirectories(TEST_CACHE_DIR_PREFIX);
   }
 

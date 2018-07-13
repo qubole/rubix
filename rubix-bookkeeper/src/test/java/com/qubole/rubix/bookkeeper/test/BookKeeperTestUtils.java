@@ -27,11 +27,24 @@ public final class BookKeeperTestUtils
   {
   }
 
+  /**
+   * Get the name of a temporary directory to be used for unit testing.
+   *
+   * @param testSubdirectoryName  The name of the subdirectory to be used for testing.
+   * @return The path name of the cache directory to be used for testing.
+   */
   public static String getTestCacheDirPrefix(String testSubdirectoryName)
   {
     return Joiner.on(File.separator).join(System.getProperty("java.io.tmpdir"), testSubdirectoryName);
   }
 
+  /**
+   * Create the parent directories necessary for cache directory creation.
+   *
+   * @param cacheDirPrefix  The path prefix for the directories to be added.
+   * @param maxDisks        The maximum number of parent directories to create.
+   * @throws IOException if an I/O error occurs while creating directories.
+   */
   public static void createCacheParentDirectories(String cacheDirPrefix, int maxDisks) throws IOException
   {
     Files.createDirectories(Paths.get(cacheDirPrefix));
@@ -40,6 +53,12 @@ public final class BookKeeperTestUtils
     }
   }
 
+  /**
+   * Remove all cache directories and their parents.
+   *
+   * @param cacheDirPrefix  The path prefix for the directories to be removed.
+   * @throws IOException if an I/O error occurs while deleting directories.
+   */
   public static void removeCacheParentDirectories(String cacheDirPrefix) throws IOException
   {
     Files.walkFileTree(Paths.get(cacheDirPrefix), new DeleteFileVisitor());

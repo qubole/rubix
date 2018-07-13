@@ -22,6 +22,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.shaded.TException;
 import org.testng.annotations.AfterClass;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -53,14 +54,18 @@ public class TestBookKeeperMetrics
   @BeforeMethod
   public void setUpForTest() throws FileNotFoundException
   {
-    conf.clear();
-    metrics.removeMatching(MetricFilter.ALL);
-
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     CacheConfig.setMaxDisks(conf, TEST_MAX_DISKS);
     CacheConfig.setBlockSize(conf, TEST_BLOCK_SIZE);
 
     bookKeeper = new CoordinatorBookKeeper(conf, metrics);
+  }
+
+  @AfterMethod
+  public void tearDownForTest()
+  {
+    conf.clear();
+    metrics.removeMatching(MetricFilter.ALL);
   }
 
   @AfterClass

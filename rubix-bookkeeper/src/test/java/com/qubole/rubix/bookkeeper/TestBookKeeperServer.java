@@ -36,7 +36,6 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
-@Test(singleThreaded = true)
 public class TestBookKeeperServer
 {
   private static final Log log = LogFactory.getLog(TestBookKeeperServer.class);
@@ -58,9 +57,6 @@ public class TestBookKeeperServer
   @BeforeMethod
   public void setUp()
   {
-    conf.clear();
-    metrics.removeMatching(MetricFilter.ALL);
-
     // Set configuration values for testing
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     CacheConfig.setMaxDisks(conf, TEST_MAX_DISKS);
@@ -69,6 +65,9 @@ public class TestBookKeeperServer
   @AfterMethod
   public void stopBookKeeperServerForTest()
   {
+    conf.clear();
+    metrics.removeMatching(MetricFilter.ALL);
+
     stopBookKeeperServer();
   }
 

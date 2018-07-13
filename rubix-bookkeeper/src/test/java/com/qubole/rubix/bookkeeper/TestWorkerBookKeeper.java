@@ -57,8 +57,6 @@ public class TestWorkerBookKeeper
   @BeforeMethod
   public void startBookKeeperServerForTest() throws InterruptedException
   {
-    conf.clear();
-
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     CacheConfig.setMaxDisks(conf, TEST_MAX_DISKS);
     CacheConfig.setServiceRetryInterval(conf, TEST_RETRY_INTERVAL);
@@ -71,6 +69,8 @@ public class TestWorkerBookKeeper
   @AfterMethod
   public void stopBookKeeperServerForTest()
   {
+    conf.clear();
+
     stopBookKeeperServer();
   }
 

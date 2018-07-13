@@ -47,8 +47,6 @@ public class TestRemoteFetchProcessor
   @BeforeMethod
   public void setUp() throws Exception
   {
-    conf.clear();
-
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     CacheConfig.setBlockSize(conf, TEST_BLOCK_SIZE);
     CacheConfig.setMaxDisks(conf, TEST_MAX_DISKS);
@@ -60,39 +58,9 @@ public class TestRemoteFetchProcessor
   @AfterMethod
   public void tearDown() throws Exception
   {
+    conf.clear();
+
     BookKeeperTestUtils.removeCacheParentDirectories(TEST_CACHE_DIR_PREFIX);
-  }
-
-  @Test
-  public void testProcessRequestOverlappingSet() throws Exception
-  {
-    DataGen.populateFile(TEST_BACKEND_FILE_NAME);
-    File file = new File(TEST_BACKEND_FILE_NAME);
-    Path backendPath = new Path("file:///" + TEST_BACKEND_FILE_NAME);
-
-    CacheConfig.setRemoteFetchProcessInterval(conf, 2000);
-    RemoteFetchProcessor processsor = new RemoteFetchProcessor(conf);
-
-    processsor.addToProcessQueue(backendPath.toString(), 0, 100, file.length(), (long) 10000);
-    processsor.addToProcessQueue(backendPath.toString(), 50, 100, file.length(), (long) 10000);
-    processsor.addToProcessQueue(backendPath.toString(), 100, 100, file.length(), (long) 10000);
-    processsor.addToProcessQueue(backendPath.toString(), 150, 100, file.length(), (long) 10000);
-    processsor.addToProcessQueue(backendPath.toString(), 200, 100, file.length(), (long) 10000);
-    processsor.addToProcessQueue(backendPath.toString(), 250, 100, file.length(), (long) 10000);
-    processsor.addToProcessQueue(backendPath.toString(), 300, 100, file.length(), (long) 10000);
-    processsor.addToProcessQueue(backendPath.toString(), 350, 100, file.length(), (long) 10000);
-    processsor.addToProcessQueue(backendPath.toString(), 400, 100, file.length(), (long) 10000);
-
-    processsor.processRequest(System.currentTimeMillis() + 2000);
-
-    String downloadedFile = CacheUtil.getLocalPath(backendPath.toString(), conf);
-    String resultString = new String(DataGen.readBytesFromFile(downloadedFile, 0, 500));
-
-    String expected = DataGen.generateContent().substring(0, 500);
-    assertTrue(expected.length() == resultString.length(),
-        "Downloaded data length didn't match Expected : " + expected.length() + " Got : " + resultString.length());
-    assertTrue(expected.equals(resultString),
-        "Downloaded data didn't match Expected : " + expected + " Got : " + resultString);
   }
 
   @Test
@@ -154,6 +122,31 @@ public class TestRemoteFetchProcessor
   }
 
   @Test
+  public void testProcessRequestOverlappingSet() throws Exception
+  {
+    DataGen.populateFile(TEST_BACKEND_FILE_NAME);
+    File file = new File(TEST_BACKEND_FILE_NAME);
+    Path backendPath = new Path("file:///" + TEST_BACKEND_FILE_NAME);
+
+    CacheConfig.setRemoteFetchProcessInterval(conf, 2000);
+    RemoteFetchProcessor processsor = new RemoteFetchProcessor(conf);
+
+    for (int offset = 0; offset <= 400; offset += 50) {
+      processsor.addToProcessQueue(backendPath.toString(), offset, 100, file.length(), (long) 10000);
+    }
+    processsor.processRequest(System.currentTimeMillis() + 2000);
+
+    String downloadedFile = CacheUtil.getLocalPath(backendPath.toString(), conf);
+    String resultString = new String(DataGen.readBytesFromFile(downloadedFile, 0, 500));
+
+    String expected = DataGen.generateContent().substring(0, 500);
+    assertTrue(expected.length() == resultString.length(),
+        "Downloaded data length didn't match Expected : " + expected.length() + " Got : " + resultString.length());
+    assertTrue(expected.equals(resultString),
+        "Downloaded data didn't match Expected : " + expected + " Got : " + resultString);
+  }
+
+  @Test
   public void testProcessRequestNonOverlappingSet() throws Exception
   {
     DataGen.populateFile(TEST_BACKEND_FILE_NAME);
@@ -163,13 +156,9 @@ public class TestRemoteFetchProcessor
     CacheConfig.setRemoteFetchProcessInterval(conf, 2000);
     RemoteFetchProcessor processsor = new RemoteFetchProcessor(conf);
 
-    processsor.addToProcessQueue(backendPath.toString(), 0, 100, file.length(), (long) 10000);
-    processsor.addToProcessQueue(backendPath.toString(), 200, 100, file.length(), (long) 10000);
-    processsor.addToProcessQueue(backendPath.toString(), 400, 100, file.length(), (long) 10000);
-    processsor.addToProcessQueue(backendPath.toString(), 600, 100, file.length(), (long) 10000);
-    processsor.addToProcessQueue(backendPath.toString(), 800, 100, file.length(), (long) 10000);
-    processsor.addToProcessQueue(backendPath.toString(), 1000, 100, file.length(), (long) 10000);
-
+    for (int offset = 0; offset <= 1000; offset += 200) {
+      processsor.addToProcessQueue(backendPath.toString(), offset, 100, file.length(), (long) 10000);
+    }
     processsor.processRequest(System.currentTimeMillis() + 2000);
 
     String downloadedFile = CacheUtil.getLocalPath(backendPath.toString(), conf);
