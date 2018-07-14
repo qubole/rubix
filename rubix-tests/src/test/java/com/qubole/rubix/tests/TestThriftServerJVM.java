@@ -17,6 +17,7 @@ import com.qubole.rubix.core.utils.DeleteFileVisitor;
 import com.qubole.rubix.spi.BlockLocation;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.Location;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import org.apache.commons.logging.Log;
@@ -134,15 +135,18 @@ public class TestThriftServerJVM extends Configured
   {
     File file = new File(backendFileName);
     file.delete();
+
+    File mdFile = new File(CacheUtil.getMetadataFilePath(backendPath.toString(), conf));
+    mdFile.delete();
+
+    File localFile = new File(CacheUtil.getLocalPath(backendPath.toString(), conf));
+    localFile.delete();
   }
 
   @Test(enabled = false)
   public void testJVMCommunication() throws IOException, InterruptedException, TTransportException, TException
   {
-    log.info("Value of Path " + this.backendFileName);
-    log.debug(" backendPath to string : " + this.backendPath.toString());
     String host = "localhost";
-    boolean dataDownloaded;
     File file = new File(backendFileName);
     List<BlockLocation> result;
     int lastBlock = 4;
@@ -155,7 +159,7 @@ public class TestThriftServerJVM extends Configured
     assertTrue(result.get(0).getLocation() == Location.LOCAL, "File already cached, before readData call");
     log.info(" Value of Result : " + result);
     log.info("Downloading file from path : " + file.toString());
-    dataDownloaded = client.readData("file:///" + backendFileName, 0, readSize, file.length(), file.lastModified(), 3);
+    boolean dataDownloaded = client.readData("file:///" + backendFileName, 0, readSize, file.length(), file.lastModified(), 3);
     assertTrue(dataDownloaded == true, "readData() function call failed. File not downloaded properly");
 
     result = client.getCacheStatus("file:///" + backendFileName, file.length(), file.lastModified(), 0, lastBlock, 3);
