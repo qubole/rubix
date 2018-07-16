@@ -41,6 +41,7 @@ public class TestRemoteFetchProcessor
   private static final String TEST_BACKEND_FILE_NAME = TEST_CACHE_DIR_PREFIX + "backendFile";
   private static final int TEST_BLOCK_SIZE = 100;
   private static final int TEST_MAX_DISKS = 1;
+  private static final int TEST_REMOTE_FETCH_PROCESS_INTERVAL = 2000;
 
   private final Configuration conf = new Configuration();
 
@@ -67,7 +68,7 @@ public class TestRemoteFetchProcessor
   public void testMergeRequests() throws Exception
   {
     CacheConfig.setRemoteFetchProcessInterval(conf, 2000);
-    RemoteFetchProcessor processor = new RemoteFetchProcessor(conf);
+    final RemoteFetchProcessor processor = new RemoteFetchProcessor(conf);
 
     log.info("Merge Test 1 when requests are all from different file");
     for (int i = 0; i < 100; i++) {
@@ -84,8 +85,9 @@ public class TestRemoteFetchProcessor
     contextMap.clear();
 
     log.info("Merge Test 2 when requests are from a set of files");
+    String path;
     for (int i = 0; i < 100; i++) {
-      String path = "File--" + (i % 10);
+      path = "File--" + (i % 10);
       processor.addToProcessQueue(path, i, i + 10, 100, 1000);
     }
 
@@ -97,7 +99,7 @@ public class TestRemoteFetchProcessor
 
     log.info("Merge Test 3 when requests non overlapping set from one file");
     for (int i = 0; i < 300; i += 30) {
-      String path = "File--1";
+      path = "File--1";
       processor.addToProcessQueue(path, i, 10, 100, 1000);
     }
     contextMap = processor.mergeRequests(System.currentTimeMillis() + 3000);
@@ -109,7 +111,7 @@ public class TestRemoteFetchProcessor
 
     log.info("Merge Test 4 when requests overlapping set from one file");
     for (int i = 0; i < 300; i += 30) {
-      String path = "File--1";
+      path = "File--1";
       processor.addToProcessQueue(path, i, 50, 100, 1000);
     }
 
@@ -125,21 +127,23 @@ public class TestRemoteFetchProcessor
   public void testProcessRequestOverlappingSet() throws Exception
   {
     DataGen.populateFile(TEST_BACKEND_FILE_NAME);
-    File file = new File(TEST_BACKEND_FILE_NAME);
-    Path backendPath = new Path("file:///" + TEST_BACKEND_FILE_NAME);
+    final File file = new File(TEST_BACKEND_FILE_NAME);
+    final Path backendPath = new Path("file:///" + TEST_BACKEND_FILE_NAME);
+    final int offsetStep = 50;
+    final int maxOffset = 400;
 
-    CacheConfig.setRemoteFetchProcessInterval(conf, 2000);
-    RemoteFetchProcessor processsor = new RemoteFetchProcessor(conf);
+    CacheConfig.setRemoteFetchProcessInterval(conf, TEST_REMOTE_FETCH_PROCESS_INTERVAL);
+    final RemoteFetchProcessor processsor = new RemoteFetchProcessor(conf);
 
-    for (int offset = 0; offset <= 400; offset += 50) {
+    for (int offset = 0; offset <= maxOffset; offset += offsetStep) {
       processsor.addToProcessQueue(backendPath.toString(), offset, 100, file.length(), (long) 10000);
     }
-    processsor.processRequest(System.currentTimeMillis() + 2000);
+    processsor.processRequest(System.currentTimeMillis() + TEST_REMOTE_FETCH_PROCESS_INTERVAL);
 
-    String downloadedFile = CacheUtil.getLocalPath(backendPath.toString(), conf);
-    String resultString = new String(DataGen.readBytesFromFile(downloadedFile, 0, 500));
+    final String downloadedFile = CacheUtil.getLocalPath(backendPath.toString(), conf);
+    final String resultString = new String(DataGen.readBytesFromFile(downloadedFile, 0, 500));
 
-    String expected = DataGen.generateContent().substring(0, 500);
+    final String expected = DataGen.generateContent().substring(0, 500);
     assertTrue(expected.length() == resultString.length(),
         "Downloaded data length didn't match Expected : " + expected.length() + " Got : " + resultString.length());
     assertTrue(expected.equals(resultString),
@@ -150,22 +154,24 @@ public class TestRemoteFetchProcessor
   public void testProcessRequestNonOverlappingSet() throws Exception
   {
     DataGen.populateFile(TEST_BACKEND_FILE_NAME);
-    File file = new File(TEST_BACKEND_FILE_NAME);
-    Path backendPath = new Path("file:///" + TEST_BACKEND_FILE_NAME);
+    final File file = new File(TEST_BACKEND_FILE_NAME);
+    final Path backendPath = new Path("file:///" + TEST_BACKEND_FILE_NAME);
+    final int offsetStep = 200;
+    final int maxOffset = 1000;
 
-    CacheConfig.setRemoteFetchProcessInterval(conf, 2000);
-    RemoteFetchProcessor processsor = new RemoteFetchProcessor(conf);
+    CacheConfig.setRemoteFetchProcessInterval(conf, TEST_REMOTE_FETCH_PROCESS_INTERVAL);
+    final RemoteFetchProcessor processsor = new RemoteFetchProcessor(conf);
 
-    for (int offset = 0; offset <= 1000; offset += 200) {
+    for (int offset = 0; offset <= maxOffset; offset += offsetStep) {
       processsor.addToProcessQueue(backendPath.toString(), offset, 100, file.length(), (long) 10000);
     }
-    processsor.processRequest(System.currentTimeMillis() + 2000);
+    processsor.processRequest(System.currentTimeMillis() + TEST_REMOTE_FETCH_PROCESS_INTERVAL);
 
-    String downloadedFile = CacheUtil.getLocalPath(backendPath.toString(), conf);
+    final String downloadedFile = CacheUtil.getLocalPath(backendPath.toString(), conf);
 
     String resultString = null;
     String expected = null;
-    String content = DataGen.generateContent(1);
+    final String content = DataGen.generateContent(1);
 
     for (int i = 0; i < 1200; i += 200) {
       resultString = new String(DataGen.readBytesFromFile(downloadedFile, i, 100));

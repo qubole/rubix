@@ -65,7 +65,7 @@ public class TestFileDownloader
   {
     final String remoteFilePath1 = "file:///Files/file-1";
     final String remoteFilePath2 = "file:///Files/file-2";
-    ConcurrentMap<String, DownloadRequestContext> contextMap = new ConcurrentHashMap<>();
+    final ConcurrentMap<String, DownloadRequestContext> contextMap = new ConcurrentHashMap<>();
 
     DownloadRequestContext context = new DownloadRequestContext(remoteFilePath1, 1000, 1000);
     contextMap.put(remoteFilePath1, context);
@@ -78,17 +78,17 @@ public class TestFileDownloader
     context.addDownloadRange(100, 200);
     context.addDownloadRange(500, 800);
 
-    FileDownloader downloader = new FileDownloader(conf);
-    List<FileDownloadRequestChain> requestChains = downloader.getFileDownloadRequestChains(contextMap);
+    final FileDownloader downloader = new FileDownloader(conf);
+    final List<FileDownloadRequestChain> requestChains = downloader.getFileDownloadRequestChains(contextMap);
 
     assertTrue(requestChains.size() == 2,
         "Wrong Number of Request Chains. Expected = 2 Got = " + requestChains.size());
 
-    FileDownloadRequestChain request1 = requestChains.get(0);
+    final FileDownloadRequestChain request1 = requestChains.get(0);
     assertTrue(request1.getReadRequests().size() == 2,
         "Wrong Number of Requests For File-1. Expected = 2 Got = " + request1.getReadRequests().size());
 
-    FileDownloadRequestChain request2 = requestChains.get(1);
+    final FileDownloadRequestChain request2 = requestChains.get(1);
     assertTrue(request2.getReadRequests().size() == 2,
         "Wrong Number of Requests For File-2. Expected = 2 Got = " + request2.getReadRequests().size());
   }
