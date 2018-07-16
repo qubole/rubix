@@ -127,9 +127,12 @@ public class TestBookKeeperServer
 
     MockStatsDThread statsDThread = startServersForTestingStatsDReporterOnMaster(statsDPort, testCasePort, shouldReport);
 
-    assertTrue(isStatsDReporterFiring(testCasePort), "BookKeeperServer is not reporting to StatsD");
-
-    statsDThread.stopThread();
+    try {
+      assertTrue(isStatsDReporterFiring(testCasePort), "BookKeeperServer is not reporting to StatsD");
+    }
+    finally {
+      statsDThread.stopThread();
+    }
   }
 
   /**
@@ -147,9 +150,12 @@ public class TestBookKeeperServer
 
     MockStatsDThread statsDThread = startServersForTestingStatsDReporterOnMaster(statsDPort, testCasePort, shouldReport);
 
-    assertFalse(isStatsDReporterFiring(testCasePort), "BookKeeperServer should not report to StatsD");
-
-    statsDThread.stopThread();
+    try {
+      assertFalse(isStatsDReporterFiring(testCasePort), "BookKeeperServer should not report to StatsD");
+    }
+    finally {
+      statsDThread.stopThread();
+    }
   }
 
   /**
@@ -167,9 +173,12 @@ public class TestBookKeeperServer
 
     MockStatsDThread statsDThread = startServersForTestingStatsDReporterForWorker(statsDPort, testCasePort, shouldReport);
 
-    assertTrue(isStatsDReporterFiring(testCasePort), "BookKeeperServer is not reporting to StatsD");
-
-    statsDThread.stopThread();
+    try {
+      assertTrue(isStatsDReporterFiring(testCasePort), "BookKeeperServer is not reporting to StatsD");
+    }
+    finally {
+      statsDThread.stopThread();
+    }
   }
 
   /**
@@ -187,9 +196,12 @@ public class TestBookKeeperServer
 
     MockStatsDThread statsDThread = startServersForTestingStatsDReporterForWorker(statsDPort, testCasePort, shouldReport);
 
-    assertFalse(isStatsDReporterFiring(testCasePort), "BookKeeperServer should not report to StatsD");
-
-    statsDThread.stopThread();
+    try {
+      assertFalse(isStatsDReporterFiring(testCasePort), "BookKeeperServer should not report to StatsD");
+    }
+    finally {
+      statsDThread.stopThread();
+    }
   }
 
   /**
