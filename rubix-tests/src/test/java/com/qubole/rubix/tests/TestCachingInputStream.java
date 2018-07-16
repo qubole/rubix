@@ -99,7 +99,7 @@ public class TestCachingInputStream
     {
       public void run()
       {
-        LocalDataTransferServer.startServer(conf);
+        LocalDataTransferServer.startServer(conf, new MetricRegistry());
       }
     };
     server.start();

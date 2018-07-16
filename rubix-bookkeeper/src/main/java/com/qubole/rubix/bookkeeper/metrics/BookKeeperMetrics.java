@@ -13,6 +13,7 @@
 
 package com.qubole.rubix.bookkeeper.metrics;
 
+import com.codahale.metrics.Counter;
 import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Splitter;
@@ -33,6 +34,21 @@ public class BookKeeperMetrics implements AutoCloseable
 {
   private static Log log = LogFactory.getLog(BookKeeperMetrics.class);
 
+  // Liveness metrics
+  public static final String METRIC_BOOKKEEPER_LIVENESS_CHECK = "rubix.bookkeeper.liveness.gauge";
+  public static final String METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE = "rubix.bookkeeper.live_workers.gauge";
+
+  // Cache metrics
+  public static final String METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT = "rubix.bookkeeper.local_cache.count";
+
+  // JVM metrics
+  public static final String METRIC_BOOKKEEPER_JVM_GC_PREFIX = "rubix.bookkeeper.gc";
+  public static final String METRIC_BOOKKEEPER_JVM_MEMORY_PREFIX = "rubix.bookkeeper.memory";
+  public static final String METRIC_BOOKKEEPER_JVM_THREADS_PREFIX = "rubix.bookkeeper.threads";
+  public static final String METRIC_LDTS_JVM_GC_PREFIX = "rubix.ldts.gc";
+  public static final String METRIC_LDTS_JVM_MEMORY_PREFIX = "rubix.ldts.memory";
+  public static final String METRIC_LDTS_JVM_THREADS_PREFIX = "rubix.ldts.threads";
+
   private final MetricRegistry metrics;
   private final Configuration conf;
   protected final Set<Closeable> reporters = new HashSet<>();
@@ -42,6 +58,18 @@ public class BookKeeperMetrics implements AutoCloseable
     this.conf = conf;
     this.metrics = metrics;
     initializeReporters();
+  }
+
+  /**
+   * Increment a counter metric with null-safety.
+   *
+   * @param counter The counter to increment.
+   */
+  public static void incrementMetricsCounter(Counter counter)
+  {
+    if (counter != null) {
+      counter.inc();
+    }
   }
 
   /**

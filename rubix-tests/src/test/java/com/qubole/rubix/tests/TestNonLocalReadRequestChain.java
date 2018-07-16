@@ -97,7 +97,7 @@ public class TestNonLocalReadRequestChain
     {
       public void run()
       {
-        LocalDataTransferServer.startServer(conf);
+        LocalDataTransferServer.startServer(conf, new MetricRegistry());
       }
     };
     Thread thread = new Thread()

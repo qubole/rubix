@@ -18,6 +18,7 @@ import com.google.common.base.Ticker;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.testing.FakeTicker;
 import com.qubole.rubix.bookkeeper.CoordinatorBookKeeper;
+import com.qubole.rubix.bookkeeper.metrics.BookKeeperMetrics;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
 import org.apache.commons.logging.Log;
@@ -80,7 +81,7 @@ public class TestCoordinatorManager
     coordinatorBookKeeper.handleHeartbeat(WORKER1_HOSTNAME);
     coordinatorBookKeeper.handleHeartbeat(WORKER2_HOSTNAME);
 
-    int workerCount = (int) metrics.getGauges().get(CoordinatorBookKeeper.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE).getValue();
+    int workerCount = (int) metrics.getGauges().get(BookKeeperMetrics.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE).getValue();
     assertEquals(workerCount, 2, "Incorrect number of workers reporting heartbeat");
   }
 
@@ -99,13 +100,13 @@ public class TestCoordinatorManager
     coordinatorManager.handleHeartbeat(WORKER1_HOSTNAME);
     coordinatorManager.handleHeartbeat(WORKER2_HOSTNAME);
 
-    int workerCount = (int) metrics.getGauges().get(CoordinatorBookKeeper.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE).getValue();
+    int workerCount = (int) metrics.getGauges().get(BookKeeperMetrics.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE).getValue();
     assertEquals(workerCount, 2, "Incorrect number of workers reporting heartbeat");
 
     ticker.advance(workerLivenessExpiry, TimeUnit.MILLISECONDS);
     coordinatorManager.handleHeartbeat(WORKER1_HOSTNAME);
 
-    workerCount = (int) metrics.getGauges().get(CoordinatorBookKeeper.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE).getValue();
+    workerCount = (int) metrics.getGauges().get(BookKeeperMetrics.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE).getValue();
     assertEquals(workerCount, 1, "Incorrect number of workers reporting heartbeat");
   }
 

@@ -17,6 +17,7 @@ import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.qubole.rubix.bookkeeper.metrics.BookKeeperMetrics;
 import com.qubole.rubix.spi.CacheConfig;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -29,9 +30,6 @@ public class CoordinatorBookKeeper extends BookKeeper
 {
   private static Log log = LogFactory.getLog(CoordinatorBookKeeper.class.getName());
 
-  // Metric key for the number of live workers in the cluster.
-  public static final String METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE = "rubix.bookkeeper.live_workers.gauge";
-
   // Cache to store hostnames of live workers in the cluster.
   protected Cache<String, Boolean> liveWorkerCache;
 
@@ -42,7 +40,7 @@ public class CoordinatorBookKeeper extends BookKeeper
         .expireAfterWrite(CacheConfig.getWorkerLivenessExpiry(conf), TimeUnit.MILLISECONDS)
         .build();
 
-    registerMetrics();
+    registerMetrics(conf);
   }
 
   @Override
@@ -55,16 +53,18 @@ public class CoordinatorBookKeeper extends BookKeeper
   /**
    * Register desired metrics.
    */
-  private void registerMetrics()
+  private void registerMetrics(Configuration conf)
   {
-    metrics.register(METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE, new Gauge<Integer>()
-    {
-      @Override
-      public Integer getValue()
+    if (CacheConfig.isLivenessMetricsEnabled(conf)) {
+      metrics.register(BookKeeperMetrics.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE, new Gauge<Integer>()
       {
-        log.debug(String.format("Reporting %s workers", liveWorkerCache.asMap().size()));
-        return liveWorkerCache.asMap().size();
-      }
-    });
+        @Override
+        public Integer getValue()
+        {
+          log.debug(String.format("Reporting %s workers", liveWorkerCache.asMap().size()));
+          return liveWorkerCache.asMap().size();
+        }
+      });
+    }
   }
 }

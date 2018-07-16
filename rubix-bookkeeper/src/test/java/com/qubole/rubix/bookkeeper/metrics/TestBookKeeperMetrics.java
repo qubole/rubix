@@ -74,6 +74,7 @@ public class TestBookKeeperMetrics
     CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
     CacheConfig.setMaxDisks(conf, MAX_DISKS);
     CacheConfig.setBlockSize(conf, BLOCK_SIZE);
+    CacheConfig.setCacheMetricsEnabled(conf, true);
 
     bookKeeper = new CoordinatorBookKeeper(conf, metrics);
   }
@@ -100,7 +101,7 @@ public class TestBookKeeperMetrics
     final long endBlock = 23;
     final long totalRequests = endBlock - startBlock;
 
-    final Counter localCacheCounter = metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT);
+    final Counter localCacheCounter = metrics.getCounters().get(BookKeeperMetrics.METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT);
 
     assertEquals(localCacheCounter.getCount(), 0);
     bookKeeper.getCacheStatus(remotePath, fileLength, lastModified, startBlock, endBlock, ClusterType.TEST_CLUSTER_MANAGER.ordinal());

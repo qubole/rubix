@@ -21,6 +21,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.cache.Weigher;
+import com.qubole.rubix.bookkeeper.metrics.BookKeeperMetrics;
 import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.core.ReadRequest;
 import com.qubole.rubix.core.RemoteReadRequestChain;
@@ -62,8 +63,6 @@ import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
  */
 public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
 {
-  public static final String METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT = "rubix.bookkeeper.local_cache.count";
-
   private static Cache<String, FileMetadata> fileMetadataCache;
   private static ClusterManager clusterManager;
   private static Log log = LogFactory.getLog(BookKeeper.class.getName());
@@ -101,7 +100,9 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
    */
   private void initializeMetrics()
   {
-    localCacheCount = metrics.counter(METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT);
+    if (CacheConfig.isCacheMetricsEnabled(conf)) {
+      localCacheCount = metrics.counter(BookKeeperMetrics.METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT);
+    }
   }
 
   @Override
@@ -161,7 +162,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
     try {
       for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
         totalRequests++;
-        localCacheCount.inc();
+        BookKeeperMetrics.incrementMetricsCounter(localCacheCount);
 
         long split = (blockNum * blockSize) / splitSize;
         if (!blockSplits.get(split).equalsIgnoreCase(nodeName)) {

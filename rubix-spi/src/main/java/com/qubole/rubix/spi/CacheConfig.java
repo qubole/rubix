@@ -54,6 +54,9 @@ public class CacheConfig
   private static final String KEY_LOCAL_TRANSFER_BUFFER_SIZE = "hadoop.cache.data.buffer.size";
   private static final String KEY_LOCAL_SERVER_PORT = "hadoop.cache.data.local.server.port";
   private static final String KEY_MAX_RETRIES = "hadoop.cache.data.client.num-retries";
+  private static final String KEY_METRICS_CACHE_ENABLED = "rubix.metrics.cache.enabled";
+  private static final String KEY_METRICS_LIVENESS_ENABLED = "rubix.metrics.liveness.enabled";
+  private static final String KEY_METRICS_JVM_ENABLED = "rubix.metrics.jvm.enabled";
   private static final String KEY_METRICS_STATSD_HOST = "rubix.metrics.statsd.host";
   private static final String KEY_METRICS_STATSD_INTERVAL = "rubix.metrics.statsd.interval";
   private static final String KEY_METRICS_STATSD_PORT = "rubix.metrics.statsd.port";
@@ -100,6 +103,9 @@ public class CacheConfig
   private static final int DEFAULT_LOCAL_SERVER_PORT = 8898;
   private static final int DEFAULT_MAX_BUFFER_SIZE = 1024;
   private static final int DEFAULT_MAX_RETRIES = 3;
+  private static final boolean DEFAULT_METRICS_CACHE_ENABLED = false;
+  private static final boolean DEFAULT_METRICS_LIVENESS_ENABLED = true;
+  private static final boolean DEFAULT_METRICS_JVM_ENABLED = false;
   private static final String DEFAULT_METRICS_STATSD_HOST = "127.0.0.1"; // localhost
   private static final int DEFAULT_METRICS_STATSD_INTERVAL = 10000; // ms
   private static final int DEFAULT_METRICS_STATSD_PORT = 8125; // default StatsD port
@@ -311,6 +317,21 @@ public class CacheConfig
     return conf.getBoolean(KEY_CACHE_ENABLED, DEFAULT_DATA_CACHE_ENABLED);
   }
 
+  public static boolean isCacheMetricsEnabled(Configuration conf)
+  {
+    return conf.getBoolean(KEY_METRICS_CACHE_ENABLED, DEFAULT_METRICS_CACHE_ENABLED);
+  }
+
+  public static boolean isLivenessMetricsEnabled(Configuration conf)
+  {
+    return conf.getBoolean(KEY_METRICS_LIVENESS_ENABLED, DEFAULT_METRICS_LIVENESS_ENABLED);
+  }
+
+  public static boolean isJvmMetricsEnabled(Configuration conf)
+  {
+    return conf.getBoolean(KEY_METRICS_JVM_ENABLED, DEFAULT_METRICS_JVM_ENABLED);
+  }
+
   public static boolean isOnMaster(Configuration conf)
   {
     return conf.getBoolean(KEY_RUBIX_ON_MASTER, DEFAULT_RUBIX_ON_MASTER);
@@ -405,6 +426,11 @@ public class CacheConfig
     conf.set(KEY_DATA_CACHE_TABLE_WHITELIST, tableWhitelist);
   }
 
+  public static void setCacheMetricsEnabled(Configuration conf, boolean cacheMetricsEnabled)
+  {
+    conf.setBoolean(KEY_METRICS_CACHE_ENABLED, cacheMetricsEnabled);
+  }
+
   public static void setHeartbeatInitialDelay(Configuration conf, int initialDelay)
   {
     conf.setInt(KEY_HEARTBEAT_INITIAL_DELAY, initialDelay);
@@ -423,6 +449,16 @@ public class CacheConfig
   public static void setIsParallelWarmupEnabled(Configuration conf, boolean isParallelWarmupEnabled)
   {
     conf.setBoolean(KEY_DATA_CACHE_STRICT_MODE, isParallelWarmupEnabled);
+  }
+
+  public static void setJvmMetricsEnabled(Configuration conf, boolean jvmMetricsEnabled)
+  {
+    conf.setBoolean(KEY_METRICS_JVM_ENABLED, jvmMetricsEnabled);
+  }
+
+  public static void setLivenessMetricsEnabled(Configuration conf, boolean livenessMetricsEnabled)
+  {
+    conf.setBoolean(KEY_METRICS_LIVENESS_ENABLED, livenessMetricsEnabled);
   }
 
   public static void setLocalServerPort(Configuration conf, int localServerPort)

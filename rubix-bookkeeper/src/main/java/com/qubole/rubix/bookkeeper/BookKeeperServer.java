@@ -47,9 +47,6 @@ import static com.qubole.rubix.spi.CacheConfig.getServerPort;
  */
 public class BookKeeperServer extends Configured implements Tool
 {
-  // Metric key for liveness of the BookKeeper daemon.
-  public static final String METRIC_BOOKKEEPER_LIVENESS_CHECK = "rubix.bookkeeper.liveness.gauge";
-
   public static BookKeeper bookKeeper;
   public static BookKeeperService.Processor processor;
 
@@ -131,17 +128,21 @@ public class BookKeeperServer extends Configured implements Tool
   {
     bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
 
-    metrics.register(METRIC_BOOKKEEPER_LIVENESS_CHECK, new Gauge<Integer>()
-    {
-      @Override
-      public Integer getValue()
+    if (CacheConfig.isLivenessMetricsEnabled(conf)) {
+      metrics.register(BookKeeperMetrics.METRIC_BOOKKEEPER_LIVENESS_CHECK, new Gauge<Integer>()
       {
-        return 1;
-      }
-    });
-    metrics.register("rubix.bookkeeper.gc", new GarbageCollectorMetricSet());
-    metrics.register("rubix.bookkeeper.threads", new CachedThreadStatesGaugeSet(CacheConfig.getStatsDMetricsInterval(conf), TimeUnit.MILLISECONDS));
-    metrics.register("rubix.bookkeeper.memory", new MemoryUsageGaugeSet());
+        @Override
+        public Integer getValue()
+        {
+          return 1;
+        }
+      });
+    }
+    if (CacheConfig.isJvmMetricsEnabled(conf)) {
+      metrics.register(BookKeeperMetrics.METRIC_BOOKKEEPER_JVM_GC_PREFIX, new GarbageCollectorMetricSet());
+      metrics.register(BookKeeperMetrics.METRIC_BOOKKEEPER_JVM_THREADS_PREFIX, new CachedThreadStatesGaugeSet(CacheConfig.getStatsDMetricsInterval(conf), TimeUnit.MILLISECONDS));
+      metrics.register(BookKeeperMetrics.METRIC_BOOKKEEPER_JVM_MEMORY_PREFIX, new MemoryUsageGaugeSet());
+    }
   }
 
   public static void stopServer()

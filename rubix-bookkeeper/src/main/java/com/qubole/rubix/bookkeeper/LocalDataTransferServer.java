@@ -12,6 +12,7 @@
  */
 package com.qubole.rubix.bookkeeper;
 
+import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.jvm.CachedThreadStatesGaugeSet;
 import com.codahale.metrics.jvm.GarbageCollectorMetricSet;
@@ -69,13 +70,13 @@ public class LocalDataTransferServer extends Configured implements Tool
   public int run(String[] args) throws Exception
   {
     conf = this.getConf();
-    startServer(conf);
+    startServer(conf, new MetricRegistry());
     return 0;
   }
 
-  public static void startServer(Configuration conf)
+  public static void startServer(Configuration conf, MetricRegistry metricRegistry)
   {
-    metrics = new MetricRegistry();
+    metrics = metricRegistry;
     registerMetrics(conf);
 
     localServer = new LocalServer(conf);
@@ -91,13 +92,16 @@ public class LocalDataTransferServer extends Configured implements Tool
   {
     bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
 
-    metrics.register("rubix.ldts.gc", new GarbageCollectorMetricSet());
-    metrics.register("rubix.ldts.threads", new CachedThreadStatesGaugeSet(CacheConfig.getStatsDMetricsInterval(conf), TimeUnit.MILLISECONDS));
-    metrics.register("rubix.ldts.memory", new MemoryUsageGaugeSet());
+    if (CacheConfig.isJvmMetricsEnabled(conf)) {
+      metrics.register(BookKeeperMetrics.METRIC_LDTS_JVM_GC_PREFIX, new GarbageCollectorMetricSet());
+      metrics.register(BookKeeperMetrics.METRIC_LDTS_JVM_THREADS_PREFIX, new CachedThreadStatesGaugeSet(CacheConfig.getStatsDMetricsInterval(conf), TimeUnit.MILLISECONDS));
+      metrics.register(BookKeeperMetrics.METRIC_LDTS_JVM_MEMORY_PREFIX, new MemoryUsageGaugeSet());
+    }
   }
 
   public static void stopServer()
   {
+    removeMetrics();
     if (localServer != null) {
       try {
         bookKeeperMetrics.close();
@@ -107,6 +111,11 @@ public class LocalDataTransferServer extends Configured implements Tool
       }
       localServer.stop();
     }
+  }
+
+  protected static void removeMetrics()
+  {
+    metrics.removeMatching(MetricFilter.ALL);
   }
 
   @VisibleForTesting
