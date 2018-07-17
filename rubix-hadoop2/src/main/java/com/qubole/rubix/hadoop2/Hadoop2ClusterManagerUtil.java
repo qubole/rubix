@@ -88,6 +88,11 @@ public class Hadoop2ClusterManagerUtil
 
   public static class NodesResponse
   {
+    // Argument-less constructor is needed for GSON parsing
+    public NodesResponse()
+    {
+    }
+
     @SerializedName("nodes")
     private Nodes nodes;
 
@@ -110,6 +115,11 @@ public class Hadoop2ClusterManagerUtil
 
   public static class Nodes
   {
+    // Argument-less constructor is needed for GSON parsing
+    public Nodes()
+    {
+    }
+
     @SerializedName("node")
     private List<Node> nodeList;
 
@@ -149,6 +159,11 @@ public class Hadoop2ClusterManagerUtil
 
     String nodeHostName;
     String state;
+
+    // Argument-less constructor is needed for GSON parsing
+    public Node()
+    {
+    }
 
     // Necessary for GSON parsing
     public Node(String nodeHostName, String state)
