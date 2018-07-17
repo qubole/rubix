@@ -13,8 +13,8 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
-import com.qubole.rubix.bookkeeper.metrics.BookKeeperMetrics;
 import com.qubole.rubix.bookkeeper.metrics.MetricsReporter;
+import com.qubole.rubix.bookkeeper.test.BookKeeperTest;
 import com.qubole.rubix.core.utils.DeleteFileVisitor;
 import com.qubole.rubix.spi.CacheConfig;
 import org.apache.commons.logging.Log;
@@ -29,7 +29,6 @@ import org.testng.annotations.Test;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.net.DatagramPacket;
@@ -39,12 +38,11 @@ import java.net.SocketTimeoutException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Set;
-import java.util.SortedSet;
 
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
-public class TestBookKeeperServer
+public class TestBookKeeperServer extends BookKeeperTest
 {
   private static final Log log = LogFactory.getLog(TestBookKeeperServer.class.getName());
   private static final String cacheTestDirPrefix = System.getProperty("java.io.tmpdir") + "/bookKeeperServerTest/";
@@ -79,7 +77,7 @@ public class TestBookKeeperServer
   @AfterMethod
   public void stopBookKeeperServerForTest()
   {
-    stopBookKeeperServer();
+    stopMockBookKeeperServer();
   }
 
   @AfterClass
@@ -93,173 +91,63 @@ public class TestBookKeeperServer
    * Verify that liveness metrics are registered when configured to.
    */
   @Test
-  public void testLivenessMetricsEnabled()
+  public void testLivenessMetricsEnabled() throws InterruptedException
   {
-    CacheConfig.setLivenessMetricsEnabled(conf, true);
-    CacheConfig.setOnMaster(conf, true);
-
-    SortedSet<String> metricsNames = metrics.getNames();
-    assertFalse(metricsNames.contains(BookKeeperMetrics.METRIC_BOOKKEEPER_LIVENESS_CHECK), "Liveness check should not be registered before server is started.");
-    assertFalse(metricsNames.contains(BookKeeperMetrics.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE), "Liveness check should not be registered before server is started.");
-
-    startBookKeeperServer();
-
-    metricsNames = metrics.getNames();
-    assertTrue(metricsNames.contains(BookKeeperMetrics.METRIC_BOOKKEEPER_LIVENESS_CHECK), "Liveness check should be registered after server is started.");
-    assertTrue(metricsNames.contains(BookKeeperMetrics.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE), "Liveness check should be registered after server is started.");
-
-    stopBookKeeperServer();
-
-    metricsNames = metrics.getNames();
-    assertFalse(metricsNames.contains(BookKeeperMetrics.METRIC_BOOKKEEPER_LIVENESS_CHECK), "Liveness check should not be registered after server is stopped.");
-    assertFalse(metricsNames.contains(BookKeeperMetrics.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE), "Liveness check should not be registered after server is stopped.");
+    super.testLivenessMetrics(ServerType.BOOKKEEPER, conf, metrics, true);
   }
 
   /**
    * Verify that liveness metrics are not registered when configured not to.
    */
   @Test
-  public void testLivenessMetricsNotEnabled()
+  public void testLivenessMetricsNotEnabled() throws InterruptedException
   {
-    CacheConfig.setLivenessMetricsEnabled(conf, false);
-    CacheConfig.setOnMaster(conf, true);
-
-    SortedSet<String> metricsNames = metrics.getNames();
-    assertFalse(metricsNames.contains(BookKeeperMetrics.METRIC_BOOKKEEPER_LIVENESS_CHECK), "Liveness check should not be registered before server is started.");
-    assertFalse(metricsNames.contains(BookKeeperMetrics.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE), "Liveness check should not be registered before server is started.");
-
-    startBookKeeperServer();
-
-    metricsNames = metrics.getNames();
-    assertFalse(metricsNames.contains(BookKeeperMetrics.METRIC_BOOKKEEPER_LIVENESS_CHECK), "Liveness check should not be registered after server is started.");
-    assertFalse(metricsNames.contains(BookKeeperMetrics.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE), "Liveness check should not be registered after server is started.");
-
-    stopBookKeeperServer();
-
-    metricsNames = metrics.getNames();
-    assertFalse(metricsNames.contains(BookKeeperMetrics.METRIC_BOOKKEEPER_LIVENESS_CHECK), "Liveness check should not be registered after server is stopped.");
-    assertFalse(metricsNames.contains(BookKeeperMetrics.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE), "Liveness check should not be registered after server is stopped.");
+    super.testLivenessMetrics(ServerType.BOOKKEEPER, conf, metrics, false);
   }
 
   /**
    * Verify that cache metrics are registered when configured to.
    */
   @Test
-  public void testCacheMetricsEnabled()
+  public void testCacheMetricsEnabled() throws InterruptedException
   {
-    CacheConfig.setCacheMetricsEnabled(conf, true);
-    CacheConfig.setOnMaster(conf, true);
-
-    SortedSet<String> metricsNames = metrics.getNames();
-    assertFalse(metricsNames.contains(BookKeeperMetrics.METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT), "Local cache request count should not be registered before server is started.");
-
-    startBookKeeperServer();
-
-    metricsNames = metrics.getNames();
-    assertTrue(metricsNames.contains(BookKeeperMetrics.METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT), "Local cache request count should be registered after server is started.");
-
-    stopBookKeeperServer();
-
-    metricsNames = metrics.getNames();
-    assertFalse(metricsNames.contains(BookKeeperMetrics.METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT), "Local cache request count should not be registered after server is stopped.");
+    super.testCacheMetrics(ServerType.BOOKKEEPER, conf, metrics, true);
   }
 
   /**
    * Verify that cache metrics are not registered when configured not to.
    */
   @Test
-  public void testCacheMetricsNotEnabled()
+  public void testCacheMetricsNotEnabled() throws InterruptedException
   {
-    CacheConfig.setCacheMetricsEnabled(conf, false);
-    CacheConfig.setOnMaster(conf, true);
-
-    SortedSet<String> metricsNames = metrics.getNames();
-    assertFalse(metricsNames.contains(BookKeeperMetrics.METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT), "Local cache request count should not be registered before server is started.");
-
-    startBookKeeperServer();
-
-    metricsNames = metrics.getNames();
-    assertFalse(metricsNames.contains(BookKeeperMetrics.METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT), "Local cache request count should not be registered after server is started.");
-
-    stopBookKeeperServer();
-
-    metricsNames = metrics.getNames();
-    assertFalse(metricsNames.contains(BookKeeperMetrics.METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT), "Local cache request count should not be registered after server is stopped.");
+    super.testCacheMetrics(ServerType.BOOKKEEPER, conf, metrics, false);
   }
 
   /**
    * Verify that JVM metrics are registered when configured to.
    */
   @Test
-  public void testJvmMetricsEnabled()
+  public void testJvmMetricsEnabled() throws InterruptedException
   {
-    CacheConfig.setJvmMetricsEnabled(conf, true);
-    CacheConfig.setOnMaster(conf, true);
-
-    SortedSet<String> metricsNames = metrics.getNames();
-    assertFalse(doesSetContainPartialMatch(metricsNames, BookKeeperMetrics.METRIC_BOOKKEEPER_JVM_GC_PREFIX), "GC metrics should not be registered before server is started.");
-    assertFalse(doesSetContainPartialMatch(metricsNames, BookKeeperMetrics.METRIC_BOOKKEEPER_JVM_THREADS_PREFIX), "Thread metrics should not be registered before server is started.");
-    assertFalse(doesSetContainPartialMatch(metricsNames, BookKeeperMetrics.METRIC_BOOKKEEPER_JVM_MEMORY_PREFIX), "Memory metrics should not be registered before server is started.");
-
-    startBookKeeperServer();
-
-    metricsNames = metrics.getNames();
-    assertTrue(doesSetContainPartialMatch(metricsNames, BookKeeperMetrics.METRIC_BOOKKEEPER_JVM_GC_PREFIX), "GC metrics should be registered after server is started.");
-    assertTrue(doesSetContainPartialMatch(metricsNames, BookKeeperMetrics.METRIC_BOOKKEEPER_JVM_THREADS_PREFIX), "Thread metrics should be registered after server is started.");
-    assertTrue(doesSetContainPartialMatch(metricsNames, BookKeeperMetrics.METRIC_BOOKKEEPER_JVM_MEMORY_PREFIX), "Memory metrics should be registered after server is started.");
-
-    stopBookKeeperServer();
-
-    metricsNames = metrics.getNames();
-    assertFalse(doesSetContainPartialMatch(metricsNames, BookKeeperMetrics.METRIC_BOOKKEEPER_JVM_GC_PREFIX), "GC metrics should not be registered after server is stopped.");
-    assertFalse(doesSetContainPartialMatch(metricsNames, BookKeeperMetrics.METRIC_BOOKKEEPER_JVM_THREADS_PREFIX), "Thread metrics should not be registered after server is stopped.");
-    assertFalse(doesSetContainPartialMatch(metricsNames, BookKeeperMetrics.METRIC_BOOKKEEPER_JVM_MEMORY_PREFIX), "Memory metrics should not be registered after server is stopped.");
+    super.testJvmMetrics(ServerType.BOOKKEEPER, conf, metrics, true);
   }
 
   /**
    * Verify that JVM metrics are not registered when configured not to.
    */
   @Test
-  public void testJvmMetricsNotEnabled()
+  public void testJvmMetricsNotEnabled() throws InterruptedException
   {
-    CacheConfig.setJvmMetricsEnabled(conf, false);
-    CacheConfig.setOnMaster(conf, true);
-
-    SortedSet<String> metricsNames = metrics.getNames();
-    assertFalse(doesSetContainPartialMatch(metricsNames, BookKeeperMetrics.METRIC_BOOKKEEPER_JVM_GC_PREFIX), "GC metrics should not be registered before server is started.");
-    assertFalse(doesSetContainPartialMatch(metricsNames, BookKeeperMetrics.METRIC_BOOKKEEPER_JVM_THREADS_PREFIX), "Thread metrics should not be registered before server is started.");
-    assertFalse(doesSetContainPartialMatch(metricsNames, BookKeeperMetrics.METRIC_BOOKKEEPER_JVM_MEMORY_PREFIX), "Memory metrics should not be registered before server is started.");
-
-    startBookKeeperServer();
-
-    metricsNames = metrics.getNames();
-    assertFalse(doesSetContainPartialMatch(metricsNames, BookKeeperMetrics.METRIC_BOOKKEEPER_JVM_GC_PREFIX), "GC metrics should not be registered after server is started.");
-    assertFalse(doesSetContainPartialMatch(metricsNames, BookKeeperMetrics.METRIC_BOOKKEEPER_JVM_THREADS_PREFIX), "Thread metrics should not be registered after server is started.");
-    assertFalse(doesSetContainPartialMatch(metricsNames, BookKeeperMetrics.METRIC_BOOKKEEPER_JVM_MEMORY_PREFIX), "Memory metrics should not be registered after server is started.");
-
-    stopBookKeeperServer();
-
-    metricsNames = metrics.getNames();
-    assertFalse(doesSetContainPartialMatch(metricsNames, BookKeeperMetrics.METRIC_BOOKKEEPER_JVM_GC_PREFIX), "GC metrics should not be registered after server is stopped.");
-    assertFalse(doesSetContainPartialMatch(metricsNames, BookKeeperMetrics.METRIC_BOOKKEEPER_JVM_THREADS_PREFIX), "Thread metrics should not be registered after server is stopped.");
-    assertFalse(doesSetContainPartialMatch(metricsNames, BookKeeperMetrics.METRIC_BOOKKEEPER_JVM_MEMORY_PREFIX), "Memory metrics should not be registered after server is stopped.");
+    super.testJvmMetrics(ServerType.BOOKKEEPER, conf, metrics, false);
   }
 
   /**
    * Verify that all registered metrics are removed once the BookKeeper server has stopped.
    */
   @Test
-  public void verifyMetricsAreRemoved()
+  public void verifyMetricsAreRemoved() throws InterruptedException
   {
-    assertTrue(metrics.getNames().size() == 0, "Metrics should not be registered before server is started.");
-
-    startBookKeeperServer();
-
-    assertTrue(metrics.getNames().size() > 0, "Metrics should be registered once server is started.");
-
-    stopBookKeeperServer();
-
-    assertTrue(metrics.getNames().size() == 0, "Metrics should not be registered after server has stopped.");
+    super.verifyMetricsAreRemoved(ServerType.BOOKKEEPER, conf, metrics);
   }
 
   /**
@@ -351,12 +239,12 @@ public class TestBookKeeperServer
     }
     assertTrue(metricsObjectNames.size() == 0, "Metrics should not be registered with JMX before server starts.");
 
-    startBookKeeperServer();
+    startMockBookKeeperServer(conf, metrics);
 
     metricsObjectNames = getJmxObjectNamesWithPattern(JMX_METRIC_NAME_PATTERN);
     assertTrue(metricsObjectNames.size() > 0, "Metrics should be registered with JMX after server starts.");
 
-    stopBookKeeperServer();
+    stopMockBookKeeperServer();
 
     metricsObjectNames = getJmxObjectNamesWithPattern(JMX_METRIC_NAME_PATTERN);
     assertTrue(metricsObjectNames.size() == 0, "Metrics should not be registered with JMX after server stops.");
@@ -373,12 +261,12 @@ public class TestBookKeeperServer
   {
     CacheConfig.setMetricsReporters(conf, "");
 
-    startBookKeeperServer();
+    startMockBookKeeperServer(conf, metrics);
 
     final Set<ObjectName> metricsObjectNames = getJmxObjectNamesWithPattern(JMX_METRIC_NAME_PATTERN);
     assertTrue(metricsObjectNames.size() == 0, "Metrics should not be registered with JMX.");
 
-    stopBookKeeperServer();
+    stopMockBookKeeperServer();
   }
 
   /**
@@ -433,7 +321,7 @@ public class TestBookKeeperServer
     CacheConfig.setStatsDMetricsInterval(conf, 1000);
 
     new MockStatsDThread(statsDPort, testCasePort).start();
-    startBookKeeperServer();
+    startMockBookKeeperServer(conf, metrics);
   }
 
   /**
@@ -461,39 +349,6 @@ public class TestBookKeeperServer
   }
 
   /**
-   * Start an instance of the BookKeeper server.
-   */
-  private void startBookKeeperServer()
-  {
-    MockBookKeeperServer.startServer(conf, metrics);
-  }
-
-  /**
-   * Stop the currently running BookKeeper server instance.
-   */
-  private void stopBookKeeperServer()
-  {
-    MockBookKeeperServer.stopServer();
-  }
-
-  /**
-   * Check if a given set contains a partial match for the desired element.
-   *
-   * @param stringSet     The set to search.
-   * @param searchString  The partial string to search for.
-   * @return true if the set contains a partial match, false otherwise.
-   */
-  private boolean doesSetContainPartialMatch(Set<String> stringSet, String searchString)
-  {
-    for (String element : stringSet) {
-      if (element.contains(searchString)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /**
    * Get the set of JMX object names matching the provided pattern.
    *
    * @param pattern The object name pattern to match.
@@ -503,31 +358,6 @@ public class TestBookKeeperServer
   private Set<ObjectName> getJmxObjectNamesWithPattern(String pattern) throws MalformedObjectNameException
   {
     return ManagementFactory.getPlatformMBeanServer().queryNames(new ObjectName(pattern), null);
-  }
-
-  /**
-   * Class to mock the behaviour of {@link BookKeeperServer} for testing registering & reporting metrics.
-   */
-  private static class MockBookKeeperServer extends BookKeeperServer
-  {
-    public static void startServer(Configuration conf, MetricRegistry metricRegistry)
-    {
-      metrics = metricRegistry;
-      try {
-        // Initializing this BookKeeper here allows it to register the live worker count metric for testing.
-        new CoordinatorBookKeeper(conf, metrics);
-      }
-      catch (FileNotFoundException e) {
-        log.error("Cache directories could not be created", e);
-        return;
-      }
-      registerMetrics(conf);
-    }
-
-    public static void stopServer()
-    {
-      removeMetrics();
-    }
   }
 
   /**
