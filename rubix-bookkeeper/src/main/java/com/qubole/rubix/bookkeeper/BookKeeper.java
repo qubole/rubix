@@ -533,6 +533,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
     public FetchFileInfoCallable(String remotePath, Configuration conf)
     {
       this.remotePath = remotePath;
+      this.conf = conf;
     }
 
     public FileInfo call() throws Exception
