@@ -12,6 +12,7 @@
  */
 package com.qubole.rubix.bookkeeper;
 
+import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
 import com.qubole.rubix.bookkeeper.metrics.MetricsReporter;
 import com.qubole.rubix.bookkeeper.test.BookKeeperTest;
@@ -46,37 +47,37 @@ public class TestBookKeeperServer extends BookKeeperTest
 {
   private static final Log log = LogFactory.getLog(TestBookKeeperServer.class.getName());
   private static final String cacheTestDirPrefix = System.getProperty("java.io.tmpdir") + "/bookKeeperServerTest/";
+  private static final int TEST_MAX_DISKS = 1;
   private static final int PACKET_SIZE = 32;
   private static final int SOCKET_TIMEOUT = 5000;
   private static final String JMX_METRIC_NAME_PATTERN = "metrics:*";
 
-  private MetricRegistry metrics;
-  private Configuration conf = new Configuration();
+  private final MetricRegistry metrics = new MetricRegistry();
+  private final Configuration conf = new Configuration();
 
   @BeforeClass
   public void initializeCacheDirectories() throws IOException
   {
-    // Set configuration values for testing
-    CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
-    CacheConfig.setMaxDisks(conf, 5);
-
     // Create cache directories
     Files.createDirectories(Paths.get(cacheTestDirPrefix));
-    for (int i = 0; i < CacheConfig.getCacheMaxDisks(conf); i++) {
-      Files.createDirectories(Paths.get(cacheTestDirPrefix, String.valueOf(i)));
+    for (int i = 0; i < TEST_MAX_DISKS; i++) {
+      Files.createDirectories(Paths.get(cacheTestDirPrefix + i));
     }
   }
 
   @BeforeMethod
   public void setUp()
   {
-    conf.clear();
-    metrics = new MetricRegistry();
+    CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
+    CacheConfig.setMaxDisks(conf, TEST_MAX_DISKS);
   }
 
   @AfterMethod
   public void stopBookKeeperServerForTest()
   {
+    conf.clear();
+    metrics.removeMatching(MetricFilter.ALL);
+
     stopMockBookKeeperServer();
   }
 
