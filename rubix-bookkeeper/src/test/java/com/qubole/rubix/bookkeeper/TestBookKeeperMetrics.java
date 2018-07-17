@@ -71,7 +71,7 @@ public class TestBookKeeperMetrics
   @AfterClass
   public void cleanCacheDirectories() throws IOException
   {
-    BookKeeperTestUtils.removeCacheParentDirectories(TEST_CACHE_DIR_PREFIX);
+    BookKeeperTestUtils.removeCacheParentDirectories(TEST_CACHE_DIR_PREFIX, TEST_MAX_DISKS);
   }
 
   /**

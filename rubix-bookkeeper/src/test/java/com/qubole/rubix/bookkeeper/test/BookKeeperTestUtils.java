@@ -47,7 +47,6 @@ public final class BookKeeperTestUtils
    */
   public static void createCacheParentDirectories(String cacheDirPrefix, int maxDisks) throws IOException
   {
-    Files.createDirectories(Paths.get(cacheDirPrefix));
     for (int i = 0; i < maxDisks; i++) {
       Files.createDirectories(Paths.get(cacheDirPrefix + i));
     }
@@ -59,9 +58,10 @@ public final class BookKeeperTestUtils
    * @param cacheDirPrefix  The path prefix for the directories to be removed.
    * @throws IOException if an I/O error occurs while deleting directories.
    */
-  public static void removeCacheParentDirectories(String cacheDirPrefix) throws IOException
+  public static void removeCacheParentDirectories(String cacheDirPrefix, int maxDisks) throws IOException
   {
-    Files.walkFileTree(Paths.get(cacheDirPrefix), new DeleteFileVisitor());
-    Files.deleteIfExists(Paths.get(cacheDirPrefix));
+    for (int i = 0; i < maxDisks; i++) {
+      Files.walkFileTree(Paths.get(cacheDirPrefix + i), new DeleteFileVisitor());
+    }
   }
 }

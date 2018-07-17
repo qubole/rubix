@@ -61,7 +61,7 @@ public class TestBookKeeper
     conf.clear();
     metrics.removeMatching(MetricFilter.ALL);
 
-    BookKeeperTestUtils.removeCacheParentDirectories(TEST_CACHE_DIR_PREFIX);
+    BookKeeperTestUtils.removeCacheParentDirectories(TEST_CACHE_DIR_PREFIX, TEST_MAX_DISKS);
   }
 
   @Test

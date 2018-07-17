@@ -74,7 +74,7 @@ public class TestBookKeeperServer
   @AfterClass
   public void cleanUpCacheDirectories() throws IOException
   {
-    BookKeeperTestUtils.removeCacheParentDirectories(TEST_CACHE_DIR_PREFIX);
+    BookKeeperTestUtils.removeCacheParentDirectories(TEST_CACHE_DIR_PREFIX, TEST_MAX_DISKS);
   }
 
   /**
