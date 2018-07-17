@@ -100,7 +100,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
    */
   private void initializeMetrics()
   {
-    if (CacheConfig.isCacheMetricsEnabled(conf)) {
+    if (CacheConfig.areCacheMetricsEnabled(conf)) {
       localCacheCount = metrics.counter(BookKeeperMetrics.METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT);
     }
   }

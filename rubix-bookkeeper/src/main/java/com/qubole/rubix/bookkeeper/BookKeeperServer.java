@@ -128,7 +128,7 @@ public class BookKeeperServer extends Configured implements Tool
   {
     bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
 
-    if (CacheConfig.isLivenessMetricsEnabled(conf)) {
+    if (CacheConfig.areLivenessMetricsEnabled(conf)) {
       metrics.register(BookKeeperMetrics.METRIC_BOOKKEEPER_LIVENESS_CHECK, new Gauge<Integer>()
       {
         @Override
@@ -138,7 +138,7 @@ public class BookKeeperServer extends Configured implements Tool
         }
       });
     }
-    if (CacheConfig.isJvmMetricsEnabled(conf)) {
+    if (CacheConfig.areJvmMetricsEnabled(conf)) {
       metrics.register(BookKeeperMetrics.METRIC_BOOKKEEPER_JVM_GC_PREFIX, new GarbageCollectorMetricSet());
       metrics.register(BookKeeperMetrics.METRIC_BOOKKEEPER_JVM_THREADS_PREFIX, new CachedThreadStatesGaugeSet(CacheConfig.getStatsDMetricsInterval(conf), TimeUnit.MILLISECONDS));
       metrics.register(BookKeeperMetrics.METRIC_BOOKKEEPER_JVM_MEMORY_PREFIX, new MemoryUsageGaugeSet());

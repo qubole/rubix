@@ -55,7 +55,7 @@ public class CoordinatorBookKeeper extends BookKeeper
    */
   private void registerMetrics(Configuration conf)
   {
-    if (CacheConfig.isLivenessMetricsEnabled(conf)) {
+    if (CacheConfig.areLivenessMetricsEnabled(conf)) {
       metrics.register(BookKeeperMetrics.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE, new Gauge<Integer>()
       {
         @Override

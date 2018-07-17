@@ -317,17 +317,17 @@ public class CacheConfig
     return conf.getBoolean(KEY_CACHE_ENABLED, DEFAULT_DATA_CACHE_ENABLED);
   }
 
-  public static boolean isCacheMetricsEnabled(Configuration conf)
+  public static boolean areCacheMetricsEnabled(Configuration conf)
   {
     return conf.getBoolean(KEY_METRICS_CACHE_ENABLED, DEFAULT_METRICS_CACHE_ENABLED);
   }
 
-  public static boolean isLivenessMetricsEnabled(Configuration conf)
+  public static boolean areLivenessMetricsEnabled(Configuration conf)
   {
     return conf.getBoolean(KEY_METRICS_LIVENESS_ENABLED, DEFAULT_METRICS_LIVENESS_ENABLED);
   }
 
-  public static boolean isJvmMetricsEnabled(Configuration conf)
+  public static boolean areJvmMetricsEnabled(Configuration conf)
   {
     return conf.getBoolean(KEY_METRICS_JVM_ENABLED, DEFAULT_METRICS_JVM_ENABLED);
   }
