@@ -29,7 +29,6 @@ import javax.management.ObjectName;
 import java.io.FileNotFoundException;
 import java.lang.management.ManagementFactory;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import static org.testng.Assert.assertFalse;
@@ -61,7 +60,7 @@ public class BookKeeperTest
     CacheConfig.setCacheMetricsEnabled(conf, areMetricsEnabled);
     CacheConfig.setOnMaster(conf, true);
 
-    List<String> metricsToVerify;
+    Set<String> metricsToVerify;
     switch (serverType) {
       case LOCAL_DATA_TRANSFER_SERVER:
         throw new IllegalArgumentException("No cache metrics available for LocalDataTransferServer");
@@ -90,7 +89,7 @@ public class BookKeeperTest
     CacheConfig.setLivenessMetricsEnabled(conf, areMetricsEnabled);
     CacheConfig.setOnMaster(conf, true);
 
-    List<String> metricsToVerify;
+    Set<String> metricsToVerify;
     switch (serverType) {
       case LOCAL_DATA_TRANSFER_SERVER:
         throw new IllegalArgumentException("No liveness metrics available for LocalDataTransferServer");
@@ -119,7 +118,7 @@ public class BookKeeperTest
     CacheConfig.setJvmMetricsEnabled(conf, areMetricsEnabled);
     CacheConfig.setOnMaster(conf, true);
 
-    List<String> metricsToVerify;
+    Set<String> metricsToVerify;
     switch (serverType) {
       case LOCAL_DATA_TRANSFER_SERVER:
         metricsToVerify = BookKeeperMetrics.LDTSJvmMetric.getAllNames();
@@ -263,7 +262,7 @@ public class BookKeeperTest
    * @param usePartialMatch   Whether to use a partial match when comparing metrics names.
    * @throws InterruptedException if the current thread is interrupted while sleeping.
    */
-  private void checkMetrics(ServerType serverType, Configuration conf, MetricRegistry metrics, List<String> metricsToVerify, boolean areMetricsEnabled, boolean usePartialMatch) throws InterruptedException, MalformedObjectNameException
+  private void checkMetrics(ServerType serverType, Configuration conf, MetricRegistry metrics, Set<String> metricsToVerify, boolean areMetricsEnabled, boolean usePartialMatch) throws InterruptedException, MalformedObjectNameException
   {
     CacheConfig.setMetricsReporters(conf, MetricsReporter.JMX.name());
 
@@ -336,7 +335,7 @@ public class BookKeeperTest
    * @param metricsToVerify The metrics to verify.
    * @param usePartialMatch Whether to use a partial match when comparing metrics names.
    */
-  private void assertContainsMetrics(Set<String> metricsNames, List<String> metricsToVerify, boolean usePartialMatch)
+  private void assertContainsMetrics(Set<String> metricsNames, Set<String> metricsToVerify, boolean usePartialMatch)
   {
     for (String metric : metricsToVerify) {
       if (usePartialMatch) {
@@ -355,7 +354,7 @@ public class BookKeeperTest
    * @param metricsToVerify The metrics to verify.
    * @param usePartialMatch Whether to use a partial match when comparing metrics names.
    */
-  private void assertDoesNotContainMetrics(Set<String> metricsNames, List<String> metricsToVerify, boolean usePartialMatch)
+  private void assertDoesNotContainMetrics(Set<String> metricsNames, Set<String> metricsToVerify, boolean usePartialMatch)
   {
     for (String metric : metricsToVerify) {
       if (usePartialMatch) {

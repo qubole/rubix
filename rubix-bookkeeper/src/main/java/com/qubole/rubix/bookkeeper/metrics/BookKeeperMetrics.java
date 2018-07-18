@@ -25,9 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -121,11 +119,11 @@ public class BookKeeperMetrics implements AutoCloseable
     /**
      * Get the names for each BookKeeper JVM metric.
      *
-     * @return a list of metrics names.
+     * @return a set of metrics names.
      */
-    public static List<String> getAllNames()
+    public static Set<String> getAllNames()
     {
-      List<String> names = new ArrayList<>();
+      Set<String> names = new HashSet<>();
       for (BookKeeperJvmMetric metric : values()) {
         names.add(metric.getMetricName());
       }
@@ -157,11 +155,11 @@ public class BookKeeperMetrics implements AutoCloseable
     /**
      * Get the names for each LDTS JVM metric.
      *
-     * @return a list of metrics names.
+     * @return a set of metrics names.
      */
-    public static List<String> getAllNames()
+    public static Set<String> getAllNames()
     {
-      List<String> names = new ArrayList<>();
+      Set<String> names = new HashSet<>();
       for (LDTSJvmMetric metric : values()) {
         names.add(metric.getMetricName());
       }
@@ -191,11 +189,11 @@ public class BookKeeperMetrics implements AutoCloseable
     /**
      * Get the names for each cache metric.
      *
-     * @return a list of metrics names.
+     * @return a set of metrics names.
      */
-    public static List<String> getAllNames()
+    public static Set<String> getAllNames()
     {
-      List<String> names = new ArrayList<>();
+      Set<String> names = new HashSet<>();
       for (CacheMetric metric : values()) {
         names.add(metric.getMetricName());
       }
@@ -226,11 +224,11 @@ public class BookKeeperMetrics implements AutoCloseable
     /**
      * Get the names for each liveness metric.
      *
-     * @return a list of metrics names.
+     * @return a set of metrics names.
      */
-    public static List<String> getAllNames()
+    public static Set<String> getAllNames()
     {
-      List<String> names = new ArrayList<>();
+      Set<String> names = new HashSet<>();
       for (LivenessMetric metric : values()) {
         names.add(metric.getMetricName());
       }

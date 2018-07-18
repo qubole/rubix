@@ -16,6 +16,7 @@ import com.codahale.metrics.Counter;
 import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Joiner;
+import com.google.common.collect.Sets;
 import com.qubole.rubix.bookkeeper.BookKeeper;
 import com.qubole.rubix.bookkeeper.CoordinatorBookKeeper;
 import com.qubole.rubix.core.utils.DeleteFileVisitor;
@@ -37,6 +38,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
+import java.util.Set;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -168,6 +170,58 @@ public class TestBookKeeperMetrics
       assertFalse(containsReporterType(bookKeeperMetrics.reporters, StatsDReporter.class));
       assertFalse(containsReporterType(bookKeeperMetrics.reporters, JmxReporter.class));
     }
+  }
+
+  /**
+   * Verify that the collection of liveness metrics correctly returns all expected metrics.
+   */
+  @Test
+  public void testLivenessMetricsGetAllNames()
+  {
+    Set<String> livenessMetricsNames = Sets.newHashSet(
+        BookKeeperMetrics.LivenessMetric.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE.getMetricName(),
+        BookKeeperMetrics.LivenessMetric.METRIC_BOOKKEEPER_LIVENESS_CHECK.getMetricName());
+
+    assertEquals(livenessMetricsNames, BookKeeperMetrics.LivenessMetric.getAllNames());
+  }
+
+  /**
+   * Verify that the collection of cache metrics correctly returns all expected metrics.
+   */
+  @Test
+  public void testCacheMetricsGetAllNames()
+  {
+    Set<String> cacheMetricsNames = Sets.newHashSet(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT.getMetricName());
+
+    assertEquals(cacheMetricsNames, BookKeeperMetrics.CacheMetric.getAllNames());
+  }
+
+  /**
+   * Verify that the collection of BookKeeper JVM metrics correctly returns all expected metrics.
+   */
+  @Test
+  public void testBookKeeperJvmMetricsGetAllNames()
+  {
+    Set<String> cacheMetricsNames = Sets.newHashSet(
+        BookKeeperMetrics.BookKeeperJvmMetric.METRIC_BOOKKEEPER_JVM_GC_PREFIX.getMetricName(),
+        BookKeeperMetrics.BookKeeperJvmMetric.METRIC_BOOKKEEPER_JVM_THREADS_PREFIX.getMetricName(),
+        BookKeeperMetrics.BookKeeperJvmMetric.METRIC_BOOKKEEPER_JVM_MEMORY_PREFIX.getMetricName());
+
+    assertEquals(cacheMetricsNames, BookKeeperMetrics.BookKeeperJvmMetric.getAllNames());
+  }
+
+  /**
+   * Verify that the collection of LocalDataTransferServer JVM metrics correctly returns all expected metrics.
+   */
+  @Test
+  public void testLDTSJvmMetricsGetAllNames()
+  {
+    Set<String> cacheMetricsNames = Sets.newHashSet(
+        BookKeeperMetrics.LDTSJvmMetric.METRIC_LDTS_JVM_GC_PREFIX.getMetricName(),
+        BookKeeperMetrics.LDTSJvmMetric.METRIC_LDTS_JVM_THREADS_PREFIX.getMetricName(),
+        BookKeeperMetrics.LDTSJvmMetric.METRIC_LDTS_JVM_MEMORY_PREFIX.getMetricName());
+
+    assertEquals(cacheMetricsNames, BookKeeperMetrics.LDTSJvmMetric.getAllNames());
   }
 
   /**
