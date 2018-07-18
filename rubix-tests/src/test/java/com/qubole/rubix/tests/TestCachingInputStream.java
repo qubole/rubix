@@ -93,6 +93,7 @@ public class TestCachingInputStream
     CacheConfig.setCacheDataDirPrefix(conf, testDirectoryPrefix + "dir");
     CacheConfig.setMaxDisks(conf, 1);
     CacheConfig.setIsParallelWarmupEnabled(conf, false);
+    CacheConfig.setFileInvalidationEnabled(conf, true);
 
     Thread server = new Thread()
     {
