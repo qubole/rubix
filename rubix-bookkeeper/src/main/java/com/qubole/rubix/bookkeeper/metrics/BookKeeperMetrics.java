@@ -13,7 +13,6 @@
 
 package com.qubole.rubix.bookkeeper.metrics;
 
-import com.codahale.metrics.Counter;
 import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Splitter;
@@ -26,28 +25,15 @@ import org.apache.hadoop.conf.Configuration;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 public class BookKeeperMetrics implements AutoCloseable
 {
   private static Log log = LogFactory.getLog(BookKeeperMetrics.class);
-
-  // Liveness metrics
-  public static final String METRIC_BOOKKEEPER_LIVENESS_CHECK = "rubix.bookkeeper.liveness.gauge";
-  public static final String METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE = "rubix.bookkeeper.live_workers.gauge";
-
-  // Cache metrics
-  public static final String METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT = "rubix.bookkeeper.local_cache.count";
-
-  // JVM metrics
-  public static final String METRIC_BOOKKEEPER_JVM_GC_PREFIX = "rubix.bookkeeper.gc";
-  public static final String METRIC_BOOKKEEPER_JVM_MEMORY_PREFIX = "rubix.bookkeeper.memory";
-  public static final String METRIC_BOOKKEEPER_JVM_THREADS_PREFIX = "rubix.bookkeeper.threads";
-  public static final String METRIC_LDTS_JVM_GC_PREFIX = "rubix.ldts.gc";
-  public static final String METRIC_LDTS_JVM_MEMORY_PREFIX = "rubix.ldts.memory";
-  public static final String METRIC_LDTS_JVM_THREADS_PREFIX = "rubix.ldts.threads";
 
   private final MetricRegistry metrics;
   private final Configuration conf;
@@ -58,18 +44,6 @@ public class BookKeeperMetrics implements AutoCloseable
     this.conf = conf;
     this.metrics = metrics;
     initializeReporters();
-  }
-
-  /**
-   * Increment a counter metric with null-safety.
-   *
-   * @param counter The counter to increment.
-   */
-  public static void incrementMetricsCounter(Counter counter)
-  {
-    if (counter != null) {
-      counter.inc();
-    }
   }
 
   /**
@@ -90,6 +64,7 @@ public class BookKeeperMetrics implements AutoCloseable
           final JmxReporter jmxReporter = JmxReporter.forRegistry(metrics)
               .convertRatesTo(TimeUnit.SECONDS)
               .convertDurationsTo(TimeUnit.MILLISECONDS)
+              .filter(new BookKeeperMetricsFilter(conf))
               .build();
 
           log.info("Reporting metrics to JMX");
@@ -103,6 +78,7 @@ public class BookKeeperMetrics implements AutoCloseable
           final StatsDReporter statsDReporter = StatsDReporter.forRegistry(metrics)
               .convertRatesTo(TimeUnit.SECONDS)
               .convertDurationsTo(TimeUnit.MILLISECONDS)
+              .filter(new BookKeeperMetricsFilter(conf))
               .build(CacheConfig.getStatsDMetricsHost(conf), CacheConfig.getStatsDMetricsPort(conf));
 
           log.info(String.format("Reporting metrics to StatsD [%s:%s]", CacheConfig.getStatsDMetricsHost(conf), CacheConfig.getStatsDMetricsPort(conf)));
@@ -118,6 +94,147 @@ public class BookKeeperMetrics implements AutoCloseable
   {
     for (Closeable reporter : reporters) {
       reporter.close();
+    }
+  }
+
+  /**
+   * Enum for metrics relating to JVM statistics on the BookKeeper daemon.
+   */
+  public enum BookKeeperJvmMetric
+  {
+    METRIC_BOOKKEEPER_JVM_GC_PREFIX("rubix.bookkeeper.gc"),
+    METRIC_BOOKKEEPER_JVM_MEMORY_PREFIX("rubix.bookkeeper.memory"),
+    METRIC_BOOKKEEPER_JVM_THREADS_PREFIX("rubix.bookkeeper.threads");
+
+    private final String metricName;
+
+    BookKeeperJvmMetric(String metricName)
+    {
+      this.metricName = metricName;
+    }
+
+    public String getMetricName()
+    {
+      return metricName;
+    }
+
+    /**
+     * Get the names for each BookKeeper JVM metric.
+     *
+     * @return a list of metrics names.
+     */
+    public static List<String> getAllNames()
+    {
+      List<String> names = new ArrayList<>();
+      for (BookKeeperJvmMetric metric : values()) {
+        names.add(metric.getMetricName());
+      }
+      return names;
+    }
+  }
+
+  /**
+   * Enum for metrics relating to JVM statistics on the LocalDataTransferServer daemon.
+   */
+  public enum LDTSJvmMetric
+  {
+    METRIC_LDTS_JVM_GC_PREFIX("rubix.ldts.gc"),
+    METRIC_LDTS_JVM_MEMORY_PREFIX("rubix.ldts.memory"),
+    METRIC_LDTS_JVM_THREADS_PREFIX("rubix.ldts.threads");
+
+    private final String metricName;
+
+    LDTSJvmMetric(String metricName)
+    {
+      this.metricName = metricName;
+    }
+
+    public String getMetricName()
+    {
+      return metricName;
+    }
+
+    /**
+     * Get the names for each LDTS JVM metric.
+     *
+     * @return a list of metrics names.
+     */
+    public static List<String> getAllNames()
+    {
+      List<String> names = new ArrayList<>();
+      for (LDTSJvmMetric metric : values()) {
+        names.add(metric.getMetricName());
+      }
+      return names;
+    }
+  }
+
+  /**
+   * Enum for metrics relating to cache interactions.
+   */
+  public enum CacheMetric
+  {
+    METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT("rubix.bookkeeper.local_cache.count");
+
+    private final String metricName;
+
+    CacheMetric(String metricName)
+    {
+      this.metricName = metricName;
+    }
+
+    public String getMetricName()
+    {
+      return metricName;
+    }
+
+    /**
+     * Get the names for each cache metric.
+     *
+     * @return a list of metrics names.
+     */
+    public static List<String> getAllNames()
+    {
+      List<String> names = new ArrayList<>();
+      for (CacheMetric metric : values()) {
+        names.add(metric.getMetricName());
+      }
+      return names;
+    }
+  }
+
+  /**
+   * Enum for metrics relating to daemon & service liveness.
+   */
+  public enum LivenessMetric
+  {
+    METRIC_BOOKKEEPER_LIVENESS_CHECK("rubix.bookkeeper.liveness.gauge"),
+    METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE("rubix.bookkeeper.live_workers.gauge");
+
+    private final String metricName;
+
+    LivenessMetric(String metricName)
+    {
+      this.metricName = metricName;
+    }
+
+    public String getMetricName()
+    {
+      return metricName;
+    }
+
+    /**
+     * Get the names for each liveness metric.
+     *
+     * @return a list of metrics names.
+     */
+    public static List<String> getAllNames()
+    {
+      List<String> names = new ArrayList<>();
+      for (LivenessMetric metric : values()) {
+        names.add(metric.getMetricName());
+      }
+      return names;
     }
   }
 }

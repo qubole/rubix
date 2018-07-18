@@ -17,14 +17,20 @@ import com.qubole.rubix.bookkeeper.BookKeeperServer;
 import com.qubole.rubix.bookkeeper.CoordinatorBookKeeper;
 import com.qubole.rubix.bookkeeper.LocalDataTransferServer;
 import com.qubole.rubix.bookkeeper.metrics.BookKeeperMetrics;
+import com.qubole.rubix.bookkeeper.metrics.MetricsReporter;
 import com.qubole.rubix.spi.CacheConfig;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
+
 import java.io.FileNotFoundException;
+import java.lang.management.ManagementFactory;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
-import java.util.SortedSet;
 
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -39,6 +45,7 @@ public class BookKeeperTest
   }
 
   private static final Log log = LogFactory.getLog(BookKeeperTest.class);
+  protected static final String JMX_METRIC_NAME_PATTERN = "metrics:*";
 
   /**
    * Verify the behavior of the cache metrics for a given server type.
@@ -49,20 +56,18 @@ public class BookKeeperTest
    * @param areMetricsEnabled Whether the metrics should be registered when the server is run.
    * @throws InterruptedException if the current thread is interrupted while sleeping.
    */
-  protected void testCacheMetrics(ServerType serverType, Configuration conf, MetricRegistry metrics, boolean areMetricsEnabled) throws InterruptedException
+  protected void testCacheMetrics(ServerType serverType, Configuration conf, MetricRegistry metrics, boolean areMetricsEnabled) throws InterruptedException, MalformedObjectNameException
   {
     CacheConfig.setCacheMetricsEnabled(conf, areMetricsEnabled);
     CacheConfig.setOnMaster(conf, true);
 
-    String[] metricsToVerify;
+    List<String> metricsToVerify;
     switch (serverType) {
       case LOCAL_DATA_TRANSFER_SERVER:
         throw new IllegalArgumentException("No cache metrics available for LocalDataTransferServer");
       case BOOKKEEPER:
       case MOCK_BOOKKEEPER:
-        metricsToVerify = new String[]{
-            BookKeeperMetrics.METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT
-        };
+        metricsToVerify = BookKeeperMetrics.CacheMetric.getAllNames();
         break;
       default:
         throw new IllegalArgumentException("Invalid server type " + serverType.name());
@@ -80,21 +85,18 @@ public class BookKeeperTest
    * @param areMetricsEnabled Whether the metrics should be registered when the server is run.
    * @throws InterruptedException if the current thread is interrupted while sleeping.
    */
-  protected void testLivenessMetrics(ServerType serverType, Configuration conf, MetricRegistry metrics, boolean areMetricsEnabled) throws InterruptedException
+  protected void testLivenessMetrics(ServerType serverType, Configuration conf, MetricRegistry metrics, boolean areMetricsEnabled) throws InterruptedException, MalformedObjectNameException
   {
     CacheConfig.setLivenessMetricsEnabled(conf, areMetricsEnabled);
     CacheConfig.setOnMaster(conf, true);
 
-    String[] metricsToVerify;
+    List<String> metricsToVerify;
     switch (serverType) {
       case LOCAL_DATA_TRANSFER_SERVER:
         throw new IllegalArgumentException("No liveness metrics available for LocalDataTransferServer");
       case BOOKKEEPER:
       case MOCK_BOOKKEEPER:
-        metricsToVerify = new String[]{
-            BookKeeperMetrics.METRIC_BOOKKEEPER_LIVENESS_CHECK,
-            BookKeeperMetrics.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE
-        };
+        metricsToVerify = BookKeeperMetrics.LivenessMetric.getAllNames();
         break;
       default:
         throw new IllegalArgumentException("Invalid server type " + serverType.name());
@@ -112,27 +114,19 @@ public class BookKeeperTest
    * @param areMetricsEnabled Whether the metrics should be registered when the server is run.
    * @throws InterruptedException if the current thread is interrupted while sleeping.
    */
-  protected void testJvmMetrics(ServerType serverType, Configuration conf, MetricRegistry metrics, boolean areMetricsEnabled) throws InterruptedException
+  protected void testJvmMetrics(ServerType serverType, Configuration conf, MetricRegistry metrics, boolean areMetricsEnabled) throws InterruptedException, MalformedObjectNameException
   {
     CacheConfig.setJvmMetricsEnabled(conf, areMetricsEnabled);
     CacheConfig.setOnMaster(conf, true);
 
-    String[] metricsToVerify;
+    List<String> metricsToVerify;
     switch (serverType) {
       case LOCAL_DATA_TRANSFER_SERVER:
-        metricsToVerify = new String[]{
-            BookKeeperMetrics.METRIC_LDTS_JVM_GC_PREFIX,
-            BookKeeperMetrics.METRIC_LDTS_JVM_THREADS_PREFIX,
-            BookKeeperMetrics.METRIC_LDTS_JVM_MEMORY_PREFIX
-        };
+        metricsToVerify = BookKeeperMetrics.LDTSJvmMetric.getAllNames();
         break;
       case BOOKKEEPER:
       case MOCK_BOOKKEEPER:
-        metricsToVerify = new String[]{
-            BookKeeperMetrics.METRIC_BOOKKEEPER_JVM_GC_PREFIX,
-            BookKeeperMetrics.METRIC_BOOKKEEPER_JVM_THREADS_PREFIX,
-            BookKeeperMetrics.METRIC_BOOKKEEPER_JVM_MEMORY_PREFIX
-        };
+        metricsToVerify = BookKeeperMetrics.BookKeeperJvmMetric.getAllNames();
         break;
       default:
         throw new IllegalArgumentException("Invalid server type " + serverType.name());
@@ -158,6 +152,21 @@ public class BookKeeperTest
     stopServer(serverType);
 
     assertTrue(metrics.getNames().size() == 0, "Metrics should not be registered after server has stopped.");
+  }
+
+  /**
+   * Get the set of names for metrics registered to JMX.
+   *
+   * @return The set of names for all registered metrics.
+   * @throws MalformedObjectNameException if the format of the pattern string does not correspond to a valid ObjectName.
+   */
+  protected Set<String> getJmxMetricsNames() throws MalformedObjectNameException
+  {
+    Set<String> registeredMetricsNames = new HashSet<>();
+    for (ObjectName metricObjectName : ManagementFactory.getPlatformMBeanServer().queryNames(new ObjectName(JMX_METRIC_NAME_PATTERN), null)) {
+      registeredMetricsNames.add(metricObjectName.getKeyProperty("name"));
+    }
+    return registeredMetricsNames;
   }
 
   /**
@@ -254,14 +263,16 @@ public class BookKeeperTest
    * @param usePartialMatch   Whether to use a partial match when comparing metrics names.
    * @throws InterruptedException if the current thread is interrupted while sleeping.
    */
-  private void checkMetrics(ServerType serverType, Configuration conf, MetricRegistry metrics, String[] metricsToVerify, boolean areMetricsEnabled, boolean usePartialMatch) throws InterruptedException
+  private void checkMetrics(ServerType serverType, Configuration conf, MetricRegistry metrics, List<String> metricsToVerify, boolean areMetricsEnabled, boolean usePartialMatch) throws InterruptedException, MalformedObjectNameException
   {
-    SortedSet<String> metricsNames = metrics.getNames();
+    CacheConfig.setMetricsReporters(conf, MetricsReporter.JMX.name());
+
+    Set<String> metricsNames = getJmxMetricsNames();
     assertDoesNotContainMetrics(metricsNames, metricsToVerify, usePartialMatch);
 
     startServer(serverType, conf, metrics);
 
-    metricsNames = metrics.getNames();
+    metricsNames = getJmxMetricsNames();
     if (areMetricsEnabled) {
       assertContainsMetrics(metricsNames, metricsToVerify, usePartialMatch);
     }
@@ -271,7 +282,7 @@ public class BookKeeperTest
 
     stopServer(serverType);
 
-    metricsNames = metrics.getNames();
+    metricsNames = getJmxMetricsNames();
     assertDoesNotContainMetrics(metricsNames, metricsToVerify, usePartialMatch);
   }
 
@@ -325,7 +336,7 @@ public class BookKeeperTest
    * @param metricsToVerify The metrics to verify.
    * @param usePartialMatch Whether to use a partial match when comparing metrics names.
    */
-  private void assertContainsMetrics(Set<String> metricsNames, String[] metricsToVerify, boolean usePartialMatch)
+  private void assertContainsMetrics(Set<String> metricsNames, List<String> metricsToVerify, boolean usePartialMatch)
   {
     for (String metric : metricsToVerify) {
       if (usePartialMatch) {
@@ -344,7 +355,7 @@ public class BookKeeperTest
    * @param metricsToVerify The metrics to verify.
    * @param usePartialMatch Whether to use a partial match when comparing metrics names.
    */
-  private void assertDoesNotContainMetrics(Set<String> metricsNames, String[] metricsToVerify, boolean usePartialMatch)
+  private void assertDoesNotContainMetrics(Set<String> metricsNames, List<String> metricsToVerify, boolean usePartialMatch)
   {
     for (String metric : metricsToVerify) {
       if (usePartialMatch) {

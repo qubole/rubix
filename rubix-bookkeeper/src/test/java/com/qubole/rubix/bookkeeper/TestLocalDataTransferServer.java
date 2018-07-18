@@ -22,6 +22,8 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import javax.management.MalformedObjectNameException;
+
 public class TestLocalDataTransferServer extends BookKeeperTest
 {
   private static final Log log = LogFactory.getLog(TestLocalDataTransferServer.class);
@@ -47,7 +49,7 @@ public class TestLocalDataTransferServer extends BookKeeperTest
    * @throws InterruptedException if the current thread is interrupted while sleeping.
    */
   @Test
-  public void testJvmMetricsEnabled() throws InterruptedException
+  public void testJvmMetricsEnabled() throws InterruptedException, MalformedObjectNameException
   {
     super.testJvmMetrics(ServerType.LOCAL_DATA_TRANSFER_SERVER, conf, metrics, true);
   }
@@ -58,7 +60,7 @@ public class TestLocalDataTransferServer extends BookKeeperTest
    * @throws InterruptedException if the current thread is interrupted while sleeping.
    */
   @Test
-  public void testJvmMetricsNotEnabled() throws InterruptedException
+  public void testJvmMetricsNotEnabled() throws InterruptedException, MalformedObjectNameException
   {
     super.testJvmMetrics(ServerType.LOCAL_DATA_TRANSFER_SERVER, conf, metrics, false);
   }

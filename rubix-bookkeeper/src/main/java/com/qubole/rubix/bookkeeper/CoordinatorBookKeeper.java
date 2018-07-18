@@ -40,7 +40,7 @@ public class CoordinatorBookKeeper extends BookKeeper
         .expireAfterWrite(CacheConfig.getWorkerLivenessExpiry(conf), TimeUnit.MILLISECONDS)
         .build();
 
-    registerMetrics(conf);
+    registerMetrics();
   }
 
   @Override
@@ -53,18 +53,16 @@ public class CoordinatorBookKeeper extends BookKeeper
   /**
    * Register desired metrics.
    */
-  private void registerMetrics(Configuration conf)
+  private void registerMetrics()
   {
-    if (CacheConfig.areLivenessMetricsEnabled(conf)) {
-      metrics.register(BookKeeperMetrics.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE, new Gauge<Integer>()
+    metrics.register(BookKeeperMetrics.LivenessMetric.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE.getMetricName(), new Gauge<Integer>()
+    {
+      @Override
+      public Integer getValue()
       {
-        @Override
-        public Integer getValue()
-        {
-          log.debug(String.format("Reporting %s workers", liveWorkerCache.asMap().size()));
-          return liveWorkerCache.asMap().size();
-        }
-      });
-    }
+        log.debug(String.format("Reporting %s workers", liveWorkerCache.asMap().size()));
+        return liveWorkerCache.asMap().size();
+      }
+    });
   }
 }

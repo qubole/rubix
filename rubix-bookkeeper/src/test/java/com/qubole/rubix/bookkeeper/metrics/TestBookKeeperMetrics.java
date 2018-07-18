@@ -101,7 +101,7 @@ public class TestBookKeeperMetrics
     final long endBlock = 23;
     final long totalRequests = endBlock - startBlock;
 
-    final Counter localCacheCounter = metrics.getCounters().get(BookKeeperMetrics.METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT);
+    final Counter localCacheCounter = metrics.getCounters().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT.getMetricName());
 
     assertEquals(localCacheCounter.getCount(), 0);
     bookKeeper.getCacheStatus(remotePath, fileLength, lastModified, startBlock, endBlock, ClusterType.TEST_CLUSTER_MANAGER.ordinal());

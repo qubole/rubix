@@ -100,9 +100,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
    */
   private void initializeMetrics()
   {
-    if (CacheConfig.areCacheMetricsEnabled(conf)) {
-      localCacheCount = metrics.counter(BookKeeperMetrics.METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT);
-    }
+    localCacheCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT.getMetricName());
   }
 
   @Override
@@ -162,7 +160,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
     try {
       for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
         totalRequests++;
-        BookKeeperMetrics.incrementMetricsCounter(localCacheCount);
+        localCacheCount.inc();
 
         long split = (blockNum * blockSize) / splitSize;
         if (!blockSplits.get(split).equalsIgnoreCase(nodeName)) {

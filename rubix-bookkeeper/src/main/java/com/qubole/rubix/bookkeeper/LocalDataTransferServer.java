@@ -92,11 +92,9 @@ public class LocalDataTransferServer extends Configured implements Tool
   {
     bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
 
-    if (CacheConfig.areJvmMetricsEnabled(conf)) {
-      metrics.register(BookKeeperMetrics.METRIC_LDTS_JVM_GC_PREFIX, new GarbageCollectorMetricSet());
-      metrics.register(BookKeeperMetrics.METRIC_LDTS_JVM_THREADS_PREFIX, new CachedThreadStatesGaugeSet(CacheConfig.getStatsDMetricsInterval(conf), TimeUnit.MILLISECONDS));
-      metrics.register(BookKeeperMetrics.METRIC_LDTS_JVM_MEMORY_PREFIX, new MemoryUsageGaugeSet());
-    }
+    metrics.register(BookKeeperMetrics.LDTSJvmMetric.METRIC_LDTS_JVM_GC_PREFIX.getMetricName(), new GarbageCollectorMetricSet());
+    metrics.register(BookKeeperMetrics.LDTSJvmMetric.METRIC_LDTS_JVM_THREADS_PREFIX.getMetricName(), new CachedThreadStatesGaugeSet(CacheConfig.getStatsDMetricsInterval(conf), TimeUnit.MILLISECONDS));
+    metrics.register(BookKeeperMetrics.LDTSJvmMetric.METRIC_LDTS_JVM_MEMORY_PREFIX.getMetricName(), new MemoryUsageGaugeSet());
   }
 
   public static void stopServer()

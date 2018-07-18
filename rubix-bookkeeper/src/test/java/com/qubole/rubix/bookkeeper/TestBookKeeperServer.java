@@ -28,10 +28,8 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import javax.management.MalformedObjectNameException;
-import javax.management.ObjectName;
 
 import java.io.IOException;
-import java.lang.management.ManagementFactory;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
@@ -50,7 +48,6 @@ public class TestBookKeeperServer extends BookKeeperTest
   private static final int TEST_MAX_DISKS = 1;
   private static final int PACKET_SIZE = 32;
   private static final int SOCKET_TIMEOUT = 5000;
-  private static final String JMX_METRIC_NAME_PATTERN = "metrics:*";
 
   private final MetricRegistry metrics = new MetricRegistry();
   private final Configuration conf = new Configuration();
@@ -92,7 +89,7 @@ public class TestBookKeeperServer extends BookKeeperTest
    * Verify that liveness metrics are registered when configured to.
    */
   @Test
-  public void testLivenessMetricsEnabled() throws InterruptedException
+  public void testLivenessMetricsEnabled() throws InterruptedException, MalformedObjectNameException
   {
     super.testLivenessMetrics(ServerType.BOOKKEEPER, conf, metrics, true);
   }
@@ -101,7 +98,7 @@ public class TestBookKeeperServer extends BookKeeperTest
    * Verify that liveness metrics are not registered when configured not to.
    */
   @Test
-  public void testLivenessMetricsNotEnabled() throws InterruptedException
+  public void testLivenessMetricsNotEnabled() throws InterruptedException, MalformedObjectNameException
   {
     super.testLivenessMetrics(ServerType.BOOKKEEPER, conf, metrics, false);
   }
@@ -110,7 +107,7 @@ public class TestBookKeeperServer extends BookKeeperTest
    * Verify that cache metrics are registered when configured to.
    */
   @Test
-  public void testCacheMetricsEnabled() throws InterruptedException
+  public void testCacheMetricsEnabled() throws InterruptedException, MalformedObjectNameException
   {
     super.testCacheMetrics(ServerType.BOOKKEEPER, conf, metrics, true);
   }
@@ -119,7 +116,7 @@ public class TestBookKeeperServer extends BookKeeperTest
    * Verify that cache metrics are not registered when configured not to.
    */
   @Test
-  public void testCacheMetricsNotEnabled() throws InterruptedException
+  public void testCacheMetricsNotEnabled() throws InterruptedException, MalformedObjectNameException
   {
     super.testCacheMetrics(ServerType.BOOKKEEPER, conf, metrics, false);
   }
@@ -128,7 +125,7 @@ public class TestBookKeeperServer extends BookKeeperTest
    * Verify that JVM metrics are registered when configured to.
    */
   @Test
-  public void testJvmMetricsEnabled() throws InterruptedException
+  public void testJvmMetricsEnabled() throws InterruptedException, MalformedObjectNameException
   {
     super.testJvmMetrics(ServerType.BOOKKEEPER, conf, metrics, true);
   }
@@ -137,7 +134,7 @@ public class TestBookKeeperServer extends BookKeeperTest
    * Verify that JVM metrics are not registered when configured not to.
    */
   @Test
-  public void testJvmMetricsNotEnabled() throws InterruptedException
+  public void testJvmMetricsNotEnabled() throws InterruptedException, MalformedObjectNameException
   {
     super.testJvmMetrics(ServerType.BOOKKEEPER, conf, metrics, false);
   }
@@ -234,21 +231,18 @@ public class TestBookKeeperServer extends BookKeeperTest
   {
     CacheConfig.setMetricsReporters(conf, MetricsReporter.JMX.name());
 
-    Set<ObjectName> metricsObjectNames = getJmxObjectNamesWithPattern(JMX_METRIC_NAME_PATTERN);
-    for (ObjectName name : metricsObjectNames) {
-      System.out.println("YES: " + name.toString());
-    }
-    assertTrue(metricsObjectNames.size() == 0, "Metrics should not be registered with JMX before server starts.");
+    Set<String> metricsNames = getJmxMetricsNames();
+    assertTrue(metricsNames.size() == 0, "Metrics should not be registered with JMX before server starts.");
 
     startMockBookKeeperServer(conf, metrics);
 
-    metricsObjectNames = getJmxObjectNamesWithPattern(JMX_METRIC_NAME_PATTERN);
-    assertTrue(metricsObjectNames.size() > 0, "Metrics should be registered with JMX after server starts.");
+    metricsNames = getJmxMetricsNames();
+    assertTrue(metricsNames.size() > 0, "Metrics should be registered with JMX after server starts.");
 
     stopMockBookKeeperServer();
 
-    metricsObjectNames = getJmxObjectNamesWithPattern(JMX_METRIC_NAME_PATTERN);
-    assertTrue(metricsObjectNames.size() == 0, "Metrics should not be registered with JMX after server stops.");
+    metricsNames = getJmxMetricsNames();
+    assertTrue(metricsNames.size() == 0, "Metrics should not be registered with JMX after server stops.");
   }
 
   /**
@@ -264,8 +258,8 @@ public class TestBookKeeperServer extends BookKeeperTest
 
     startMockBookKeeperServer(conf, metrics);
 
-    final Set<ObjectName> metricsObjectNames = getJmxObjectNamesWithPattern(JMX_METRIC_NAME_PATTERN);
-    assertTrue(metricsObjectNames.size() == 0, "Metrics should not be registered with JMX.");
+    final Set<String> metricsNames = getJmxMetricsNames();
+    assertTrue(metricsNames.size() == 0, "Metrics should not be registered with JMX.");
 
     stopMockBookKeeperServer();
   }
@@ -347,18 +341,6 @@ public class TestBookKeeperServer extends BookKeeperTest
     }
 
     return true;
-  }
-
-  /**
-   * Get the set of JMX object names matching the provided pattern.
-   *
-   * @param pattern The object name pattern to match.
-   * @return The set of ObjectNames that match the given pattern.
-   * @throws MalformedObjectNameException if the format of the pattern string does not correspond to a valid ObjectName.
-   */
-  private Set<ObjectName> getJmxObjectNamesWithPattern(String pattern) throws MalformedObjectNameException
-  {
-    return ManagementFactory.getPlatformMBeanServer().queryNames(new ObjectName(pattern), null);
   }
 
   /**

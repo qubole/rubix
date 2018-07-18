@@ -128,8 +128,7 @@ public class BookKeeperServer extends Configured implements Tool
   {
     bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
 
-    if (CacheConfig.areLivenessMetricsEnabled(conf)) {
-      metrics.register(BookKeeperMetrics.METRIC_BOOKKEEPER_LIVENESS_CHECK, new Gauge<Integer>()
+    metrics.register(BookKeeperMetrics.LivenessMetric.METRIC_BOOKKEEPER_LIVENESS_CHECK.getMetricName(), new Gauge<Integer>()
       {
         @Override
         public Integer getValue()
@@ -137,12 +136,9 @@ public class BookKeeperServer extends Configured implements Tool
           return 1;
         }
       });
-    }
-    if (CacheConfig.areJvmMetricsEnabled(conf)) {
-      metrics.register(BookKeeperMetrics.METRIC_BOOKKEEPER_JVM_GC_PREFIX, new GarbageCollectorMetricSet());
-      metrics.register(BookKeeperMetrics.METRIC_BOOKKEEPER_JVM_THREADS_PREFIX, new CachedThreadStatesGaugeSet(CacheConfig.getStatsDMetricsInterval(conf), TimeUnit.MILLISECONDS));
-      metrics.register(BookKeeperMetrics.METRIC_BOOKKEEPER_JVM_MEMORY_PREFIX, new MemoryUsageGaugeSet());
-    }
+    metrics.register(BookKeeperMetrics.BookKeeperJvmMetric.METRIC_BOOKKEEPER_JVM_GC_PREFIX.getMetricName(), new GarbageCollectorMetricSet());
+    metrics.register(BookKeeperMetrics.BookKeeperJvmMetric.METRIC_BOOKKEEPER_JVM_THREADS_PREFIX.getMetricName(), new CachedThreadStatesGaugeSet(CacheConfig.getStatsDMetricsInterval(conf), TimeUnit.MILLISECONDS));
+    metrics.register(BookKeeperMetrics.BookKeeperJvmMetric.METRIC_BOOKKEEPER_JVM_MEMORY_PREFIX.getMetricName(), new MemoryUsageGaugeSet());
   }
 
   public static void stopServer()
