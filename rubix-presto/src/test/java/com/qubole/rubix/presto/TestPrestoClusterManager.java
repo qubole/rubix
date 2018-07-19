@@ -34,9 +34,9 @@ import static org.testng.Assert.assertTrue;
  */
 
 @Test(singleThreaded = true)
-public class TestClusterManager
+public class TestPrestoClusterManager
 {
-  private Log log = LogFactory.getLog(TestClusterManager.class);
+  private Log log = LogFactory.getLog(TestPrestoClusterManager.class);
 
   @Test
   /*
