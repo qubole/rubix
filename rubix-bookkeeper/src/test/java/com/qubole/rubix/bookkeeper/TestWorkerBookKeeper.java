@@ -51,14 +51,15 @@ public class TestWorkerBookKeeper
   @BeforeClass
   public void initializeCacheDirectories() throws IOException
   {
-    BookKeeperTestUtils.createCacheParentDirectories(TEST_CACHE_DIR_PREFIX, TEST_MAX_DISKS);
+    CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
+
+    BookKeeperTestUtils.createCacheParentDirectories(CacheConfig.getCacheDirPrefixList(conf), TEST_MAX_DISKS);
   }
 
   @BeforeMethod
   public void startBookKeeperServerForTest() throws InterruptedException
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
-    CacheConfig.setMaxDisks(conf, TEST_MAX_DISKS);
     CacheConfig.setServiceRetryInterval(conf, TEST_RETRY_INTERVAL);
     CacheConfig.setServiceMaxRetries(conf, TEST_MAX_RETRIES);
 
@@ -77,7 +78,9 @@ public class TestWorkerBookKeeper
   @AfterClass
   public void cleanUpCacheDirectories() throws IOException
   {
-    BookKeeperTestUtils.removeCacheParentDirectories(TEST_CACHE_DIR_PREFIX, TEST_MAX_DISKS);
+    CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
+
+    BookKeeperTestUtils.removeCacheParentDirectories(CacheConfig.getCacheDirPrefixList(conf), TEST_MAX_DISKS);
   }
 
   /**

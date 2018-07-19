@@ -50,18 +50,17 @@ public class TestBookKeeper
   {
     // Set configuration values for testing
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
-    CacheConfig.setMaxDisks(conf, TEST_MAX_DISKS);
 
-    BookKeeperTestUtils.createCacheParentDirectories(TEST_CACHE_DIR_PREFIX, TEST_MAX_DISKS);
+    BookKeeperTestUtils.createCacheParentDirectories(CacheConfig.getCacheDirPrefixList(conf), TEST_MAX_DISKS);
   }
 
   @AfterMethod
   public void tearDown() throws Exception
   {
+    BookKeeperTestUtils.removeCacheParentDirectories(CacheConfig.getCacheDirPrefixList(conf), TEST_MAX_DISKS);
+
     conf.clear();
     metrics.removeMatching(MetricFilter.ALL);
-
-    BookKeeperTestUtils.removeCacheParentDirectories(TEST_CACHE_DIR_PREFIX, TEST_MAX_DISKS);
   }
 
   @Test

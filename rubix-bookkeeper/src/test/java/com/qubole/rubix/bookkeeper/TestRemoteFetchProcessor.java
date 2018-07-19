@@ -49,19 +49,17 @@ public class TestRemoteFetchProcessor
   public void setUp() throws Exception
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
-    CacheConfig.setBlockSize(conf, TEST_BLOCK_SIZE);
-    CacheConfig.setMaxDisks(conf, TEST_MAX_DISKS);
 
-    BookKeeperTestUtils.createCacheParentDirectories(TEST_CACHE_DIR_PREFIX, TEST_MAX_DISKS);
+    BookKeeperTestUtils.createCacheParentDirectories(CacheConfig.getCacheDirPrefixList(conf), TEST_MAX_DISKS);
     CacheUtil.createCacheDirectories(conf);
   }
 
   @AfterMethod
   public void tearDown() throws Exception
   {
-    conf.clear();
+    BookKeeperTestUtils.removeCacheParentDirectories(CacheConfig.getCacheDirPrefixList(conf), TEST_MAX_DISKS);
 
-    BookKeeperTestUtils.removeCacheParentDirectories(TEST_CACHE_DIR_PREFIX, TEST_MAX_DISKS);
+    conf.clear();
   }
 
   @Test
