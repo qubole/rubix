@@ -13,12 +13,11 @@
 
 package com.qubole.rubix.presto;
 
+import com.facebook.presto.hive.$internal.com.google.common.collect.ImmutableMap;
 import com.google.common.base.Throwables;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
@@ -27,10 +26,10 @@ import org.apache.hadoop.conf.Configuration;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.util.Collections;
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -44,7 +43,10 @@ public class PrestoClusterManagerV2 extends ClusterManager
   private boolean isMaster = true;
   private int serverPort = 8081;
   private String serverAddress = "localhost";
-  static LoadingCache<String, List<String>> nodesCache;
+  static LoadingCache<String, Map<String, String>> nodesCache;
+
+  // This is the master list that will keep track of the current nodes and the lost nodes
+  static Map<String, String> allNodesMap;
 
   private Log log = LogFactory.getLog(PrestoClusterManagerV2.class);
 
@@ -53,50 +55,55 @@ public class PrestoClusterManagerV2 extends ClusterManager
   public void initialize(final Configuration conf)
   {
     super.initialize(conf);
+    allNodesMap = new HashMap<String, String>();
+
     ExecutorService executor = Executors.newSingleThreadExecutor();
     nodesCache = CacheBuilder.newBuilder()
         .refreshAfterWrite(getNodeRefreshTime(), TimeUnit.SECONDS)
-        .build(CacheLoader.asyncReloading(new CacheLoader<String, List<String>>() {
+        .build(CacheLoader.asyncReloading(new CacheLoader<String, Map<String, String>>() {
           @Override
-          public List<String> load(String s)
+          public Map<String, String> load(String s)
               throws Exception
           {
             if (!isMaster) {
               // First time all nodes start assuming themselves as master and down the line figure out their role
               // Next time onwards, only master will be fetching the list of nodes
-              return ImmutableList.of();
+              return ImmutableMap.of();
             }
 
             try {
               List<PrestoClusterManagerUtil.Stats> allNodes = PrestoClusterManagerUtil.getAllNodes(conf);
               if (allNodes == null) {
                 isMaster = false;
-                return ImmutableList.of();
+                // if allNodes is null, it means we got error from the getAllNodes. Return the master list
+                return allNodesMap;
               }
 
               if (allNodes.isEmpty()) {
-                // Empty result set => server up and only master node running, return localhost has the only node
-                // Do not need to consider failed nodes list as 1node cluster and server is up since it replied to allNodesRequest
-                return ImmutableList.of(InetAddress.getLocalHost().getHostAddress());
+                if (allNodesMap.isEmpty()) {
+                  return ImmutableMap.of(InetAddress.getLocalHost().getHostAddress(), "ACTIVATED");
+                }
+                else {
+                  return allNodesMap;
+                }
+              }
+
+              for (PrestoClusterManagerUtil.Stats node : allNodes) {
+                if (!allNodesMap.containsKey(node.getUri().getHost())) {
+                  allNodesMap.put(node.getUri().getHost(), "ACTIVATED");
+                }
               }
 
               List<PrestoClusterManagerUtil.Stats> failedNodes = PrestoClusterManagerUtil.getFailedNodes(conf);
-              // keep only the healthy nodes
-              allNodes.removeAll(failedNodes);
 
-              Set<String> hosts = new HashSet<String>();
-
-              for (PrestoClusterManagerUtil.Stats node : allNodes) {
-                hosts.add(node.getUri().getHost());
+              for (PrestoClusterManagerUtil.Stats node : failedNodes) {
+                if (!allNodesMap.containsKey(node.getUri().getHost())) {
+                  log.warn("Failed Node " + node.getUri().getHost() + " not present in the master list");
+                }
+                allNodesMap.put(node.getUri().getHost(), "DEACTIVATED");
               }
 
-              if (hosts.isEmpty()) {
-                // case of master only cluster
-                hosts.add(InetAddress.getLocalHost().getHostAddress());
-              }
-              List<String> hostList = Lists.newArrayList(hosts.toArray(new String[0]));
-              Collections.sort(hostList);
-              return hostList;
+              return allNodesMap;
             }
             catch (IOException e) {
               throw Throwables.propagate(e);
@@ -122,7 +129,7 @@ public class PrestoClusterManagerV2 extends ClusterManager
   public List<String> getNodes()
   {
     try {
-      return nodesCache.get("nodeList");
+      return new ArrayList<>(nodesCache.get("nodeList").keySet());
     }
     catch (ExecutionException e) {
       log.info("Error fetching node list : ", e);
@@ -133,13 +140,47 @@ public class PrestoClusterManagerV2 extends ClusterManager
   @Override
   public Integer getNextRunningNodeIndex(int startIndex)
   {
-    return startIndex;
+    try {
+      List<String> nodeList = new ArrayList<>(nodesCache.get("nodeList").keySet());
+      for (int i = startIndex; i < (startIndex + nodeList.size()); i++) {
+        int index = i >= nodeList.size() ? (i - nodeList.size()) : i;
+        String nodeState = nodesCache.get("nodeList").get(nodeList.get(index));
+        if (nodeState.equalsIgnoreCase("ACTIVATED")) {
+          return index;
+        }
+      }
+    }
+    catch (ExecutionException e) {
+      e.printStackTrace();
+    }
+
+    return null;
   }
 
   @Override
   public Integer getPreviousRunningNodeIndex(int startIndex)
   {
-    return startIndex;
+    try {
+      List<String> nodeList = new ArrayList<>(nodesCache.get("nodeList").keySet());
+      for (int i = startIndex; i >= 0; i--) {
+        String nodeState = nodesCache.get("nodeList").get(nodeList.get(i));
+        if (nodeState.equalsIgnoreCase("ACTIVATED")) {
+          return i;
+        }
+      }
+
+      for (int i = nodeList.size() - 1; i > startIndex; i--) {
+        String nodeState = nodesCache.get("nodeList").get(nodeList.get(i));
+        if (nodeState.equalsIgnoreCase("ACTIVATED")) {
+          return i;
+        }
+      }
+    }
+    catch (ExecutionException e) {
+      e.printStackTrace();
+    }
+
+    return null;
   }
 
   @Override
