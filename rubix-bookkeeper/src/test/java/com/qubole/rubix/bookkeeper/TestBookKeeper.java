@@ -25,8 +25,9 @@ import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertTrue;
@@ -38,29 +39,34 @@ public class TestBookKeeper
 {
   private static final Log log = LogFactory.getLog(TestBookKeeper.class);
 
-  private static final String TEST_CACHE_DIR_PREFIX = BookKeeperTestUtils.getTestCacheDirPrefix("bookKeeperTest");
+  private static final String TEST_CACHE_DIR_PREFIX = BookKeeperTestUtils.getTestCacheDirPrefix("TestBookKeeper");
   private static final String TEST_DNE_CLUSTER_MANAGER = "com.qubole.rubix.core.DoesNotExistClusterManager";
   private static final int TEST_MAX_DISKS = 1;
 
   private final Configuration conf = new Configuration();
   private final MetricRegistry metrics = new MetricRegistry();
 
-  @BeforeMethod
-  public void setUp() throws Exception
+  @BeforeClass
+  public void setUpForClass() throws Exception
   {
-    // Set configuration values for testing
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 
-    BookKeeperTestUtils.createCacheParentDirectories(CacheConfig.getCacheDirPrefixList(conf), TEST_MAX_DISKS);
+    BookKeeperTestUtils.createCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   @AfterMethod
   public void tearDown() throws Exception
   {
-    BookKeeperTestUtils.removeCacheParentDirectories(CacheConfig.getCacheDirPrefixList(conf), TEST_MAX_DISKS);
-
     conf.clear();
     metrics.removeMatching(MetricFilter.ALL);
+  }
+
+  @AfterClass
+  public void tearDownForClass() throws Exception
+  {
+    CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
+
+    BookKeeperTestUtils.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   @Test

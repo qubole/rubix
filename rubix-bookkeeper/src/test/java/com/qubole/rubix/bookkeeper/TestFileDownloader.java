@@ -20,8 +20,9 @@ import com.qubole.rubix.spi.CacheUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.util.List;
@@ -42,21 +43,27 @@ public class TestFileDownloader
 
   private final Configuration conf = new Configuration();
 
-  @BeforeMethod
-  public void setUp() throws Exception
+  @BeforeClass
+  public void setUpForClass() throws Exception
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 
-    BookKeeperTestUtils.createCacheParentDirectories(CacheConfig.getCacheDirPrefixList(conf), TEST_MAX_DISKS);
+    BookKeeperTestUtils.createCacheParentDirectories(conf, TEST_MAX_DISKS);
     CacheUtil.createCacheDirectories(conf);
   }
 
   @AfterMethod
   public void tearDown() throws Exception
   {
-    BookKeeperTestUtils.removeCacheParentDirectories(CacheConfig.getCacheDirPrefixList(conf), TEST_MAX_DISKS);
-
     conf.clear();
+  }
+
+  @AfterClass
+  public void tearDownForClass() throws Exception
+  {
+    CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
+
+    BookKeeperTestUtils.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   @Test

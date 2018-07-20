@@ -15,6 +15,8 @@ package com.qubole.rubix.bookkeeper.test;
 
 import com.google.common.base.Joiner;
 import com.qubole.rubix.core.utils.DeleteFileVisitor;
+import com.qubole.rubix.spi.CacheConfig;
+import org.apache.hadoop.conf.Configuration;
 
 import java.io.File;
 import java.io.IOException;
@@ -41,27 +43,28 @@ public final class BookKeeperTestUtils
   /**
    * Create the parent directories necessary for cache directory creation.
    *
-   * @param cacheDirPrefix  The path prefix for the directories to be added.
+   * @param conf            The current Hadoop configuration.
    * @param maxDisks        The maximum number of parent directories to create.
    * @throws IOException if an I/O error occurs while creating directories.
    */
-  public static void createCacheParentDirectories(String cacheDirPrefix, int maxDisks) throws IOException
+  public static void createCacheParentDirectories(Configuration conf, int maxDisks) throws IOException
   {
     for (int i = 0; i < maxDisks; i++) {
-      Files.createDirectories(Paths.get(cacheDirPrefix + i));
+      Files.createDirectories(Paths.get(CacheConfig.getCacheDirPrefixList(conf) + i));
     }
   }
 
   /**
    * Remove all cache directories and their parents.
    *
-   * @param cacheDirPrefix  The path prefix for the directories to be removed.
+   * @param conf            The current Hadoop configuration.
+   * @param maxDisks        The maximum number of parent directories to remove.
    * @throws IOException if an I/O error occurs while deleting directories.
    */
-  public static void removeCacheParentDirectories(String cacheDirPrefix, int maxDisks) throws IOException
+  public static void removeCacheParentDirectories(Configuration conf, int maxDisks) throws IOException
   {
     for (int i = 0; i < maxDisks; i++) {
-      Files.walkFileTree(Paths.get(cacheDirPrefix + i), new DeleteFileVisitor());
+      Files.walkFileTree(Paths.get(CacheConfig.getCacheDirPrefixList(conf) + i), new DeleteFileVisitor());
     }
   }
 }

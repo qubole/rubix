@@ -50,7 +50,7 @@ public class TestBookKeeperMetrics
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 
-    BookKeeperTestUtils.createCacheParentDirectories(CacheConfig.getCacheDirPrefixList(conf), TEST_MAX_DISKS);
+    BookKeeperTestUtils.createCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   @BeforeMethod
@@ -74,7 +74,7 @@ public class TestBookKeeperMetrics
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 
-    BookKeeperTestUtils.removeCacheParentDirectories(CacheConfig.getCacheDirPrefixList(conf), TEST_MAX_DISKS);
+    BookKeeperTestUtils.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   /**
