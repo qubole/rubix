@@ -63,7 +63,6 @@ public class PrestoClusterManagerUtil
 
     try {
       if (allNodesResponseCode == HttpURLConnection.HTTP_OK) {
-        //isMaster = true;
         BufferedReader in = new BufferedReader(new InputStreamReader(allHttpCon.getInputStream()));
         String inputLine = "";
         try {
@@ -80,7 +79,6 @@ public class PrestoClusterManagerUtil
       }
       else {
         log.info(String.format("v1/node failed with code: setting this node as worker "));
-        //isMaster = false;
         return null;
       }
     }

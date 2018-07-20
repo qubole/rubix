@@ -115,6 +115,57 @@ public class TestPrestoClusterManagerV2
     assertTrue(deactivatedNodes == 1, "There should be one deactivated node");
   }
 
+  public void testLoadNodesCache_FirstMultipleWorkers_ThenAnotherMultipleWorkers_NoFailed() throws Exception
+  {
+    PrestoClusterManagerV2 manager = getPrestoClusterManager();
+
+    HttpServer server = createServer("/v1/node", worker.new MultipleWorkers(), "/v1/node/failed", worker.new NoFailedNode());
+    Map<String, String> nodesMap = manager.loadNodesCache(conf);
+    server.stop(0);
+
+    assertTrue(nodesMap.size() == 2, "There should be two nodes");
+    assertTrue(!nodesMap.containsValue(PrestoClusterManagerUtil.NODE_DOWN_STATE), "The nodes should be in Activated state");
+
+    server = createServer("/v1/node", worker.new AnotherMultipleWorker(), "/v1/node/failed", worker.new NoFailedNode());
+    nodesMap = manager.loadNodesCache(conf);
+    server.stop(0);
+
+    assertTrue(nodesMap.size() == 4, "There should be Four nodes");
+    int activatedNodes = 0;
+    int deactivatedNodes = 0;
+
+    for (Map.Entry<String, String> item : nodesMap.entrySet()) {
+      if (item.getValue().equals(PrestoClusterManagerUtil.NODE_UP_STATE)) {
+        deactivatedNodes++;
+      }
+      else {
+        activatedNodes++;
+      }
+    }
+
+    assertTrue(activatedNodes == 2, "There should be two activated nodes");
+    assertTrue(deactivatedNodes == 2, "There should be two deactivated nodes");
+  }
+
+  public void testLoadNodesCache_FirstMultipleWorkers_ThenNoWorker() throws Exception
+  {
+    PrestoClusterManagerV2 manager = getPrestoClusterManager();
+
+    HttpServer server = createServer("/v1/node", worker.new MultipleWorkers(), "/v1/node/failed", worker.new NoFailedNode());
+    Map<String, String> nodesMap = manager.loadNodesCache(conf);
+    server.stop(0);
+
+    assertTrue(nodesMap.size() == 2, "There should be two nodes");
+    assertTrue(!nodesMap.containsValue(PrestoClusterManagerUtil.NODE_DOWN_STATE), "The nodes should be in Activated state");
+
+    server = createServer("/v1/node", worker.new NoWorker(), "/v1/node/failed", worker.new NoFailedNode());
+    nodesMap = manager.loadNodesCache(conf);
+    server.stop(0);
+
+    assertTrue(nodesMap.size() == 2, "There should be Two nodes");
+    assertTrue(!nodesMap.containsValue(PrestoClusterManagerUtil.NODE_UP_STATE), "The nodes should be in Deactivated state");
+  }
+
   private PrestoClusterManagerV2 getPrestoClusterManager()
   {
     PrestoClusterManagerV2 clusterManager = new PrestoClusterManagerV2();

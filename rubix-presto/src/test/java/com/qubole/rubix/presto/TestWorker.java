@@ -68,7 +68,7 @@ public class TestWorker implements HttpHandler
           "{\"uri\":\"http://192.168.2.252:8083\",\"recentRequests\":119.0027780896941," +
           "\"recentFailures\":119.00267353393015,\"recentSuccesses\":1.0845754237194612E-4," +
           "\"lastRequestTime\":\"2016-01-14T13:26:29.948Z\",\"lastResponseTime\":\"2016-01-14T13:26:29.948Z\"," +
-          "\"recentFailureRatio\":0.999999121400646,\"age\":\"6.68h\"," +
+          "\"recentFailureRatio\":0.999999121400646,\"age\":\"26.68h\"," +
           "\"recentFailuresByType\":{\"java.util.concurrent.TimeoutException\":2.4567611856996272E-6," +
           "\"java.net.SocketTimeoutException\":119.00237271323728,\"java.net.SocketException\":2.98363931759331E-4}}," +
           "{\"uri\":\"http://192.168.1.3:8082\",\"recentRequests\":119.00277802527565," +
@@ -78,6 +78,27 @@ public class TestWorker implements HttpHandler
           "\"recentFailuresByType\":{\"java.util.concurrent.TimeoutException\":0.0," +
           "\"java.net.SocketTimeoutException\":119.00258110193407,\"java.net.ConnectException\":0.0," +
           "\"java.net.SocketException\":2.416290401318479E-4,\"java.net.NoRouteToHostException\":1.3332509542453224E-21}}" +
+          "]\n");
+    }
+  }
+
+  class AnotherMultipleWorker extends TestWorker
+  {
+    public AnotherMultipleWorker()
+    {
+      super("[" +
+          "{\"uri\":\"http://192.168.2.250:8083\",\"recentRequests\":119.0027780896941," +
+          "\"recentFailures\":119.00267353393015,\"recentSuccesses\":1.0845754237194612E-4," +
+          "\"lastRequestTime\":\"2016-01-14T13:26:29.948Z\",\"lastResponseTime\":\"2016-01-14T13:26:29.948Z\"," +
+          "\"recentFailureRatio\":0.999999121400646,\"age\":\"12.68h\"," +
+          "\"recentFailuresByType\":{\"java.util.concurrent.TimeoutException\":2.4567611856996272E-6," +
+          "\"java.net.SocketTimeoutException\":119.00237271323728,\"java.net.SocketException\":2.98363931759331E-4}}," +
+          "{\"uri\":\"http://192.168.2.254:8083\",\"recentRequests\":119.0027780896941," +
+          "\"recentFailures\":119.00267353393015,\"recentSuccesses\":1.0845754237194612E-4," +
+          "\"lastRequestTime\":\"2016-01-14T13:26:29.948Z\",\"lastResponseTime\":\"2016-01-14T13:26:29.948Z\"," +
+          "\"recentFailureRatio\":0.999999121400646,\"age\":\"6.68h\"," +
+          "\"recentFailuresByType\":{\"java.util.concurrent.TimeoutException\":2.4567611856996272E-6," +
+          "\"java.net.SocketTimeoutException\":119.00237271323728,\"java.net.SocketException\":2.98363931759331E-4}}" +
           "]\n");
     }
   }

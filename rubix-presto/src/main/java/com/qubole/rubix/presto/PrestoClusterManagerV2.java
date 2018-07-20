@@ -80,7 +80,7 @@ public class PrestoClusterManagerV2 extends ClusterManager
   }
 
   @VisibleForTesting
-  public Map<String, String> loadNodesCache(Configuration conf) throws Exception
+  Map<String, String> loadNodesCache(Configuration conf) throws Exception
   {
     try {
       List<PrestoClusterManagerUtil.Stats> nodeListFromServer = PrestoClusterManagerUtil.getAllNodes(conf);
