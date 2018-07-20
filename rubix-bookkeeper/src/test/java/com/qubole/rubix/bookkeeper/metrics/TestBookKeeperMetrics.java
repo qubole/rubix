@@ -14,29 +14,29 @@ package com.qubole.rubix.bookkeeper.metrics;
 
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.JmxReporter;
+import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Sets;
 import com.qubole.rubix.bookkeeper.BookKeeper;
 import com.qubole.rubix.bookkeeper.CoordinatorBookKeeper;
-import com.qubole.rubix.core.utils.DeleteFileVisitor;
+import com.qubole.rubix.bookkeeper.test.BookKeeperTest;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterType;
 import com.readytalk.metrics.StatsDReporter;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.shaded.TException;
 import org.testng.annotations.AfterClass;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.Closeable;
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.Set;
 
@@ -46,46 +46,48 @@ import static org.testng.Assert.assertTrue;
 
 public class TestBookKeeperMetrics
 {
-  private static final String cacheTestDirPrefix = Joiner.on(File.separator).join(System.getProperty("java.io.tmpdir"), "bookKeeperMetricsTest");
-  private static final Path cacheTestDirPath = Paths.get(cacheTestDirPrefix);
-  private static final int BLOCK_SIZE = 100;
-  private static final int MAX_DISKS = 5;
+  private static final Log log = LogFactory.getLog(TestBookKeeperMetrics.class);
 
-  private MetricRegistry metrics;
+  private static final String TEST_CACHE_DIR_PREFIX = BookKeeperTest.getTestCacheDirPrefix("TestBookKeeperMetrics");
+  private static final int TEST_BLOCK_SIZE = 100;
+  private static final int TEST_MAX_DISKS = 1;
+
   private final Configuration conf = new Configuration();
+  private final MetricRegistry metrics = new MetricRegistry();
 
   private BookKeeper bookKeeper;
 
   @BeforeClass
-  public void initializeCacheDirectories() throws IOException
+  public void setUpForClass() throws IOException
   {
-    // Create cache directories
-    Files.createDirectories(cacheTestDirPath);
-    for (int i = 0; i < MAX_DISKS; i++) {
-      Files.createDirectories(Paths.get(cacheTestDirPrefix + i));
-    }
+    CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
+
+    BookKeeperTest.createCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   @BeforeMethod
   public void setUp() throws FileNotFoundException
   {
-    metrics = new MetricRegistry();
-    conf.clear();
-
-    // Set configuration values for testing
-    CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
-    CacheConfig.setMaxDisks(conf, MAX_DISKS);
-    CacheConfig.setBlockSize(conf, BLOCK_SIZE);
+    CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
+    CacheConfig.setBlockSize(conf, TEST_BLOCK_SIZE);
     CacheConfig.setCacheMetricsEnabled(conf, true);
 
     bookKeeper = new CoordinatorBookKeeper(conf, metrics);
   }
 
-  @AfterClass
-  public void cleanUpCacheDirectories() throws IOException
+  @AfterMethod
+  public void tearDown()
   {
-    Files.walkFileTree(Paths.get(cacheTestDirPrefix), new DeleteFileVisitor());
-    Files.deleteIfExists(Paths.get(cacheTestDirPrefix));
+    conf.clear();
+    metrics.removeMatching(MetricFilter.ALL);
+  }
+
+  @AfterClass
+  public void tearDownForClass() throws IOException
+  {
+    CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
+
+    BookKeeperTest.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   /**

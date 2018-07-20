@@ -14,7 +14,7 @@ package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
-import com.qubole.rubix.bookkeeper.test.BookKeeperTestUtils;
+import com.qubole.rubix.bookkeeper.test.BookKeeperTest;
 import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.core.utils.DummyClusterManager;
 import com.qubole.rubix.hadoop2.Hadoop2ClusterManager;
@@ -40,7 +40,7 @@ public class TestBookKeeper
 {
   private static final Log log = LogFactory.getLog(TestBookKeeper.class);
 
-  private static final String TEST_CACHE_DIR_PREFIX = BookKeeperTestUtils.getTestCacheDirPrefix("TestBookKeeper");
+  private static final String TEST_CACHE_DIR_PREFIX = BookKeeperTest.getTestCacheDirPrefix("TestBookKeeper");
   private static final String TEST_DNE_CLUSTER_MANAGER = "com.qubole.rubix.core.DoesNotExistClusterManager";
   private static final int TEST_MAX_DISKS = 1;
 
@@ -52,7 +52,7 @@ public class TestBookKeeper
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 
-    BookKeeperTestUtils.createCacheParentDirectories(conf, TEST_MAX_DISKS);
+    BookKeeperTest.createCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   @BeforeMethod
@@ -73,7 +73,7 @@ public class TestBookKeeper
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 
-    BookKeeperTestUtils.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
+    BookKeeperTest.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   @Test

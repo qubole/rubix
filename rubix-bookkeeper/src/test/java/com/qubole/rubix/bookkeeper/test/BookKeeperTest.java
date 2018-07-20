@@ -13,11 +13,13 @@
 package com.qubole.rubix.bookkeeper.test;
 
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.base.Joiner;
 import com.qubole.rubix.bookkeeper.BookKeeperServer;
 import com.qubole.rubix.bookkeeper.CoordinatorBookKeeper;
 import com.qubole.rubix.bookkeeper.LocalDataTransferServer;
 import com.qubole.rubix.bookkeeper.metrics.BookKeeperMetrics;
 import com.qubole.rubix.bookkeeper.metrics.MetricsReporter;
+import com.qubole.rubix.core.utils.DeleteFileVisitor;
 import com.qubole.rubix.spi.CacheConfig;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -26,8 +28,12 @@ import org.apache.hadoop.conf.Configuration;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -40,11 +46,50 @@ public class BookKeeperTest
   {
     BOOKKEEPER,
     MOCK_BOOKKEEPER,
-    LOCAL_DATA_TRANSFER_SERVER
+    LOCAL_DATA_TRANSFER_SERVER;
   }
 
   private static final Log log = LogFactory.getLog(BookKeeperTest.class);
   protected static final String JMX_METRIC_NAME_PATTERN = "metrics:*";
+
+  /**
+   * Get the name of a temporary directory to be used for unit testing.
+   *
+   * @param testSubdirectoryName  The name of the subdirectory to be used for testing.
+   * @return The path name of the cache directory to be used for testing.
+   */
+  public static String getTestCacheDirPrefix(String testSubdirectoryName)
+  {
+    return Joiner.on(File.separator).join(System.getProperty("java.io.tmpdir"), testSubdirectoryName);
+  }
+
+  /**
+   * Create the parent directories necessary for cache directory creation.
+   *
+   * @param conf            The current Hadoop configuration.
+   * @param maxDisks        The maximum number of parent directories to create.
+   * @throws IOException if an I/O error occurs while creating directories.
+   */
+  public static void createCacheParentDirectories(Configuration conf, int maxDisks) throws IOException
+  {
+    for (int i = 0; i < maxDisks; i++) {
+      Files.createDirectories(Paths.get(CacheConfig.getCacheDirPrefixList(conf) + i));
+    }
+  }
+
+  /**
+   * Remove all cache directories and their parents.
+   *
+   * @param conf            The current Hadoop configuration.
+   * @param maxDisks        The maximum number of parent directories to remove.
+   * @throws IOException if an I/O error occurs while deleting directories.
+   */
+  public static void removeCacheParentDirectories(Configuration conf, int maxDisks) throws IOException
+  {
+    for (int i = 0; i < maxDisks; i++) {
+      Files.walkFileTree(Paths.get(CacheConfig.getCacheDirPrefixList(conf) + i), new DeleteFileVisitor());
+    }
+  }
 
   /**
    * Verify the behavior of the cache metrics for a given server type.

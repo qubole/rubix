@@ -19,9 +19,8 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Ticker;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.testing.FakeTicker;
-import com.qubole.rubix.bookkeeper.CoordinatorBookKeeper;
 import com.qubole.rubix.bookkeeper.metrics.BookKeeperMetrics;
-import com.qubole.rubix.bookkeeper.test.BookKeeperTestUtils;
+import com.qubole.rubix.bookkeeper.test.BookKeeperTest;
 import com.qubole.rubix.spi.CacheConfig;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -42,7 +41,7 @@ public class TestCoordinatorBookKeeper
 {
   private static final Log log = LogFactory.getLog(TestCoordinatorBookKeeper.class);
 
-  private static final String TEST_CACHE_DIR_PREFIX = BookKeeperTestUtils.getTestCacheDirPrefix("TestCoordinatorBookKeeper");
+  private static final String TEST_CACHE_DIR_PREFIX = BookKeeperTest.getTestCacheDirPrefix("TestCoordinatorBookKeeper");
   private static final String TEST_HOSTNAME_WORKER1 = "worker1";
   private static final String TEST_HOSTNAME_WORKER2 = "worker2";
   private static final int TEST_MAX_DISKS = 1;
@@ -55,7 +54,7 @@ public class TestCoordinatorBookKeeper
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 
-    BookKeeperTestUtils.createCacheParentDirectories(conf, TEST_MAX_DISKS);
+    BookKeeperTest.createCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   @BeforeMethod
@@ -76,7 +75,7 @@ public class TestCoordinatorBookKeeper
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 
-    BookKeeperTestUtils.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
+    BookKeeperTest.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   /**

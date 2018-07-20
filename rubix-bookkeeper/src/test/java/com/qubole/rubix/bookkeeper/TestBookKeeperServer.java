@@ -16,8 +16,6 @@ import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
 import com.qubole.rubix.bookkeeper.metrics.MetricsReporter;
 import com.qubole.rubix.bookkeeper.test.BookKeeperTest;
-import com.qubole.rubix.bookkeeper.test.BookKeeperTestUtils;
-import com.qubole.rubix.core.utils.DeleteFileVisitor;
 import com.qubole.rubix.spi.CacheConfig;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,8 +33,6 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.Set;
 
 import static org.testng.Assert.assertFalse;
@@ -46,7 +42,7 @@ public class TestBookKeeperServer extends BookKeeperTest
 {
   private static final Log log = LogFactory.getLog(TestBookKeeperServer.class);
 
-  private static final String TEST_CACHE_DIR_PREFIX = BookKeeperTestUtils.getTestCacheDirPrefix("TestBookKeeperServer");
+  private static final String TEST_CACHE_DIR_PREFIX = BookKeeperTest.getTestCacheDirPrefix("TestBookKeeperServer");
   private static final int TEST_MAX_DISKS = 1;
   private static final int TEST_PACKET_SIZE = 32;
   private static final int TEST_SOCKET_TIMEOUT = 5000;
@@ -59,7 +55,7 @@ public class TestBookKeeperServer extends BookKeeperTest
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 
-    BookKeeperTestUtils.createCacheParentDirectories(conf, TEST_MAX_DISKS);
+    BookKeeperTest.createCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   @BeforeMethod
@@ -82,7 +78,7 @@ public class TestBookKeeperServer extends BookKeeperTest
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 
-    BookKeeperTestUtils.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
+    BookKeeperTest.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   /**
