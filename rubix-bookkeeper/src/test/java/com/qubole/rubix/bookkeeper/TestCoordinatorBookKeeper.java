@@ -11,62 +11,72 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-package com.qubole.rubix.bookkeeper.manager;
+package com.qubole.rubix.bookkeeper;
 
+import com.codahale.metrics.Gauge;
+import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Ticker;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.testing.FakeTicker;
 import com.qubole.rubix.bookkeeper.CoordinatorBookKeeper;
 import com.qubole.rubix.bookkeeper.metrics.BookKeeperMetrics;
+import com.qubole.rubix.bookkeeper.test.BookKeeperTestUtils;
 import com.qubole.rubix.spi.CacheConfig;
-import com.qubole.rubix.spi.CacheUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
 
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.fail;
 
-public class TestCoordinatorManager
+public class TestCoordinatorBookKeeper
 {
-  private static final Log log = LogFactory.getLog(TestCoordinatorManager.class);
+  private static final Log log = LogFactory.getLog(TestCoordinatorBookKeeper.class);
 
-  private static final String cacheTestDirPrefix = System.getProperty("java.io.tmpdir") + "/coordinatorManagerTest/";
-  private static final int maxDisks = 5;
-  private static final String WORKER1_HOSTNAME = "worker1";
-  private static final String WORKER2_HOSTNAME = "worker2";
+  private static final String TEST_CACHE_DIR_PREFIX = BookKeeperTestUtils.getTestCacheDirPrefix("TestCoordinatorBookKeeper");
+  private static final String TEST_HOSTNAME_WORKER1 = "worker1";
+  private static final String TEST_HOSTNAME_WORKER2 = "worker2";
+  private static final int TEST_MAX_DISKS = 1;
 
-  private Configuration conf;
-  private MetricRegistry metrics;
+  private final Configuration conf = new Configuration();
+  private final MetricRegistry metrics = new MetricRegistry();
 
   @BeforeClass
-  public void initializeCacheDirectories() throws IOException
+  public void setUpForClass() throws IOException
   {
-    this.conf = new Configuration();
-    Files.createDirectories(Paths.get(cacheTestDirPrefix));
-    for (int i = 0; i < maxDisks; i++) {
-      Files.createDirectories(Paths.get(cacheTestDirPrefix, String.valueOf(i)));
-    }
+    CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 
-    CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
-    createCacheDirectoriesForTest(conf);
+    BookKeeperTestUtils.createCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   @BeforeMethod
   public void setUp()
   {
+    CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
+  }
+
+  @AfterMethod
+  public void tearDown()
+  {
     conf.clear();
-    this.metrics = new MetricRegistry();
+    metrics.removeMatching(MetricFilter.ALL);
+  }
+
+  @AfterClass
+  public void tearDownForClass() throws IOException
+  {
+    CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
+
+    BookKeeperTestUtils.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   /**
@@ -75,11 +85,9 @@ public class TestCoordinatorManager
   @Test
   public void testWorkerLivenessCountMetric() throws FileNotFoundException
   {
-    CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
-
     final CoordinatorBookKeeper coordinatorBookKeeper = new CoordinatorBookKeeper(conf, metrics);
-    coordinatorBookKeeper.handleHeartbeat(WORKER1_HOSTNAME);
-    coordinatorBookKeeper.handleHeartbeat(WORKER2_HOSTNAME);
+    coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER1);
+    coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER2);
 
     int workerCount = (int) metrics.getGauges().get(BookKeeperMetrics.LivenessMetric.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE.getMetricName()).getValue();
     assertEquals(workerCount, 2, "Incorrect number of workers reporting heartbeat");
@@ -92,37 +100,23 @@ public class TestCoordinatorManager
   public void testWorkerLivenessCountMetric_workerLivenessExpired() throws FileNotFoundException
   {
     final FakeTicker ticker = new FakeTicker();
-    final int workerLivenessExpiry = 5000; // ms
+    final int workerLivenessExpiry = 1000; // ms
     CacheConfig.setWorkerLivenessExpiry(conf, workerLivenessExpiry);
-    CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
 
     final MockCoordinatorBookKeeper coordinatorManager = new MockCoordinatorBookKeeper(conf, metrics, ticker);
-    coordinatorManager.handleHeartbeat(WORKER1_HOSTNAME);
-    coordinatorManager.handleHeartbeat(WORKER2_HOSTNAME);
+    final Gauge liveWorkerGauge = metrics.getGauges().get(BookKeeperMetrics.LivenessMetric.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE.getMetricName());
 
-    int workerCount = (int) metrics.getGauges().get(BookKeeperMetrics.LivenessMetric.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE.getMetricName()).getValue();
+    coordinatorManager.handleHeartbeat(TEST_HOSTNAME_WORKER1);
+    coordinatorManager.handleHeartbeat(TEST_HOSTNAME_WORKER2);
+
+    int workerCount = (int) liveWorkerGauge.getValue();
     assertEquals(workerCount, 2, "Incorrect number of workers reporting heartbeat");
 
     ticker.advance(workerLivenessExpiry, TimeUnit.MILLISECONDS);
-    coordinatorManager.handleHeartbeat(WORKER1_HOSTNAME);
+    coordinatorManager.handleHeartbeat(TEST_HOSTNAME_WORKER1);
 
-    workerCount = (int) metrics.getGauges().get(BookKeeperMetrics.LivenessMetric.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE.getMetricName()).getValue();
+    workerCount = (int) liveWorkerGauge.getValue();
     assertEquals(workerCount, 1, "Incorrect number of workers reporting heartbeat");
-  }
-
-  /**
-   * Create the cache directories necessary for running the test.
-   *
-   * @param conf  The current Hadoop configuration.
-   */
-  private void createCacheDirectoriesForTest(Configuration conf)
-  {
-    try {
-      CacheUtil.createCacheDirectories(conf);
-    }
-    catch (FileNotFoundException e) {
-      fail("Could not create cache directories: " + e.getMessage());
-    }
   }
 
   /**

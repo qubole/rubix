@@ -16,6 +16,7 @@ import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
 import com.qubole.rubix.bookkeeper.metrics.MetricsReporter;
 import com.qubole.rubix.bookkeeper.test.BookKeeperTest;
+import com.qubole.rubix.bookkeeper.test.BookKeeperTestUtils;
 import com.qubole.rubix.core.utils.DeleteFileVisitor;
 import com.qubole.rubix.spi.CacheConfig;
 import org.apache.commons.logging.Log;
@@ -43,34 +44,32 @@ import static org.testng.Assert.assertTrue;
 
 public class TestBookKeeperServer extends BookKeeperTest
 {
-  private static final Log log = LogFactory.getLog(TestBookKeeperServer.class.getName());
-  private static final String cacheTestDirPrefix = System.getProperty("java.io.tmpdir") + "/bookKeeperServerTest/";
-  private static final int TEST_MAX_DISKS = 1;
-  private static final int PACKET_SIZE = 32;
-  private static final int SOCKET_TIMEOUT = 5000;
+  private static final Log log = LogFactory.getLog(TestBookKeeperServer.class);
 
-  private final MetricRegistry metrics = new MetricRegistry();
+  private static final String TEST_CACHE_DIR_PREFIX = BookKeeperTestUtils.getTestCacheDirPrefix("TestBookKeeperServer");
+  private static final int TEST_MAX_DISKS = 1;
+  private static final int TEST_PACKET_SIZE = 32;
+  private static final int TEST_SOCKET_TIMEOUT = 5000;
+
   private final Configuration conf = new Configuration();
+  private final MetricRegistry metrics = new MetricRegistry();
 
   @BeforeClass
-  public void initializeCacheDirectories() throws IOException
+  public void setUpForClass() throws IOException
   {
-    // Create cache directories
-    Files.createDirectories(Paths.get(cacheTestDirPrefix));
-    for (int i = 0; i < TEST_MAX_DISKS; i++) {
-      Files.createDirectories(Paths.get(cacheTestDirPrefix + i));
-    }
+    CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
+
+    BookKeeperTestUtils.createCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   @BeforeMethod
   public void setUp()
   {
-    CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
-    CacheConfig.setMaxDisks(conf, TEST_MAX_DISKS);
+    CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
   }
 
   @AfterMethod
-  public void stopBookKeeperServerForTest()
+  public void tearDown()
   {
     conf.clear();
     metrics.removeMatching(MetricFilter.ALL);
@@ -79,10 +78,11 @@ public class TestBookKeeperServer extends BookKeeperTest
   }
 
   @AfterClass
-  public void cleanUpCacheDirectories() throws IOException
+  public void tearDownForClass() throws IOException
   {
-    Files.walkFileTree(Paths.get(cacheTestDirPrefix), new DeleteFileVisitor());
-    Files.deleteIfExists(Paths.get(cacheTestDirPrefix));
+    CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
+
+    BookKeeperTestUtils.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   /**
@@ -161,9 +161,14 @@ public class TestBookKeeperServer extends BookKeeperTest
     final int testCasePort = 5678;
     final boolean shouldReport = true;
 
-    startServersForTestingStatsDReporterOnMaster(statsDPort, testCasePort, shouldReport);
+    MockStatsDThread statsDThread = startServersForTestingStatsDReporterOnMaster(statsDPort, testCasePort, shouldReport);
 
-    assertTrue(isStatsDReporterFiring(testCasePort), "BookKeeperServer is not reporting to StatsD");
+    try {
+      assertTrue(isStatsDReporterFiring(testCasePort), "BookKeeperServer is not reporting to StatsD");
+    }
+    finally {
+      statsDThread.stopThread();
+    }
   }
 
   /**
@@ -179,9 +184,14 @@ public class TestBookKeeperServer extends BookKeeperTest
     final int testCasePort = 5679;
     final boolean shouldReport = false;
 
-    startServersForTestingStatsDReporterOnMaster(statsDPort, testCasePort, shouldReport);
+    MockStatsDThread statsDThread = startServersForTestingStatsDReporterOnMaster(statsDPort, testCasePort, shouldReport);
 
-    assertFalse(isStatsDReporterFiring(testCasePort), "BookKeeperServer should not report to StatsD");
+    try {
+      assertFalse(isStatsDReporterFiring(testCasePort), "BookKeeperServer should not report to StatsD");
+    }
+    finally {
+      statsDThread.stopThread();
+    }
   }
 
   /**
@@ -197,9 +207,14 @@ public class TestBookKeeperServer extends BookKeeperTest
     final int testCasePort = 5680;
     final boolean shouldReport = true;
 
-    startServersForTestingStatsDReporterForWorker(statsDPort, testCasePort, shouldReport);
+    MockStatsDThread statsDThread = startServersForTestingStatsDReporterForWorker(statsDPort, testCasePort, shouldReport);
 
-    assertTrue(isStatsDReporterFiring(testCasePort), "BookKeeperServer is not reporting to StatsD");
+    try {
+      assertTrue(isStatsDReporterFiring(testCasePort), "BookKeeperServer is not reporting to StatsD");
+    }
+    finally {
+      statsDThread.stopThread();
+    }
   }
 
   /**
@@ -215,9 +230,14 @@ public class TestBookKeeperServer extends BookKeeperTest
     final int testCasePort = 5681;
     final boolean shouldReport = false;
 
-    startServersForTestingStatsDReporterForWorker(statsDPort, testCasePort, shouldReport);
+    MockStatsDThread statsDThread = startServersForTestingStatsDReporterForWorker(statsDPort, testCasePort, shouldReport);
 
-    assertFalse(isStatsDReporterFiring(testCasePort), "BookKeeperServer should not report to StatsD");
+    try {
+      assertFalse(isStatsDReporterFiring(testCasePort), "BookKeeperServer should not report to StatsD");
+    }
+    finally {
+      statsDThread.stopThread();
+    }
   }
 
   /**
@@ -273,14 +293,14 @@ public class TestBookKeeperServer extends BookKeeperTest
    * @throws SocketException if the socket for the mock StatsD server could not be created or bound.
    * @throws InterruptedException if the current thread is interrupted while sleeping.
    */
-  private void startServersForTestingStatsDReporterOnMaster(int statsDPort, int testCasePort, boolean shouldReportMetrics) throws SocketException, InterruptedException
+  private MockStatsDThread startServersForTestingStatsDReporterOnMaster(int statsDPort, int testCasePort, boolean shouldReportMetrics) throws SocketException, InterruptedException
   {
     CacheConfig.setOnMaster(conf, true);
     if (shouldReportMetrics) {
       CacheConfig.setMetricsReporters(conf, MetricsReporter.STATSD.name());
     }
 
-    startServersForTestingStatsDReporter(statsDPort, testCasePort);
+    return startServersForTestingStatsDReporter(statsDPort, testCasePort);
   }
 
   /**
@@ -292,14 +312,14 @@ public class TestBookKeeperServer extends BookKeeperTest
    * @throws SocketException if the socket for the mock StatsD server could not be created or bound.
    * @throws InterruptedException if the current thread is interrupted while sleeping.
    */
-  private void startServersForTestingStatsDReporterForWorker(int statsDPort, int testCasePort, boolean shouldReportMetrics) throws SocketException, InterruptedException
+  private MockStatsDThread startServersForTestingStatsDReporterForWorker(int statsDPort, int testCasePort, boolean shouldReportMetrics) throws SocketException, InterruptedException
   {
     CacheConfig.setOnMaster(conf, false);
     if (shouldReportMetrics) {
       CacheConfig.setMetricsReporters(conf, MetricsReporter.STATSD.name());
     }
 
-    startServersForTestingStatsDReporter(statsDPort, testCasePort);
+    return startServersForTestingStatsDReporter(statsDPort, testCasePort);
   }
 
   /**
@@ -310,13 +330,16 @@ public class TestBookKeeperServer extends BookKeeperTest
    * @throws SocketException if the socket for the mock StatsD server could not be created or bound.
    * @throws InterruptedException if the current thread is interrupted while sleeping.
    */
-  private void startServersForTestingStatsDReporter(int statsDPort, int testCasePort) throws SocketException, InterruptedException
+  private MockStatsDThread startServersForTestingStatsDReporter(int statsDPort, int testCasePort) throws SocketException, InterruptedException
   {
     CacheConfig.setStatsDMetricsPort(conf, statsDPort);
     CacheConfig.setStatsDMetricsInterval(conf, 1000);
 
-    new MockStatsDThread(statsDPort, testCasePort).start();
+    MockStatsDThread statsDThread = new MockStatsDThread(statsDPort, testCasePort);
+    statsDThread.start();
+
     startMockBookKeeperServer(conf, metrics);
+    return statsDThread;
   }
 
   /**
@@ -328,11 +351,11 @@ public class TestBookKeeperServer extends BookKeeperTest
    */
   private boolean isStatsDReporterFiring(int receivePort) throws IOException
   {
-    byte[] data = new byte[PACKET_SIZE];
+    byte[] data = new byte[TEST_PACKET_SIZE];
     DatagramSocket socket = new DatagramSocket(receivePort);
     DatagramPacket packet = new DatagramPacket(data, data.length);
 
-    socket.setSoTimeout(SOCKET_TIMEOUT);
+    socket.setSoTimeout(TEST_SOCKET_TIMEOUT);
     try {
       socket.receive(packet);
     }
@@ -348,6 +371,8 @@ public class TestBookKeeperServer extends BookKeeperTest
    */
   private static class MockStatsDThread extends Thread
   {
+    private volatile boolean isRunning = true;
+
     // The socket to send/receive StatsD metrics from.
     private final DatagramSocket socket;
 
@@ -363,9 +388,9 @@ public class TestBookKeeperServer extends BookKeeperTest
     @Override
     public void run()
     {
-      while (true) {
+      while (isRunning) {
         try {
-          byte[] response = new byte[PACKET_SIZE];
+          byte[] response = new byte[TEST_PACKET_SIZE];
           final DatagramPacket receivedPacket = new DatagramPacket(response, response.length);
           socket.receive(receivedPacket);
 
@@ -377,6 +402,11 @@ public class TestBookKeeperServer extends BookKeeperTest
           log.error("Error sending/receiving UDP packets", e);
         }
       }
+    }
+
+    public void stopThread()
+    {
+      isRunning = false;
     }
   }
 }
