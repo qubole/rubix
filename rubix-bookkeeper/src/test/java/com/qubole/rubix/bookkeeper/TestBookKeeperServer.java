@@ -49,7 +49,7 @@ public class TestBookKeeperServer
   private final MetricRegistry metrics = new MetricRegistry();
 
   @BeforeClass
-  public void initializeCacheDirectories() throws IOException
+  public void setUpForClass() throws IOException
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 
@@ -63,7 +63,7 @@ public class TestBookKeeperServer
   }
 
   @AfterMethod
-  public void stopBookKeeperServerForTest()
+  public void tearDown()
   {
     conf.clear();
     metrics.removeMatching(MetricFilter.ALL);
@@ -72,7 +72,7 @@ public class TestBookKeeperServer
   }
 
   @AfterClass
-  public void cleanUpCacheDirectories() throws IOException
+  public void tearDownForClass() throws IOException
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 

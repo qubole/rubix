@@ -46,7 +46,7 @@ public class TestBookKeeperMetrics
   private BookKeeper bookKeeper;
 
   @BeforeClass
-  public void initializeCacheDirectories() throws IOException
+  public void setUpForClass() throws IOException
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 
@@ -54,7 +54,7 @@ public class TestBookKeeperMetrics
   }
 
   @BeforeMethod
-  public void setUpForTest() throws FileNotFoundException
+  public void setUp() throws FileNotFoundException
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     CacheConfig.setBlockSize(conf, TEST_BLOCK_SIZE);
@@ -63,14 +63,14 @@ public class TestBookKeeperMetrics
   }
 
   @AfterMethod
-  public void tearDownForTest()
+  public void tearDown()
   {
     conf.clear();
     metrics.removeMatching(MetricFilter.ALL);
   }
 
   @AfterClass
-  public void cleanCacheDirectories() throws IOException
+  public void tearDownForClass() throws IOException
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 

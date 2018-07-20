@@ -49,7 +49,7 @@ public class TestWorkerBookKeeper
   private final Configuration conf = new Configuration();
 
   @BeforeClass
-  public void initializeCacheDirectories() throws IOException
+  public void setUpForClass() throws IOException
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 
@@ -57,7 +57,7 @@ public class TestWorkerBookKeeper
   }
 
   @BeforeMethod
-  public void startBookKeeperServerForTest() throws InterruptedException
+  public void setUp() throws InterruptedException
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     CacheConfig.setServiceRetryInterval(conf, TEST_RETRY_INTERVAL);
@@ -68,7 +68,7 @@ public class TestWorkerBookKeeper
   }
 
   @AfterMethod
-  public void stopBookKeeperServerForTest()
+  public void tearDown()
   {
     conf.clear();
 
@@ -76,7 +76,7 @@ public class TestWorkerBookKeeper
   }
 
   @AfterClass
-  public void cleanUpCacheDirectories() throws IOException
+  public void tearDownForClass() throws IOException
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 

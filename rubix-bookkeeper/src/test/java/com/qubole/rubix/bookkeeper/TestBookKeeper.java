@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertTrue;
@@ -52,6 +53,12 @@ public class TestBookKeeper
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 
     BookKeeperTestUtils.createCacheParentDirectories(conf, TEST_MAX_DISKS);
+  }
+
+  @BeforeMethod
+  public void setUp()
+  {
+    CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
   }
 
   @AfterMethod

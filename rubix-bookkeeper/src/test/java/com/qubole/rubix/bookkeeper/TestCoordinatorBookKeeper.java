@@ -49,7 +49,7 @@ public class TestCoordinatorBookKeeper
   private final MetricRegistry metrics = new MetricRegistry();
 
   @BeforeClass
-  public void initializeCacheDirectories() throws IOException
+  public void setUpForClass() throws IOException
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 
@@ -70,7 +70,7 @@ public class TestCoordinatorBookKeeper
   }
 
   @AfterClass
-  public void clearCacheDirectories() throws IOException
+  public void tearDownForClass() throws IOException
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 
