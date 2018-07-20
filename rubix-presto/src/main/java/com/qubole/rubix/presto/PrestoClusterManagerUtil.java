@@ -47,6 +47,9 @@ public class PrestoClusterManagerUtil
   public static String serverAddressConf = "master.hostname";
   public static String yarnServerAddressConf = "yarn.resourcemanager.address";
 
+  public static final String NODE_UP_STATE = "ACTIVATED";
+  public static final String NODE_DOWN_STATE = "DEACTIVATED";
+
   public static List<Stats> getAllNodes(Configuration conf) throws Exception
   {
     URL allNodesRequest = getNodeUrl(conf);

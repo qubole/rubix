@@ -95,11 +95,14 @@ public class PrestoClusterManagerV2 extends ClusterManager
       if (nodeListFromServer.isEmpty()) {
         if (allNodesMap.isEmpty()) {
           // if the master list is empty, return localhost as activated state
-          return ImmutableMap.of(InetAddress.getLocalHost().getHostAddress(), "ACTIVATED");
+          return ImmutableMap.of(InetAddress.getLocalHost().getHostAddress(), PrestoClusterManagerUtil.NODE_UP_STATE);
         }
         else {
-          // If not empty, return the master list
-          // TODO: Should we mark all the nodes as DEACTIVATED here because we might have lost all the nodes.
+          // If not empty, return the master list marking all the nodes as deactivated state
+          for (Map.Entry<String, String> item : allNodesMap.entrySet()) {
+            item.setValue(PrestoClusterManagerUtil.NODE_DOWN_STATE);
+          }
+
           return allNodesMap;
         }
       }
@@ -108,7 +111,7 @@ public class PrestoClusterManagerV2 extends ClusterManager
       // then these are newly added notes. Mark them as ACTIVATED in the master list
       for (PrestoClusterManagerUtil.Stats node : nodeListFromServer) {
         if (!allNodesMap.containsKey(node.getUri().getHost())) {
-          allNodesMap.put(node.getUri().getHost(), "ACTIVATED");
+          allNodesMap.put(node.getUri().getHost(), PrestoClusterManagerUtil.NODE_UP_STATE);
         }
       }
 
@@ -119,7 +122,7 @@ public class PrestoClusterManagerV2 extends ClusterManager
         if (!allNodesMap.containsKey(node.getUri().getHost())) {
           log.warn("Failed Node " + node.getUri().getHost() + " not present in the master list");
         }
-        allNodesMap.put(node.getUri().getHost(), "DEACTIVATED");
+        allNodesMap.put(node.getUri().getHost(), PrestoClusterManagerUtil.NODE_DOWN_STATE);
       }
 
       Set<String> nodesFromServerSet = new HashSet<String>();
@@ -132,7 +135,7 @@ public class PrestoClusterManagerV2 extends ClusterManager
       // to /v1/node/failed
       for (String key : allNodesMap.keySet()) {
         if (!nodesFromServerSet.contains(key)) {
-          allNodesMap.put(key, "DEACTIVATED");
+          allNodesMap.put(key, PrestoClusterManagerUtil.NODE_DOWN_STATE);
         }
       }
 
