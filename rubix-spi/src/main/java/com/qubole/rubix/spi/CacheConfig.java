@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016. Qubole Inc
+ * Copyright (c) 2018. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -67,6 +67,8 @@ public class CacheConfig
   private static final String KEY_RUBIX_ON_MASTER = "rubix.cluster.on-master";
   private static final String KEY_SERVER_PORT = "hadoop.cache.data.bookkeeper.port";
   private static final String KEY_SERVER_MAX_THREADS = "hadoop.cache.data.bookkeeper.max-threads";
+  private static final String KEY_SERVICE_RETRY_INTERVAL = "rubix.network.service.retry-interval";
+  private static final String KEY_SERVICE_MAX_RETRIES = "rubix.network.service.max-retries";
   private static final String KEY_SOCKET_READ_TIMEOUT = "hadoop.cache.network.socket.read.timeout";
   private static final String KEY_WORKER_LIVENESS_EXPIRY = "rubix.monitor.worker.liveness.expiry";
   private static final String KEY_PRESTO_CLUSTER_MANAGER = "rubix.presto.clustermanager.class";
@@ -112,6 +114,8 @@ public class CacheConfig
   private static final boolean DEFAULT_RUBIX_ON_MASTER = false;
   private static final int DEFAULT_SERVER_MAX_THREADS = Integer.MAX_VALUE;
   private static final int DEFAULT_SERVER_PORT = 8899;
+  private static final int DEFAULT_SERVICE_RETRY_INTERVAL = 30000; // ms
+  private static final int DEFAULT_SERVICE_MAX_RETRIES = 100;
   private static final int DEFAULT_SOCKET_READ_TIMEOUT = 30000; // ms
   private static final int DEFAULT_WORKER_LIVENESS_EXPIRY = 60000; // ms
   private static final int DEFAULT_WORKER_LIVENESS_METRIC_INITIAL_DELAY = 30000; // ms
@@ -262,6 +266,16 @@ public class CacheConfig
   public static int getServerPort(Configuration conf)
   {
     return conf.getInt(KEY_SERVER_PORT, DEFAULT_SERVER_PORT);
+  }
+
+  public static int getServiceMaxRetries(Configuration conf)
+  {
+    return conf.getInt(KEY_SERVICE_MAX_RETRIES, DEFAULT_SERVICE_MAX_RETRIES);
+  }
+
+  public static int getServiceRetryInterval(Configuration conf)
+  {
+    return conf.getInt(KEY_SERVICE_RETRY_INTERVAL, DEFAULT_SERVICE_RETRY_INTERVAL);
   }
 
   public static int getSocketReadTimeOut(Configuration conf)
@@ -447,6 +461,16 @@ public class CacheConfig
   public static void setServerPort(Configuration conf, int serverPort)
   {
     conf.setInt(KEY_SERVER_PORT, serverPort);
+  }
+
+  public static void setServiceMaxRetries(Configuration conf, int maxRetries)
+  {
+    conf.setInt(KEY_SERVICE_MAX_RETRIES, maxRetries);
+  }
+
+  public static void setServiceRetryInterval(Configuration conf, int retryInterval)
+  {
+    conf.setInt(KEY_SERVICE_RETRY_INTERVAL, retryInterval);
   }
 
   public static void setStatsDMetricsHost(Configuration conf, String hostname)

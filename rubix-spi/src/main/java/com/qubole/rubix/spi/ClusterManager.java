@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016. Qubole Inc
+ * Copyright (c) 2018. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -55,8 +55,16 @@ public abstract class ClusterManager
   {
     HashFunction hf = Hashing.md5();
     HashCode hc = hf.hashString(key, Charsets.UTF_8);
-    int nodeIndex = Hashing.consistentHash(hc, numNodes);
-    return nodeIndex;
+    int initialNodeIndex = Hashing.consistentHash(hc, numNodes);
+    int finalNodeIndex = initialNodeIndex;
+    if (hc.asInt() % 2 == 0) {
+      finalNodeIndex = getNextRunningNodeIndex(initialNodeIndex);
+    }
+    else {
+      finalNodeIndex = getPreviousRunningNodeIndex(initialNodeIndex);
+    }
+
+    return finalNodeIndex;
   }
 
   // This is the size in which the file will be logically divided into splits
@@ -76,4 +84,8 @@ public abstract class ClusterManager
   // Nodes format as per the note above
   // Should return sorted list
   public abstract List<String> getNodes();
+
+  public abstract Integer getNextRunningNodeIndex(int startIndex);
+
+  public abstract Integer getPreviousRunningNodeIndex(int startIndex);
 }

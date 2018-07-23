@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016. Qubole Inc
+ * Copyright (c) 2018. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,16 +14,19 @@ package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
+import com.qubole.rubix.bookkeeper.test.BookKeeperTestUtils;
 import com.google.common.base.Ticker;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.Weigher;
 import com.google.common.testing.FakeTicker;
-import com.qubole.rubix.core.utils.DeleteFileVisitor;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.ClusterType;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.shaded.TException;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -32,17 +35,17 @@ import org.testng.annotations.Test;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
 
 import static org.testng.Assert.assertEquals;
 
 public class TestBookKeeperMetrics
 {
-  private static final String TEST_DIRECTORY_PREFIX = System.getProperty("java.io.tmpdir") + "/TestBookKeeperMetrics/";
-  private static final int TEST_BLOCK_SIZE = 100;
+  private static final Log log = LogFactory.getLog(TestBookKeeperMetrics.class);
 
+  private static final String TEST_CACHE_DIR_PREFIX = BookKeeperTestUtils.getTestCacheDirPrefix("TestBookKeeperMetrics");
+  private static final int TEST_BLOCK_SIZE = 100;
+  private static final int TEST_MAX_DISKS = 1;
   private static final String TEST_REMOTE_PATH = "/tmp/testPath";
   private static final long TEST_LAST_MODIFIED = 1514764800; // 2018-01-01T00:00:00
   private static final long TEST_FILE_LENGTH = 5000;
@@ -50,38 +53,44 @@ public class TestBookKeeperMetrics
   private static final long TEST_END_BLOCK = 23;
 
   private final Configuration conf = new Configuration();
-  private MetricRegistry metrics = new MetricRegistry();
+  private final MetricRegistry metrics = new MetricRegistry();
+
   private BookKeeper bookKeeper;
 
   @BeforeClass
-  public void setUp()
+  public void setUpForClass() throws IOException
   {
-    // Set configuration values for testing
-    CacheConfig.setCacheDataDirPrefix(conf, TEST_DIRECTORY_PREFIX);
-    CacheConfig.setMaxDisks(conf, 5);
-    CacheConfig.setBlockSize(conf, TEST_BLOCK_SIZE);
+    CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
+
+    BookKeeperTestUtils.createCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   @BeforeMethod
-  public void setUpForNextTest() throws IOException
+  public void setUp() throws FileNotFoundException
   {
-    // Create cache directories
-    Files.createDirectories(Paths.get(CacheConfig.getCacheDirPrefixList(conf)));
-    for (int i = 0; i < CacheConfig.getCacheMaxDisks(conf); i++) {
-      Files.createDirectories(Paths.get(CacheConfig.getCacheDirPrefixList(conf) + i));
-    }
+    CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
+    CacheConfig.setBlockSize(conf, TEST_BLOCK_SIZE);
 
-    // Reset test values
-    metrics = new MetricRegistry();
+    // TODO move cache creation here
     bookKeeper = new CoordinatorBookKeeper(conf, metrics);
     bookKeeper.clusterManager = null;
   }
 
   @AfterMethod
-  public void clearForNextTest() throws IOException
+  public void tearDown()
   {
-    Files.walkFileTree(Paths.get(TEST_DIRECTORY_PREFIX), new DeleteFileVisitor());
-    Files.deleteIfExists(Paths.get(TEST_DIRECTORY_PREFIX));
+    // TODO move cache removal here
+
+    conf.clear();
+    metrics.removeMatching(MetricFilter.ALL);
+  }
+
+  @AfterClass
+  public void tearDownForClass() throws IOException
+  {
+    CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
+
+    BookKeeperTestUtils.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   /**

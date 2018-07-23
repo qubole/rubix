@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016. Qubole Inc
+ * Copyright (c) 2018. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,16 +13,19 @@
 
 package com.qubole.rubix.bookkeeper;
 
+import com.qubole.rubix.bookkeeper.test.BookKeeperTestUtils;
 import com.qubole.rubix.core.FileDownloadRequestChain;
-import com.qubole.rubix.core.utils.DeleteFileVisitor;
 import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.CacheUtil;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -34,52 +37,71 @@ import static org.testng.Assert.assertTrue;
  */
 public class TestFileDownloader
 {
-  private static final String testDirectoryPrefix = System.getProperty("java.io.tmpdir") + "/TestFileDownloader/";
-  private static final String testDirectory = testDirectoryPrefix + "dir0";
-  private Configuration conf;
+  private static final Log log = LogFactory.getLog(TestFileDownloader.class);
+
+  private static final String TEST_CACHE_DIR_PREFIX = BookKeeperTestUtils.getTestCacheDirPrefix("TestFileDownloader");
+  private static final int TEST_MAX_DISKS = 1;
+
+  private final Configuration conf = new Configuration();
+
+  @BeforeClass
+  public void setUpForClass() throws Exception
+  {
+    CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
+
+    BookKeeperTestUtils.createCacheParentDirectories(conf, TEST_MAX_DISKS);
+    CacheUtil.createCacheDirectories(conf);
+  }
 
   @BeforeMethod
-  public void setUp() throws Exception
+  public void setUp()
   {
-    conf = new Configuration();
-    CacheConfig.setCacheDataDirPrefix(conf, testDirectoryPrefix + "dir");
-    CacheConfig.setMaxDisks(conf, 1);
-    Files.createDirectories(Paths.get(testDirectory, CacheConfig.getCacheDataDirSuffix(conf)));
+    CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
   }
 
   @AfterMethod
   public void tearDown() throws Exception
   {
-    Files.walkFileTree(Paths.get(testDirectory), new DeleteFileVisitor());
-    Files.deleteIfExists(Paths.get(testDirectory));
+    conf.clear();
+  }
+
+  @AfterClass
+  public void tearDownForClass() throws Exception
+  {
+    CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
+
+    BookKeeperTestUtils.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   @Test
   public void testGetFileDownloadRequestChains() throws Exception
   {
-    ConcurrentMap<String, DownloadRequestContext> contextMap = new ConcurrentHashMap<String, DownloadRequestContext>();
-    DownloadRequestContext context = new DownloadRequestContext("file:///Files/file-1", 1000, 1000);
-    contextMap.put("file:///Files/file-1", context);
+    final String remoteFilePath1 = "file:///Files/file-1";
+    final String remoteFilePath2 = "file:///Files/file-2";
+    final ConcurrentMap<String, DownloadRequestContext> contextMap = new ConcurrentHashMap<>();
+
+    DownloadRequestContext context = new DownloadRequestContext(remoteFilePath1, 1000, 1000);
+    contextMap.put(remoteFilePath1, context);
     context.addDownloadRange(100, 300);
     context.addDownloadRange(250, 400);
     context.addDownloadRange(500, 800);
 
-    context = new DownloadRequestContext("file:///Files/file-2", 1000, 1000);
-    contextMap.put("file:///Files/file-2", context);
+    context = new DownloadRequestContext(remoteFilePath2, 1000, 1000);
+    contextMap.put(remoteFilePath2, context);
     context.addDownloadRange(100, 200);
     context.addDownloadRange(500, 800);
 
-    FileDownloader downloader = new FileDownloader(conf);
-    List<FileDownloadRequestChain> requestChains = downloader.getFileDownloadRequestChains(contextMap);
+    final FileDownloader downloader = new FileDownloader(conf);
+    final List<FileDownloadRequestChain> requestChains = downloader.getFileDownloadRequestChains(contextMap);
 
     assertTrue(requestChains.size() == 2,
         "Wrong Number of Request Chains. Expected = 2 Got = " + requestChains.size());
 
-    FileDownloadRequestChain request1 = requestChains.get(0);
+    final FileDownloadRequestChain request1 = requestChains.get(0);
     assertTrue(request1.getReadRequests().size() == 2,
         "Wrong Number of Requests For File-1. Expected = 2 Got = " + request1.getReadRequests().size());
 
-    FileDownloadRequestChain request2 = requestChains.get(1);
+    final FileDownloadRequestChain request2 = requestChains.get(1);
     assertTrue(request2.getReadRequests().size() == 2,
         "Wrong Number of Requests For File-2. Expected = 2 Got = " + request2.getReadRequests().size());
   }

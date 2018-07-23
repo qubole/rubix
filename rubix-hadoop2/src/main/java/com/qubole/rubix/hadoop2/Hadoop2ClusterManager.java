@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016. Qubole Inc
+ * Copyright (c) 2018. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,9 +18,6 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.reflect.TypeToken;
-import com.google.gson.Gson;
-import com.google.gson.annotations.SerializedName;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
@@ -28,13 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.lang.reflect.Type;
-import java.net.HttpURLConnection;
 import java.net.InetAddress;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -50,23 +41,15 @@ import java.util.concurrent.TimeUnit;
 public class Hadoop2ClusterManager extends ClusterManager
 {
   private boolean isMaster = true;
-  public int serverPort = 8088;
-  private String serverAddress = "localhost";
   static LoadingCache<String, List<String>> nodesCache;
   YarnConfiguration yconf;
-  String address = "localhost:8088";
   private Log log = LogFactory.getLog(Hadoop2ClusterManager.class);
-  static String addressConf = "yarn.resourcemanager.webapp.address";
 
   @Override
   public void initialize(Configuration conf)
   {
     super.initialize(conf);
     yconf = new YarnConfiguration(conf);
-    this.address = yconf.get(addressConf, address);
-    this.serverAddress = address.substring(0, address.indexOf(":"));
-    this.serverPort = Integer.parseInt(address.substring(address.indexOf(":") + 1));
-
     ExecutorService executor = Executors.newSingleThreadExecutor();
     nodesCache = CacheBuilder.newBuilder()
         .refreshAfterWrite(getNodeRefreshTime(), TimeUnit.SECONDS)
@@ -82,33 +65,12 @@ public class Hadoop2ClusterManager extends ClusterManager
               return ImmutableList.of();
             }
             try {
-              StringBuffer response = new StringBuffer();
-              URL obj = getNodeURL();
-              HttpURLConnection httpcon = (HttpURLConnection) obj.openConnection();
-              httpcon.setRequestMethod("GET");
-              log.debug("Sending 'GET' request to URL: " + obj.toString());
-              int responseCode = httpcon.getResponseCode();
-              if (responseCode == HttpURLConnection.HTTP_OK) {
-                BufferedReader in = new BufferedReader(new InputStreamReader(httpcon.getInputStream()));
-                String inputLine;
-                while ((inputLine = in.readLine()) != null) {
-                  response.append(inputLine);
-                }
-                in.close();
-                httpcon.disconnect();
-              }
-              else {
-                log.info("/ws/v1/cluster/nodes failed due to " + responseCode + ". Setting this node as worker.");
+              List<Hadoop2ClusterManagerUtil.Node> allNodes = Hadoop2ClusterManagerUtil.getAllNodes(yconf);
+              if (allNodes == null) {
                 isMaster = false;
-                httpcon.disconnect();
                 return ImmutableList.of();
               }
-              Gson gson = new Gson();
-              Type type = new TypeToken<NodesResponse>()
-              {
-              }.getType();
-              NodesResponse nodesResponse = gson.fromJson(response.toString(), type);
-              List<Node> allNodes = nodesResponse.getNodes().getNodeList();
+
               Set<String> hosts = new HashSet<>();
 
               if (allNodes.isEmpty()) {
@@ -117,7 +79,7 @@ public class Hadoop2ClusterManager extends ClusterManager
                 return ImmutableList.of(InetAddress.getLocalHost().getHostAddress());
               }
 
-              for (Node node : allNodes) {
+              for (Hadoop2ClusterManagerUtil.Node node : allNodes) {
                 String state = node.getState();
                 log.debug("Hostname: " + node.getNodeHostName() + "State: " + state);
                 //keep only healthy data nodes
@@ -140,12 +102,6 @@ public class Hadoop2ClusterManager extends ClusterManager
             }
           }
         }, executor));
-  }
-
-  public URL getNodeURL()
-      throws MalformedURLException
-  {
-    return new URL("http://" + serverAddress + ":" + serverPort + "/ws/v1/cluster/nodes");
   }
 
   @Override
@@ -171,90 +127,20 @@ public class Hadoop2ClusterManager extends ClusterManager
   }
 
   @Override
+  public Integer getNextRunningNodeIndex(int startIndex)
+  {
+    return startIndex;
+  }
+
+  @Override
+  public Integer getPreviousRunningNodeIndex(int startIndex)
+  {
+    return startIndex;
+  }
+
+  @Override
   public ClusterType getClusterType()
   {
     return ClusterType.HADOOP2_CLUSTER_MANAGER;
-  }
-
-  public static class NodesResponse
-  {
-    @SerializedName("nodes")
-    private Nodes nodes;
-
-    // Necessary for GSON parsing
-    public NodesResponse(Nodes nodes)
-    {
-      this.nodes = nodes;
-    }
-
-    public void setNodes(Nodes nodes)
-    {
-      this.nodes = nodes;
-    }
-
-    public Nodes getNodes()
-    {
-      return nodes;
-    }
-  }
-
-  public static class Nodes
-  {
-    @SerializedName("node")
-    private List<Node> nodeList;
-
-    // Necessary for GSON parsing
-    public Nodes(List<Node> nodeStats)
-    {
-      this.nodeList = nodeStats;
-    }
-
-    public void setNodeList(List<Node> nodeStats)
-    {
-      this.nodeList = nodeStats;
-    }
-
-    public List<Node> getNodeList()
-    {
-      return nodeList;
-    }
-  }
-
-  public static class Node
-  {
-    /*
-    /ws/v1/cluster/nodes REST endpoint fields:
-    rack             string
-    state            string
-    id               string
-    nodeHostName     string
-    nodeHTTPAddress  string
-    healthStatus     string
-    healthReport     string
-    lastHealthUpdate long
-    usedMemoryMB     long
-    availMemoryMB    long
-    numContainers    int
-    */
-
-    String nodeHostName;
-    String state;
-
-    // Necessary for GSON parsing
-    public Node(String nodeHostName, String state)
-    {
-      this.nodeHostName = nodeHostName;
-      this.state = state;
-    }
-
-    String getState()
-    {
-      return state;
-    }
-
-    String getNodeHostName()
-    {
-      return nodeHostName;
-    }
   }
 }

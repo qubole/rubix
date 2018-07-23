@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016. Qubole Inc
+ * Copyright (c) 2018. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -59,5 +59,17 @@ public class DummyClusterManager extends ClusterManager
   public long getSplitSize()
   {
     return splitSize;
+  }
+
+  @Override
+  public Integer getNextRunningNodeIndex(int startIndex)
+  {
+    return startIndex;
+  }
+
+  @Override
+  public Integer getPreviousRunningNodeIndex(int startIndex)
+  {
+    return startIndex;
   }
 }
