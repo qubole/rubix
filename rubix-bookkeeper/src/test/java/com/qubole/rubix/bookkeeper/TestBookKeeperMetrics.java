@@ -14,11 +14,11 @@ package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
-import com.qubole.rubix.bookkeeper.test.BookKeeperTestUtils;
 import com.google.common.base.Ticker;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.Weigher;
 import com.google.common.testing.FakeTicker;
+import com.qubole.rubix.bookkeeper.test.BookKeeperTestUtils;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.ClusterType;
@@ -57,40 +57,25 @@ public class TestBookKeeperMetrics
 
   private BookKeeper bookKeeper;
 
-  @BeforeClass
-  public void setUpForClass() throws IOException
-  {
-    CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
-
-    BookKeeperTestUtils.createCacheParentDirectories(conf, TEST_MAX_DISKS);
-  }
-
   @BeforeMethod
-  public void setUp() throws FileNotFoundException
+  public void setUp() throws IOException
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     CacheConfig.setBlockSize(conf, TEST_BLOCK_SIZE);
 
-    // TODO move cache creation here
+    BookKeeperTestUtils.createCacheParentDirectories(conf, TEST_MAX_DISKS);
+
     bookKeeper = new CoordinatorBookKeeper(conf, metrics);
     bookKeeper.clusterManager = null;
   }
 
   @AfterMethod
-  public void tearDown()
+  public void tearDown() throws IOException
   {
-    // TODO move cache removal here
+    BookKeeperTestUtils.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
 
     conf.clear();
     metrics.removeMatching(MetricFilter.ALL);
-  }
-
-  @AfterClass
-  public void tearDownForClass() throws IOException
-  {
-    CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
-
-    BookKeeperTestUtils.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   /**

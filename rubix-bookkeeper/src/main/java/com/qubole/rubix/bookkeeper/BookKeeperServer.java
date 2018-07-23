@@ -12,7 +12,6 @@
  */
 package com.qubole.rubix.bookkeeper;
 
-import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.annotations.VisibleForTesting;
@@ -36,7 +35,6 @@ import org.apache.thrift.shaded.transport.TTransportException;
 import java.io.FileNotFoundException;
 import java.util.concurrent.TimeUnit;
 
-import static com.qubole.rubix.bookkeeper.CoordinatorBookKeeper.METRIC_BOOKKEEPER_LIVENESS_CHECK;
 import static com.qubole.rubix.spi.CacheConfig.getServerMaxThreads;
 import static com.qubole.rubix.spi.CacheConfig.getServerPort;
 

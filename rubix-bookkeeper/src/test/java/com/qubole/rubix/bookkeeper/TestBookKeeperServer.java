@@ -25,6 +25,7 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -87,7 +88,7 @@ public class TestBookKeeperServer
   {
     CacheConfig.setOnMaster(conf, true);
 
-    assertNull(metrics.getGauges().get(BookKeeperServer.METRIC_BOOKKEEPER_LIVENESS_CHECK), "Metric should not exist before server has started");
+    assertNull(metrics.getGauges().get(CoordinatorBookKeeper.METRIC_BOOKKEEPER_LIVENESS_CHECK), "Metric should not exist before server has started");
 
     startBookKeeperServer();
 
@@ -308,6 +309,14 @@ public class TestBookKeeperServer
   {
     public static void startServer(Configuration conf, MetricRegistry metricRegistry)
     {
+      try {
+        new CoordinatorBookKeeper(conf, metricRegistry);
+      }
+      catch (FileNotFoundException e) {
+        log.error("Cache directories could not be created", e);
+        return;
+      }
+
       metrics = metricRegistry;
       registerMetrics(conf);
     }
