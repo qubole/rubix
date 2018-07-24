@@ -14,6 +14,7 @@ package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.testing.FakeTicker;
 import com.qubole.rubix.bookkeeper.test.BookKeeperTestUtils;
 import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.core.utils.DataGen;
@@ -33,6 +34,8 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+
+import java.util.concurrent.TimeUnit;
 
 import static org.testng.Assert.assertTrue;
 
@@ -201,7 +204,9 @@ public class TestBookKeeper
     CacheConfig.setFileInvalidationEnabled(conf, false);
     CacheConfig.setFileStatusExpiryPeriod(conf, 5000);
 
-    BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);
+    FakeTicker ticker = new FakeTicker();
+
+    BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics, ticker);
     FileInfo info = bookKeeper.getFileInfo(backendFilePath.toString());
 
     assertTrue(info.getFileSize() == expectedFileSize, "FileSize was not equal to the expected value." +
@@ -214,9 +219,8 @@ public class TestBookKeeper
     assertTrue(info.getFileSize() == expectedFileSize, "FileSize was not equal to the expected value." +
         " Got FileSize: " + info.getFileSize() + " Expected Value : " + expectedFileSize);
 
-    // Sleep for 5 sec to expire the cache
-    Thread.sleep(5000);
-    log.info("Sleeping for 5 sec to expire the cache entry");
+    // Advance the ticker to 5 sec
+    ticker.advance(5, TimeUnit.SECONDS);
 
     expectedFileSize = DataGen.generateContent(2).length();
     info = bookKeeper.getFileInfo(backendFilePath.toString());

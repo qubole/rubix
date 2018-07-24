@@ -16,6 +16,7 @@ import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
+import com.google.common.base.Ticker;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -86,6 +87,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
   int currentNodeIndex = -1;
   static long splitSize;
   private RemoteFetchProcessor fetchProcessor;
+  private Ticker ticker;
 
   // Registry for gathering & storing necessary metrics
   protected final MetricRegistry metrics;
@@ -95,10 +97,17 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
 
   public BookKeeper(Configuration conf, MetricRegistry metrics) throws FileNotFoundException
   {
+    this(conf, metrics, Ticker.systemTicker());
+  }
+
+  @VisibleForTesting
+  BookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker) throws FileNotFoundException
+  {
     this.conf = conf;
     this.metrics = metrics;
+    this.ticker = ticker;
     initializeMetrics();
-    initializeCache(conf);
+    initializeCache(conf, ticker);
     fetchProcessor = new RemoteFetchProcessor(conf);
     fetchProcessor.startAsync();
   }
@@ -437,7 +446,8 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
     return endBlock;
   }
 
-  private static synchronized void initializeCache(final Configuration conf) throws FileNotFoundException
+  private static synchronized void initializeCache(final Configuration conf, final Ticker ticker)
+      throws FileNotFoundException
   {
     CacheUtil.createCacheDirectories(conf);
 
@@ -452,7 +462,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
     // To minimize those cases, consider available space lower than actual
     final long total = (long) (0.95 * avail);
 
-    initializeFileInfoCache(conf);
+    initializeFileInfoCache(conf, ticker);
 
     fileMetadataCache = CacheBuilder.newBuilder()
         .weigher(new Weigher<String, FileMetadata>()
@@ -481,11 +491,12 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
         .build();
   }
 
-  private static void initializeFileInfoCache(final Configuration conf)
+  private static void initializeFileInfoCache(final Configuration conf, final Ticker ticker)
   {
     ExecutorService executor = Executors.newSingleThreadExecutor();
     int expiryPeriod = CacheConfig.getFileStatusExpiryPeriod(conf);
     fileInfoCache = CacheBuilder.newBuilder()
+        .ticker(ticker)
         .expireAfterWrite(expiryPeriod, TimeUnit.MILLISECONDS)
         .removalListener(new RemovalListener<String, FileInfo>()
         {

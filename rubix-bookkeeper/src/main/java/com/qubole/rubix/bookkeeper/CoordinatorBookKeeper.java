@@ -15,6 +15,8 @@ package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Ticker;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.qubole.rubix.spi.CacheConfig;
@@ -37,8 +39,15 @@ public class CoordinatorBookKeeper extends BookKeeper
 
   public CoordinatorBookKeeper(Configuration conf, MetricRegistry metrics) throws FileNotFoundException
   {
-    super(conf, metrics);
+    this(conf, metrics, Ticker.systemTicker());
+  }
+
+  @VisibleForTesting
+  CoordinatorBookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker) throws FileNotFoundException
+  {
+    super(conf, metrics, ticker);
     this.liveWorkerCache = CacheBuilder.newBuilder()
+        .ticker(ticker)
         .expireAfterWrite(CacheConfig.getWorkerLivenessExpiry(conf), TimeUnit.MILLISECONDS)
         .build();
 
