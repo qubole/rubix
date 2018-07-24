@@ -18,4 +18,4 @@ sudo cp $RUBIX_CORE_JAR $HADOOP_JARSPATH
 sudo cp $RUBIX_PRESTO_JAR $HADOOP_JARSPATH
 sudo cp $RUBIX_SPI_JAR $HADOOP_JARSPATH
 
-mvn clean install && mvn cobertura:cobertura coveralls:report
+mvn clean install && sudo mvn cobertura:cobertura coveralls:report
