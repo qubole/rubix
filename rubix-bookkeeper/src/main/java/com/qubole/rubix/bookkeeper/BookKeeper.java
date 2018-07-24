@@ -18,6 +18,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.cache.Weigher;
@@ -55,6 +57,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
@@ -67,7 +71,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
   public static final String METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT = "rubix.bookkeeper.local_cache.count";
 
   private static Cache<String, FileMetadata> fileMetadataCache;
-  private static Cache<String, FileInfo> fileInfoCache;
+  private static LoadingCache<String, FileInfo> fileInfoCache;
   private static ClusterManager clusterManager;
   private static Log log = LogFactory.getLog(BookKeeper.class.getName());
   private long totalRequests;
@@ -339,7 +343,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
     }
     else {
       try {
-        return fileInfoCache.get(remotePath, new FetchFileInfoCallable(remotePath, conf));
+        return fileInfoCache.get(remotePath);
       }
       catch (ExecutionException e) {
         log.error(String.format("Could not fetch FileInfo from Cache for %s : %s", remotePath, Throwables.getStackTraceAsString(e)));
@@ -479,8 +483,10 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
 
   private static void initializeFileInfoCache(final Configuration conf)
   {
+    ExecutorService executor = Executors.newSingleThreadExecutor();
+    int expiryPeriod = CacheConfig.getFileStatusExpiryPeriod(conf);
     fileInfoCache = CacheBuilder.newBuilder()
-        .expireAfterWrite(36000, TimeUnit.SECONDS)
+        .expireAfterWrite(expiryPeriod, TimeUnit.MILLISECONDS)
         .removalListener(new RemovalListener<String, FileInfo>()
         {
           @Override
@@ -489,7 +495,19 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
             log.info("removed FileInfo for path " + notification.getKey() + " due to " + notification.getCause());
           }
         })
-        .build();
+        .build(CacheLoader.asyncReloading(new CacheLoader<String, FileInfo>()
+        {
+          @Override
+          public FileInfo load(String s) throws Exception
+          {
+            log.info("Fetching FileStatus for : " + s);
+            Path path = new Path(s);
+            FileSystem fs = path.getFileSystem(conf);
+            FileStatus status = fs.getFileStatus(path);
+            FileInfo info = new FileInfo(status.getLen(), status.getModificationTime());
+            return info;
+          }
+        }, executor));
   }
 
   public void invalidateEntry(String key)
@@ -522,28 +540,6 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
         throws Exception
     {
       return new FileMetadata(path, fileLength, lastModified, conf);
-    }
-  }
-
-  private static class FetchFileInfoCallable implements Callable<FileInfo>
-  {
-    String remotePath;
-    Configuration conf;
-
-    public FetchFileInfoCallable(String remotePath, Configuration conf)
-    {
-      this.remotePath = remotePath;
-      this.conf = conf;
-    }
-
-    public FileInfo call() throws Exception
-    {
-      log.info("Fetching FileStatus for : " + remotePath);
-      Path path = new Path(remotePath);
-      FileSystem fs = path.getFileSystem(conf);
-      FileStatus status = fs.getFileStatus(path);
-      FileInfo info = new FileInfo(status.getLen(), status.getModificationTime());
-      return info;
     }
   }
 

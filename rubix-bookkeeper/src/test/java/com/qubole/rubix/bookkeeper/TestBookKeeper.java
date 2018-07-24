@@ -190,4 +190,37 @@ public class TestBookKeeper
     assertTrue(info.getFileSize() == expectedFileSize, "FileSize was not equal to the expected value." +
         " Got FileSize: " + info.getFileSize() + " Expected Value : " + expectedFileSize);
   }
+
+  @Test
+  public void testGetFileInfoWithInvalidationDisabledWithCacheExpired() throws Exception
+  {
+    Path backendFilePath = new Path(BookKeeperTestUtils.getDefaultTestDirectoryPath(conf), BACKEND_FILE_NAME);
+    DataGen.populateFile(backendFilePath.toString());
+    int expectedFileSize = DataGen.generateContent(1).length();
+
+    CacheConfig.setFileInvalidationEnabled(conf, false);
+    CacheConfig.setFileStatusExpiryPeriod(conf, 5000);
+
+    BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);
+    FileInfo info = bookKeeper.getFileInfo(backendFilePath.toString());
+
+    assertTrue(info.getFileSize() == expectedFileSize, "FileSize was not equal to the expected value." +
+        " Got FileSize: " + info.getFileSize() + " Expected Value : " + expectedFileSize);
+
+    //Rewrite the file with half the data
+    DataGen.populateFile(backendFilePath.toString(), 2);
+
+    info = bookKeeper.getFileInfo(backendFilePath.toString());
+    assertTrue(info.getFileSize() == expectedFileSize, "FileSize was not equal to the expected value." +
+        " Got FileSize: " + info.getFileSize() + " Expected Value : " + expectedFileSize);
+
+    // Sleep for 5 sec to expire the cache
+    Thread.sleep(5000);
+    log.info("Sleeping for 5 sec to expire the cache entry");
+
+    expectedFileSize = DataGen.generateContent(2).length();
+    info = bookKeeper.getFileInfo(backendFilePath.toString());
+    assertTrue(info.getFileSize() == expectedFileSize, "FileSize was not equal to the expected value." +
+        " Got FileSize: " + info.getFileSize() + " Expected Value : " + expectedFileSize);
+  }
 }
