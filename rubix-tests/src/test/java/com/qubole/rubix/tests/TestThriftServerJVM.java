@@ -100,7 +100,7 @@ public class TestThriftServerJVM extends Configured
     localDataTransferJvm = pJVMBuilder.start();
 
     log.info("Test Directory : " + testDirectory);
-    Files.createDirectories(Paths.get(testDirectoryPrefix + "dir0/fcache/"));
+    Files.createDirectories(Paths.get(testDirectoryPrefix + "dir0" + CacheConfig.getCacheDataDirSuffix(conf)));
     Thread.sleep(3000);
   }
 
@@ -149,20 +149,20 @@ public class TestThriftServerJVM extends Configured
     String host = "localhost";
     File file = new File(backendFileName);
     List<BlockLocation> result;
-    int lastBlock = 4;
-    int readSize = 1000;
+    long lastBlock = file.length() / CacheConfig.getBlockSize(conf);
+    long readSize = file.length();
 
     RetryingBookkeeperClient client;
     client = bookKeeperFactory.createBookKeeperClient(host, conf);
 
-    result = client.getCacheStatus("file:///" + backendFileName, file.length(), file.lastModified(), 0, lastBlock, 3);
+    result = client.getCacheStatus(backendPath.toString(), file.length(), file.lastModified(), 0, lastBlock, 3);
     assertTrue(result.get(0).getLocation() == Location.LOCAL, "File already cached, before readData call");
     log.info(" Value of Result : " + result);
     log.info("Downloading file from path : " + file.toString());
-    boolean dataDownloaded = client.readData("file:///" + backendFileName, 0, readSize, file.length(), file.lastModified(), 3);
+    boolean dataDownloaded = client.readData(backendPath.toString(), 0, (int) readSize, file.length(), file.lastModified(), 3);
     assertTrue(dataDownloaded == true, "readData() function call failed. File not downloaded properly");
 
-    result = client.getCacheStatus("file:///" + backendFileName, file.length(), file.lastModified(), 0, lastBlock, 3);
+    result = client.getCacheStatus(backendPath.toString(), file.length(), file.lastModified(), 0, lastBlock, 3);
     assertTrue(result.get(0).getLocation() == Location.CACHED, "File not cached properly");
     log.info(" Value of Result : " + result);
   }
