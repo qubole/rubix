@@ -6,6 +6,9 @@ services:
   - docker
 
 before_install:
-  - docker pull kvankayala/hadoop_mvn_thrift
+  - docker pull quboleinc/hadoop_mvn_thrift
 
-script: docker run -it --rm -v "$PWD":/usr/src/rubix -v "$HOME/.m2":/root/.m2 -w /usr/src/rubix kvankayala/hadoop_mvn_thrift /bin/bash script.sh
+script: docker run -it --rm -v "$PWD":/usr/src/rubix -v "$HOME/.m2":/root/.m2 -w /usr/src/rubix quboleinc/hadoop_mvn_thrift /bin/bash script.sh
+
+after_success:
+  - mvn cobertura:cobertura coveralls:report
