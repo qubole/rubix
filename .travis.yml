@@ -1,6 +1,9 @@
 branches:
   only:
     - master
+language: java
+jdk:
+  - openjdk7
 sudo: required
 services:
   - docker
@@ -11,4 +14,4 @@ before_install:
 script: docker run -it --rm -v "$PWD":/usr/src/rubix -v "$HOME/.m2":/root/.m2 -w /usr/src/rubix quboleinc/hadoop_mvn_thrift /bin/bash script.sh
 
 after_success:
-  - sudo mvn cobertura:cobertura coveralls:report
+  - mvn cobertura:cobertura coveralls:report
