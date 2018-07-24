@@ -124,7 +124,7 @@ public class CacheConfig
   private static final String DEFAULT_PRESTO_CLUSTER_MANAGER = "com.qubole.rubix.presto.PrestoClusterManager";
   private static final String DEFAULT_HADOOP_CLUSTER_MANAGER = "com.qubole.rubix.hadoop2.Hadoop2ClusterManager";
   private static final String DEFAULT_DUMMY_CLUSTER_MANAGER = "com.qubole.rubix.core.utils.DummyClusterManager";
-  private static final boolean DEFAULT_ENABLE_FILE_INVALIDATION = false;
+  private static final boolean DEFAULT_ENABLE_FILE_INVALIDATION = true;
 
   private CacheConfig()
   {

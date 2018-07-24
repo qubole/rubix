@@ -39,11 +39,9 @@ import org.testng.annotations.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -203,8 +201,8 @@ public class TestCachingInputStream
     assertions(readSize, 200, buffer, expectedOutput);
 
     // 4. Replace chunks already read from backend file with zeros
-    writeZeros(backendFileName, 100, 1100);
-    writeZeros(backendFileName, 1550, 1750);
+    DataGen.writeZerosInFile(backendFileName, 100, 1100);
+    DataGen.writeZerosInFile(backendFileName, 1550, 1750);
 
     // 5. Read from [0, 1750) and ensure the old data is returned, this verifies that reading in chunks, some from cache and some from backend works as expected
     Thread.sleep(3000);
@@ -232,19 +230,6 @@ public class TestCachingInputStream
     expectedOutput = stringBuilder.toString();
 
     assertions(readSize, 1000, buffer, expectedOutput);
-  }
-
-  private void writeZeros(String filename, int start, int end) throws IOException
-  {
-    File file = new File(filename);
-    RandomAccessFile raf = new RandomAccessFile(file, "rw");
-    raf.seek(start);
-    String s = "0";
-    StandardCharsets.UTF_8.encode(s);
-    for (int i = 0; i < (end - start); i++) {
-      raf.writeBytes(s);
-    }
-    raf.close();
   }
 
   @Test

@@ -54,6 +54,12 @@ public final class BookKeeperTestUtils
     }
   }
 
+  public static String getDefaultTestDirectoryPath(Configuration conf)
+  {
+    String directoryPath = Paths.get(CacheConfig.getCacheDirPrefixList(conf) + "0").toString();
+    return directoryPath;
+  }
+
   /**
    * Remove all cache directories and their parents.
    *

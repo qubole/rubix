@@ -16,15 +16,18 @@ import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
 import com.qubole.rubix.bookkeeper.test.BookKeeperTestUtils;
 import com.qubole.rubix.core.ClusterManagerInitilizationException;
+import com.qubole.rubix.core.utils.DataGen;
 import com.qubole.rubix.core.utils.DummyClusterManager;
 import com.qubole.rubix.hadoop2.Hadoop2ClusterManager;
 import com.qubole.rubix.presto.PrestoClusterManager;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
+import com.qubole.rubix.spi.FileInfo;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
@@ -43,6 +46,7 @@ public class TestBookKeeper
   private static final String TEST_CACHE_DIR_PREFIX = BookKeeperTestUtils.getTestCacheDirPrefix("TestBookKeeper");
   private static final String TEST_DNE_CLUSTER_MANAGER = "com.qubole.rubix.core.DoesNotExistClusterManager";
   private static final int TEST_MAX_DISKS = 1;
+  private static final String BACKEND_FILE_NAME = "backendFile";
 
   private final Configuration conf = new Configuration();
   private final MetricRegistry metrics = new MetricRegistry();
@@ -137,5 +141,53 @@ public class TestBookKeeper
     BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);
 
     ClusterManager manager = bookKeeper.getClusterManagerInstance(type, conf);
+  }
+
+  @Test
+  public void testGetFileInfoWithInvalidationEnabled() throws Exception
+  {
+    Path backendFilePath = new Path(BookKeeperTestUtils.getDefaultTestDirectoryPath(conf), BACKEND_FILE_NAME);
+    DataGen.populateFile(backendFilePath.toString());
+    int expectedFileSize = DataGen.generateContent(1).length();
+
+    CacheConfig.setFileInvalidationEnabled(conf, true);
+
+    BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);
+    FileInfo info = bookKeeper.getFileInfo(backendFilePath.toString());
+
+    assertTrue(info.getFileSize() == expectedFileSize, "FileSize was not equal to the expected value." +
+        " Got FileSize: " + info.getFileSize() + " Expected Value : " + expectedFileSize);
+
+    //Rewrite the file with half the data
+    DataGen.populateFile(backendFilePath.toString(), 2);
+
+    expectedFileSize = DataGen.generateContent(2).length();
+
+    info = bookKeeper.getFileInfo(backendFilePath.toString());
+    assertTrue(info.getFileSize() == expectedFileSize, "FileSize was not equal to the expected value." +
+        " Got FileSize: " + info.getFileSize() + " Expected Value : " + expectedFileSize);
+  }
+
+  @Test
+  public void testGetFileInfoWithInvalidationDisabled() throws Exception
+  {
+    Path backendFilePath = new Path(BookKeeperTestUtils.getDefaultTestDirectoryPath(conf), BACKEND_FILE_NAME);
+    DataGen.populateFile(backendFilePath.toString());
+    int expectedFileSize = DataGen.generateContent(1).length();
+
+    CacheConfig.setFileInvalidationEnabled(conf, false);
+
+    BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);
+    FileInfo info = bookKeeper.getFileInfo(backendFilePath.toString());
+
+    assertTrue(info.getFileSize() == expectedFileSize, "FileSize was not equal to the expected value." +
+        " Got FileSize: " + info.getFileSize() + " Expected Value : " + expectedFileSize);
+
+    //Rewrite the file with half the data
+    DataGen.populateFile(backendFilePath.toString(), 2);
+
+    info = bookKeeper.getFileInfo(backendFilePath.toString());
+    assertTrue(info.getFileSize() == expectedFileSize, "FileSize was not equal to the expected value." +
+        " Got FileSize: " + info.getFileSize() + " Expected Value : " + expectedFileSize);
   }
 }
