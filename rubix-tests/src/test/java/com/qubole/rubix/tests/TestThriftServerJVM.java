@@ -76,6 +76,8 @@ public class TestThriftServerJVM extends Configured
     /*
      * Dynamically, retrieving bookkeeper jar from /usr/lib/hadoop2/share/hadoop/tools/lib/ folder
      * */
+    log.info("Test Directory : " + testDirectory);
+    Files.createDirectories(Paths.get(testDirectoryPrefix + "dir0" + CacheConfig.getCacheDataDirSuffix(conf)));
     File folder = new File(jarsPath);
     File[] listOfFiles = folder.listFiles();
     String bookKeeperJarPath = null;
@@ -98,10 +100,7 @@ public class TestThriftServerJVM extends Configured
     bookKeeperJvm = pJVMBuilder.start();
     pJVMBuilder.command(localDataTransferStartCmd);
     localDataTransferJvm = pJVMBuilder.start();
-
-    log.info("Test Directory : " + testDirectory);
-    Files.createDirectories(Paths.get(testDirectoryPrefix + "dir0" + CacheConfig.getCacheDataDirSuffix(conf)));
-    Thread.sleep(3000);
+    Thread.sleep(1000);
   }
 
   @AfterClass
