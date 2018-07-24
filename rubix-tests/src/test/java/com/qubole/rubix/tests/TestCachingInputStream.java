@@ -141,7 +141,6 @@ public class TestCachingInputStream
   {
     BookKeeperServer.stopServer();
     LocalDataTransferServer.stopServer();
-    Configuration conf = new Configuration();
 
     inputStream.close();
     File file = new File(backendFileName);
