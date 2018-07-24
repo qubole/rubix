@@ -32,6 +32,7 @@ import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.Location;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -68,8 +69,8 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
   public static final String METRIC_BOOKKEEPER_CACHE_HIT_RATE_GAUGE = "rubix.bookkeeper.cache_hit_rate.gauge";
   public static final String METRIC_BOOKKEEPER_CACHE_MISS_RATE_GAUGE = "rubix.bookkeeper.cache_miss_rate.gauge";
   public static final String METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE = "rubix.bookkeeper.cache_size.gauge";
-  public static final String METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT = "rubix.bookkeeper.local_cache.count";
-  public static final String METRIC_BOOKKEEPER_LOCAL_REQUEST_COUNT = "rubix.bookkeeper.local_request.count";
+  public static final String METRIC_BOOKKEEPER_TOTAL_REQUEST_COUNT = "rubix.bookkeeper.total_request.count";
+  public static final String METRIC_BOOKKEEPER_CACHE_REQUEST_COUNT = "rubix.bookkeeper.cache_request.count";
   public static final String METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT = "rubix.bookkeeper.nonlocal_request.count";
   public static final String METRIC_BOOKKEEPER_REMOTE_REQUEST_COUNT = "rubix.bookkeeper.remote_request.count";
 
@@ -91,9 +92,9 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
 
   // Metrics to keep track of cache interactions
   private static Counter cacheEvictionCount;
-  private Counter localCacheCount;
+  private Counter totalRequestCount;
   private Counter remoteRequestCount;
-  private Counter localRequestCount;
+  private Counter cacheRequestCount;
   private Counter nonlocalRequestCount;
 
   public BookKeeper(Configuration conf, MetricRegistry metrics) throws FileNotFoundException
@@ -112,8 +113,8 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
   private void initializeMetrics()
   {
     cacheEvictionCount = metrics.counter(METRIC_BOOKKEEPER_CACHE_EVICTION_COUNT);
-    localCacheCount = metrics.counter(METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT);
-    localRequestCount = metrics.counter(METRIC_BOOKKEEPER_LOCAL_REQUEST_COUNT);
+    totalRequestCount = metrics.counter(METRIC_BOOKKEEPER_TOTAL_REQUEST_COUNT);
+    cacheRequestCount = metrics.counter(METRIC_BOOKKEEPER_CACHE_REQUEST_COUNT);
     nonlocalRequestCount = metrics.counter(METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT);
     remoteRequestCount = metrics.counter(METRIC_BOOKKEEPER_REMOTE_REQUEST_COUNT);
 
@@ -122,7 +123,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
       @Override
       public Double getValue()
       {
-        return ((double) localRequestCount.getCount() / (localRequestCount.getCount() + remoteRequestCount.getCount()));
+        return ((double) cacheRequestCount.getCount() / (cacheRequestCount.getCount() + remoteRequestCount.getCount()));
       }
     });
     metrics.register(METRIC_BOOKKEEPER_CACHE_MISS_RATE_GAUGE, new Gauge<Double>()
@@ -130,7 +131,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
       @Override
       public Double getValue()
       {
-        return ((double) remoteRequestCount.getCount() / (localRequestCount.getCount() + remoteRequestCount.getCount()));
+        return ((double) remoteRequestCount.getCount() / (cacheRequestCount.getCount() + remoteRequestCount.getCount()));
       }
     });
     metrics.register(METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE, new Gauge<Long>()
@@ -138,9 +139,27 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
       @Override
       public Long getValue()
       {
-        return fileMetadataCache.size();
+        return getCacheSize();
       }
     });
+  }
+
+  /**
+   * Get the current size of the data cached to this system.
+   *
+   * @return The size of the cache in bytes.
+   */
+  private Long getCacheSize()
+  {
+    final Map<Integer, String> diskMap = CacheUtil.getCacheDiskPathsMap(conf);
+    final String cacheDirSuffix = CacheConfig.getCacheDataDirSuffix(conf);
+
+    long cacheSize = 0;
+    for (int disk = 0; disk < diskMap.size(); disk++) {
+      long cacheDirSize = FileUtils.sizeOfDirectory(new File(diskMap.get(disk) + cacheDirSuffix));
+      cacheSize += cacheDirSize;
+    }
+    return cacheSize;
   }
 
   @Override
@@ -199,7 +218,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
 
     try {
       for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
-        localCacheCount.inc();
+        totalRequestCount.inc();
 
         long split = (blockNum * blockSize) / splitSize;
         if (!blockSplits.get(split).equalsIgnoreCase(nodeName)) {
@@ -209,7 +228,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
         else {
           if (md.isBlockCached(blockNum)) {
             blockLocations.add(new BlockLocation(Location.CACHED, blockSplits.get(split)));
-            localRequestCount.inc();
+            cacheRequestCount.inc();
           }
           else {
             blockLocations.add(new BlockLocation(Location.LOCAL, blockSplits.get(split)));
@@ -331,16 +350,17 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
   @Override
   public Map getCacheStats()
   {
-    final long cachedRequests = localRequestCount.getCount();
+    final long cachedRequests = cacheRequestCount.getCount();
     final long remoteRequests = remoteRequestCount.getCount();
-    final long totalRequests = localCacheCount.getCount();
+    final long nonLocalRequests = nonlocalRequestCount.getCount();
+    final long totalRequests = totalRequestCount.getCount();
 
     Map<String, Double> stats = new HashMap<String, Double>();
     stats.put("Cache Hit Rate", ((double) cachedRequests / (cachedRequests + remoteRequests)));
     stats.put("Cache Miss Rate", ((double) (remoteRequests) / (cachedRequests + remoteRequests)));
     stats.put("Cache Reads", ((double) cachedRequests));
     stats.put("Remote Reads", ((double) remoteRequests));
-    stats.put("Non-Local Reads", ((double) (totalRequests - cachedRequests - remoteRequests)));
+    stats.put("Non-Local Reads", ((double) nonLocalRequests));
     return stats;
   }
 

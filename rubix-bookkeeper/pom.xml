@@ -97,6 +97,14 @@
             <version>${dep.guava.version}</version>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>com.qubole.rubix</groupId>
+            <artifactId>rubix-core</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+            <version>0.3.2-SNAPSHOT</version>
+        </dependency>
     </dependencies>
 
     <build>

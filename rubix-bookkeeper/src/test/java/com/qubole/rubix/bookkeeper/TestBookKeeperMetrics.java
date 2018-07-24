@@ -19,16 +19,19 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.Weigher;
 import com.google.common.testing.FakeTicker;
 import com.qubole.rubix.bookkeeper.test.BookKeeperTestUtils;
+import com.qubole.rubix.core.LocalFSInputStream;
+import com.qubole.rubix.core.ReadRequest;
+import com.qubole.rubix.core.RemoteReadRequestChain;
+import com.qubole.rubix.core.utils.DataGen;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.thrift.shaded.TException;
-import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -88,11 +91,11 @@ public class TestBookKeeperMetrics
   {
     final long totalRequests = TEST_END_BLOCK - TEST_START_BLOCK;
 
-    assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT).getCount(), 0);
+    assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_TOTAL_REQUEST_COUNT).getCount(), 0);
 
     bookKeeper.getCacheStatus(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
 
-    assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT).getCount(), totalRequests);
+    assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_TOTAL_REQUEST_COUNT).getCount(), totalRequests);
   }
 
   /**
@@ -122,13 +125,13 @@ public class TestBookKeeperMetrics
   {
     final long totalRequests = TEST_END_BLOCK - TEST_START_BLOCK;
 
-    assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_LOCAL_REQUEST_COUNT).getCount(), 0);
+    assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_CACHE_REQUEST_COUNT).getCount(), 0);
 
     bookKeeper.getCacheStatus(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
     bookKeeper.setAllCached(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, TEST_START_BLOCK, TEST_END_BLOCK);
     bookKeeper.getCacheStatus(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
 
-    assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_LOCAL_REQUEST_COUNT).getCount(), totalRequests);
+    assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_CACHE_REQUEST_COUNT).getCount(), totalRequests);
   }
 
   /**
@@ -142,28 +145,42 @@ public class TestBookKeeperMetrics
     final long totalRequests = TEST_END_BLOCK - TEST_START_BLOCK;
 
     assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT).getCount(), 0);
-    assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_LOCAL_REQUEST_COUNT).getCount(), 0);
+    assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_CACHE_REQUEST_COUNT).getCount(), 0);
 
     bookKeeper.getCacheStatus(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER_MULTINODE.ordinal());
 
     assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT).getCount(), totalRequests);
-    assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_LOCAL_REQUEST_COUNT).getCount(), 0);
+    assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_CACHE_REQUEST_COUNT).getCount(), 0);
   }
 
   /**
    * Verify that the metric representing the current cache size is correctly registered & reports expected values.
    *
-   * @throws TException when file metadata cannot be fetched or refreshed.
+   * @throws IOException if an I/O error occurs when interacting with the cache.
    */
   @Test
-  public void verifyCacheSizeMetricIsReported() throws TException
+  public void verifyCacheSizeMetricIsReported() throws IOException
   {
+    final int readStart = 0;
+    final int readEnd = 100;
+    final int bufferOffset = 0;
+    final byte[] buffer = new byte[(int) TEST_FILE_LENGTH];
+
     // Since the value returned from a gauge metric is an object rather than a primitive, boxing is required here to properly compare the values.
     assertEquals(metrics.getGauges().get(BookKeeper.METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE).getValue(), new Long(0));
 
-    bookKeeper.getCacheStatus(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+    final File testFile = new File(TEST_REMOTE_PATH);
+    DataGen.populateFile(TEST_REMOTE_PATH);
 
-    assertEquals(metrics.getGauges().get(BookKeeper.METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE).getValue(), new Long(1));
+    final ReadRequest readRequest = new ReadRequest(readStart, readEnd, readStart, readEnd, buffer, bufferOffset, testFile.length());
+    final FSDataInputStream inputStream = new FSDataInputStream(new LocalFSInputStream(TEST_REMOTE_PATH));
+    final RemoteReadRequestChain readRequestChain = new RemoteReadRequestChain(inputStream, CacheUtil.getLocalPath(TEST_REMOTE_PATH, conf));
+
+    readRequestChain.addReadRequest(readRequest);
+    readRequestChain.lock();
+    final long bytesRead = readRequestChain.call();
+
+    assertEquals(metrics.getGauges().get(BookKeeper.METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE).getValue(), bytesRead);
   }
 
   /**
