@@ -1,9 +1,6 @@
 branches:
   only:
     - master
-language: java
-jdk:
-  - openjdk7
 sudo: required
 services:
   - docker
