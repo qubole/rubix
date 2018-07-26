@@ -202,7 +202,7 @@ public class TestBookKeeper
     int expectedFileSize = DataGen.generateContent(1).length();
 
     CacheConfig.setFileStalenessCheck(conf, false);
-    CacheConfig.setStaleFileInfoExpiryPeriod(conf, 5000);
+    CacheConfig.setStaleFileInfoExpiryPeriod(conf, 5);
 
     FakeTicker ticker = new FakeTicker();
 

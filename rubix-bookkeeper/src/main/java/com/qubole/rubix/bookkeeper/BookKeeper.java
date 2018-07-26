@@ -497,7 +497,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
     int expiryPeriod = CacheConfig.getStaleFileInfoExpiryPeriod(conf);
     fileInfoCache = CacheBuilder.newBuilder()
         .ticker(ticker)
-        .expireAfterWrite(expiryPeriod, TimeUnit.MILLISECONDS)
+        .expireAfterWrite(expiryPeriod, TimeUnit.SECONDS)
         .removalListener(new RemovalListener<String, FileInfo>()
         {
           @Override

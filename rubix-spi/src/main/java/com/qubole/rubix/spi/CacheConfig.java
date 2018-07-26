@@ -126,7 +126,7 @@ public class CacheConfig
   private static final String DEFAULT_HADOOP_CLUSTER_MANAGER = "com.qubole.rubix.hadoop2.Hadoop2ClusterManager";
   private static final String DEFAULT_DUMMY_CLUSTER_MANAGER = "com.qubole.rubix.core.utils.DummyClusterManager";
   private static final boolean DEFAULT_ENABLE_FILE_STALESSNESS_CHECK = true;
-  private static final int DEFAULT_STALE_FILEINFO_EXPIRY_PERIOD = 3600000; // ms
+  private static final int DEFAULT_STALE_FILEINFO_EXPIRY_PERIOD = 36000; // seconds
 
   private CacheConfig()
   {
