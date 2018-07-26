@@ -16,8 +16,6 @@ package com.qubole.rubix.bookkeeper;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Ticker;
-import com.google.common.cache.CacheBuilder;
 import com.google.common.testing.FakeTicker;
 import com.qubole.rubix.bookkeeper.test.BookKeeperTestUtils;
 import com.qubole.rubix.spi.CacheConfig;
@@ -101,34 +99,19 @@ public class TestCoordinatorBookKeeper
     final int workerLivenessExpiry = 1000; // ms
     CacheConfig.setWorkerLivenessExpiry(conf, workerLivenessExpiry);
 
-    final MockCoordinatorBookKeeper coordinatorManager = new MockCoordinatorBookKeeper(conf, metrics, ticker);
+    final CoordinatorBookKeeper coordinatorBookKeeper = new CoordinatorBookKeeper(conf, metrics, ticker);
     final Gauge liveWorkerGauge = metrics.getGauges().get(CoordinatorBookKeeper.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE);
 
-    coordinatorManager.handleHeartbeat(TEST_HOSTNAME_WORKER1);
-    coordinatorManager.handleHeartbeat(TEST_HOSTNAME_WORKER2);
+    coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER1);
+    coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER2);
 
     int workerCount = (int) liveWorkerGauge.getValue();
     assertEquals(workerCount, 2, "Incorrect number of workers reporting heartbeat");
 
     ticker.advance(workerLivenessExpiry, TimeUnit.MILLISECONDS);
-    coordinatorManager.handleHeartbeat(TEST_HOSTNAME_WORKER1);
+    coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER1);
 
     workerCount = (int) liveWorkerGauge.getValue();
     assertEquals(workerCount, 1, "Incorrect number of workers reporting heartbeat");
-  }
-
-  /**
-   * Class to mock a {@link CoordinatorBookKeeper} and customize the ticker associated with the worker liveness cache.
-   */
-  private static class MockCoordinatorBookKeeper extends CoordinatorBookKeeper
-  {
-    public MockCoordinatorBookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker) throws FileNotFoundException
-    {
-      super(conf, metrics);
-      super.liveWorkerCache = CacheBuilder.newBuilder()
-          .expireAfterWrite(CacheConfig.getWorkerLivenessExpiry(conf), TimeUnit.MILLISECONDS)
-          .ticker(ticker)
-          .build();
-    }
   }
 }

@@ -15,6 +15,8 @@ package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Ticker;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.qubole.rubix.spi.CacheConfig;
@@ -29,9 +31,6 @@ public class CoordinatorBookKeeper extends BookKeeper
 {
   private static Log log = LogFactory.getLog(CoordinatorBookKeeper.class.getName());
 
-  // Metric key for liveness of the BookKeeper daemon.
-  public static final String METRIC_BOOKKEEPER_LIVENESS_CHECK = "rubix.bookkeeper.liveness.gauge";
-
   // Metric key for the number of live workers in the cluster.
   public static final String METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE = "rubix.bookkeeper.live_workers.gauge";
 
@@ -40,8 +39,15 @@ public class CoordinatorBookKeeper extends BookKeeper
 
   public CoordinatorBookKeeper(Configuration conf, MetricRegistry metrics) throws FileNotFoundException
   {
-    super(conf, metrics);
+    this(conf, metrics, Ticker.systemTicker());
+  }
+
+  @VisibleForTesting
+  CoordinatorBookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker) throws FileNotFoundException
+  {
+    super(conf, metrics, ticker);
     this.liveWorkerCache = CacheBuilder.newBuilder()
+        .ticker(ticker)
         .expireAfterWrite(CacheConfig.getWorkerLivenessExpiry(conf), TimeUnit.MILLISECONDS)
         .build();
 
@@ -60,14 +66,6 @@ public class CoordinatorBookKeeper extends BookKeeper
    */
   private void registerMetrics()
   {
-    metrics.register(METRIC_BOOKKEEPER_LIVENESS_CHECK, new Gauge<Integer>()
-    {
-      @Override
-      public Integer getValue()
-      {
-        return 1;
-      }
-    });
     metrics.register(METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE, new Gauge<Integer>()
     {
       @Override

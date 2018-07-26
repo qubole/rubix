@@ -14,22 +14,16 @@ package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Ticker;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.Weigher;
 import com.google.common.testing.FakeTicker;
 import com.qubole.rubix.bookkeeper.test.BookKeeperTestUtils;
-import com.qubole.rubix.core.LocalFSInputStream;
-import com.qubole.rubix.core.ReadRequest;
-import com.qubole.rubix.core.RemoteReadRequestChain;
 import com.qubole.rubix.core.utils.DataGen;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.ClusterType;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.thrift.shaded.TException;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -82,12 +76,12 @@ public class TestBookKeeperMetrics
   }
 
   /**
-   * Verify that the metric representing total block hits is correctly registered & incremented.
+   * Verify that the metric representing total requests is correctly registered & incremented.
    *
    * @throws TException when file metadata cannot be fetched or refreshed.
    */
   @Test
-  public void verifyBlockHitsMetricIsReported() throws TException
+  public void verifyTotalRequestMetricIsReported() throws TException
   {
     final long totalRequests = TEST_END_BLOCK - TEST_START_BLOCK;
 
@@ -159,28 +153,21 @@ public class TestBookKeeperMetrics
    * @throws IOException if an I/O error occurs when interacting with the cache.
    */
   @Test
-  public void verifyCacheSizeMetricIsReported() throws IOException
+  public void verifyCacheSizeMetricIsReported() throws IOException, TException
   {
-    final int readStart = 0;
-    final int readEnd = 100;
-    final int bufferOffset = 0;
-    final byte[] buffer = new byte[(int) TEST_FILE_LENGTH];
+    final String remotePathWithScheme = "file://" + TEST_REMOTE_PATH;
+    final int readOffset = 0;
+    final int readLength = 100;
 
     // Since the value returned from a gauge metric is an object rather than a primitive, boxing is required here to properly compare the values.
     assertEquals(metrics.getGauges().get(BookKeeper.METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE).getValue(), new Long(0));
 
-    final File testFile = new File(TEST_REMOTE_PATH);
     DataGen.populateFile(TEST_REMOTE_PATH);
+    bookKeeper.readData(remotePathWithScheme, readOffset, readLength, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
 
-    final ReadRequest readRequest = new ReadRequest(readStart, readEnd, readStart, readEnd, buffer, bufferOffset, testFile.length());
-    final FSDataInputStream inputStream = new FSDataInputStream(new LocalFSInputStream(TEST_REMOTE_PATH));
-    final RemoteReadRequestChain readRequestChain = new RemoteReadRequestChain(inputStream, CacheUtil.getLocalPath(TEST_REMOTE_PATH, conf));
-
-    readRequestChain.addReadRequest(readRequest);
-    readRequestChain.lock();
-    final long bytesRead = readRequestChain.call();
-
-    assertEquals(metrics.getGauges().get(BookKeeper.METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE).getValue(), bytesRead);
+    final long mdSize = FileUtils.sizeOf(new File(CacheUtil.getMetadataFilePath(TEST_REMOTE_PATH, conf)));
+    final long totalCacheSize = readLength + mdSize;
+    assertEquals(metrics.getGauges().get(BookKeeper.METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE).getValue(), totalCacheSize);
   }
 
   /**
@@ -195,7 +182,7 @@ public class TestBookKeeperMetrics
     final FakeTicker ticker = new FakeTicker();
     CacheConfig.setCacheDataExpirationAfterWrite(conf, 1000);
     metrics.removeMatching(MetricFilter.ALL);
-    bookKeeper = new MockBookKeeper(conf, metrics, ticker);
+    bookKeeper = new CoordinatorBookKeeper(conf, metrics, ticker);
 
     assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_CACHE_EVICTION_COUNT).getCount(), 0);
 
@@ -227,47 +214,5 @@ public class TestBookKeeperMetrics
 
     assertEquals(metrics.getGauges().get(BookKeeper.METRIC_BOOKKEEPER_CACHE_HIT_RATE_GAUGE).getValue(), 0.5);
     assertEquals(metrics.getGauges().get(BookKeeper.METRIC_BOOKKEEPER_CACHE_MISS_RATE_GAUGE).getValue(), 0.5);
-  }
-
-  /**
-   * Class to mock a {@link BookKeeper} and customize the ticker associated with the file metadata cache.
-   */
-  private static class MockBookKeeper extends BookKeeper
-  {
-    public MockBookKeeper(final Configuration conf, MetricRegistry metrics, Ticker ticker) throws FileNotFoundException
-    {
-      super(conf, metrics);
-      super.fileMetadataCache = CacheBuilder.newBuilder()
-          .weigher(new Weigher<String, FileMetadata>()
-          {
-            @Override
-            public int weigh(String key, FileMetadata md)
-            {
-              return md.getWeight(conf);
-            }
-          })
-          .maximumWeight((long) (getAvailableCacheSpace(conf) * 1.0 * CacheConfig.getCacheDataFullnessPercentage(conf) / 100.0))
-          .expireAfterWrite(CacheConfig.getCacheDataExpirationAfterWrite(conf), TimeUnit.MILLISECONDS)
-          .removalListener(new CacheRemovalListener())
-          .ticker(ticker)
-          .build();
-    }
-
-    private long getAvailableCacheSpace(Configuration conf)
-    {
-      long avail = 0;
-      for (int d = 0; d < CacheUtil.getCacheDiskCount(conf); d++) {
-        avail += new File(CacheUtil.getDirPath(d, conf)).getUsableSpace();
-      }
-      avail = avail / 1024 / 1024;
-
-      return (long) (0.95 * avail);
-    }
-
-    @Override
-    public void handleHeartbeat(String workerHostname)
-    {
-      // This operation is not needed during testing.
-    }
   }
 }

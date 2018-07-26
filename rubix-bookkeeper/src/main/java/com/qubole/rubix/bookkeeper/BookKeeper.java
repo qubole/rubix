@@ -17,6 +17,7 @@ import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
+import com.google.common.base.Ticker;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.RemovalListener;
@@ -99,10 +100,16 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
 
   public BookKeeper(Configuration conf, MetricRegistry metrics) throws FileNotFoundException
   {
+    this(conf, metrics, Ticker.systemTicker());
+  }
+
+  @VisibleForTesting
+  BookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker) throws FileNotFoundException
+  {
     this.conf = conf;
     this.metrics = metrics;
     initializeMetrics();
-    initializeCache(conf);
+    initializeCache(conf, ticker);
     fetchProcessor = new RemoteFetchProcessor(conf);
     fetchProcessor.startAsync();
   }
@@ -142,24 +149,6 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
         return getCacheSize();
       }
     });
-  }
-
-  /**
-   * Get the current size of the data cached to this system.
-   *
-   * @return The size of the cache in bytes.
-   */
-  private Long getCacheSize()
-  {
-    final Map<Integer, String> diskMap = CacheUtil.getCacheDiskPathsMap(conf);
-    final String cacheDirSuffix = CacheConfig.getCacheDataDirSuffix(conf);
-
-    long cacheSize = 0;
-    for (int disk = 0; disk < diskMap.size(); disk++) {
-      long cacheDirSize = FileUtils.sizeOfDirectory(new File(diskMap.get(disk) + cacheDirSuffix));
-      cacheSize += cacheDirSize;
-    }
-    return cacheSize;
   }
 
   @Override
@@ -468,7 +457,25 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
     return endBlock;
   }
 
-  private static synchronized void initializeCache(final Configuration conf) throws FileNotFoundException
+  /**
+   * Get the current size of the data cached to this system.
+   *
+   * @return The size of the cache in bytes.
+   */
+  private Long getCacheSize()
+  {
+    final Map<Integer, String> diskMap = CacheUtil.getCacheDiskPathsMap(conf);
+    final String cacheDirSuffix = CacheConfig.getCacheDataDirSuffix(conf);
+
+    long cacheSize = 0;
+    for (int disk = 0; disk < diskMap.size(); disk++) {
+      long cacheDirSize = FileUtils.sizeOfDirectory(new File(diskMap.get(disk) + cacheDirSuffix));
+      cacheSize += cacheDirSize;
+    }
+    return cacheSize;
+  }
+
+  private static synchronized void initializeCache(final Configuration conf, final Ticker ticker) throws FileNotFoundException
   {
     CacheUtil.createCacheDirectories(conf);
 
@@ -484,6 +491,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
     final long total = (long) (0.95 * avail);
 
     fileMetadataCache = CacheBuilder.newBuilder()
+        .ticker(ticker)
         .weigher(new Weigher<String, FileMetadata>()
         {
           @Override
@@ -496,6 +504,16 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
         .expireAfterWrite(CacheConfig.getCacheDataExpirationAfterWrite(conf), TimeUnit.MILLISECONDS)
         .removalListener(new CacheRemovalListener())
         .build();
+  }
+
+  public void invalidateEntry(String key)
+  {
+    fileMetadataCache.invalidate(key);
+  }
+
+  public FileMetadata getEntry(String key, Callable<FileMetadata> callable) throws ExecutionException
+  {
+    return fileMetadataCache.get(key, callable);
   }
 
   protected static class CacheRemovalListener implements RemovalListener<String, FileMetadata>
@@ -512,16 +530,6 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
         log.warn("Could not cleanup FileMetadata for " + notification.getKey(), e);
       }
     }
-  }
-
-  public void invalidateEntry(String key)
-  {
-    fileMetadataCache.invalidate(key);
-  }
-
-  public FileMetadata getEntry(String key, Callable<FileMetadata> callable) throws ExecutionException
-  {
-    return fileMetadataCache.get(key, callable);
   }
 
   private static class CreateFileMetadataCallable

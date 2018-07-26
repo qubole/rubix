@@ -32,9 +32,7 @@ import java.net.DatagramSocket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 
-import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
 public class TestBookKeeperServer
@@ -78,25 +76,6 @@ public class TestBookKeeperServer
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 
     BookKeeperTestUtils.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
-  }
-
-  /**
-   * Verify that liveness status of the BookKeeper daemon is correctly reported.
-   */
-  @Test
-  public void verifyLivenessCheck()
-  {
-    CacheConfig.setOnMaster(conf, true);
-
-    assertNull(metrics.getGauges().get(CoordinatorBookKeeper.METRIC_BOOKKEEPER_LIVENESS_CHECK), "Metric should not exist before server has started");
-
-    startBookKeeperServer();
-
-    assertEquals(metrics.getGauges().get(CoordinatorBookKeeper.METRIC_BOOKKEEPER_LIVENESS_CHECK).getValue(), 1, "Metric should return a value once the server has started");
-
-    stopBookKeeperServer();
-
-    assertNull(metrics.getGauges().get(CoordinatorBookKeeper.METRIC_BOOKKEEPER_LIVENESS_CHECK), "Metric should not exist after server has stopped");
   }
 
   /**
