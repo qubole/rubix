@@ -75,7 +75,7 @@ public class CacheConfig
   private static final String KEY_HADOOP_CLUSTER_MANAGER = "rubix.hadoop.clustermanager.class";
   private static final String KEY_DUMMY_CLUSTER_MANAGER = "rubix.dummy.clustermanager.class";
   private static final String KEY_ENABLE_FILE_STALESSNESS_CHECK = "rubix.enable.file.staleness-check";
-  private static final String KEY_STALE_FILEINFO_EXPIRY_PERIOD = "rubix.filestatus.expiry.period";
+  private static final String KEY_STALE_FILEINFO_EXPIRY_PERIOD = "rubix.stale.fileinfo.expiry.period";
 
   // default values
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
