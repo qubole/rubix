@@ -12,12 +12,16 @@
  */
 package com.qubole.rubix.bookkeeper.utils;
 
+import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Map;
 
 /**
  * Created by stagra on 29/1/16.
@@ -55,7 +59,25 @@ public class DiskUtils
     return size * 1024;
   }
 
-  public static int getUsedSpaceMB(org.apache.hadoop.conf.Configuration conf)
+  /**
+   * Get the current size of the data cached to this system.
+   *
+   * @return The size of the cache in MB.
+   */
+  public static int getCacheSizeMB(Configuration conf)
+  {
+    final Map<Integer, String> diskMap = CacheUtil.getCacheDiskPathsMap(conf);
+    final String cacheDirSuffix = CacheConfig.getCacheDataDirSuffix(conf);
+
+    long cacheSize = 0;
+    for (int disk = 0; disk < diskMap.size(); disk++) {
+      long cacheDirSize = FileUtils.sizeOfDirectory(new File(diskMap.get(disk) + cacheDirSuffix));
+      cacheSize += cacheDirSize;
+    }
+    return DiskUtils.bytesToMB(cacheSize);
+  }
+
+  public static int getUsedSpaceMB(Configuration conf)
   {
     long used = 0;
     for (int d = 0; d < CacheUtil.getCacheDiskCount(conf); d++) {

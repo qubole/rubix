@@ -37,7 +37,6 @@ import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.FileInfo;
 import com.qubole.rubix.spi.Location;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -156,7 +155,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
       @Override
       public Integer getValue()
       {
-        return getCacheSizeMB();
+        return DiskUtils.getCacheSizeMB(conf);
       }
     });
   }
@@ -493,24 +492,6 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
     }
 
     return endBlock;
-  }
-
-  /**
-   * Get the current size of the data cached to this system.
-   *
-   * @return The size of the cache in MB.
-   */
-  private int getCacheSizeMB()
-  {
-    final Map<Integer, String> diskMap = CacheUtil.getCacheDiskPathsMap(conf);
-    final String cacheDirSuffix = CacheConfig.getCacheDataDirSuffix(conf);
-
-    long cacheSize = 0;
-    for (int disk = 0; disk < diskMap.size(); disk++) {
-      long cacheDirSize = FileUtils.sizeOfDirectory(new File(diskMap.get(disk) + cacheDirSuffix));
-      cacheSize += cacheDirSize;
-    }
-    return DiskUtils.bytesToMB(cacheSize);
   }
 
   private static synchronized void initializeCache(final Configuration conf, final Ticker ticker)
