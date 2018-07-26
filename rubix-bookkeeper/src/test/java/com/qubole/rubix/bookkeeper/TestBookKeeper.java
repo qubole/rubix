@@ -153,7 +153,7 @@ public class TestBookKeeper
     DataGen.populateFile(backendFilePath.toString());
     int expectedFileSize = DataGen.generateContent(1).length();
 
-    CacheConfig.setFileInvalidationEnabled(conf, true);
+    CacheConfig.setFileStalenessCheck(conf, true);
 
     BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);
     FileInfo info = bookKeeper.getFileInfo(backendFilePath.toString());
@@ -178,7 +178,7 @@ public class TestBookKeeper
     DataGen.populateFile(backendFilePath.toString());
     int expectedFileSize = DataGen.generateContent(1).length();
 
-    CacheConfig.setFileInvalidationEnabled(conf, false);
+    CacheConfig.setFileStalenessCheck(conf, false);
 
     BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);
     FileInfo info = bookKeeper.getFileInfo(backendFilePath.toString());
@@ -201,8 +201,8 @@ public class TestBookKeeper
     DataGen.populateFile(backendFilePath.toString());
     int expectedFileSize = DataGen.generateContent(1).length();
 
-    CacheConfig.setFileInvalidationEnabled(conf, false);
-    CacheConfig.setFileStatusExpiryPeriod(conf, 5000);
+    CacheConfig.setFileStalenessCheck(conf, false);
+    CacheConfig.setStaleFileInfoExpiryPeriod(conf, 5000);
 
     FakeTicker ticker = new FakeTicker();
 

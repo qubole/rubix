@@ -338,7 +338,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
   @Override
   public FileInfo getFileInfo(String remotePath) throws TException
   {
-    if (CacheConfig.isFileInvalidationEnabled(conf)) {
+    if (CacheConfig.isFileStalenessCheckEnabled(conf)) {
       try {
         Path path = new Path(remotePath);
         FileSystem fs = path.getFileSystem(conf);
@@ -494,7 +494,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
   private static void initializeFileInfoCache(final Configuration conf, final Ticker ticker)
   {
     ExecutorService executor = Executors.newSingleThreadExecutor();
-    int expiryPeriod = CacheConfig.getFileStatusExpiryPeriod(conf);
+    int expiryPeriod = CacheConfig.getStaleFileInfoExpiryPeriod(conf);
     fileInfoCache = CacheBuilder.newBuilder()
         .ticker(ticker)
         .expireAfterWrite(expiryPeriod, TimeUnit.MILLISECONDS)
@@ -503,7 +503,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
           @Override
           public void onRemoval(RemovalNotification<String, FileInfo> notification)
           {
-            log.info("removed FileInfo for path " + notification.getKey() + " due to " + notification.getCause());
+            log.info("Removed FileInfo for path " + notification.getKey() + " due to " + notification.getCause());
           }
         })
         .build(CacheLoader.asyncReloading(new CacheLoader<String, FileInfo>()
@@ -564,7 +564,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
 
   private boolean isInvalidationRequired(long metadataLastModifiedTime, long remoteLastModifiedTime)
   {
-    if (CacheConfig.isFileInvalidationEnabled(conf) && (metadataLastModifiedTime != remoteLastModifiedTime)) {
+    if (CacheConfig.isFileStalenessCheckEnabled(conf) && (metadataLastModifiedTime != remoteLastModifiedTime)) {
       return true;
     }
 

@@ -184,7 +184,7 @@ public class TestCachingInputStream
   public void testChunkCachingAndEviction()
       throws IOException, InterruptedException, URISyntaxException
   {
-    CacheConfig.setFileInvalidationEnabled(conf, true);
+    CacheConfig.setFileStalenessCheck(conf, true);
     // 1. Seek and read some data
     testCachingHelper();
 
