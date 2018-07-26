@@ -31,6 +31,17 @@ public class DiskUtils
     //
   }
 
+  /**
+   * Convert bytes to MB.
+   *
+   * @param bytes   The number of bytes.
+   * @return the number of bytes as MB.
+   */
+  public static int bytesToMB(long bytes)
+  {
+    return (int) (bytes / 1024 / 1024);
+  }
+
   // Return actual size of a sparse file in bytes
   public static long getActualSize(String path)
       throws IOException
@@ -51,6 +62,6 @@ public class DiskUtils
       File localPath = new File(CacheUtil.getDirPath(d, conf));
       used += localPath.getTotalSpace() - localPath.getUsableSpace();
     }
-    return (int) (used / 1024 / 1024);
+    return bytesToMB(used);
   }
 }

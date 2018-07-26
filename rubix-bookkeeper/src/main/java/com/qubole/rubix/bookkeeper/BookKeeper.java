@@ -25,6 +25,7 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.cache.Weigher;
+import com.qubole.rubix.bookkeeper.utils.DiskUtils;
 import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.core.ReadRequest;
 import com.qubole.rubix.core.RemoteReadRequestChain;
@@ -75,7 +76,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
   public static final String METRIC_BOOKKEEPER_CACHE_EVICTION_COUNT = "rubix.bookkeeper.cache_eviction.count";
   public static final String METRIC_BOOKKEEPER_CACHE_HIT_RATE_GAUGE = "rubix.bookkeeper.cache_hit_rate.gauge";
   public static final String METRIC_BOOKKEEPER_CACHE_MISS_RATE_GAUGE = "rubix.bookkeeper.cache_miss_rate.gauge";
-  public static final String METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE = "rubix.bookkeeper.cache_size.gauge";
+  public static final String METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE = "rubix.bookkeeper.cache_size_mb.gauge";
   public static final String METRIC_BOOKKEEPER_TOTAL_REQUEST_COUNT = "rubix.bookkeeper.total_request.count";
   public static final String METRIC_BOOKKEEPER_CACHE_REQUEST_COUNT = "rubix.bookkeeper.cache_request.count";
   public static final String METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT = "rubix.bookkeeper.nonlocal_request.count";
@@ -150,12 +151,12 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
         return ((double) remoteRequestCount.getCount() / (cacheRequestCount.getCount() + remoteRequestCount.getCount()));
       }
     });
-    metrics.register(METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE, new Gauge<Long>()
+    metrics.register(METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE, new Gauge<Integer>()
     {
       @Override
-      public Long getValue()
+      public Integer getValue()
       {
-        return getCacheSize();
+        return getCacheSizeMB();
       }
     });
   }
@@ -497,9 +498,9 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
   /**
    * Get the current size of the data cached to this system.
    *
-   * @return The size of the cache in bytes.
+   * @return The size of the cache in MB.
    */
-  private Long getCacheSize()
+  private int getCacheSizeMB()
   {
     final Map<Integer, String> diskMap = CacheUtil.getCacheDiskPathsMap(conf);
     final String cacheDirSuffix = CacheConfig.getCacheDataDirSuffix(conf);
@@ -509,7 +510,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
       long cacheDirSize = FileUtils.sizeOfDirectory(new File(diskMap.get(disk) + cacheDirSuffix));
       cacheSize += cacheDirSize;
     }
-    return cacheSize;
+    return DiskUtils.bytesToMB(cacheSize);
   }
 
   private static synchronized void initializeCache(final Configuration conf, final Ticker ticker)
@@ -521,7 +522,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
     for (int d = 0; d < CacheUtil.getCacheDiskCount(conf); d++) {
       avail += new File(CacheUtil.getDirPath(d, conf)).getUsableSpace();
     }
-    avail = avail / 1024 / 1024;
+    avail = DiskUtils.bytesToMB(avail);
     log.info("total free space " + avail + "MB");
 
     // In corner cases evictions might not make enough space for new entries

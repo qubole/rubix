@@ -16,6 +16,7 @@ import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.testing.FakeTicker;
 import com.qubole.rubix.bookkeeper.test.BookKeeperTestUtils;
+import com.qubole.rubix.bookkeeper.utils.DiskUtils;
 import com.qubole.rubix.core.utils.DataGen;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
@@ -160,13 +161,13 @@ public class TestBookKeeperMetrics
     final int readLength = 100;
 
     // Since the value returned from a gauge metric is an object rather than a primitive, boxing is required here to properly compare the values.
-    assertEquals(metrics.getGauges().get(BookKeeper.METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE).getValue(), new Long(0));
+    assertEquals(metrics.getGauges().get(BookKeeper.METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE).getValue(), 0);
 
     DataGen.populateFile(TEST_REMOTE_PATH);
     bookKeeper.readData(remotePathWithScheme, readOffset, readLength, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
 
     final long mdSize = FileUtils.sizeOf(new File(CacheUtil.getMetadataFilePath(TEST_REMOTE_PATH, conf)));
-    final long totalCacheSize = readLength + mdSize;
+    final int totalCacheSize = DiskUtils.bytesToMB(readLength + mdSize);
     assertEquals(metrics.getGauges().get(BookKeeper.METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE).getValue(), totalCacheSize);
   }
 
