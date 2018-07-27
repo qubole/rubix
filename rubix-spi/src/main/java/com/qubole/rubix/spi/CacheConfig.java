@@ -360,6 +360,7 @@ public class CacheConfig
       case PRESTO_CLUSTER_MANAGER:
         return conf.get(KEY_PRESTO_CLUSTER_MANAGER, DEFAULT_PRESTO_CLUSTER_MANAGER);
       case TEST_CLUSTER_MANAGER:
+      case TEST_CLUSTER_MANAGER_MULTINODE:
         return conf.get(KEY_DUMMY_CLUSTER_MANAGER, DEFAULT_DUMMY_CLUSTER_MANAGER);
       default:
         return null;
@@ -399,6 +400,11 @@ public class CacheConfig
   public static void setCacheDataEnabled(Configuration conf, boolean cacheEnabled)
   {
     conf.setBoolean(KEY_CACHE_ENABLED, cacheEnabled);
+  }
+
+  public static void setCacheDataExpirationAfterWrite(Configuration conf, int expiryAfterWrite)
+  {
+    conf.setInt(KEY_DATA_CACHE_EXPIRY_AFTER_WRITE, expiryAfterWrite);
   }
 
   public static void setCacheDataLocationWhitelist(Configuration conf, String whitelist)
@@ -479,6 +485,11 @@ public class CacheConfig
   public static void setServiceRetryInterval(Configuration conf, int retryInterval)
   {
     conf.setInt(KEY_SERVICE_RETRY_INTERVAL, retryInterval);
+  }
+
+  public static void setStatsDMetricsHost(Configuration conf, String hostname)
+  {
+    conf.set(KEY_METRICS_STATSD_HOST, hostname);
   }
 
   public static void setStatsDMetricsInterval(Configuration conf, int interval)
