@@ -4,8 +4,8 @@ mvn clean install -DskipTests
 
 PWD=$(pwd)
 echo $TRAVIS_JOB_ID
-echo TRAVIS_BRANCH
-echo TRAVIS_REPO_SLUG
+echo $TRAVIS_BRANCH
+echo $TRAVIS_REPO_SLUG
 HADOOP_JARSPATH="/usr/lib/hadoop2/share/hadoop/tools/lib/"
 
 RUBIX_SPI_JAR="${PWD}/rubix-spi/target/rubix-spi-*SNAPSHOT.jar"
