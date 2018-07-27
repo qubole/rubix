@@ -3,10 +3,6 @@
 mvn clean install -DskipTests
 
 PWD=$(pwd)
-echo $TRAVIS_JOB_ID
-echo $TRAVIS_BRANCH
-echo $TRAVIS_REPO_SLUG
-echo $TRAVIS_PULL_REQUEST
 HADOOP_JARSPATH="/usr/lib/hadoop2/share/hadoop/tools/lib/"
 
 RUBIX_SPI_JAR="${PWD}/rubix-spi/target/rubix-spi-*SNAPSHOT.jar"
@@ -22,4 +18,4 @@ sudo cp $RUBIX_PRESTO_JAR $HADOOP_JARSPATH
 sudo cp $RUBIX_SPI_JAR $HADOOP_JARSPATH
 
 mvn clean install
-mvn cobertura:cobertura coveralls:report
+mvn cobertura:cobertura coveralls:report -DrepoToken=$REPOTOKEN

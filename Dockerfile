@@ -58,7 +58,7 @@ ENV HADOOP_PREFIX /usr/lib/hadoop
 
 RUN cd /usr/lib && mv hadoop-$HADOOP_VERSION hadoop2 && ln -s ./hadoop2 hadoop
 
-ENV HADOOP_CLASSPATH=$HADOOP_CLASSPATH:/usr/lib/hadoop2/share/hadoop/tools/lib/*
+ENV HADOOP_CLASSPATH=$HADOOP_CLASSPATH:/usr/lib/hadoop2/*
 
 ENV USER=root
 ENV PATH $HADOOP_PREFIX/bin/:$PATH
