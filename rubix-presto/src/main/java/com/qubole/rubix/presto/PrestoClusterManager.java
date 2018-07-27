@@ -52,7 +52,6 @@ public class PrestoClusterManager extends ClusterManager
   public void initialize(final Configuration conf)
   {
     super.initialize(conf);
-
     ExecutorService executor = Executors.newSingleThreadExecutor();
     nodesCache = CacheBuilder.newBuilder()
         .refreshAfterWrite(getNodeRefreshTime(), TimeUnit.SECONDS)

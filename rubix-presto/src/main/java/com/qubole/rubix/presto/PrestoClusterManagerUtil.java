@@ -15,6 +15,7 @@ package com.qubole.rubix.presto;
 import com.google.common.collect.ImmutableList;
 import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
+import com.qubole.rubix.core.utils.ClusterUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -145,36 +146,17 @@ public class PrestoClusterManagerUtil
     return failedNodes;
   }
 
-  private static String getMasterHostname(Configuration conf)
-  {
-    // TODO move to common place (used in HeartbeatService)
-    String host;
-    log.debug("Trying master.hostname");
-    host = conf.get(serverAddressConf);
-    if (host != null) {
-      return host;
-    }
-    log.debug("Trying yarn.resourcemanager.address");
-    host = conf.get(yarnServerAddressConf);
-    if (host != null) {
-      host = host.substring(0, host.indexOf(":"));
-      return host;
-    }
-    log.debug("No hostname found in etc/*-site.xml, returning localhost");
-    return serverAddress;
-  }
-
   private static URL getNodeUrl(Configuration conf) throws MalformedURLException
   {
     int port = conf.getInt(serverPortConf, serverPort);
-    String address = getMasterHostname(conf);
+    String address = ClusterUtil.getMasterHostname(conf);
     return new URL("http://" + address + ":" + port + "/v1/node");
   }
 
   private static URL getFailedNodeUrl(Configuration conf) throws MalformedURLException
   {
     int port = conf.getInt(serverPortConf, serverPort);
-    String address = getMasterHostname(conf);
+    String address = ClusterUtil.getMasterHostname(conf);
     return new URL("http://" + address + ":" + port + "/v1/node/failed");
   }
 
