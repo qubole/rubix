@@ -8,4 +8,4 @@ services:
 before_install:
   - docker pull quboleinc/hadoop_mvn_thrift
 
-script: docker run -it --rm -v "$PWD":/usr/src/rubix -v "$HOME/.m2":/root/.m2 -w /usr/src/rubix -e TRAVIS_JOB_ID -e TRAVIS_BRANCH -e TRAVIS_REPO_SLUG quboleinc/hadoop_mvn_thrift /bin/bash script.sh
+script: docker run -it --rm -v "$PWD":/usr/src/rubix -v "$HOME/.m2":/root/.m2 -w /usr/src/rubix -e TRAVIS_JOB_ID -e TRAVIS_BRANCH -e TRAVIS_REPO_SLUG -e TRAVIS_PULL_REQUEST quboleinc/hadoop_mvn_thrift /bin/bash script.sh
