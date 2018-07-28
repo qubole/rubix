@@ -1,12 +1,19 @@
 branches:
   only:
-  - master
-sudo: required
+    - master
+language: java
 services:
-- docker
+  - docker
+jdk:
+  - openjdk7
+sudo: enabled
 before_install:
-- docker pull quboleinc/hadoop_mvn_thrift
-script: docker run -it --rm -v "$PWD":/usr/src/rubix -v "$HOME/.m2":/root/.m2 -w /usr/src/rubix -e REPOTOKEN quboleinc/hadoop_mvn_thrift /bin/bash script.sh
-env:
-  global:
-    secure: cp6DlVwiivySxI5uol9WlpUyjy/guuFXrjjRL4C/aF4CvvULdPyb9wVfG+oaFalswvu3BN3YTxaze9crWibtdSVsm91D19y116cQP1MehZmCa8kwHQ2YYWE/7RpO+x9I8qzKjk71j/KkVDz232a/aurgJW48IyNvDeTht6vEt9JCNBpzeC1NJ3Jparr8+EgtA9Kxs86j2HveHjsOE/cR9rWoQMas9BUR23T9EiDHW7u4vyh3cN0XsOVPaAFvBb/4VSLz3Rai4WsoVXxazwAuXHdaq4plQDNyI5/RaT6M50v7/eQAAKslFz/21JAjoN0GWaK7C1I9Qllbo033VH+Vdqt7qJyFT3mfUZJ5+2qCzdc6NA+rB+7aNAyLBKhUXn9B3ZvPYqlGKVbBSaYLI9YNx5SQDwk4WYKY13wpKtY2xdeQ1tPqwZqj+d2vm0/2p9X/MNBU0vxjYOyui1/GSQplc2h2X0N8EBPQ0mWNO+RKca6I1iSQznZldCuu52sJJVYeWRS9etROVLwFuFGd+rN5PrqT7X9G19/YeNPjMdtJlCzpzcLlT8hWwRiFIOBtZi2wEguepAM8SukzVYS+ZVY9x1Qi1KbTDzBO4Ufzn6IUlsXP52K8kQvHUJc6H2Wqe7qQ/1kKOV2M1vK8GK9qDous8MZktPL1CGf8eMoiL34UTZQ=
+  - sudo apt-get update -qq
+  - sudo apt-get install libboost-dev libboost-test-dev libboost-program-options-dev libevent-dev automake libtool flex bison pkg-config g++ libssl-dev
+  - cd $TRAVIS_HOME
+  - wget http://archive.apache.org/dist/thrift/0.9.3/thrift-0.9.3.tar.gz
+  - tar xfz thrift-0.9.3.tar.gz
+  - cd thrift-0.9.3 && ./configure --with-java --without-c_glib --without-cpp --without-ruby --without-nodejs --without-python --without-php --without-erlang --without-go && sudo make install
+  - cd $TRAVIS_BUILD_DIR
+  - docker pull quboleinc/hadoop_mvn_thrift
+script: mvn cobertura:cobertura coveralls:report  && docker run -it --rm -v "$PWD":/usr/src/rubix -v "$HOME/.m2":/root/.m2 -w /usr/src/rubix quboleinc/hadoop_mvn_thrift /bin/bash script.sh
