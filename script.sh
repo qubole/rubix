@@ -1,7 +1,7 @@
 #!/bin/bash
 
 mvn clean install -DskipTests
-
+echo $REPOTOKEN
 PWD=$(pwd)
 HADOOP_JARSPATH="/usr/lib/hadoop2/share/hadoop/tools/lib/"
 
