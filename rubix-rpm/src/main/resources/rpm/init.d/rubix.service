@@ -23,7 +23,6 @@ is_master="$2"
 # increase mmap system limit
 sudo sysctl -w vm.max_map_count=200000
 
-
 usage() {
   echo "Usage: $0"
   echo "$1"
@@ -31,7 +30,6 @@ usage() {
   echo "$0 [start|stop] [True|False]"
   exit $2
 }
-
 
 start() {
   export HADOOP_OPTS="-Dlog4j.configuration=file://${LOG4J_FILE}"
