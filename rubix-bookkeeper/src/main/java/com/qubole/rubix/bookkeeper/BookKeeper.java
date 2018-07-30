@@ -26,6 +26,7 @@ import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.cache.Weigher;
 import com.qubole.rubix.bookkeeper.utils.DiskUtils;
+import com.qubole.rubix.bookkeeper.validation.CacheValidator;
 import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.core.ReadRequest;
 import com.qubole.rubix.core.RemoteReadRequestChain;
@@ -94,6 +95,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
   int currentNodeIndex = -1;
   static long splitSize;
   private RemoteFetchProcessor fetchProcessor;
+  private CacheValidator cacheValidator;
   private Ticker ticker;
 
   // Registry for gathering & storing necessary metrics
@@ -119,8 +121,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
     this.ticker = ticker;
     initializeMetrics();
     initializeCache(conf, ticker);
-    fetchProcessor = new RemoteFetchProcessor(conf);
-    fetchProcessor.startAsync();
+    startServices();
   }
 
   /**
@@ -158,6 +159,15 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
         return DiskUtils.getCacheSizeMB(conf);
       }
     });
+  }
+
+  private void startServices()
+  {
+    fetchProcessor = new RemoteFetchProcessor(conf);
+    fetchProcessor.startAsync();
+
+    cacheValidator = new CacheValidator(conf, metrics);
+    cacheValidator.startAsync();
   }
 
   @Override

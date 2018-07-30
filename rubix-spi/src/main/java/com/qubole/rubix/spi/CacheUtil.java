@@ -148,7 +148,19 @@ public class CacheUtil
   public static String getMetadataFilePath(String remotePath, Configuration conf)
   {
     final String absLocation = getDirectory(remotePath, conf);
-    return absLocation + "/" + getName(remotePath) + "_mdfile";
+    return absLocation + "/" + getName(remotePath) + CacheConfig.getCacheMetadataFileSuffix(conf);
+  }
+
+  /**
+   * Determine whether the file at the given path is a metadata file.
+   *
+   * @param filePath  The path to a possible metadata file.
+   * @param conf      The current Hadoop configuration.
+   * @return true if the file is a metadata file, false otherwise
+   */
+  public static boolean isMetadataFile(String filePath, Configuration conf)
+  {
+    return filePath.endsWith(CacheConfig.getCacheMetadataFileSuffix(conf));
   }
 
   /**
