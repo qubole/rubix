@@ -36,14 +36,11 @@ usage() {
 start() {
   export HADOOP_OPTS="-Dlog4j.configuration=file://${LOG4J_FILE}"
   ulimit -n 100000
-
   if [[ $is_master == True ]]; then
         nohup $HADOOP_HOME/bin/hadoop jar /usr/lib/rubix/lib/rubix-bookkeeper-*.jar com.qubole.rubix.bookkeeper.BookKeeperServer -Drubix.cluster.on-master=true &
-  elif [[ $is_master != True ]]; then
+  else
         nohup $HADOOP_HOME/bin/hadoop jar /usr/lib/rubix/lib/rubix-bookkeeper-*.jar com.qubole.rubix.bookkeeper.BookKeeperServer &
   fi
-
-
   PID=$!
   echo $PID > ${PID_FILE}
 
