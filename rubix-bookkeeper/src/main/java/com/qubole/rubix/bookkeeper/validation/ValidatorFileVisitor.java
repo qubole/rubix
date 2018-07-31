@@ -20,6 +20,7 @@ import org.apache.hadoop.conf.Configuration;
 
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -36,7 +37,6 @@ public class ValidatorFileVisitor extends SimpleFileVisitor<Path>
   private int successes;
   private int totalCacheFiles;
   private final Set<String> filesWithoutMd = new HashSet<>();
-  private final Set<String> mdWithoutFile = new HashSet<>();
 
   public ValidatorFileVisitor(Configuration conf)
   {
@@ -48,41 +48,19 @@ public class ValidatorFileVisitor extends SimpleFileVisitor<Path>
   @Override
   public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException
   {
-    final String filePath = file.toString();
+    if (!CacheUtil.isMetadataFile(file.toString(), conf)) {
+      totalCacheFiles++;
 
-    checkForFileMatch(filePath);
+      Path mdFile = file.resolveSibling(file.getFileName() + metadataFileSuffix);
+      if (Files.exists(mdFile)) {
+        successes++;
+      }
+      else {
+        filesWithoutMd.add(file.toString());
+      }
+    }
 
     return super.visitFile(file, attrs);
-  }
-
-  /**
-   * Checks for a match with the provided file.
-   *
-   * @param filePath The path of the file for which to search for a match.
-   */
-  private void checkForFileMatch(String filePath)
-  {
-    if (CacheUtil.isMetadataFile(filePath, conf)) {
-      String mdSourceFileName = filePath.substring(0, filePath.length() - metadataFileSuffix.length());
-
-      if (filesWithoutMd.contains(mdSourceFileName)) {
-        filesWithoutMd.remove(mdSourceFileName);
-        successes++;
-      }
-      else {
-        mdWithoutFile.add(mdSourceFileName);
-      }
-    }
-    else {
-      if (mdWithoutFile.contains(filePath)) {
-        mdWithoutFile.remove(filePath);
-        successes++;
-      }
-      else {
-        filesWithoutMd.add(filePath);
-      }
-      totalCacheFiles++;
-    }
   }
 
   /**
