@@ -19,7 +19,6 @@ HADOOP_HOME=/usr/lib/hadoop
 
 #Getting the flag for Master or Slave
 is_master="$2" 
-
 # increase mmap system limit
 sudo sysctl -w vm.max_map_count=200000
 
