@@ -39,11 +39,9 @@ import org.testng.annotations.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -63,6 +61,7 @@ public class TestCachingInputStream
   CachingInputStream inputStream;
 
   private static final String testDirectory = testDirectoryPrefix + "dir0";
+  private static Configuration conf;
 
   private static final Log log = LogFactory.getLog(TestCachingInputStream.class.getName());
 
@@ -84,7 +83,7 @@ public class TestCachingInputStream
   @BeforeMethod
   public void setup() throws IOException, InterruptedException, URISyntaxException
   {
-    final Configuration conf = new Configuration();
+    conf = new Configuration();
 
     CacheConfig.setOnMaster(conf, true);
     CacheConfig.setIsStrictMode(conf, true);
@@ -125,14 +124,12 @@ public class TestCachingInputStream
   public void createCachingStream(Configuration conf)
       throws InterruptedException, IOException, URISyntaxException
   {
-    CacheConfig.setIsStrictMode(conf, true);
-    CacheConfig.setServerPort(conf, 3456);
-
     File file = new File(backendFileName);
 
     LocalFSInputStream localFSInputStream = new LocalFSInputStream(backendFileName);
     FSDataInputStream fsDataInputStream = new FSDataInputStream(localFSInputStream);
     CacheConfig.setBlockSize(conf, blockSize);
+
     // This should be after server comes up else client could not be created
     inputStream = new CachingInputStream(fsDataInputStream, conf, backendPath, file.length(),
         file.lastModified(), new CachingFileSystemStats(), ClusterType.TEST_CLUSTER_MANAGER,
@@ -145,8 +142,7 @@ public class TestCachingInputStream
   {
     BookKeeperServer.stopServer();
     LocalDataTransferServer.stopServer();
-    Configuration conf = new Configuration();
-    CacheConfig.setCacheDataDirPrefix(conf, testDirectoryPrefix + "dir");
+
     inputStream.close();
     File file = new File(backendFileName);
     file.delete();
@@ -156,6 +152,8 @@ public class TestCachingInputStream
 
     File localFile = new File(CacheUtil.getLocalPath(backendPath.toString(), conf));
     localFile.delete();
+
+    conf.clear();
   }
 
   @Test
@@ -187,6 +185,7 @@ public class TestCachingInputStream
   public void testChunkCachingAndEviction()
       throws IOException, InterruptedException, URISyntaxException
   {
+    CacheConfig.setFileStalenessCheck(conf, true);
     // 1. Seek and read some data
     testCachingHelper();
 
@@ -202,8 +201,8 @@ public class TestCachingInputStream
     assertions(readSize, 200, buffer, expectedOutput);
 
     // 4. Replace chunks already read from backend file with zeros
-    writeZeros(backendFileName, 100, 1100);
-    writeZeros(backendFileName, 1550, 1750);
+    DataGen.writeZerosInFile(backendFileName, 100, 1100);
+    DataGen.writeZerosInFile(backendFileName, 1550, 1750);
 
     // 5. Read from [0, 1750) and ensure the old data is returned, this verifies that reading in chunks, some from cache and some from backend works as expected
     Thread.sleep(3000);
@@ -215,8 +214,7 @@ public class TestCachingInputStream
 
     //6. Close existing stream and start a new one to get the new lastModifiedDate of backend file
     inputStream.close();
-    Configuration conf = new Configuration();
-    CacheConfig.setCacheDataDirPrefix(conf, testDirectoryPrefix + "dir");
+
     createCachingStream(conf);
     log.info("New stream started");
 
@@ -232,19 +230,6 @@ public class TestCachingInputStream
     expectedOutput = stringBuilder.toString();
 
     assertions(readSize, 1000, buffer, expectedOutput);
-  }
-
-  private void writeZeros(String filename, int start, int end) throws IOException
-  {
-    File file = new File(filename);
-    RandomAccessFile raf = new RandomAccessFile(file, "rw");
-    raf.seek(start);
-    String s = "0";
-    StandardCharsets.UTF_8.encode(s);
-    for (int i = 0; i < (end - start); i++) {
-      raf.writeBytes(s);
-    }
-    raf.close();
   }
 
   @Test

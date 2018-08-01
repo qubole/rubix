@@ -28,6 +28,7 @@ import org.testng.annotations.Test;
 
 import javax.management.MalformedObjectNameException;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -360,6 +361,31 @@ public class TestBookKeeperServer extends BookKeeperTest
     }
 
     return true;
+  }
+
+  /**
+   * Class to mock the behaviour of {@link BookKeeperServer} for testing registering & reporting metrics.
+   */
+  private static class MockBookKeeperServer extends BookKeeperServer
+  {
+    public static void startServer(Configuration conf, MetricRegistry metricRegistry)
+    {
+      try {
+        new CoordinatorBookKeeper(conf, metricRegistry);
+      }
+      catch (FileNotFoundException e) {
+        log.error("Cache directories could not be created", e);
+        return;
+      }
+
+      metrics = metricRegistry;
+      registerMetrics(conf);
+    }
+
+    public static void stopServer()
+    {
+      removeMetrics();
+    }
   }
 
   /**

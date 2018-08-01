@@ -18,13 +18,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.qubole.rubix.spi.BlockLocation;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.ClusterType;
-import com.qubole.rubix.spi.Location;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.thrift.BlockLocation;
+import com.qubole.rubix.spi.thrift.FileInfo;
+import com.qubole.rubix.spi.thrift.Location;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -85,12 +86,22 @@ public class CachingInputStream extends FSInputStream
                             BookKeeperFactory bookKeeperFactory, FileSystem remoteFileSystem,
                             int bufferSize, FileSystem.Statistics statistics) throws IOException
   {
+    initialize(backendPath.toString(), conf, bookKeeperFactory);
     this.remotePath = backendPath.toString();
-    FileStatus fileStatus = parentFs.getFileStatus(backendPath);
-    this.fileSize = fileStatus.getLen();
     this.remoteFileSystem = remoteFileSystem;
-    lastModified = fileStatus.getModificationTime();
-    initialize(conf, bookKeeperFactory);
+
+    try {
+      FileInfo fileInfo = this.bookKeeperClient.getFileInfo(backendPath.toString());
+      this.fileSize = fileInfo.fileSize;
+      this.lastModified = fileInfo.lastModified;
+    }
+    catch (Exception ex) {
+      log.error("Could not get FileInfo for " + backendPath.toString() + " . Fetching FileStatus from remote file system");
+      FileStatus fileStatus = parentFs.getFileStatus(backendPath);
+      this.fileSize = fileStatus.getLen();
+      this.lastModified = fileStatus.getModificationTime();
+    }
+
     this.statsMbean = statsMbean;
     this.clusterType = clusterType;
     this.bufferSize = bufferSize;
@@ -104,11 +115,12 @@ public class CachingInputStream extends FSInputStream
                             FileSystem remoteFileSystem, int buffersize, FileSystem.Statistics statistics)
       throws IOException
   {
+    initialize(backendPath.toString(), conf, bookKeeperFactory);
+
     this.inputStream = inputStream;
     this.remotePath = backendPath.toString();
     this.fileSize = size;
     this.lastModified = lastModified;
-    initialize(conf, bookKeeperFactory);
     this.statsMbean = statsMbean;
     this.clusterType = clusterType;
     this.remoteFileSystem = remoteFileSystem;
@@ -116,7 +128,7 @@ public class CachingInputStream extends FSInputStream
     this.statistics = statistics;
   }
 
-  private void initialize(Configuration conf, BookKeeperFactory bookKeeperFactory)
+  private void initialize(String backendPath, Configuration conf, BookKeeperFactory bookKeeperFactory)
   {
     this.conf = conf;
     this.strictMode = CacheConfig.isStrictMode(conf);
@@ -131,7 +143,7 @@ public class CachingInputStream extends FSInputStream
       bookKeeperClient = null;
     }
     this.blockSize = CacheConfig.getBlockSize(conf);
-    this.localPath = CacheUtil.getLocalPath(remotePath, conf);
+    this.localPath = CacheUtil.getLocalPath(backendPath, conf);
     this.diskReadBufferSize = CacheConfig.getDiskReadBufferSize(conf);
   }
 

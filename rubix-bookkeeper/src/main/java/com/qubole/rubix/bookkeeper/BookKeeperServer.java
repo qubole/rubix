@@ -12,7 +12,6 @@
  */
 package com.qubole.rubix.bookkeeper;
 
-import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.jvm.CachedThreadStatesGaugeSet;
@@ -21,8 +20,8 @@ import com.codahale.metrics.jvm.MemoryUsageGaugeSet;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.qubole.rubix.bookkeeper.metrics.BookKeeperMetrics;
-import com.qubole.rubix.spi.BookKeeperService;
 import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.thrift.BookKeeperService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -128,14 +127,6 @@ public class BookKeeperServer extends Configured implements Tool
   {
     bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
 
-    metrics.register(BookKeeperMetrics.LivenessMetric.METRIC_BOOKKEEPER_LIVENESS_CHECK.getMetricName(), new Gauge<Integer>()
-      {
-        @Override
-        public Integer getValue()
-        {
-          return 1;
-        }
-      });
     metrics.register(BookKeeperMetrics.BookKeeperJvmMetric.METRIC_BOOKKEEPER_JVM_GC_PREFIX.getMetricName(), new GarbageCollectorMetricSet());
     metrics.register(BookKeeperMetrics.BookKeeperJvmMetric.METRIC_BOOKKEEPER_JVM_THREADS_PREFIX.getMetricName(), new CachedThreadStatesGaugeSet(CacheConfig.getStatsDMetricsInterval(conf), TimeUnit.MILLISECONDS));
     metrics.register(BookKeeperMetrics.BookKeeperJvmMetric.METRIC_BOOKKEEPER_JVM_MEMORY_PREFIX.getMetricName(), new MemoryUsageGaugeSet());

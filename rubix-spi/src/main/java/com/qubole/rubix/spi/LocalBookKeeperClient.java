@@ -12,6 +12,8 @@
  */
 package com.qubole.rubix.spi;
 
+import com.qubole.rubix.spi.thrift.BlockLocation;
+import com.qubole.rubix.spi.thrift.BookKeeperService;
 import org.apache.thrift.TException;
 import org.apache.thrift.transport.TTransport;
 import org.slf4j.Logger;

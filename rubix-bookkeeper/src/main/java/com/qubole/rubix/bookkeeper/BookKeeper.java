@@ -13,29 +13,37 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.Counter;
+import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
+import com.google.common.base.Ticker;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.cache.Weigher;
 import com.qubole.rubix.bookkeeper.metrics.BookKeeperMetrics;
+import com.qubole.rubix.bookkeeper.utils.DiskUtils;
 import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.core.ReadRequest;
 import com.qubole.rubix.core.RemoteReadRequestChain;
-import com.qubole.rubix.spi.BlockLocation;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
-import com.qubole.rubix.spi.Location;
+import com.qubole.rubix.spi.thrift.BlockLocation;
+import com.qubole.rubix.spi.thrift.BookKeeperService;
+import com.qubole.rubix.spi.thrift.FileInfo;
+import com.qubole.rubix.spi.thrift.Location;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.thrift.shaded.TException;
@@ -54,21 +62,31 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
+import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER_MULTINODE;
 
 /**
  * Created by stagra on 12/2/16.
  */
-public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
+public abstract class BookKeeper implements BookKeeperService.Iface
 {
-  private static Cache<String, FileMetadata> fileMetadataCache;
-  private static ClusterManager clusterManager;
+  public static final String METRIC_BOOKKEEPER_CACHE_EVICTION_COUNT = "rubix.bookkeeper.cache_eviction.count";
+  public static final String METRIC_BOOKKEEPER_CACHE_HIT_RATE_GAUGE = "rubix.bookkeeper.cache_hit_rate.gauge";
+  public static final String METRIC_BOOKKEEPER_CACHE_MISS_RATE_GAUGE = "rubix.bookkeeper.cache_miss_rate.gauge";
+  public static final String METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE = "rubix.bookkeeper.cache_size_mb.gauge";
+  public static final String METRIC_BOOKKEEPER_TOTAL_REQUEST_COUNT = "rubix.bookkeeper.total_request.count";
+  public static final String METRIC_BOOKKEEPER_CACHE_REQUEST_COUNT = "rubix.bookkeeper.cache_request.count";
+  public static final String METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT = "rubix.bookkeeper.nonlocal_request.count";
+  public static final String METRIC_BOOKKEEPER_REMOTE_REQUEST_COUNT = "rubix.bookkeeper.remote_request.count";
+
+  protected static Cache<String, FileMetadata> fileMetadataCache;
+  private static LoadingCache<String, FileInfo> fileInfoCache;
+  protected static ClusterManager clusterManager;
   private static Log log = LogFactory.getLog(BookKeeper.class.getName());
-  private long totalRequests;
-  private long cachedRequests;
-  private long remoteRequests;
   String nodeName;
   static String nodeHostName;
   static String nodeHostAddress;
@@ -78,19 +96,31 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
   int currentNodeIndex = -1;
   static long splitSize;
   private RemoteFetchProcessor fetchProcessor;
+  private Ticker ticker;
 
   // Registry for gathering & storing necessary metrics
   protected final MetricRegistry metrics;
 
-  // Metrics counter to keep track of the total number of blocks hit
-  private Counter localCacheCount;
+  // Metrics to keep track of cache interactions
+  private static Counter cacheEvictionCount;
+  private Counter totalRequestCount;
+  private Counter remoteRequestCount;
+  private Counter cacheRequestCount;
+  private Counter nonlocalRequestCount;
 
   public BookKeeper(Configuration conf, MetricRegistry metrics) throws FileNotFoundException
   {
+    this(conf, metrics, Ticker.systemTicker());
+  }
+
+  @VisibleForTesting
+  BookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker) throws FileNotFoundException
+  {
     this.conf = conf;
     this.metrics = metrics;
+    this.ticker = ticker;
     initializeMetrics();
-    initializeCache(conf);
+    initializeCache(conf, ticker);
     fetchProcessor = new RemoteFetchProcessor(conf);
     fetchProcessor.startAsync();
   }
@@ -100,7 +130,36 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
    */
   private void initializeMetrics()
   {
-    localCacheCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT.getMetricName());
+    cacheEvictionCount = metrics.counter(METRIC_BOOKKEEPER_CACHE_EVICTION_COUNT);
+    totalRequestCount = metrics.counter(METRIC_BOOKKEEPER_TOTAL_REQUEST_COUNT);
+    cacheRequestCount = metrics.counter(METRIC_BOOKKEEPER_CACHE_REQUEST_COUNT);
+    nonlocalRequestCount = metrics.counter(METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT);
+    remoteRequestCount = metrics.counter(METRIC_BOOKKEEPER_REMOTE_REQUEST_COUNT);
+
+    metrics.register(METRIC_BOOKKEEPER_CACHE_HIT_RATE_GAUGE, new Gauge<Double>()
+    {
+      @Override
+      public Double getValue()
+      {
+        return ((double) cacheRequestCount.getCount() / (cacheRequestCount.getCount() + remoteRequestCount.getCount()));
+      }
+    });
+    metrics.register(METRIC_BOOKKEEPER_CACHE_MISS_RATE_GAUGE, new Gauge<Double>()
+    {
+      @Override
+      public Double getValue()
+      {
+        return ((double) remoteRequestCount.getCount() / (cacheRequestCount.getCount() + remoteRequestCount.getCount()));
+      }
+    });
+    metrics.register(METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE, new Gauge<Integer>()
+    {
+      @Override
+      public Integer getValue()
+      {
+        return DiskUtils.getCacheSizeMB(conf);
+      }
+    });
   }
 
   @Override
@@ -142,7 +201,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
     FileMetadata md;
     try {
       md = fileMetadataCache.get(remotePath, new CreateFileMetadataCallable(remotePath, fileLength, lastModified, conf));
-      if (md.getLastModified() != lastModified) {
+      if (isInvalidationRequired(md.getLastModified(), lastModified)) {
         invalidate(remotePath);
         md = fileMetadataCache.get(remotePath, new CreateFileMetadataCallable(remotePath, fileLength, lastModified, conf));
       }
@@ -159,21 +218,21 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
 
     try {
       for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
-        totalRequests++;
-        localCacheCount.inc();
+        totalRequestCount.inc();
 
         long split = (blockNum * blockSize) / splitSize;
         if (!blockSplits.get(split).equalsIgnoreCase(nodeName)) {
           blockLocations.add(new BlockLocation(Location.NON_LOCAL, blockSplits.get(split)));
+          nonlocalRequestCount.inc();
         }
         else {
           if (md.isBlockCached(blockNum)) {
             blockLocations.add(new BlockLocation(Location.CACHED, blockSplits.get(split)));
-            cachedRequests++;
+            cacheRequestCount.inc();
           }
           else {
             blockLocations.add(new BlockLocation(Location.LOCAL, blockSplits.get(split)));
-            remoteRequests++;
+            remoteRequestCount.inc();
           }
         }
       }
@@ -206,10 +265,13 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
           this.clusterManager = manager;
           splitSize = clusterManager.getSplitSize();
 
-          if (clusterType == TEST_CLUSTER_MANAGER.ordinal()) {
+          if (clusterType == TEST_CLUSTER_MANAGER.ordinal() || clusterType == TEST_CLUSTER_MANAGER_MULTINODE.ordinal()) {
             currentNodeIndex = 0;
             nodes = clusterManager.getNodes();
             nodeName = nodes.get(currentNodeIndex);
+            if (clusterType == TEST_CLUSTER_MANAGER_MULTINODE.ordinal()) {
+              nodes.add(nodeName + "_copy");
+            }
             return;
           }
         }
@@ -270,7 +332,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
     if (md == null) {
       return;
     }
-    if (md.getLastModified() != lastModified) {
+    if (isInvalidationRequired(md.getLastModified(), lastModified)) {
       invalidate(remotePath);
       return;
     }
@@ -288,12 +350,17 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
   @Override
   public Map getCacheStats()
   {
+    final long cachedRequests = cacheRequestCount.getCount();
+    final long remoteRequests = remoteRequestCount.getCount();
+    final long nonLocalRequests = nonlocalRequestCount.getCount();
+    final long totalRequests = totalRequestCount.getCount();
+
     Map<String, Double> stats = new HashMap<String, Double>();
     stats.put("Cache Hit Rate", ((double) cachedRequests / (cachedRequests + remoteRequests)));
     stats.put("Cache Miss Rate", ((double) (remoteRequests) / (cachedRequests + remoteRequests)));
     stats.put("Cache Reads", ((double) cachedRequests));
     stats.put("Remote Reads", ((double) remoteRequests));
-    stats.put("Non-Local Reads", ((double) (totalRequests - cachedRequests - remoteRequests)));
+    stats.put("Non-Local Reads", ((double) nonLocalRequests));
     return stats;
   }
 
@@ -316,6 +383,34 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
     else {
       return readDataInternal(remotePath, offset, length, fileSize, lastModified, clusterType);
     }
+  }
+
+  @Override
+  public FileInfo getFileInfo(String remotePath) throws TException
+  {
+    if (CacheConfig.isFileStalenessCheckEnabled(conf)) {
+      try {
+        Path path = new Path(remotePath);
+        FileSystem fs = path.getFileSystem(conf);
+        FileStatus status = fs.getFileStatus(path);
+        FileInfo info = new FileInfo(status.getLen(), status.getModificationTime());
+        return info;
+      }
+      catch (Exception e) {
+        log.error(String.format("Could not fetch FileStatus from remote file system for %s : %s", remotePath, Throwables.getStackTraceAsString(e)));
+      }
+    }
+    else {
+      try {
+        return fileInfoCache.get(remotePath);
+      }
+      catch (ExecutionException e) {
+        log.error(String.format("Could not fetch FileInfo from Cache for %s : %s", remotePath, Throwables.getStackTraceAsString(e)));
+        throw new TException(e);
+      }
+    }
+
+    return null;
   }
 
   private boolean readDataInternal(String remotePath, long offset, int length, long fileSize,
@@ -401,7 +496,8 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
     return endBlock;
   }
 
-  private static synchronized void initializeCache(final Configuration conf) throws FileNotFoundException
+  private static synchronized void initializeCache(final Configuration conf, final Ticker ticker)
+      throws FileNotFoundException
   {
     CacheUtil.createCacheDirectories(conf);
 
@@ -409,14 +505,17 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
     for (int d = 0; d < CacheUtil.getCacheDiskCount(conf); d++) {
       avail += new File(CacheUtil.getDirPath(d, conf)).getUsableSpace();
     }
-    avail = avail / 1024 / 1024;
+    avail = DiskUtils.bytesToMB(avail);
     log.info("total free space " + avail + "MB");
 
     // In corner cases evictions might not make enough space for new entries
     // To minimize those cases, consider available space lower than actual
     final long total = (long) (0.95 * avail);
 
+    initializeFileInfoCache(conf, ticker);
+
     fileMetadataCache = CacheBuilder.newBuilder()
+        .ticker(ticker)
         .weigher(new Weigher<String, FileMetadata>()
         {
           @Override
@@ -427,19 +526,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
         })
         .maximumWeight((long) (total * 1.0 * CacheConfig.getCacheDataFullnessPercentage(conf) / 100.0))
         .expireAfterWrite(CacheConfig.getCacheDataExpirationAfterWrite(conf), TimeUnit.MILLISECONDS)
-        .removalListener(new RemovalListener<String, FileMetadata>()
-        {
-          public void onRemoval(final RemovalNotification<String, FileMetadata> notification)
-          {
-            FileMetadata md = notification.getValue();
-            try {
-              md.closeAndCleanup(notification.getCause(), fileMetadataCache);
-            }
-            catch (IOException e) {
-              log.warn("Could not cleanup FileMetadata for " + notification.getKey(), e);
-            }
-          }
-        })
+        .removalListener(new CacheRemovalListener())
         .build();
   }
 
@@ -451,6 +538,52 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
   public FileMetadata getEntry(String key, Callable<FileMetadata> callable) throws ExecutionException
   {
     return fileMetadataCache.get(key, callable);
+  }
+
+  private static void initializeFileInfoCache(final Configuration conf, final Ticker ticker)
+  {
+    ExecutorService executor = Executors.newSingleThreadExecutor();
+    int expiryPeriod = CacheConfig.getStaleFileInfoExpiryPeriod(conf);
+    fileInfoCache = CacheBuilder.newBuilder()
+        .ticker(ticker)
+        .expireAfterWrite(expiryPeriod, TimeUnit.SECONDS)
+        .removalListener(new RemovalListener<String, FileInfo>()
+        {
+          @Override
+          public void onRemoval(RemovalNotification<String, FileInfo> notification)
+          {
+            log.info("Removed FileInfo for path " + notification.getKey() + " due to " + notification.getCause());
+          }
+        })
+        .build(CacheLoader.asyncReloading(new CacheLoader<String, FileInfo>()
+        {
+          @Override
+          public FileInfo load(String s) throws Exception
+          {
+            log.info("Fetching FileStatus for : " + s);
+            Path path = new Path(s);
+            FileSystem fs = path.getFileSystem(conf);
+            FileStatus status = fs.getFileStatus(path);
+            FileInfo info = new FileInfo(status.getLen(), status.getModificationTime());
+            return info;
+          }
+        }, executor));
+  }
+
+  protected static class CacheRemovalListener implements RemovalListener<String, FileMetadata>
+  {
+    @Override
+    public void onRemoval(RemovalNotification<String, FileMetadata> notification)
+    {
+      FileMetadata md = notification.getValue();
+      try {
+        md.closeAndCleanup(notification.getCause(), fileMetadataCache);
+        cacheEvictionCount.inc();
+      }
+      catch (IOException e) {
+        log.warn("Could not cleanup FileMetadata for " + notification.getKey(), e);
+      }
+    }
   }
 
   private static class CreateFileMetadataCallable
@@ -482,5 +615,14 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
     if (fileMetadataCache != null) {
       fileMetadataCache.invalidate(p);
     }
+  }
+
+  private boolean isInvalidationRequired(long metadataLastModifiedTime, long remoteLastModifiedTime)
+  {
+    if (CacheConfig.isFileStalenessCheckEnabled(conf) && (metadataLastModifiedTime != remoteLastModifiedTime)) {
+      return true;
+    }
+
+    return false;
   }
 }
