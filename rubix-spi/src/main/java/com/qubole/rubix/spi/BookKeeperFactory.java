@@ -12,6 +12,7 @@
  */
 package com.qubole.rubix.spi;
 
+import com.qubole.rubix.spi.thrift.BookKeeperService;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
