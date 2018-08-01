@@ -12,22 +12,17 @@
  */
 package com.qubole.rubix.bookkeeper.metrics;
 
-import com.codahale.metrics.Counter;
 import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Sets;
-import com.qubole.rubix.bookkeeper.BookKeeper;
-import com.qubole.rubix.bookkeeper.CoordinatorBookKeeper;
 import com.qubole.rubix.bookkeeper.test.BookKeeperTest;
 import com.qubole.rubix.spi.CacheConfig;
-import com.qubole.rubix.spi.ClusterType;
 import com.readytalk.metrics.StatsDReporter;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.thrift.shaded.TException;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
@@ -35,7 +30,6 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.Closeable;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Set;
@@ -55,8 +49,6 @@ public class TestBookKeeperMetrics
   private final Configuration conf = new Configuration();
   private final MetricRegistry metrics = new MetricRegistry();
 
-  private BookKeeper bookKeeper;
-
   @BeforeClass
   public void setUpForClass() throws IOException
   {
@@ -66,13 +58,11 @@ public class TestBookKeeperMetrics
   }
 
   @BeforeMethod
-  public void setUp() throws FileNotFoundException
+  public void setUp()
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     CacheConfig.setBlockSize(conf, TEST_BLOCK_SIZE);
     CacheConfig.setCacheMetricsEnabled(conf, true);
-
-    bookKeeper = new CoordinatorBookKeeper(conf, metrics);
   }
 
   @AfterMethod
@@ -88,28 +78,6 @@ public class TestBookKeeperMetrics
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 
     BookKeeperTest.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
-  }
-
-  /**
-   * Verify that the metric representing total block hits is correctly registered & incremented.
-   *
-   * @throws TException when file metadata cannot be fetched or refreshed.
-   */
-  @Test
-  public void verifyBlockHitsMetricIsReported() throws TException
-  {
-    final String remotePath = "/tmp/testPath";
-    final long lastModified = 1514764800; // 2018-01-01T00:00:00
-    final long fileLength = 5000;
-    final long startBlock = 20;
-    final long endBlock = 23;
-    final long totalRequests = endBlock - startBlock;
-
-    final Counter localCacheCounter = metrics.getCounters().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT.getMetricName());
-
-    assertEquals(localCacheCounter.getCount(), 0);
-    bookKeeper.getCacheStatus(remotePath, fileLength, lastModified, startBlock, endBlock, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
-    assertEquals(localCacheCounter.getCount(), totalRequests);
   }
 
   /**
@@ -180,9 +148,7 @@ public class TestBookKeeperMetrics
   @Test
   public void testLivenessMetricsGetAllNames()
   {
-    Set<String> livenessMetricsNames = Sets.newHashSet(
-        BookKeeperMetrics.LivenessMetric.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE.getMetricName(),
-        BookKeeperMetrics.LivenessMetric.METRIC_BOOKKEEPER_LIVENESS_CHECK.getMetricName());
+    Set<String> livenessMetricsNames = Sets.newHashSet(BookKeeperMetrics.LivenessMetric.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE.getMetricName());
 
     assertEquals(livenessMetricsNames, BookKeeperMetrics.LivenessMetric.getAllNames());
   }
@@ -193,7 +159,15 @@ public class TestBookKeeperMetrics
   @Test
   public void testCacheMetricsGetAllNames()
   {
-    Set<String> cacheMetricsNames = Sets.newHashSet(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_LOCAL_CACHE_COUNT.getMetricName());
+    Set<String> cacheMetricsNames = Sets.newHashSet(
+        BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_EVICTION_COUNT.getMetricName(),
+        BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_HIT_RATE_GAUGE.getMetricName(),
+        BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_MISS_RATE_GAUGE.getMetricName(),
+        BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE.getMetricName(),
+        BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_TOTAL_REQUEST_COUNT.getMetricName(),
+        BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_REQUEST_COUNT.getMetricName(),
+        BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT.getMetricName(),
+        BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_REMOTE_REQUEST_COUNT.getMetricName());
 
     assertEquals(cacheMetricsNames, BookKeeperMetrics.CacheMetric.getAllNames());
   }

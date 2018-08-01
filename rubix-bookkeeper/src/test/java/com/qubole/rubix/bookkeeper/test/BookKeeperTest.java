@@ -52,6 +52,12 @@ public class BookKeeperTest
   private static final Log log = LogFactory.getLog(BookKeeperTest.class);
   protected static final String JMX_METRIC_NAME_PATTERN = "metrics:*";
 
+  public static String getDefaultTestDirectoryPath(Configuration conf)
+  {
+    String directoryPath = Paths.get(CacheConfig.getCacheDirPrefixList(conf) + "0").toString();
+    return directoryPath;
+  }
+
   /**
    * Get the name of a temporary directory to be used for unit testing.
    *
