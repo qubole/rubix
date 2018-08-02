@@ -84,8 +84,8 @@ public class CacheConfig
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
   private static final int DEFAULT_CLIENT_TIMEOUT = 10000; // ms
   private static final String DEFAULT_CACHE_METADATA_FILE_SUFFIX = "_mdfile";
-  private static final int DEFAULT_CACHE_VALIDATION_INITIAL_DELAY = 30000; // ms
-  private static final int DEFAULT_CACHE_VALIDATION_INTERVAL = 30000; // ms
+  private static final int DEFAULT_CACHE_VALIDATION_INITIAL_DELAY = 1800000; // ms (30min)
+  private static final int DEFAULT_CACHE_VALIDATION_INTERVAL = 1800000; // ms (30min)
   private static final String DEFAULT_DATA_CACHE_DIR_PREFIX = "/media/ephemeral";
   private static final String DEFAULT_DATA_CACHE_DIR_SUFFIX = "/fcache/";
   private static final boolean DEFAULT_DATA_CACHE_ENABLED = true;
