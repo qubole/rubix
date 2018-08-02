@@ -58,10 +58,11 @@
 
     <modules>
         <module>rubix-spi</module>
+        <module>rubix-core</module>
+        <module>rubix-common</module>
+        <module>rubix-presto</module>
         <module>rubix-hadoop2</module>
         <module>rubix-bookkeeper</module>
-        <module>rubix-core</module>
-        <module>rubix-presto</module>
         <module>rubix-tests</module>
         <module>assembly</module>
         <module>rubix-rpm</module>

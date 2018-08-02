@@ -105,13 +105,13 @@ public class CacheConfig
   private static final int DEFAULT_LOCAL_SERVER_PORT = 8898;
   private static final int DEFAULT_MAX_BUFFER_SIZE = 1024;
   private static final int DEFAULT_MAX_RETRIES = 3;
-  private static final boolean DEFAULT_METRICS_CACHE_ENABLED = false;
+  private static final boolean DEFAULT_METRICS_CACHE_ENABLED = true;
   private static final boolean DEFAULT_METRICS_LIVENESS_ENABLED = true;
   private static final boolean DEFAULT_METRICS_JVM_ENABLED = false;
   private static final String DEFAULT_METRICS_STATSD_HOST = "127.0.0.1"; // localhost
   private static final int DEFAULT_METRICS_STATSD_INTERVAL = 10000; // ms
   private static final int DEFAULT_METRICS_STATSD_PORT = 8125; // default StatsD port
-  private static final String DEFAULT_METRICS_REPORTERS = "";
+  private static final String DEFAULT_METRICS_REPORTERS = "JMX";
   private static final boolean DEFAULT_PARALLEL_WARMUP = false;
   private static final int DEFAULT_PROCESS_THREAD_INITIAL_DELAY = 1000; // ms
   private static final int DEFAULT_PROCESS_THREAD_INTERVAL = 1000; // ms

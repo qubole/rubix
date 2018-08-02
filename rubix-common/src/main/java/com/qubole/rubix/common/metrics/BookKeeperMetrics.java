@@ -11,7 +11,7 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-package com.qubole.rubix.bookkeeper.metrics;
+package com.qubole.rubix.common.metrics;
 
 import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.MetricRegistry;
@@ -100,9 +100,9 @@ public class BookKeeperMetrics implements AutoCloseable
    */
   public enum BookKeeperJvmMetric
   {
-    METRIC_BOOKKEEPER_JVM_GC_PREFIX("rubix.bookkeeper.gc"),
-    METRIC_BOOKKEEPER_JVM_MEMORY_PREFIX("rubix.bookkeeper.memory"),
-    METRIC_BOOKKEEPER_JVM_THREADS_PREFIX("rubix.bookkeeper.threads");
+    METRIC_BOOKKEEPER_JVM_GC_PREFIX("rubix.bookkeeper.jvm.gc"),
+    METRIC_BOOKKEEPER_JVM_MEMORY_PREFIX("rubix.bookkeeper.jvm.memory"),
+    METRIC_BOOKKEEPER_JVM_THREADS_PREFIX("rubix.bookkeeper.jvm.threads");
 
     private final String metricName;
 
@@ -136,9 +136,9 @@ public class BookKeeperMetrics implements AutoCloseable
    */
   public enum LDTSJvmMetric
   {
-    METRIC_LDTS_JVM_GC_PREFIX("rubix.ldts.gc"),
-    METRIC_LDTS_JVM_MEMORY_PREFIX("rubix.ldts.memory"),
-    METRIC_LDTS_JVM_THREADS_PREFIX("rubix.ldts.threads");
+    METRIC_LDTS_JVM_GC_PREFIX("rubix.ldts.jvm.gc"),
+    METRIC_LDTS_JVM_MEMORY_PREFIX("rubix.ldts.jvm.memory"),
+    METRIC_LDTS_JVM_THREADS_PREFIX("rubix.ldts.jvm.threads");
 
     private final String metricName;
 

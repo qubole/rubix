@@ -15,9 +15,9 @@ package com.qubole.rubix.bookkeeper;
 import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.testing.FakeTicker;
-import com.qubole.rubix.bookkeeper.metrics.BookKeeperMetrics;
-import com.qubole.rubix.bookkeeper.test.BookKeeperTest;
 import com.qubole.rubix.bookkeeper.utils.DiskUtils;
+import com.qubole.rubix.common.TestUtil;
+import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.core.utils.DataGen;
 import com.qubole.rubix.core.utils.DummyClusterManager;
@@ -53,7 +53,7 @@ public class TestBookKeeper
 {
   private static final Log log = LogFactory.getLog(TestBookKeeper.class);
 
-  private static final String TEST_CACHE_DIR_PREFIX = BookKeeperTest.getTestCacheDirPrefix("TestBookKeeper");
+  private static final String TEST_CACHE_DIR_PREFIX = TestUtil.getTestCacheDirPrefix("TestBookKeeper");
   private static final String TEST_DNE_CLUSTER_MANAGER = "com.qubole.rubix.core.DoesNotExistClusterManager";
   private static final int TEST_MAX_DISKS = 1;
   private static final String BACKEND_FILE_NAME = "backendFile";
@@ -75,7 +75,7 @@ public class TestBookKeeper
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     CacheConfig.setBlockSize(conf, TEST_BLOCK_SIZE);
 
-    BookKeeperTest.createCacheParentDirectories(conf, TEST_MAX_DISKS);
+    TestUtil.createCacheParentDirectories(conf, TEST_MAX_DISKS);
 
     bookKeeper = new CoordinatorBookKeeper(conf, metrics);
     bookKeeper.clusterManager = null;
@@ -84,7 +84,7 @@ public class TestBookKeeper
   @AfterMethod
   public void tearDown() throws Exception
   {
-    BookKeeperTest.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
+    TestUtil.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
 
     conf.clear();
     metrics.removeMatching(MetricFilter.ALL);
@@ -150,7 +150,7 @@ public class TestBookKeeper
   @Test
   public void testGetFileInfoWithInvalidationEnabled() throws Exception
   {
-    Path backendFilePath = new Path(BookKeeperTest.getDefaultTestDirectoryPath(conf), BACKEND_FILE_NAME);
+    Path backendFilePath = new Path(TestUtil.getDefaultTestDirectoryPath(conf), BACKEND_FILE_NAME);
     DataGen.populateFile(backendFilePath.toString());
     int expectedFileSize = DataGen.generateContent(1).length();
 
@@ -175,7 +175,7 @@ public class TestBookKeeper
   @Test
   public void testGetFileInfoWithInvalidationDisabled() throws Exception
   {
-    Path backendFilePath = new Path(BookKeeperTest.getDefaultTestDirectoryPath(conf), BACKEND_FILE_NAME);
+    Path backendFilePath = new Path(TestUtil.getDefaultTestDirectoryPath(conf), BACKEND_FILE_NAME);
     DataGen.populateFile(backendFilePath.toString());
     int expectedFileSize = DataGen.generateContent(1).length();
 
@@ -198,7 +198,7 @@ public class TestBookKeeper
   @Test
   public void testGetFileInfoWithInvalidationDisabledWithCacheExpired() throws Exception
   {
-    Path backendFilePath = new Path(BookKeeperTest.getDefaultTestDirectoryPath(conf), BACKEND_FILE_NAME);
+    Path backendFilePath = new Path(TestUtil.getDefaultTestDirectoryPath(conf), BACKEND_FILE_NAME);
     DataGen.populateFile(backendFilePath.toString());
     int expectedFileSize = DataGen.generateContent(1).length();
 

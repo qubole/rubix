@@ -10,14 +10,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-package com.qubole.rubix.bookkeeper.metrics;
+package com.qubole.rubix.common.metrics;
 
 import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Sets;
-import com.qubole.rubix.bookkeeper.test.BookKeeperTest;
+import com.qubole.rubix.common.TestUtil;
 import com.qubole.rubix.spi.CacheConfig;
 import com.readytalk.metrics.StatsDReporter;
 import org.apache.commons.logging.Log;
@@ -42,7 +42,7 @@ public class TestBookKeeperMetrics
 {
   private static final Log log = LogFactory.getLog(TestBookKeeperMetrics.class);
 
-  private static final String TEST_CACHE_DIR_PREFIX = BookKeeperTest.getTestCacheDirPrefix("TestBookKeeperMetrics");
+  private static final String TEST_CACHE_DIR_PREFIX = TestUtil.getTestCacheDirPrefix("TestBookKeeperMetrics");
   private static final int TEST_BLOCK_SIZE = 100;
   private static final int TEST_MAX_DISKS = 1;
 
@@ -54,7 +54,7 @@ public class TestBookKeeperMetrics
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 
-    BookKeeperTest.createCacheParentDirectories(conf, TEST_MAX_DISKS);
+    TestUtil.createCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   @BeforeMethod
@@ -77,7 +77,7 @@ public class TestBookKeeperMetrics
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 
-    BookKeeperTest.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
+    TestUtil.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   /**

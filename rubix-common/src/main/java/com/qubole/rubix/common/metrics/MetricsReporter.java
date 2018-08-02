@@ -11,7 +11,7 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-package com.qubole.rubix.bookkeeper.metrics;
+package com.qubole.rubix.common.metrics;
 
 public enum MetricsReporter
 {

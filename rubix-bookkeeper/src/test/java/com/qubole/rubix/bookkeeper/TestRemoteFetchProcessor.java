@@ -13,7 +13,7 @@
 
 package com.qubole.rubix.bookkeeper;
 
-import com.qubole.rubix.bookkeeper.test.BookKeeperTest;
+import com.qubole.rubix.common.TestUtil;
 import com.qubole.rubix.core.utils.DataGen;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
@@ -39,7 +39,7 @@ public class TestRemoteFetchProcessor
 {
   private static final Log log = LogFactory.getLog(TestRemoteFetchProcessor.class);
 
-  private static final String TEST_CACHE_DIR_PREFIX = BookKeeperTest.getTestCacheDirPrefix("TestRemoteFetchProcessor");
+  private static final String TEST_CACHE_DIR_PREFIX = TestUtil.getTestCacheDirPrefix("TestRemoteFetchProcessor");
   private static final String TEST_BACKEND_FILE_NAME = TEST_CACHE_DIR_PREFIX + "backendFile";
   private static final int TEST_BLOCK_SIZE = 100;
   private static final int TEST_MAX_DISKS = 1;
@@ -52,7 +52,7 @@ public class TestRemoteFetchProcessor
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 
-    BookKeeperTest.createCacheParentDirectories(conf, TEST_MAX_DISKS);
+    TestUtil.createCacheParentDirectories(conf, TEST_MAX_DISKS);
     CacheUtil.createCacheDirectories(conf);
   }
 
@@ -73,7 +73,7 @@ public class TestRemoteFetchProcessor
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 
-    BookKeeperTest.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
+    TestUtil.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   @Test

@@ -10,7 +10,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-package com.qubole.rubix.bookkeeper.metrics;
+package com.qubole.rubix.common.metrics;
 
 import com.codahale.metrics.Metric;
 import com.google.common.collect.Sets;
