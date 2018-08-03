@@ -17,7 +17,9 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.common.testing.FakeTicker;
 import com.qubole.rubix.bookkeeper.test.BookKeeperTestUtils;
 import com.qubole.rubix.bookkeeper.utils.DiskUtils;
+import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.core.utils.DataGen;
+import com.qubole.rubix.core.utils.DummyMultiNodeClusterManager;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.ClusterType;
@@ -26,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.shaded.TException;
+import org.mockito.Mockito;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -36,6 +39,7 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.fail;
 
 public class TestBookKeeperMetrics
 {
@@ -141,8 +145,15 @@ public class TestBookKeeperMetrics
 
     assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT).getCount(), 0);
     assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_CACHE_REQUEST_COUNT).getCount(), 0);
-
-    bookKeeper.getCacheStatus(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER_MULTINODE.ordinal());
+    BookKeeper spyBookKeeper = Mockito.spy(bookKeeper);
+    try {
+      Mockito.when(spyBookKeeper.getClusterManagerInstance(ClusterType.TEST_CLUSTER_MANAGER_MULTINODE, conf)).thenReturn(
+          new DummyMultiNodeClusterManager());
+    }
+    catch (ClusterManagerInitilizationException ex) {
+      fail("Not able to initialize Cluster Manager");
+    }
+    spyBookKeeper.getCacheStatus(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER_MULTINODE.ordinal());
 
     assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT).getCount(), totalRequests);
     assertEquals(metrics.getCounters().get(BookKeeper.METRIC_BOOKKEEPER_CACHE_REQUEST_COUNT).getCount(), 0);

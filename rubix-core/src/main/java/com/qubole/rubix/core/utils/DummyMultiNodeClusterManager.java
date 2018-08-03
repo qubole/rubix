@@ -12,7 +12,6 @@
  */
 package com.qubole.rubix.core.utils;
 
-import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
 
 import java.net.InetAddress;
@@ -21,11 +20,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created by Abhishek on 6/8/18.
+ * Created by Abhishek on 7/31/18.
  */
-public class DummyClusterManager extends ClusterManager
+public class DummyMultiNodeClusterManager extends DummyClusterManager
 {
-  private static long splitSize = 64 * 1024 * 1024;
   @Override
   public List<String> getNodes()
   {
@@ -39,6 +37,7 @@ public class DummyClusterManager extends ClusterManager
     }
 
     list.add(hostName);
+    list.add(hostName + "_copy");
 
     return list;
   }
@@ -46,24 +45,6 @@ public class DummyClusterManager extends ClusterManager
   @Override
   public ClusterType getClusterType()
   {
-    return ClusterType.TEST_CLUSTER_MANAGER;
-  }
-
-  @Override
-  public long getSplitSize()
-  {
-    return splitSize;
-  }
-
-  @Override
-  public Integer getNextRunningNodeIndex(int startIndex)
-  {
-    return startIndex;
-  }
-
-  @Override
-  public Integer getPreviousRunningNodeIndex(int startIndex)
-  {
-    return startIndex;
+    return ClusterType.TEST_CLUSTER_MANAGER_MULTINODE;
   }
 }

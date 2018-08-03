@@ -191,8 +191,8 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
         end = fileLength;
       }
       String key = remotePath + i + end;
-      int nodeIndex = clusterManager.getNodeIndex(nodes.size(), key);
-      blockSplits.put(blockNumber, nodes.get(nodeIndex));
+      String hostName = getClusterNodeHostName(key, clusterType);
+      blockSplits.put(blockNumber, hostName);
       blockNumber++;
     }
 
@@ -242,7 +242,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
     return blockLocations;
   }
 
-  private void initializeClusterManager(int clusterType) throws ClusterManagerInitilizationException
+  void initializeClusterManager(int clusterType) throws ClusterManagerInitilizationException
   {
     if (this.clusterManager == null) {
       ClusterManager manager = null;
@@ -267,9 +267,6 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
             currentNodeIndex = 0;
             nodes = clusterManager.getNodes();
             nodeName = nodes.get(currentNodeIndex);
-            if (clusterType == TEST_CLUSTER_MANAGER_MULTINODE.ordinal()) {
-              nodes.add(nodeName + "_copy");
-            }
             return;
           }
         }

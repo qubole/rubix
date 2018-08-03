@@ -19,12 +19,15 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ticker;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
 import java.io.FileNotFoundException;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class CoordinatorBookKeeper extends BookKeeper
@@ -59,6 +62,43 @@ public class CoordinatorBookKeeper extends BookKeeper
   {
     liveWorkerCache.put(workerHostname, true);
     log.debug("Received heartbeat from " + workerHostname);
+  }
+
+  @Override
+  public List<String> getNodeHostNames(int clusterType)
+  {
+    try {
+      initializeClusterManager(clusterType);
+    }
+    catch (ClusterManagerInitilizationException ex) {
+      log.error("Not able to initialize ClusterManager for cluster type : " + ClusterType.findByValue(clusterType) +
+          " with Exception : " + ex);
+      return null;
+    }
+
+    log.debug("Fetching nodes from the cluster manager");
+    List<String> nodes = clusterManager.getNodes();
+
+    return nodes;
+  }
+
+  @Override
+  public String getClusterNodeHostName(String remotePath, int clusterType)
+  {
+    try {
+      initializeClusterManager(clusterType);
+    }
+    catch (ClusterManagerInitilizationException ex) {
+      log.error("Not able to initialize ClusterManager for cluster type : " + ClusterType.findByValue(clusterType) +
+          " with Exception : " + ex);
+      return null;
+    }
+
+    List<String> nodes = getNodeHostNames(clusterType);
+    int nodeIndex = clusterManager.getNodeIndex(nodes.size(), remotePath);
+    String hostName = nodes.get(nodeIndex);
+
+    return hostName;
   }
 
   /**

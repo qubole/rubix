@@ -40,7 +40,6 @@ import java.util.concurrent.TimeUnit;
  */
 public class Hadoop2ClusterManager extends ClusterManager
 {
-  private boolean isMaster = true;
   static LoadingCache<String, List<String>> nodesCache;
   YarnConfiguration yconf;
   private Log log = LogFactory.getLog(Hadoop2ClusterManager.class);
@@ -59,15 +58,9 @@ public class Hadoop2ClusterManager extends ClusterManager
           public List<String> load(String s)
               throws Exception
           {
-            if (!isMaster) {
-              // First time all nodes start assuming themselves as master and down the line figure out their role
-              // Next time onwards, only master will be fetching the list of nodes
-              return ImmutableList.of();
-            }
             try {
               List<Hadoop2ClusterManagerUtil.Node> allNodes = Hadoop2ClusterManagerUtil.getAllNodes(yconf);
               if (allNodes == null) {
-                isMaster = false;
                 return ImmutableList.of();
               }
 
@@ -102,15 +95,6 @@ public class Hadoop2ClusterManager extends ClusterManager
             }
           }
         }, executor));
-  }
-
-  @Override
-  public boolean isMaster()
-      throws ExecutionException
-  {
-    // issue get on nodesSupplier to ensure that isMaster is set correctly
-    nodesCache.get("nodeList");
-    return isMaster;
   }
 
   @Override

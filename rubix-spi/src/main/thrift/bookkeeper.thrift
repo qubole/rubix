@@ -31,5 +31,9 @@ service BookKeeperService
 
     oneway void handleHeartbeat(1:string workerHostname)
 
-    FileInfo getFileInfo(1: string remotePath)
+    FileInfo getFileInfo(1:string remotePath)
+
+    list<string> getNodeHostNames(1:int clusterType)
+
+    string getClusterNodeHostName(1:string remotePath, 2:int clusterType)
 }

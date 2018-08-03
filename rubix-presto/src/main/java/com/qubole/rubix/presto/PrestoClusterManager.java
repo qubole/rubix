@@ -51,7 +51,6 @@ import java.util.concurrent.TimeUnit;
  */
 public class PrestoClusterManager extends ClusterManager
 {
-  private boolean isMaster = true;
   private int serverPort = 8081;
   private String serverAddress = "localhost";
   static LoadingCache<String, List<String>> nodesCache;
@@ -78,12 +77,6 @@ public class PrestoClusterManager extends ClusterManager
           public List<String> load(String s)
               throws Exception
           {
-            if (!isMaster) {
-              // First time all nodes start assuming themselves as master and down the line figure out their role
-              // Next time onwards, only master will be fetching the list of nodes
-              return ImmutableList.of();
-            }
-
             try {
               URL allNodesRequest = getNodeUrl();
               URL failedNodesRequest = getFailedNodeUrl();
@@ -98,7 +91,6 @@ public class PrestoClusterManager extends ClusterManager
               StringBuffer failedResponse = new StringBuffer();
               try {
                 if (allNodesResponseCode == HttpURLConnection.HTTP_OK) {
-                  isMaster = true;
                   BufferedReader in = new BufferedReader(new InputStreamReader(allHttpCon.getInputStream()));
                   String inputLine = "";
                   try {
@@ -115,7 +107,6 @@ public class PrestoClusterManager extends ClusterManager
                 }
                 else {
                   log.info(String.format("v1/node failed with code: setting this node as worker "));
-                  isMaster = false;
                   return ImmutableList.of();
                 }
               }
@@ -193,15 +184,6 @@ public class PrestoClusterManager extends ClusterManager
             }
           }
         }, executor));
-  }
-
-  @Override
-  public boolean isMaster()
-      throws ExecutionException
-  {
-    // issue get on nodesSupplier to ensure that isMaster is set correctly
-    nodesCache.get("nodeList");
-    return isMaster;
   }
 
   /*
