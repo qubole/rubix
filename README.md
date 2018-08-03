@@ -1,7 +1,7 @@
 # RubiX
 
 [![Build Status](https://travis-ci.org/qubole/rubix.svg?branch=master)](https://travis-ci.org/qubole/rubix)
-[![codecov](https://codecov.io/gh/TechnionYP5777/project-name/branch/master/graph/badge.svg)](https://codecov.io/gh/TechnionYP5777/rubix)
+[![codecov](https://codecov.io/gh/TechnionYP5777/project-name/branch/master/graph/badge.svg)](https://codecov.io/gh/qubole/rubix)
 
 
 RubiX is a light-weight data caching framework that can be used by Big-Data engines. Rubix uses local disks to provide
