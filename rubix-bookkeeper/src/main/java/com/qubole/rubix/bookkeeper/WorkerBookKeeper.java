@@ -79,7 +79,7 @@ public class WorkerBookKeeper extends BookKeeper
             if (client == null) {
               client = initializeClientWithRetry(bookKeeperFactory, conf, masterHostname);
             }
-            log.info("Fetching list of nodes for cluster type " + s.intValue() + " from master : ", masterHostname);
+            log.info("Fetching list of nodes for cluster type " + s.intValue() + " from master : " + masterHostname);
             return client.getNodeHostNames(s.intValue());
           }
         }, executor));
