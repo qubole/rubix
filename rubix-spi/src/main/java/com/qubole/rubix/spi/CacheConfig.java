@@ -74,6 +74,8 @@ public class CacheConfig
   private static final String KEY_PRESTO_CLUSTER_MANAGER = "rubix.presto.clustermanager.class";
   private static final String KEY_HADOOP_CLUSTER_MANAGER = "rubix.hadoop.clustermanager.class";
   private static final String KEY_DUMMY_CLUSTER_MANAGER = "rubix.dummy.clustermanager.class";
+  private static final String KEY_ENABLE_FILE_STALESSNESS_CHECK = "rubix.enable.file.staleness-check";
+  private static final String KEY_STALE_FILEINFO_EXPIRY_PERIOD = "rubix.stale.fileinfo.expiry.period";
 
   // default values
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
@@ -123,6 +125,8 @@ public class CacheConfig
   private static final String DEFAULT_PRESTO_CLUSTER_MANAGER = "com.qubole.rubix.presto.PrestoClusterManager";
   private static final String DEFAULT_HADOOP_CLUSTER_MANAGER = "com.qubole.rubix.hadoop2.Hadoop2ClusterManager";
   private static final String DEFAULT_DUMMY_CLUSTER_MANAGER = "com.qubole.rubix.core.utils.DummyClusterManager";
+  private static final boolean DEFAULT_ENABLE_FILE_STALESSNESS_CHECK = true;
+  private static final int DEFAULT_STALE_FILEINFO_EXPIRY_PERIOD = 36000; // seconds
 
   private CacheConfig()
   {
@@ -356,10 +360,21 @@ public class CacheConfig
       case PRESTO_CLUSTER_MANAGER:
         return conf.get(KEY_PRESTO_CLUSTER_MANAGER, DEFAULT_PRESTO_CLUSTER_MANAGER);
       case TEST_CLUSTER_MANAGER:
+      case TEST_CLUSTER_MANAGER_MULTINODE:
         return conf.get(KEY_DUMMY_CLUSTER_MANAGER, DEFAULT_DUMMY_CLUSTER_MANAGER);
       default:
         return null;
     }
+  }
+
+  public static boolean isFileStalenessCheckEnabled(Configuration conf)
+  {
+    return conf.getBoolean(KEY_ENABLE_FILE_STALESSNESS_CHECK, DEFAULT_ENABLE_FILE_STALESSNESS_CHECK);
+  }
+
+  public static int getStaleFileInfoExpiryPeriod(Configuration conf)
+  {
+    return conf.getInt(KEY_STALE_FILEINFO_EXPIRY_PERIOD, DEFAULT_STALE_FILEINFO_EXPIRY_PERIOD);
   }
 
   public static void setBlockSize(Configuration conf, int blockSize)
@@ -385,6 +400,11 @@ public class CacheConfig
   public static void setCacheDataEnabled(Configuration conf, boolean cacheEnabled)
   {
     conf.setBoolean(KEY_CACHE_ENABLED, cacheEnabled);
+  }
+
+  public static void setCacheDataExpirationAfterWrite(Configuration conf, int expiryAfterWrite)
+  {
+    conf.setInt(KEY_DATA_CACHE_EXPIRY_AFTER_WRITE, expiryAfterWrite);
   }
 
   public static void setCacheDataLocationWhitelist(Configuration conf, String whitelist)
@@ -467,6 +487,11 @@ public class CacheConfig
     conf.setInt(KEY_SERVICE_RETRY_INTERVAL, retryInterval);
   }
 
+  public static void setStatsDMetricsHost(Configuration conf, String hostname)
+  {
+    conf.set(KEY_METRICS_STATSD_HOST, hostname);
+  }
+
   public static void setStatsDMetricsInterval(Configuration conf, int interval)
   {
     conf.setInt(KEY_METRICS_STATSD_INTERVAL, interval);
@@ -505,5 +530,15 @@ public class CacheConfig
   public static void setDummyClusterManager(Configuration conf, String clusterManager)
   {
     conf.set(KEY_DUMMY_CLUSTER_MANAGER, clusterManager);
+  }
+
+  public static void setFileStalenessCheck(Configuration conf, boolean fileStalenessCheck)
+  {
+    conf.setBoolean(KEY_ENABLE_FILE_STALESSNESS_CHECK, fileStalenessCheck);
+  }
+
+  public static void setStaleFileInfoExpiryPeriod(Configuration conf, int expiryPeriod)
+  {
+    conf.setInt(KEY_STALE_FILEINFO_EXPIRY_PERIOD, expiryPeriod);
   }
 }

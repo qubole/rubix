@@ -15,6 +15,7 @@ package com.qubole.rubix.core.utils;
 import org.apache.hadoop.util.DirectBufferPool;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -22,6 +23,7 @@ import java.io.PrintWriter;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Created by stagra on 21/1/16.
@@ -59,6 +61,26 @@ public class DataGen
     PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(filename, false)));
     out.print(generateContent());
     out.close();
+  }
+
+  public static void populateFile(String filename, int skip) throws IOException
+  {
+    PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(filename, false)));
+    out.print(generateContent(skip));
+    out.close();
+  }
+
+  public static void writeZerosInFile(String filename, int start, int end) throws IOException
+  {
+    File file = new File(filename);
+    RandomAccessFile raf = new RandomAccessFile(file, "rw");
+    raf.seek(start);
+    String s = "0";
+    StandardCharsets.UTF_8.encode(s);
+    for (int i = 0; i < (end - start); i++) {
+      raf.writeBytes(s);
+    }
+    raf.close();
   }
 
   public static byte[] readBytesFromFile(String path, int offset, int length) throws IOException
