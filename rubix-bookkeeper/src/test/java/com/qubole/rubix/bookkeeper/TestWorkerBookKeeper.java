@@ -137,6 +137,7 @@ public class TestWorkerBookKeeper
 
     FakeTicker ticker = new FakeTicker();
 
+    CacheConfig.setWorkerNodeInfoExpiryPeriod(conf, 100);
     final WorkerBookKeeper workerBookKeeper = new WorkerBookKeeper(conf, new MetricRegistry(), ticker);
     String hostName = workerBookKeeper.getClusterNodeHostName("remotepath", ClusterType.TEST_CLUSTER_MANAGER.ordinal());
 
@@ -149,7 +150,7 @@ public class TestWorkerBookKeeper
     hostName = workerBookKeeper.getClusterNodeHostName("remotepath", ClusterType.TEST_CLUSTER_MANAGER.ordinal());
 
     assertTrue(hostName.equals(testLocalhost), "HostName is not correct from the cache");
-    ticker.advance(6, TimeUnit.MINUTES);
+    ticker.advance(200, TimeUnit.SECONDS);
 
     hostName = workerBookKeeper.getClusterNodeHostName("remotepath", ClusterType.TEST_CLUSTER_MANAGER.ordinal());
     assertTrue(hostName.equals("changed_localhost"), "HostName is not refreshed from Coordinator");

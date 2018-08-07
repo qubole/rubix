@@ -68,10 +68,11 @@ public class WorkerBookKeeper extends BookKeeper
 
   private void initializeNodesCache(final Configuration conf, final Ticker ticker)
   {
+    int expiryPeriod = CacheConfig.getWorkerNodeInfoExpiryPeriod(conf);
     ExecutorService executor = Executors.newSingleThreadExecutor();
     nodeListCache = CacheBuilder.newBuilder()
         .ticker(ticker)
-        .expireAfterWrite(5, TimeUnit.MINUTES)
+        .expireAfterWrite(expiryPeriod, TimeUnit.SECONDS)
         .build(CacheLoader.asyncReloading(new CacheLoader<Integer, List<String>>() {
           @Override
           public List<String> load(Integer s) throws Exception
