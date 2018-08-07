@@ -155,6 +155,13 @@ public class TestWorkerBookKeeper
     assertTrue(hostName.equals("changed_localhost"), "HostName is not refreshed from Coordinator");
   }
 
+  @Test(expectedExceptions = UnsupportedOperationException.class)
+  public void testWorkerGetHostNames() throws FileNotFoundException
+  {
+    final WorkerBookKeeper workerBookKeeper = new WorkerBookKeeper(conf, new MetricRegistry());
+    workerBookKeeper.getNodeHostNames(ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+  }
+
   /**
    * Verify that the heartbeat service correctly makes a connection using a BookKeeper client.
    *

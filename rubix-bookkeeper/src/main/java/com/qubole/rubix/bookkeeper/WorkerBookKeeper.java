@@ -100,7 +100,6 @@ public class WorkerBookKeeper extends BookKeeper
   @Override
   public String getClusterNodeHostName(String remotePath, int clusterType)
   {
-    log.info("Worker -- " + clusterType);
     try {
       initializeClusterManager(clusterType);
     }

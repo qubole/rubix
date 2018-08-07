@@ -19,9 +19,9 @@ import com.qubole.rubix.bookkeeper.test.BookKeeperTestUtils;
 import com.qubole.rubix.bookkeeper.utils.DiskUtils;
 import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.core.utils.DataGen;
-import com.qubole.rubix.core.utils.DummyMultiNodeClusterManager;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
+import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
@@ -36,6 +36,10 @@ import org.testng.annotations.Test;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static org.testng.Assert.assertEquals;
@@ -148,7 +152,38 @@ public class TestBookKeeperMetrics
     BookKeeper spyBookKeeper = Mockito.spy(bookKeeper);
     try {
       Mockito.when(spyBookKeeper.getClusterManagerInstance(ClusterType.TEST_CLUSTER_MANAGER_MULTINODE, conf)).thenReturn(
-          new DummyMultiNodeClusterManager());
+          new ClusterManager()
+          {
+            @Override
+            public List<String> getNodes()
+            {
+              List<String> list = new ArrayList<String>();
+              String hostName = "";
+              try {
+                hostName = InetAddress.getLocalHost().getCanonicalHostName();
+              }
+              catch (UnknownHostException e) {
+                hostName = "localhost";
+              }
+
+              list.add(hostName);
+              list.add(hostName + "_copy");
+
+              return list;
+            }
+
+            @Override
+            public Integer getNextRunningNodeIndex(int startIndex)
+            {
+              return startIndex;
+            }
+
+            @Override
+            public Integer getPreviousRunningNodeIndex(int startIndex)
+            {
+              return startIndex;
+            }
+          });
     }
     catch (ClusterManagerInitilizationException ex) {
       fail("Not able to initialize Cluster Manager");
