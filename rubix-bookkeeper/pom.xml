@@ -146,6 +146,10 @@
                                     <pattern>com.readytalk</pattern>
                                     <shadedPattern>com.readytalk.shaded</shadedPattern>
                                 </relocation>
+                                <relocation>
+                                    <pattern>io.dropwizard.metrics</pattern>
+                                    <shadedPattern>io.dropwizard.metrics.shaded</shadedPattern>
+                                </relocation>
                             </relocations>
 
                         </configuration>

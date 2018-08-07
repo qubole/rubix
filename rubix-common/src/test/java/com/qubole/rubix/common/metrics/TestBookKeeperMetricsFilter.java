@@ -19,7 +19,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.util.Set;
@@ -34,14 +33,7 @@ public class TestBookKeeperMetricsFilter
   // Dummy metric required by MetricFilter interface, but not used in our MetricFilter implementation.
   private static final Metric TEST_METRIC = new Metric(){};
 
-  private BookKeeperMetricsFilter metricsFilter;
   private final Configuration conf = new Configuration();
-
-  @BeforeMethod
-  public void setUp()
-  {
-    metricsFilter = new BookKeeperMetricsFilter(conf);
-  }
 
   @AfterMethod
   public void tearDown()
@@ -58,9 +50,7 @@ public class TestBookKeeperMetricsFilter
     CacheConfig.setLivenessMetricsEnabled(conf, true);
     Set<String> livenessMetricsNames = BookKeeperMetrics.LivenessMetric.getAllNames();
 
-    for (String metricsName : livenessMetricsNames) {
-      assertTrue(metricsFilter.matches(metricsName, TEST_METRIC));
-    }
+    checkMetricsFilter(livenessMetricsNames, true);
   }
 
   /**
@@ -72,9 +62,7 @@ public class TestBookKeeperMetricsFilter
     CacheConfig.setLivenessMetricsEnabled(conf, false);
     Set<String> livenessMetricsNames = BookKeeperMetrics.LivenessMetric.getAllNames();
 
-    for (String metricsName : livenessMetricsNames) {
-      assertFalse(metricsFilter.matches(metricsName, TEST_METRIC));
-    }
+    checkMetricsFilter(livenessMetricsNames, false);
   }
 
   /**
@@ -86,9 +74,7 @@ public class TestBookKeeperMetricsFilter
     CacheConfig.setCacheMetricsEnabled(conf, true);
     Set<String> cacheMetricsNames = BookKeeperMetrics.CacheMetric.getAllNames();
 
-    for (String metricsName : cacheMetricsNames) {
-      assertTrue(metricsFilter.matches(metricsName, TEST_METRIC));
-    }
+    checkMetricsFilter(cacheMetricsNames, true);
   }
 
   /**
@@ -100,9 +86,7 @@ public class TestBookKeeperMetricsFilter
     CacheConfig.setCacheMetricsEnabled(conf, false);
     Set<String> cacheMetricsNames = BookKeeperMetrics.CacheMetric.getAllNames();
 
-    for (String metricsName : cacheMetricsNames) {
-      assertFalse(metricsFilter.matches(metricsName, TEST_METRIC));
-    }
+    checkMetricsFilter(cacheMetricsNames, false);
   }
 
   /**
@@ -112,13 +96,11 @@ public class TestBookKeeperMetricsFilter
   public void testMatches_jvmMetricsEnabled()
   {
     CacheConfig.setJvmMetricsEnabled(conf, true);
-    Set<String> cacheMetricsNames = Sets.union(
+    Set<String> jvmMetricsNames = Sets.union(
         BookKeeperMetrics.BookKeeperJvmMetric.getAllNames(),
         BookKeeperMetrics.LDTSJvmMetric.getAllNames());
 
-    for (String metricsName : cacheMetricsNames) {
-      assertTrue(metricsFilter.matches(metricsName, TEST_METRIC));
-    }
+    checkMetricsFilter(jvmMetricsNames, true);
   }
 
   /**
@@ -128,12 +110,30 @@ public class TestBookKeeperMetricsFilter
   public void testMatches_jvmMetricsDisabled()
   {
     CacheConfig.setJvmMetricsEnabled(conf, false);
-    Set<String> cacheMetricsNames = Sets.union(
+    Set<String> jvmMetricsNames = Sets.union(
         BookKeeperMetrics.BookKeeperJvmMetric.getAllNames(),
         BookKeeperMetrics.LDTSJvmMetric.getAllNames());
 
-    for (String metricsName : cacheMetricsNames) {
-      assertFalse(metricsFilter.matches(metricsName, TEST_METRIC));
+    checkMetricsFilter(jvmMetricsNames, false);
+  }
+
+  /**
+   * Check that the provided metrics set is correctly filtered.
+   *
+   * @param metricsToCheck  The metrics to filter.
+   * @param shouldMatch     Whether the filter should match.
+   */
+  private void checkMetricsFilter(Set<String> metricsToCheck, boolean shouldMatch)
+  {
+    BookKeeperMetricsFilter metricsFilter = new BookKeeperMetricsFilter(conf);
+
+    for (String metricsName : metricsToCheck) {
+      if (shouldMatch) {
+        assertTrue(metricsFilter.matches(metricsName, TEST_METRIC));
+      }
+      else {
+        assertFalse(metricsFilter.matches(metricsName, TEST_METRIC));
+      }
     }
   }
 }

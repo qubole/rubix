@@ -33,15 +33,22 @@ public class BookKeeperMetrics implements AutoCloseable
 {
   private static Log log = LogFactory.getLog(BookKeeperMetrics.class);
 
-  private final MetricRegistry metrics;
   private final Configuration conf;
+  private final MetricRegistry metrics;
+  private final BookKeeperMetricsFilter metricsFilter;
   protected final Set<Closeable> reporters = new HashSet<>();
 
   public BookKeeperMetrics(Configuration conf, MetricRegistry metrics)
   {
     this.conf = conf;
     this.metrics = metrics;
+    this.metricsFilter = new BookKeeperMetricsFilter(conf);
     initializeReporters();
+  }
+
+  public BookKeeperMetricsFilter getMetricsFilter()
+  {
+    return metricsFilter;
   }
 
   /**
@@ -62,7 +69,7 @@ public class BookKeeperMetrics implements AutoCloseable
           final JmxReporter jmxReporter = JmxReporter.forRegistry(metrics)
               .convertRatesTo(TimeUnit.SECONDS)
               .convertDurationsTo(TimeUnit.MILLISECONDS)
-              .filter(new BookKeeperMetricsFilter(conf))
+              .filter(metricsFilter)
               .build();
 
           log.info("Reporting metrics to JMX");
@@ -76,7 +83,7 @@ public class BookKeeperMetrics implements AutoCloseable
           final StatsDReporter statsDReporter = StatsDReporter.forRegistry(metrics)
               .convertRatesTo(TimeUnit.SECONDS)
               .convertDurationsTo(TimeUnit.MILLISECONDS)
-              .filter(new BookKeeperMetricsFilter(conf))
+              .filter(metricsFilter)
               .build(CacheConfig.getStatsDMetricsHost(conf), CacheConfig.getStatsDMetricsPort(conf));
 
           log.info(String.format("Reporting metrics to StatsD [%s:%s]", CacheConfig.getStatsDMetricsHost(conf), CacheConfig.getStatsDMetricsPort(conf)));

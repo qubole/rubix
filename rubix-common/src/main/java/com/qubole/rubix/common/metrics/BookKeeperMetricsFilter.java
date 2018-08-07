@@ -22,15 +22,14 @@ import java.util.List;
 
 public class BookKeeperMetricsFilter implements MetricFilter
 {
-  private final Configuration conf;
+  private final List<String> whitelist;
 
   public BookKeeperMetricsFilter(Configuration conf)
   {
-    this.conf = conf;
+    this.whitelist = createWhitelist(conf);
   }
 
-  @Override
-  public boolean matches(String name, Metric metric)
+  private List<String> createWhitelist(Configuration conf)
   {
     List<String> whitelist = new ArrayList<>();
     if (CacheConfig.areLivenessMetricsEnabled(conf)) {
@@ -44,6 +43,12 @@ public class BookKeeperMetricsFilter implements MetricFilter
       whitelist.addAll(BookKeeperMetrics.LDTSJvmMetric.getAllNames());
     }
 
+    return whitelist;
+  }
+
+  @Override
+  public boolean matches(String name, Metric metric)
+  {
     for (String whitelistedMetric : whitelist) {
       if (name.startsWith(whitelistedMetric)) {
         return true;

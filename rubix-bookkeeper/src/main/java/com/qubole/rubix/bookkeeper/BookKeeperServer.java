@@ -12,7 +12,6 @@
  */
 package com.qubole.rubix.bookkeeper;
 
-import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.jvm.CachedThreadStatesGaugeSet;
 import com.codahale.metrics.jvm.GarbageCollectorMetricSet;
@@ -146,7 +145,7 @@ public class BookKeeperServer extends Configured implements Tool
 
   protected static void removeMetrics()
   {
-    metrics.removeMatching(MetricFilter.ALL);
+    metrics.removeMatching(bookKeeperMetrics.getMetricsFilter());
   }
 
   @VisibleForTesting
