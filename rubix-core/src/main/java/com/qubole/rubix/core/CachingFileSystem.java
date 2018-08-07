@@ -241,19 +241,6 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
   @Override
   public BlockLocation[] getFileBlockLocations(FileStatus file, long start, long len) throws IOException
   {
-    /*
-    try {
-      if (!clusterManager.isMaster() || cacheSkipped) {
-        // If in worker node, blockLocation does not matter
-        return fs.getFileBlockLocations(file, start, len);
-      }
-    }
-    catch (ExecutionException e) {
-      log.info("Could not find whether node is Master");
-      return fs.getFileBlockLocations(file, start, len);
-    }
-    */
-
     Configuration conf = getConf();
     long splitSize = CacheConfig.getCacheFileSplitSize(conf);
 
