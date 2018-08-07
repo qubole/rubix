@@ -101,7 +101,7 @@ public class TestThriftServerJVM extends Configured
     bookKeeperJvm = pJVMBuilder.start();
     pJVMBuilder.command(localDataTransferStartCmd);
     localDataTransferJvm = pJVMBuilder.start();
-    Thread.sleep(1000);
+    Thread.sleep(3000);
   }
 
   @AfterClass
