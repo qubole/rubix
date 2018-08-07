@@ -17,22 +17,27 @@ LOG_FILE_LDS=${LOG_DIR}/lds.log
 PRESTO_HOME=/usr/lib/presto
 HADOOP_HOME=/usr/lib/hadoop
 
+#Getting the flag for Master or Slave
+is_master="$2" 
 # increase mmap system limit
 sudo sysctl -w vm.max_map_count=200000
 
 usage() {
   echo "Usage: $0"
   echo "$1"
-  echo "start and stop the Cache BookKeeper Server."
-  echo "$0 [start|stop]"
+  echo "start and stop the Cache BookKeeper Server, Mention True for Master and False for Slave"
+  echo "$0 [start|stop] [True|False]"
   exit $2
 }
 
 start() {
   export HADOOP_OPTS="-Dlog4j.configuration=file://${LOG4J_FILE}"
   ulimit -n 100000
-  nohup $HADOOP_HOME/bin/hadoop jar /usr/lib/rubix/lib/rubix-bookkeeper-*.jar com.qubole.rubix.bookkeeper.BookKeeperServer &
-
+  if [[ $is_master == True ]]; then
+        nohup $HADOOP_HOME/bin/hadoop jar /usr/lib/rubix/lib/rubix-bookkeeper-*.jar com.qubole.rubix.bookkeeper.BookKeeperServer -Drubix.cluster.on-master=true &
+  else
+        nohup $HADOOP_HOME/bin/hadoop jar /usr/lib/rubix/lib/rubix-bookkeeper-*.jar com.qubole.rubix.bookkeeper.BookKeeperServer &
+  fi
   PID=$!
   echo $PID > ${PID_FILE}
 
