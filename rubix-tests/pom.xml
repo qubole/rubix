@@ -34,12 +34,6 @@
             <artifactId>rubix-bookkeeper</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>com.qubole.rubix</groupId>
-            <artifactId>rubix-common</artifactId>
-            <version>${project.version}</version>
-            <scope>test</scope>
-        </dependency>
 
         <dependency>
             <groupId>io.dropwizard.metrics</groupId>
