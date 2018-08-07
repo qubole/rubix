@@ -83,11 +83,11 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
 
   protected static Cache<String, FileMetadata> fileMetadataCache;
   private static LoadingCache<String, FileInfo> fileInfoCache;
-  protected static ClusterManager clusterManager;
+  ClusterManager clusterManager;
   private static Log log = LogFactory.getLog(BookKeeper.class.getName());
-  static String nodeName;
-  static String nodeHostName;
-  static String nodeHostAddress;
+  String nodeName;
+  String nodeHostName;
+  String nodeHostAddress;
   private Configuration conf;
   private static Integer lock = 1;
   static long splitSize;
@@ -288,7 +288,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
       throws ClusterManagerInitilizationException
   {
     String clusterManagerClassName = CacheConfig.getClusterManagerClass(conf, clusterType);
-    log.info("Initializing cluster manager : " + clusterManagerClassName);
+    log.info("Initializing cluster manager : " + clusterManagerClassName + " for cluster type " + clusterType);
     ClusterManager manager = null;
 
     try {

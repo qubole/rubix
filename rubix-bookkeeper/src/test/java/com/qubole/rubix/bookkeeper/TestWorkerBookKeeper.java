@@ -14,9 +14,11 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.testing.FakeTicker;
 import com.qubole.rubix.bookkeeper.test.BookKeeperTestUtils;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,10 +34,18 @@ import org.testng.annotations.Test;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
+
+import static org.testng.Assert.assertTrue;
 
 public class TestWorkerBookKeeper
 {
@@ -62,6 +72,7 @@ public class TestWorkerBookKeeper
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     CacheConfig.setServiceRetryInterval(conf, TEST_RETRY_INTERVAL);
     CacheConfig.setServiceMaxRetries(conf, TEST_MAX_RETRIES);
+    CacheConfig.setMaxDisks(conf, TEST_MAX_DISKS);
 
     CacheConfig.setOnMaster(conf, true);
     startBookKeeperServer();
@@ -93,6 +104,55 @@ public class TestWorkerBookKeeper
   {
     final WorkerBookKeeper workerBookKeeper = new WorkerBookKeeper(conf, new MetricRegistry());
     workerBookKeeper.handleHeartbeat("");
+  }
+
+  @Test
+  public void testGetClusterNodeHostNameFromCoordinatorAndThenWorkerCache() throws FileNotFoundException, TTransportException
+  {
+    stopBookKeeperServer();
+    List<String> mockList = new ArrayList<>();
+
+    final MetricRegistry metricRegistry = new MetricRegistry();
+    final CoordinatorBookKeeper spyCoordinator = spy(new CoordinatorBookKeeper(conf, metricRegistry));
+
+    final Thread thread = new Thread()
+    {
+      public void run()
+      {
+        BookKeeperServer.startServer(conf, metricRegistry, spyCoordinator);
+      }
+    };
+    thread.start();
+
+    String testLocalhost = "localhost_test";
+    mockList.add(testLocalhost);
+
+    doReturn(mockList).when(spyCoordinator).getNodeHostNames(anyInt());
+
+    final BookKeeperFactory bookKeeperFactory = mock(BookKeeperFactory.class);
+    when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
+        new RetryingBookkeeperClient(
+            new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf)),
+            CacheConfig.getMaxRetries(conf)));
+
+    FakeTicker ticker = new FakeTicker();
+
+    final WorkerBookKeeper workerBookKeeper = new WorkerBookKeeper(conf, new MetricRegistry(), ticker);
+    String hostName = workerBookKeeper.getClusterNodeHostName("remotepath", ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+
+    assertTrue(hostName.equals(testLocalhost), "HostName is not correct from the coordinator");
+
+    mockList.clear();
+    mockList.add("changed_localhost");
+
+    doReturn(mockList).when(spyCoordinator).getNodeHostNames(anyInt());
+    hostName = workerBookKeeper.getClusterNodeHostName("remotepath", ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+
+    assertTrue(hostName.equals(testLocalhost), "HostName is not correct from the cache");
+    ticker.advance(6, TimeUnit.MINUTES);
+
+    hostName = workerBookKeeper.getClusterNodeHostName("remotepath", ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+    assertTrue(hostName.equals("changed_localhost"), "HostName is not refreshed from Coordinator");
   }
 
   /**

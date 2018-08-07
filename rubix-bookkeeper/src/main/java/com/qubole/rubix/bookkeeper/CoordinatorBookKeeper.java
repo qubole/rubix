@@ -67,6 +67,7 @@ public class CoordinatorBookKeeper extends BookKeeper
   @Override
   public List<String> getNodeHostNames(int clusterType)
   {
+    log.info("Coordinator getNodeHostNames -- " + clusterType);
     try {
       initializeClusterManager(clusterType);
     }
@@ -85,6 +86,7 @@ public class CoordinatorBookKeeper extends BookKeeper
   @Override
   public String getClusterNodeHostName(String remotePath, int clusterType)
   {
+    log.info("Coordinator -- " + clusterType);
     try {
       initializeClusterManager(clusterType);
     }
