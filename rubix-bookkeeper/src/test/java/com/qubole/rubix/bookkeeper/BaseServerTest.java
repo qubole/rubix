@@ -10,12 +10,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-package com.qubole.rubix.bookkeeper.test;
+package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
-import com.qubole.rubix.bookkeeper.BookKeeperServer;
-import com.qubole.rubix.bookkeeper.CoordinatorBookKeeper;
-import com.qubole.rubix.bookkeeper.LocalDataTransferServer;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.common.metrics.MetricsReporter;
 import com.qubole.rubix.spi.CacheConfig;
@@ -34,16 +31,16 @@ import java.util.Set;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
-public class BookKeeperTest
+public class BaseServerTest
 {
   protected enum ServerType
   {
     BOOKKEEPER,
     MOCK_BOOKKEEPER,
-    LOCAL_DATA_TRANSFER_SERVER;
+    LOCAL_DATA_TRANSFER_SERVER
   }
 
-  private static final Log log = LogFactory.getLog(BookKeeperTest.class);
+  private static final Log log = LogFactory.getLog(BaseServerTest.class);
   protected static final String JMX_METRIC_NAME_PATTERN = "metrics:*";
 
   /**

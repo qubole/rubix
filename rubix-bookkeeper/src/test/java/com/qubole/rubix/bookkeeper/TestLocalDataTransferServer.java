@@ -14,7 +14,6 @@ package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
-import com.qubole.rubix.bookkeeper.test.BookKeeperTest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -24,7 +23,7 @@ import org.testng.annotations.Test;
 
 import javax.management.MalformedObjectNameException;
 
-public class TestLocalDataTransferServer extends BookKeeperTest
+public class TestLocalDataTransferServer extends BaseServerTest
 {
   private static final Log log = LogFactory.getLog(TestLocalDataTransferServer.class);
 

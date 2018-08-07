@@ -14,7 +14,6 @@ package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
-import com.qubole.rubix.bookkeeper.test.BookKeeperTest;
 import com.qubole.rubix.common.TestUtil;
 import com.qubole.rubix.common.metrics.MetricsReporter;
 import com.qubole.rubix.spi.CacheConfig;
@@ -40,7 +39,7 @@ import java.util.Set;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
-public class TestBookKeeperServer extends BookKeeperTest
+public class TestBookKeeperServer extends BaseServerTest
 {
   private static final Log log = LogFactory.getLog(TestBookKeeperServer.class);
 
