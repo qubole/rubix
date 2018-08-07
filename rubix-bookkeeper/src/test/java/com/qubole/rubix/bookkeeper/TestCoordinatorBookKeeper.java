@@ -14,7 +14,6 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.Gauge;
-import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.testing.FakeTicker;
 import com.qubole.rubix.common.TestUtil;
@@ -45,7 +44,7 @@ public class TestCoordinatorBookKeeper
   private static final int TEST_MAX_DISKS = 1;
 
   private final Configuration conf = new Configuration();
-  private final MetricRegistry metrics = new MetricRegistry();
+  private MetricRegistry metrics;
 
   @BeforeClass
   public void setUpForClass() throws IOException
@@ -59,13 +58,14 @@ public class TestCoordinatorBookKeeper
   public void setUp()
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
+
+    metrics = new MetricRegistry();
   }
 
   @AfterMethod
   public void tearDown()
   {
     conf.clear();
-    metrics.removeMatching(MetricFilter.ALL);
   }
 
   @AfterClass

@@ -13,7 +13,6 @@
 package com.qubole.rubix.common.metrics;
 
 import com.codahale.metrics.JmxReporter;
-import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Sets;
@@ -47,7 +46,7 @@ public class TestBookKeeperMetrics
   private static final int TEST_MAX_DISKS = 1;
 
   private final Configuration conf = new Configuration();
-  private final MetricRegistry metrics = new MetricRegistry();
+  private MetricRegistry metrics;
 
   @BeforeClass
   public void setUpForClass() throws IOException
@@ -63,13 +62,14 @@ public class TestBookKeeperMetrics
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     CacheConfig.setBlockSize(conf, TEST_BLOCK_SIZE);
     CacheConfig.setCacheMetricsEnabled(conf, true);
+
+    metrics = new MetricRegistry();
   }
 
   @AfterMethod
   public void tearDown()
   {
     conf.clear();
-    metrics.removeMatching(MetricFilter.ALL);
   }
 
   @AfterClass

@@ -12,7 +12,6 @@
  */
 package com.qubole.rubix.bookkeeper;
 
-import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.testing.FakeTicker;
 import com.qubole.rubix.bookkeeper.utils.DiskUtils;
@@ -65,7 +64,7 @@ public class TestBookKeeper
   private static final long TEST_END_BLOCK = 23;
 
   private final Configuration conf = new Configuration();
-  private final MetricRegistry metrics = new MetricRegistry();
+  private MetricRegistry metrics;
 
   private BookKeeper bookKeeper;
 
@@ -77,6 +76,7 @@ public class TestBookKeeper
 
     TestUtil.createCacheParentDirectories(conf, TEST_MAX_DISKS);
 
+    metrics = new MetricRegistry();
     bookKeeper = new CoordinatorBookKeeper(conf, metrics);
     bookKeeper.clusterManager = null;
   }
@@ -87,7 +87,6 @@ public class TestBookKeeper
     TestUtil.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
 
     conf.clear();
-    metrics.removeMatching(MetricFilter.ALL);
   }
 
   @Test
@@ -335,7 +334,7 @@ public class TestBookKeeper
   {
     final FakeTicker ticker = new FakeTicker();
     CacheConfig.setCacheDataExpirationAfterWrite(conf, 1000);
-    metrics.removeMatching(MetricFilter.ALL);
+    metrics = new MetricRegistry();
     bookKeeper = new CoordinatorBookKeeper(conf, metrics, ticker);
 
     assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_EVICTION_COUNT.getMetricName()).getCount(), 0);

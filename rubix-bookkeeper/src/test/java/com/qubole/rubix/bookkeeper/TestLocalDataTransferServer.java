@@ -12,7 +12,6 @@
  */
 package com.qubole.rubix.bookkeeper;
 
-import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -28,18 +27,18 @@ public class TestLocalDataTransferServer extends BaseServerTest
   private static final Log log = LogFactory.getLog(TestLocalDataTransferServer.class);
 
   private final Configuration conf = new Configuration();
-  private final MetricRegistry metrics = new MetricRegistry();
+  private MetricRegistry metrics;
 
   @BeforeMethod
   public void setUp()
   {
+    metrics = new MetricRegistry();
   }
 
   @AfterMethod
   public void tearDown()
   {
     conf.clear();
-    metrics.removeMatching(MetricFilter.ALL);
   }
 
   /**

@@ -12,7 +12,6 @@
  */
 package com.qubole.rubix.bookkeeper;
 
-import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
 import com.qubole.rubix.common.TestUtil;
 import com.qubole.rubix.common.metrics.MetricsReporter;
@@ -49,7 +48,7 @@ public class TestBookKeeperServer extends BaseServerTest
   private static final int TEST_SOCKET_TIMEOUT = 5000;
 
   private final Configuration conf = new Configuration();
-  private final MetricRegistry metrics = new MetricRegistry();
+  private MetricRegistry metrics = new MetricRegistry();
 
   @BeforeClass
   public void setUpForClass() throws IOException
@@ -63,13 +62,14 @@ public class TestBookKeeperServer extends BaseServerTest
   public void setUp()
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
+
+    metrics = new MetricRegistry();
   }
 
   @AfterMethod
   public void tearDown()
   {
     conf.clear();
-    metrics.removeMatching(MetricFilter.ALL);
 
     stopMockBookKeeperServer();
   }
