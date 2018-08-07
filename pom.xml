@@ -244,10 +244,7 @@
             <configuration>
                 <instrumentation>
                     <excludes>
-                        <exclude>**/com/qubole/rubix/spi/BlockLocation*.class</exclude>
-                        <exclude>**/com/qubole/rubix/spi/BookKeeperService*.class</exclude>
-                        <exclude>**/com/qubole/rubix/spi/Location*.class</exclude>
-                        <exclude>**/com/qubole/rubix/spi/FileInfo*.class</exclude>
+                        <exclude>**/com/qubole/rubix/spi/thrift/*.class</exclude>
                     </excludes>
                 </instrumentation>
                 <check>true</check>
@@ -258,11 +255,6 @@
             </configuration>
         </plugin>
 
-        <plugin>
-            <groupId>org.eluder.coveralls</groupId>
-            <artifactId>coveralls-maven-plugin</artifactId>
-            <version>4.3.0</version>
-        </plugin>
     </plugins>
     </build>
 

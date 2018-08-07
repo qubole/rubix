@@ -1,4 +1,4 @@
-namespace java com.qubole.rubix.spi
+namespace java com.qubole.rubix.spi.thrift
 
 typedef i64 long
 typedef i32 int
