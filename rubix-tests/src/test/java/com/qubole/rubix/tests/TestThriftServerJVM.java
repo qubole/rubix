@@ -122,7 +122,6 @@ public class TestThriftServerJVM extends Configured
   public static void setup() throws IOException, InterruptedException, URISyntaxException
   {
     DataGen.populateFile(backendFileName);
-    log.info("BackendPath: " + backendPath);
 
     CacheConfig.setIsStrictMode(conf, true);
     CacheConfig.setCacheDataDirPrefix(conf, testDirectoryPrefix + "dir");
@@ -144,7 +143,7 @@ public class TestThriftServerJVM extends Configured
   }
 
   @Test(enabled = true)
-  public void testJVMCommunication() throws IOException, InterruptedException, TTransportException, TException
+  public void testBookKeeperCaching() throws IOException, InterruptedException, TTransportException, TException
   {
     String host = "localhost";
     File file = new File(backendFileName);
@@ -168,7 +167,7 @@ public class TestThriftServerJVM extends Configured
   }
 
   @Test(enabled = true, expectedExceptions = org.apache.thrift.shaded.transport.TTransportException.class)
-  public void testTTransportException() throws IOException, InterruptedException, Exception
+  public void testCreateBookKeeperClient_OnNotRunningPort() throws IOException, InterruptedException, Exception
   {
     //1234 is a random port to test if TTransportException is being thrown or not
     CacheConfig.setServerPort(conf, 1234);
