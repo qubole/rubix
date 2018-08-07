@@ -85,7 +85,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
   private static LoadingCache<String, FileInfo> fileInfoCache;
   protected static ClusterManager clusterManager;
   private static Log log = LogFactory.getLog(BookKeeper.class.getName());
-  String nodeName;
+  static String nodeName;
   static String nodeHostName;
   static String nodeHostAddress;
   private Configuration conf;
