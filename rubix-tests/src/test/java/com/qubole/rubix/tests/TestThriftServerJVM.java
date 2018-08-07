@@ -14,12 +14,12 @@ package com.qubole.rubix.tests;
 
 import com.qubole.rubix.core.utils.DataGen;
 import com.qubole.rubix.core.utils.DeleteFileVisitor;
-import com.qubole.rubix.spi.BlockLocation;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
-import com.qubole.rubix.spi.Location;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.thrift.BlockLocation;
+import com.qubole.rubix.spi.thrift.Location;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -62,6 +62,7 @@ public class TestThriftServerJVM extends Configured
   private static final String setDataBlockSize = "-Dhadoop.cache.data.block-size=200";
   private static final String setCacheMaxDisks = "-Dhadoop.cache.data.max.disks=1";
   private static final String setCacheDirectory = "-Dhadoop.cache.data.dirprefix.list=" + testDirectoryPrefix + "dir";
+  private static final String setmasterbookkeeper = "-Drubix.cluster.on-master=true";
 
   public BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
 
@@ -90,8 +91,8 @@ public class TestThriftServerJVM extends Configured
     /*
      * Spinning up the separate JVMs for bookKeeper and Local Data Transfer Servers
      * */
-    String[] bookKeeperStartCmd = {hadoopDirectory, "jar", bookKeeperJarPath, bookKeeperClass, setDataBlockSize, setCacheMaxDisks, setCacheDirectory};
-    String[] localDataTransferStartCmd = {hadoopDirectory, "jar", bookKeeperJarPath, localDataTransferServerClass, setDataBlockSize, setCacheMaxDisks, setCacheDirectory};
+    String[] bookKeeperStartCmd = {hadoopDirectory, "jar", bookKeeperJarPath, bookKeeperClass, setDataBlockSize, setCacheMaxDisks, setCacheDirectory, setmasterbookkeeper};
+    String[] localDataTransferStartCmd = {hadoopDirectory, "jar", bookKeeperJarPath, localDataTransferServerClass, setDataBlockSize, setCacheMaxDisks, setCacheDirectory, setmasterbookkeeper};
 
     ProcessBuilder pJVMBuilder = new ProcessBuilder();
     pJVMBuilder.redirectErrorStream(true);
@@ -100,7 +101,7 @@ public class TestThriftServerJVM extends Configured
     bookKeeperJvm = pJVMBuilder.start();
     pJVMBuilder.command(localDataTransferStartCmd);
     localDataTransferJvm = pJVMBuilder.start();
-    Thread.sleep(1000);
+    Thread.sleep(3000);
   }
 
   @AfterClass

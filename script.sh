@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 mvn clean install -DskipTests
 
@@ -18,5 +18,8 @@ sudo cp $RUBIX_PRESTO_JAR $HADOOP_JARSPATH
 sudo cp $RUBIX_SPI_JAR $HADOOP_JARSPATH
 
 mvn clean install
+if [[ $? -ne 0 ]]; then
+    exit 1
+fi
 mvn cobertura:cobertura
 bash <(curl -s https://codecov.io/bash)
