@@ -15,8 +15,8 @@ package com.qubole.rubix.core;
 import com.google.common.base.Throwables;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
-import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
+import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -29,18 +29,15 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
+import org.apache.thrift.shaded.TException;
 import org.weakref.jmx.MBeanExporter;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.net.URI;
-import java.util.List;
-import java.util.concurrent.ExecutionException;
 
 import static com.qubole.rubix.spi.CacheUtil.skipCache;
 
@@ -51,7 +48,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
 {
   private static final Log log = LogFactory.getLog(CachingFileSystem.class);
   protected T fs;
-  private static ClusterManager clusterManager;
+  private static ClusterType clusterType;
 
   private boolean cacheSkipped;
   private boolean isRubixSchemeUsed;
@@ -89,61 +86,26 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
 
   public abstract String getScheme();
 
-  public void setClusterManager(ClusterManager clusterManager)
-  {
-    this.clusterManager = clusterManager;
-  }
-
-  public ClusterManager getClusterManager()
-  {
-    return clusterManager;
-  }
-
   public void setBookKeeper(BookKeeperFactory bookKeeperFactory, Configuration conf)
   {
     this.bookKeeperFactory = bookKeeperFactory;
     this.setConf(conf);
   }
 
+  public void setClusterType(ClusterType clusterType)
+  {
+    this.clusterType = clusterType;
+  }
+
   @Override
   public void initialize(URI uri, Configuration conf) throws IOException
   {
-    if (clusterManager == null) {
-      throw new IOException("Cluster Manager not set");
-    }
     super.initialize(uri, conf);
     this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
     this.workingDir = new Path("/user", System.getProperty("user.name")).makeQualified(this);
     isRubixSchemeUsed = uri.getScheme().equals(CacheConfig.RUBIX_SCHEME);
     URI originalUri = getOriginalURI(uri);
     fs.initialize(originalUri, conf);
-  }
-
-  public synchronized void initializeClusterManager(Configuration conf, ClusterType clusterType)
-      throws ClusterManagerInitilizationException
-  {
-    if (clusterManager != null) {
-      return;
-    }
-
-    String clusterManagerClassName = CacheConfig.getClusterManagerClass(conf, clusterType);
-    log.info("Initializing cluster manager : " + clusterManagerClassName);
-
-    try {
-      Class clusterManagerClass = conf.getClassByName(clusterManagerClassName);
-      Constructor constructor = clusterManagerClass.getConstructor();
-      ClusterManager manager = (ClusterManager) constructor.newInstance();
-
-      manager.initialize(conf);
-      setClusterManager(manager);
-    }
-    catch (ClassNotFoundException | NoSuchMethodException | InstantiationException |
-            IllegalAccessException | InvocationTargetException ex) {
-      String errorMessage = String.format("Not able to initialize ClusterManager class : {0} ",
-          clusterManagerClassName);
-      log.error(errorMessage);
-      throw new ClusterManagerInitilizationException(errorMessage, ex);
-    }
   }
 
   @Override
@@ -169,7 +131,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
     return new FSDataInputStream(
         new BufferedFSInputStream(
             new CachingInputStream(this, originalPath, this.getConf(), statsMBean,
-                clusterManager.getClusterType(), bookKeeperFactory, fs, bufferSize, statistics),
+                clusterType, bookKeeperFactory, fs, bufferSize, statistics),
             CacheConfig.getBlockSize(getConf())));
   }
 
@@ -279,22 +241,8 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
   @Override
   public BlockLocation[] getFileBlockLocations(FileStatus file, long start, long len) throws IOException
   {
-    try {
-      if (!clusterManager.isMaster() || cacheSkipped) {
-        // If in worker node, blockLocation does not matter
-        return fs.getFileBlockLocations(file, start, len);
-      }
-    }
-    catch (ExecutionException e) {
-      log.info("Could not find whether node is Master");
-      return fs.getFileBlockLocations(file, start, len);
-    }
-
-    List<String> nodes = clusterManager.getNodes();
-
-    if (nodes == null) {
-      return fs.getFileBlockLocations(file, start, len);
-    }
+    Configuration conf = getConf();
+    long splitSize = CacheConfig.getCacheFileSplitSize(conf);
 
     if (file == null) {
       return null;
@@ -306,22 +254,36 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
       else {
         // Using similar logic of returning all Blocks as FileSystem.getFileBlockLocations does instead of only returning blocks from start till len
 
-        BlockLocation[] blockLocations = new BlockLocation[(int) Math.ceil((double) file.getLen() / clusterManager.getSplitSize())];
-        int blockNumber = 0;
-        for (long i = 0; i < file.getLen(); i = i + clusterManager.getSplitSize()) {
-          long end = i + clusterManager.getSplitSize();
-          if (end > file.getLen()) {
-            end = file.getLen();
-          }
-          String key = file.getPath().toString() + i + end;
-          int nodeIndex = clusterManager.getNodeIndex(nodes.size(), key);
-          String[] name = new String[]{nodes.get(nodeIndex)};
-          String[] host = new String[]{nodes.get(nodeIndex)};
-          blockLocations[blockNumber++] = new BlockLocation(name, host, i, end - i);
-          log.info(String.format("BlockLocation %s %d %d %s totalHosts: %s", file.getPath().toString(), i, end - i, host[0], nodes.size()));
-        }
+        try {
+          BlockLocation[] blockLocations = new BlockLocation[(int) Math.ceil((double) file.getLen() / splitSize)];
+          int blockNumber = 0;
 
-        return blockLocations;
+          RetryingBookkeeperClient client = new BookKeeperFactory().createBookKeeperClient(conf);
+
+          for (long i = 0; i < file.getLen(); i = i + splitSize) {
+            long end = i + splitSize;
+            if (end > file.getLen()) {
+              end = file.getLen();
+            }
+            String key = file.getPath().toString() + i + end;
+            String hostName = client.getClusterNodeHostName(key, clusterType.ordinal());
+
+            if (hostName == null) {
+              return fs.getFileBlockLocations(file, start, len);
+            }
+
+            String[] name = new String[]{hostName};
+            String[] host = new String[]{hostName};
+            blockLocations[blockNumber++] = new BlockLocation(name, host, i, end - i);
+            log.info(String.format("BlockLocation %s %d %d %s ", file.getPath().toString(), i, end - i, host[0]));
+          }
+
+          return blockLocations;
+        }
+        catch (TException ex) {
+          log.error("Error while getting Node HostName. Fallingback on RemoteFileSystem. " + ex.toString());
+          return fs.getFileBlockLocations(file, start, len);
+        }
       }
     }
     else {

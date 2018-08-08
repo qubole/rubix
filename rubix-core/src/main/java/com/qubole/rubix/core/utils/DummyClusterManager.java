@@ -44,12 +44,6 @@ public class DummyClusterManager extends ClusterManager
   }
 
   @Override
-  public boolean isMaster()
-  {
-    return false;
-  }
-
-  @Override
   public ClusterType getClusterType()
   {
     return ClusterType.TEST_CLUSTER_MANAGER;

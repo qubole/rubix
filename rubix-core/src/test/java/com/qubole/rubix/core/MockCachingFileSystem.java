@@ -40,13 +40,8 @@ public class MockCachingFileSystem extends CachingFileSystem<RawLocalFileSystem>
   public void initialize(URI uri, Configuration conf) throws IOException
   {
     this.conf = conf;
-    try {
-      initializeClusterManager(conf, ClusterType.TEST_CLUSTER_MANAGER);
-      super.initialize(uri, conf);
-    }
-    catch (ClusterManagerInitilizationException ex) {
-      throw new IOException(ex);
-    }
+    setClusterType(ClusterType.TEST_CLUSTER_MANAGER);
+    super.initialize(uri, conf);
   }
 
   public String getScheme()

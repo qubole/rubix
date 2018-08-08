@@ -84,15 +84,13 @@ public abstract class BookKeeper implements BookKeeperService.Iface
 
   protected static Cache<String, FileMetadata> fileMetadataCache;
   private static LoadingCache<String, FileInfo> fileInfoCache;
-  protected static ClusterManager clusterManager;
+  ClusterManager clusterManager;
   private static Log log = LogFactory.getLog(BookKeeper.class.getName());
   String nodeName;
-  static String nodeHostName;
-  static String nodeHostAddress;
+  String nodeHostName;
+  String nodeHostAddress;
   private Configuration conf;
   private static Integer lock = 1;
-  private List<String> nodes;
-  int currentNodeIndex = -1;
   static long splitSize;
   private RemoteFetchProcessor fetchProcessor;
   private Ticker ticker;
@@ -171,16 +169,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     catch (ClusterManagerInitilizationException ex) {
       log.error("Not able to initialize ClusterManager for cluster type : " + ClusterType.findByValue(clusterType) +
           " with Exception : " + ex);
-      return null;
-    }
-    if (nodeName == null) {
-      log.error("Node name is null for Cluster Type" + ClusterType.findByValue(clusterType));
-      return null;
-    }
-
-    if (currentNodeIndex == -1 || nodes == null) {
-      log.error("Initialization not done");
-      return null;
+      throw new TException(ex);
     }
 
     Map<Long, String> blockSplits = new HashMap<>();
@@ -192,8 +181,8 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         end = fileLength;
       }
       String key = remotePath + i + end;
-      int nodeIndex = clusterManager.getNodeIndex(nodes.size(), key);
-      blockSplits.put(blockNumber, nodes.get(nodeIndex));
+      String hostName = getClusterNodeHostName(key, clusterType);
+      blockSplits.put(blockNumber, hostName);
       blockNumber++;
     }
 
@@ -243,7 +232,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     return blockLocations;
   }
 
-  private void initializeClusterManager(int clusterType) throws ClusterManagerInitilizationException
+  void initializeClusterManager(int clusterType) throws ClusterManagerInitilizationException
   {
     if (this.clusterManager == null) {
       ClusterManager manager = null;
@@ -255,8 +244,9 @@ public abstract class BookKeeper implements BookKeeperService.Iface
             log.info(" HostName : " + nodeHostName + " HostAddress : " + nodeHostAddress);
           }
           catch (UnknownHostException e) {
-            log.warn("Could not get nodeName", e);
-            return;
+            String errorMessage = "Could not get nodeName";
+            log.warn(errorMessage, e);
+            throw new ClusterManagerInitilizationException(errorMessage, e);
           }
 
           manager = getClusterManagerInstance(ClusterType.findByValue(clusterType), conf);
@@ -264,34 +254,33 @@ public abstract class BookKeeper implements BookKeeperService.Iface
           this.clusterManager = manager;
           splitSize = clusterManager.getSplitSize();
 
-          if (clusterType == TEST_CLUSTER_MANAGER.ordinal() || clusterType == TEST_CLUSTER_MANAGER_MULTINODE.ordinal()) {
-            currentNodeIndex = 0;
-            nodes = clusterManager.getNodes();
-            nodeName = nodes.get(currentNodeIndex);
-            if (clusterType == TEST_CLUSTER_MANAGER_MULTINODE.ordinal()) {
-              nodes.add(nodeName + "_copy");
-            }
-            return;
-          }
+          setCurrentNodeNameAndIndex(manager, clusterType);
         }
       }
     }
+  }
 
-    nodes = clusterManager.getNodes();
-    if (nodes == null || nodes.size() == 0) {
-      log.error("Could not initialize as no cluster node is found");
+  void setCurrentNodeNameAndIndex(ClusterManager manager, int clusterType)
+      throws ClusterManagerInitilizationException
+  {
+    List<String> nodes = clusterManager.getNodes();
+    if (clusterType == TEST_CLUSTER_MANAGER.ordinal() || clusterType == TEST_CLUSTER_MANAGER_MULTINODE.ordinal()) {
+      nodeName = nodes.get(0);
+      return;
     }
-    else if (nodes.indexOf(nodeHostName) >= 0) {
-      currentNodeIndex = nodes.indexOf(nodeHostName);
-      nodeName = nodeHostName;
-    }
-    else if (nodes.indexOf(nodeHostAddress) >= 0) {
-      currentNodeIndex = nodes.indexOf(nodeHostAddress);
-      nodeName = nodeHostAddress;
+    if (nodes != null && nodes.size() > 0) {
+      if (nodes.indexOf(nodeHostName) >= 0) {
+        nodeName = nodeHostName;
+      }
+      else if (nodes.indexOf(nodeHostAddress) >= 0) {
+        nodeName = nodeHostAddress;
+      }
     }
     else {
-      log.error(String.format("Could not initialize cluster nodes=%s nodeHostName=%s nodeHostAddress=%s " +
-          "currentNodeIndex=%d", nodes, nodeHostName, nodeHostAddress, currentNodeIndex));
+      String errorMessage = String.format("Could not initialize cluster nodes=%s nodeHostName=%s nodeHostAddress=%s ",
+          nodes, nodeHostName, nodeHostAddress);
+      log.error(errorMessage);
+      throw new ClusterManagerInitilizationException(errorMessage);
     }
   }
 
@@ -300,7 +289,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       throws ClusterManagerInitilizationException
   {
     String clusterManagerClassName = CacheConfig.getClusterManagerClass(conf, clusterType);
-    log.info("Initializing cluster manager : " + clusterManagerClassName);
+    log.info("Initializing cluster manager : " + clusterManagerClassName + " for cluster type " + clusterType);
     ClusterManager manager = null;
 
     try {

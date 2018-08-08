@@ -81,19 +81,27 @@ public class BookKeeperServer extends Configured implements Tool
 
   public static void startServer(Configuration conf, MetricRegistry metricsRegistry)
   {
-    metrics = metricsRegistry;
+    BookKeeper localBookKeeper;
     try {
       if (CacheConfig.isOnMaster(conf)) {
-        bookKeeper = new CoordinatorBookKeeper(conf, metrics);
+        localBookKeeper = new CoordinatorBookKeeper(conf, metricsRegistry);
       }
       else {
-        bookKeeper = new WorkerBookKeeper(conf, metrics);
+        localBookKeeper = new WorkerBookKeeper(conf, metricsRegistry);
       }
     }
     catch (FileNotFoundException e) {
       log.error("Cache directories could not be created", e);
       return;
     }
+
+    startServer(conf, metricsRegistry, localBookKeeper);
+  }
+
+  static void startServer(Configuration conf, MetricRegistry metricsRegistry, BookKeeper bookKeeper)
+  {
+    metrics = metricsRegistry;
+    bookKeeper = bookKeeper;
 
     registerMetrics(conf);
 
@@ -137,6 +145,7 @@ public class BookKeeperServer extends Configured implements Tool
   {
     removeMetrics();
     server.stop();
+    log.debug("Bookkeeper Server Stopped");
   }
 
   protected static void removeMetrics()

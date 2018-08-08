@@ -43,7 +43,6 @@ import java.util.concurrent.TimeUnit;
  */
 public class PrestoClusterManagerV2 extends ClusterManager
 {
-  private boolean isMaster = true;
   private int serverPort = 8081;
   private String serverAddress = "localhost";
   static LoadingCache<String, Map<String, String>> nodesCache;
@@ -68,12 +67,6 @@ public class PrestoClusterManagerV2 extends ClusterManager
           public Map<String, String> load(String s)
               throws Exception
           {
-            if (!isMaster) {
-              // First time all nodes start assuming themselves as master and down the line figure out their role
-              // Next time onwards, only master will be fetching the list of nodes
-              return ImmutableMap.of();
-            }
-
             return loadNodesCache(conf);
           }
         }, executor));
@@ -86,7 +79,6 @@ public class PrestoClusterManagerV2 extends ClusterManager
       List<PrestoClusterManagerUtil.Stats> nodeListFromServer = PrestoClusterManagerUtil.getAllNodes(conf);
 
       if (nodeListFromServer == null) {
-        isMaster = false;
         // if nodeListFromServer is null, it means we got error from the getAllNodes. Return the master list
         return allNodesMap;
       }
@@ -144,15 +136,6 @@ public class PrestoClusterManagerV2 extends ClusterManager
     catch (IOException e) {
       throw Throwables.propagate(e);
     }
-  }
-
-  @Override
-  public boolean isMaster()
-      throws ExecutionException
-  {
-    // issue get on nodesSupplier to ensure that isMaster is set correctly
-    nodesCache.get("nodeList");
-    return isMaster;
   }
 
   /*
