@@ -38,6 +38,7 @@
             <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-common</artifactId>
             <scope>test</scope>
+            <version>${project.version}</version>
         </dependency>
 
         <dependency>
