@@ -32,6 +32,9 @@ public class CacheConfig
 
   private static final String KEY_BLOCK_SIZE = "hadoop.cache.data.block-size";
   private static final String KEY_CACHE_ENABLED = "hadoop.cache.data.enabled";
+  private static final String KEY_CACHE_METADATA_FILE_SUFFIX = "rubix.cache.metadata.file.suffix";
+  private static final String KEY_CACHE_VALIDATION_INITIAL_DELAY = "rubix.cache.validation.initial.delay";
+  private static final String KEY_CACHE_VALIDATION_INTERVAL = "rubix.cache.validation.interval";
   private static final String KEY_CLIENT_TIMEOUT = "hadoop.cache.data.client.timeout";
   private static final String KEY_DATA_CACHE_EXPIRY = "hadoop.cache.data.expiration";
   private static final String KEY_DATA_CACHE_EXPIRY_AFTER_WRITE = "hadoop.cache.data.expiration.after-write";
@@ -80,6 +83,9 @@ public class CacheConfig
   // default values
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
   private static final int DEFAULT_CLIENT_TIMEOUT = 10000; // ms
+  private static final String DEFAULT_CACHE_METADATA_FILE_SUFFIX = "_mdfile";
+  private static final int DEFAULT_CACHE_VALIDATION_INITIAL_DELAY = 1800000; // ms (30min)
+  private static final int DEFAULT_CACHE_VALIDATION_INTERVAL = 1800000; // ms (30min)
   private static final String DEFAULT_DATA_CACHE_DIR_PREFIX = "/media/ephemeral";
   private static final String DEFAULT_DATA_CACHE_DIR_SUFFIX = "/fcache/";
   private static final boolean DEFAULT_DATA_CACHE_ENABLED = true;
@@ -195,6 +201,21 @@ public class CacheConfig
   public static int getCacheMaxDisks(Configuration conf)
   {
     return conf.getInt(KEY_DATA_CACHE_MAX_DISKS, DEFAULT_DATA_CACHE_MAX_DISKS);
+  }
+
+  public static String getCacheMetadataFileSuffix(Configuration conf)
+  {
+    return conf.get(KEY_CACHE_METADATA_FILE_SUFFIX, DEFAULT_CACHE_METADATA_FILE_SUFFIX);
+  }
+
+  public static int getCacheValidationInitialDelay(Configuration conf)
+  {
+    return conf.getInt(KEY_CACHE_VALIDATION_INITIAL_DELAY, DEFAULT_CACHE_VALIDATION_INITIAL_DELAY);
+  }
+
+  public static int getCacheValidationInterval(Configuration conf)
+  {
+    return conf.getInt(KEY_CACHE_VALIDATION_INTERVAL, DEFAULT_CACHE_VALIDATION_INTERVAL);
   }
 
   public static int getClientTimeout(Configuration conf)
@@ -430,6 +451,21 @@ public class CacheConfig
   public static void setCacheDataTableWhitelist(Configuration conf, String tableWhitelist)
   {
     conf.set(KEY_DATA_CACHE_TABLE_WHITELIST, tableWhitelist);
+  }
+
+  public static void setCacheMetadataFileSuffix(Configuration conf, String fileSuffix)
+  {
+    conf.set(KEY_CACHE_METADATA_FILE_SUFFIX, fileSuffix);
+  }
+
+  public static void setCacheValidationInitialDelay(Configuration conf, int initialDelay)
+  {
+    conf.setInt(KEY_CACHE_VALIDATION_INITIAL_DELAY, initialDelay);
+  }
+
+  public static void setCacheValidationInterval(Configuration conf, int interval)
+  {
+    conf.setInt(KEY_CACHE_VALIDATION_INTERVAL, interval);
   }
 
   public static void setHeartbeatInitialDelay(Configuration conf, int initialDelay)
