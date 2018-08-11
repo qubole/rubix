@@ -38,7 +38,6 @@
             <groupId>io.dropwizard.metrics</groupId>
             <artifactId>metrics-core</artifactId>
             <version>${dep.metrics.version}</version>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.readytalk</groupId>
@@ -100,6 +99,9 @@
                                 <includes>
                                     <include>org.weakref:jmxutils</include>
                                     <include>com.google.guava:guava</include>
+                                    <include>io.dropwizard.metrics:metrics-core</include>
+                                    <include>com.readytalk:metrics-statsd-common</include>
+                                    <include>com.readytalk:metrics3-statsd</include>
                                 </includes>
                             </artifactSet>
                             <relocations>
