@@ -177,17 +177,21 @@ public class BaseServerTest
    */
   protected void startBookKeeperServer(final Configuration conf, final MetricRegistry metrics) throws InterruptedException
   {
+    if (bookKeeperServer != null) {
+      throw new IllegalStateException("A BookKeeperServer is already running");
+    }
+
+    bookKeeperServer = new BookKeeperServer();
     final Thread thread = new Thread()
     {
       public void run()
       {
-        bookKeeperServer = new BookKeeperServer();
         bookKeeperServer.startServer(conf, metrics);
       }
     };
     thread.start();
 
-    while (!BookKeeperServer.isServerUp()) {
+    while (!bookKeeperServer.isServerUp()) {
       Thread.sleep(200);
       log.info("Waiting for BookKeeper Server to come up");
     }
@@ -200,6 +204,10 @@ public class BaseServerTest
   {
     if (bookKeeperServer != null) {
       bookKeeperServer.stopServer();
+      bookKeeperServer = null;
+    }
+    else {
+      throw new IllegalStateException("BookKeeperServer hasn't been started yet");
     }
   }
 
@@ -243,6 +251,10 @@ public class BaseServerTest
    */
   protected void startMockBookKeeperServer(final Configuration conf, final MetricRegistry metrics)
   {
+    if (mockBookKeeperServer != null) {
+      throw new IllegalStateException("A MockBookKeeperServer is already running");
+    }
+
     mockBookKeeperServer = new MockBookKeeperServer();
     mockBookKeeperServer.startServer(conf, metrics);
   }
@@ -254,6 +266,10 @@ public class BaseServerTest
   {
     if (mockBookKeeperServer != null) {
       mockBookKeeperServer.stopServer();
+      mockBookKeeperServer = null;
+    }
+    else {
+      throw new IllegalStateException("MockBookKeeperServer hasn't been started yet");
     }
   }
 

@@ -70,8 +70,6 @@ public class TestBookKeeperServer extends BaseServerTest
   public void tearDown()
   {
     conf.clear();
-
-    stopMockBookKeeperServer();
   }
 
   @AfterClass
@@ -165,6 +163,7 @@ public class TestBookKeeperServer extends BaseServerTest
     }
     finally {
       statsDThread.stopThread();
+      stopMockBookKeeperServer();
     }
   }
 
@@ -188,6 +187,7 @@ public class TestBookKeeperServer extends BaseServerTest
     }
     finally {
       statsDThread.stopThread();
+      stopMockBookKeeperServer();
     }
   }
 
@@ -211,6 +211,7 @@ public class TestBookKeeperServer extends BaseServerTest
     }
     finally {
       statsDThread.stopThread();
+      stopMockBookKeeperServer();
     }
   }
 
@@ -234,6 +235,7 @@ public class TestBookKeeperServer extends BaseServerTest
     }
     finally {
       statsDThread.stopThread();
+      stopMockBookKeeperServer();
     }
   }
 

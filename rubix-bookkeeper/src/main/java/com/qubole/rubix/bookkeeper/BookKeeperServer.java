@@ -45,18 +45,18 @@ import static com.qubole.rubix.spi.CacheConfig.getServerPort;
  */
 public class BookKeeperServer extends Configured implements Tool
 {
-  public static BookKeeper bookKeeper;
-  public static BookKeeperService.Processor processor;
+  public BookKeeper bookKeeper;
+  public BookKeeperService.Processor processor;
 
   // Registry for gathering & storing necessary metrics
-  protected static MetricRegistry metrics;
+  protected MetricRegistry metrics;
 
-  public static Configuration conf;
+  public Configuration conf;
 
-  private static TServer server;
+  private TServer server;
 
   private static Log log = LogFactory.getLog(BookKeeperServer.class.getName());
-  private static BookKeeperMetrics bookKeeperMetrics;
+  private BookKeeperMetrics bookKeeperMetrics;
 
   public BookKeeperServer()
   {
@@ -149,7 +149,7 @@ public class BookKeeperServer extends Configured implements Tool
   }
 
   @VisibleForTesting
-  public static boolean isServerUp()
+  public boolean isServerUp()
   {
     if (server != null) {
       return server.isServing();
