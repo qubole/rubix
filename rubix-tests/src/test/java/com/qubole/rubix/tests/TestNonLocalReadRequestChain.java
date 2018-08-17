@@ -101,17 +101,17 @@ public class TestNonLocalReadRequestChain
         LocalDataTransferServer.startServer(conf, new MetricRegistry());
       }
     };
+    bookKeeperServer = new BookKeeperServer();
     Thread thread = new Thread()
     {
       public void run()
       {
-        bookKeeperServer = new BookKeeperServer();
         bookKeeperServer.startServer(conf, new MetricRegistry());
       }
     };
     thread.start();
 
-    while (!BookKeeperServer.isServerUp()) {
+    while (!bookKeeperServer.isServerUp()) {
       Thread.sleep(200);
       log.info("Waiting for BookKeeper Server to come up");
     }
