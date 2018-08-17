@@ -368,7 +368,7 @@ public class TestBookKeeperServer extends BaseServerTest
    */
   private static class MockBookKeeperServer extends BookKeeperServer
   {
-    public static void startServer(Configuration conf, MetricRegistry metricRegistry)
+    public void startServer(Configuration conf, MetricRegistry metricRegistry)
     {
       try {
         new CoordinatorBookKeeper(conf, metricRegistry);
@@ -382,7 +382,7 @@ public class TestBookKeeperServer extends BaseServerTest
       registerMetrics(conf);
     }
 
-    public static void stopServer()
+    public void stopServer()
     {
       removeMetrics();
     }

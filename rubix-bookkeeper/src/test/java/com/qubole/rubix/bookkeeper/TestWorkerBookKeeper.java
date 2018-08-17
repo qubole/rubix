@@ -33,8 +33,11 @@ import org.testng.annotations.Test;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 public class TestWorkerBookKeeper
@@ -46,6 +49,7 @@ public class TestWorkerBookKeeper
   private static final int TEST_MAX_RETRIES = 5;
   private static final int TEST_RETRY_INTERVAL = 500;
 
+  private BookKeeperServer bookKeeperServer = spy(BookKeeperServer.class);
   private final Configuration conf = new Configuration();
 
   @BeforeClass
@@ -54,6 +58,9 @@ public class TestWorkerBookKeeper
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 
     TestUtil.createCacheParentDirectories(conf, TEST_MAX_DISKS);
+
+    doNothing().when(bookKeeperServer).registerMetrics(any(Configuration.class));
+    doNothing().when(bookKeeperServer).removeMetrics();
   }
 
   @BeforeMethod
@@ -149,7 +156,7 @@ public class TestWorkerBookKeeper
     {
       public void run()
       {
-        BookKeeperServer.startServer(conf, new MetricRegistry());
+        bookKeeperServer.startServer(conf, new MetricRegistry());
       }
     };
     thread.start();
@@ -175,7 +182,7 @@ public class TestWorkerBookKeeper
         catch (InterruptedException e) {
           Thread.currentThread().interrupt();
         }
-        BookKeeperServer.startServer(conf, new MetricRegistry());
+        bookKeeperServer.startServer(conf, new MetricRegistry());
       }
     };
     thread.start();
@@ -186,6 +193,6 @@ public class TestWorkerBookKeeper
    */
   private void stopBookKeeperServer()
   {
-    BookKeeperServer.stopServer();
+    bookKeeperServer.stopServer();
   }
 }

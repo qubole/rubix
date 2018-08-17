@@ -58,7 +58,7 @@ public class BookKeeperServer extends Configured implements Tool
   private static Log log = LogFactory.getLog(BookKeeperServer.class.getName());
   private static BookKeeperMetrics bookKeeperMetrics;
 
-  protected BookKeeperServer()
+  public BookKeeperServer()
   {
   }
 
@@ -82,7 +82,7 @@ public class BookKeeperServer extends Configured implements Tool
     return 0;
   }
 
-  public static void startServer(Configuration conf, MetricRegistry metricsRegistry)
+  public void startServer(Configuration conf, MetricRegistry metricsRegistry)
   {
     metrics = metricsRegistry;
     try {
@@ -122,7 +122,7 @@ public class BookKeeperServer extends Configured implements Tool
   /**
    * Register desired metrics.
    */
-  protected static void registerMetrics(Configuration conf)
+  protected void registerMetrics(Configuration conf)
   {
     bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
 
@@ -131,7 +131,7 @@ public class BookKeeperServer extends Configured implements Tool
     metrics.register(BookKeeperMetrics.BookKeeperJvmMetric.METRIC_BOOKKEEPER_JVM_MEMORY_PREFIX.getMetricName(), new MemoryUsageGaugeSet());
   }
 
-  public static void stopServer()
+  public void stopServer()
   {
     removeMetrics();
     try {
@@ -143,7 +143,7 @@ public class BookKeeperServer extends Configured implements Tool
     server.stop();
   }
 
-  protected static void removeMetrics()
+  protected void removeMetrics()
   {
     metrics.removeMatching(bookKeeperMetrics.getMetricsFilter());
   }

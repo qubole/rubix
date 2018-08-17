@@ -40,6 +40,9 @@ public class BaseServerTest
     LOCAL_DATA_TRANSFER_SERVER
   }
 
+  private BookKeeperServer bookKeeperServer;
+  private MockBookKeeperServer mockBookKeeperServer;
+
   private static final Log log = LogFactory.getLog(BaseServerTest.class);
   protected static final String JMX_METRIC_NAME_PATTERN = "metrics:*";
 
@@ -178,7 +181,8 @@ public class BaseServerTest
     {
       public void run()
       {
-        BookKeeperServer.startServer(conf, metrics);
+        bookKeeperServer = new BookKeeperServer();
+        bookKeeperServer.startServer(conf, metrics);
       }
     };
     thread.start();
@@ -194,7 +198,9 @@ public class BaseServerTest
    */
   protected void stopBookKeeperServer()
   {
-    BookKeeperServer.stopServer();
+    if (bookKeeperServer != null) {
+      bookKeeperServer.stopServer();
+    }
   }
 
   /**
@@ -237,7 +243,8 @@ public class BaseServerTest
    */
   protected void startMockBookKeeperServer(final Configuration conf, final MetricRegistry metrics)
   {
-    MockBookKeeperServer.startServer(conf, metrics);
+    mockBookKeeperServer = new MockBookKeeperServer();
+    mockBookKeeperServer.startServer(conf, metrics);
   }
 
   /**
@@ -245,7 +252,9 @@ public class BaseServerTest
    */
   protected void stopMockBookKeeperServer()
   {
-    MockBookKeeperServer.stopServer();
+    if (mockBookKeeperServer != null) {
+      mockBookKeeperServer.stopServer();
+    }
   }
 
   /**
@@ -385,7 +394,7 @@ public class BaseServerTest
    */
   private static class MockBookKeeperServer extends BookKeeperServer
   {
-    public static void startServer(Configuration conf, MetricRegistry metricRegistry)
+    public void startServer(Configuration conf, MetricRegistry metricRegistry)
     {
       metrics = metricRegistry;
       try {
@@ -399,7 +408,7 @@ public class BaseServerTest
       registerMetrics(conf);
     }
 
-    public static void stopServer()
+    public void stopServer()
     {
       removeMetrics();
     }

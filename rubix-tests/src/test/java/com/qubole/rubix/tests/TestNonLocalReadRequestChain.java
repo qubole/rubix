@@ -60,6 +60,7 @@ public class TestNonLocalReadRequestChain
   Thread localDataTransferServer;
 
   private static final String testDirectory = testDirectoryPrefix + "dir0";
+  private BookKeeperServer bookKeeperServer;
 
   NonLocalReadRequestChain nonLocalReadRequestChain;
   private static final Log log = LogFactory.getLog(TestNonLocalReadRequestChain.class);
@@ -104,7 +105,8 @@ public class TestNonLocalReadRequestChain
     {
       public void run()
       {
-        BookKeeperServer.startServer(conf, new MetricRegistry());
+        bookKeeperServer = new BookKeeperServer();
+        bookKeeperServer.startServer(conf, new MetricRegistry());
       }
     };
     thread.start();
@@ -153,7 +155,9 @@ public class TestNonLocalReadRequestChain
       throws Exception
   {
     localDataTransferServer.start();
-    BookKeeperServer.stopServer();
+    if (bookKeeperServer != null) {
+      bookKeeperServer.stopServer();
+    }
     while (!LocalDataTransferServer.isServerUp()) {
       Thread.sleep(200);
       log.info("Waiting for Local Data Transfer Server to come up");
@@ -195,7 +199,9 @@ public class TestNonLocalReadRequestChain
   public void cleanup()
       throws IOException
   {
-    BookKeeperServer.stopServer();
+    if (bookKeeperServer != null) {
+      bookKeeperServer.stopServer();
+    }
     LocalDataTransferServer.stopServer();
 
     File mdFile = new File(CacheUtil.getMetadataFilePath(backendPath.toString(), conf));

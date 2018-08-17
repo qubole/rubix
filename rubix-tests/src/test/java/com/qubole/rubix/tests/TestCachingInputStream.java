@@ -62,6 +62,7 @@ public class TestCachingInputStream
 
   private static final String testDirectory = testDirectoryPrefix + "dir0";
   private static Configuration conf;
+  private BookKeeperServer bookKeeperServer;
 
   private static final Log log = LogFactory.getLog(TestCachingInputStream.class.getName());
 
@@ -106,7 +107,8 @@ public class TestCachingInputStream
     {
       public void run()
       {
-        BookKeeperServer.startServer(conf, new MetricRegistry());
+        bookKeeperServer = new BookKeeperServer();
+        bookKeeperServer.startServer(conf, new MetricRegistry());
       }
     };
     thread.start();
@@ -140,7 +142,9 @@ public class TestCachingInputStream
   @AfterMethod
   public void cleanup()
   {
-    BookKeeperServer.stopServer();
+    if (bookKeeperServer != null) {
+      bookKeeperServer.stopServer();
+    }
     LocalDataTransferServer.stopServer();
 
     inputStream.close();
