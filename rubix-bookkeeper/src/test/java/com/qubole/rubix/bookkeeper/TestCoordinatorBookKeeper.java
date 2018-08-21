@@ -14,10 +14,10 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.Gauge;
-import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.testing.FakeTicker;
-import com.qubole.rubix.bookkeeper.test.BookKeeperTestUtils;
+import com.qubole.rubix.common.TestUtil;
+import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.spi.CacheConfig;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -38,33 +38,34 @@ public class TestCoordinatorBookKeeper
 {
   private static final Log log = LogFactory.getLog(TestCoordinatorBookKeeper.class);
 
-  private static final String TEST_CACHE_DIR_PREFIX = BookKeeperTestUtils.getTestCacheDirPrefix("TestCoordinatorBookKeeper");
+  private static final String TEST_CACHE_DIR_PREFIX = TestUtil.getTestCacheDirPrefix("TestCoordinatorBookKeeper");
   private static final String TEST_HOSTNAME_WORKER1 = "worker1";
   private static final String TEST_HOSTNAME_WORKER2 = "worker2";
   private static final int TEST_MAX_DISKS = 1;
 
   private final Configuration conf = new Configuration();
-  private final MetricRegistry metrics = new MetricRegistry();
+  private MetricRegistry metrics;
 
   @BeforeClass
   public void setUpForClass() throws IOException
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 
-    BookKeeperTestUtils.createCacheParentDirectories(conf, TEST_MAX_DISKS);
+    TestUtil.createCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   @BeforeMethod
   public void setUp()
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
+
+    metrics = new MetricRegistry();
   }
 
   @AfterMethod
   public void tearDown()
   {
     conf.clear();
-    metrics.removeMatching(MetricFilter.ALL);
   }
 
   @AfterClass
@@ -72,7 +73,7 @@ public class TestCoordinatorBookKeeper
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 
-    BookKeeperTestUtils.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
+    TestUtil.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   /**
@@ -85,7 +86,7 @@ public class TestCoordinatorBookKeeper
     coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER1);
     coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER2);
 
-    int workerCount = (int) metrics.getGauges().get(CoordinatorBookKeeper.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE).getValue();
+    int workerCount = (int) metrics.getGauges().get(BookKeeperMetrics.LivenessMetric.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE.getMetricName()).getValue();
     assertEquals(workerCount, 2, "Incorrect number of workers reporting heartbeat");
   }
 
@@ -100,7 +101,7 @@ public class TestCoordinatorBookKeeper
     CacheConfig.setWorkerLivenessExpiry(conf, workerLivenessExpiry);
 
     final CoordinatorBookKeeper coordinatorBookKeeper = new CoordinatorBookKeeper(conf, metrics, ticker);
-    final Gauge liveWorkerGauge = metrics.getGauges().get(CoordinatorBookKeeper.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE);
+    final Gauge liveWorkerGauge = metrics.getGauges().get(BookKeeperMetrics.LivenessMetric.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE.getMetricName());
 
     coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER1);
     coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER2);

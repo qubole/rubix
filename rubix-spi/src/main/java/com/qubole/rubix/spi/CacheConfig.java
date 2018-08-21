@@ -54,11 +54,13 @@ public class CacheConfig
   private static final String KEY_LOCAL_TRANSFER_BUFFER_SIZE = "hadoop.cache.data.buffer.size";
   private static final String KEY_LOCAL_SERVER_PORT = "hadoop.cache.data.local.server.port";
   private static final String KEY_MAX_RETRIES = "hadoop.cache.data.client.num-retries";
+  private static final String KEY_METRICS_CACHE_ENABLED = "rubix.metrics.cache.enabled";
+  private static final String KEY_METRICS_LIVENESS_ENABLED = "rubix.metrics.liveness.enabled";
+  private static final String KEY_METRICS_JVM_ENABLED = "rubix.metrics.jvm.enabled";
   private static final String KEY_METRICS_STATSD_HOST = "rubix.metrics.statsd.host";
   private static final String KEY_METRICS_STATSD_INTERVAL = "rubix.metrics.statsd.interval";
   private static final String KEY_METRICS_STATSD_PORT = "rubix.metrics.statsd.port";
-  private static final String KEY_METRICS_STATSD_REPORT_ON_MASTER = "rubix.metrics.statsd.report-master";
-  private static final String KEY_METRICS_STATSD_REPORT_ON_WORKER = "rubix.metrics.statsd.report-worker";
+  private static final String KEY_METRICS_REPORTERS = "rubix.metrics.reporters";
   private static final String KEY_PARALLEL_WARMUP = "rubix.parallel.warmup";
   private static final String KEY_PROCESS_THREAD_INITIAL_DELAY = "rubix.request.process.initial.delay";
   private static final String KEY_PROCESS_THREAD_INTERVAL = "rubix.request.process.interval";
@@ -103,11 +105,13 @@ public class CacheConfig
   private static final int DEFAULT_LOCAL_SERVER_PORT = 8898;
   private static final int DEFAULT_MAX_BUFFER_SIZE = 1024;
   private static final int DEFAULT_MAX_RETRIES = 3;
+  private static final boolean DEFAULT_METRICS_CACHE_ENABLED = true;
+  private static final boolean DEFAULT_METRICS_LIVENESS_ENABLED = true;
+  private static final boolean DEFAULT_METRICS_JVM_ENABLED = false;
   private static final String DEFAULT_METRICS_STATSD_HOST = "127.0.0.1"; // localhost
   private static final int DEFAULT_METRICS_STATSD_INTERVAL = 10000; // ms
   private static final int DEFAULT_METRICS_STATSD_PORT = 8125; // default StatsD port
-  private static final boolean DEFAULT_METRICS_STATSD_REPORT_ON_MASTER = false;
-  private static final boolean DEFAULT_METRICS_STATSD_REPORT_ON_WORKER = false;
+  private static final String DEFAULT_METRICS_REPORTERS = "JMX";
   private static final boolean DEFAULT_PARALLEL_WARMUP = false;
   private static final int DEFAULT_PROCESS_THREAD_INITIAL_DELAY = 1000; // ms
   private static final int DEFAULT_PROCESS_THREAD_INTERVAL = 1000; // ms
@@ -242,6 +246,11 @@ public class CacheConfig
     return conf.getInt(KEY_MAX_RETRIES, DEFAULT_MAX_RETRIES);
   }
 
+  public static String getMetricsReporters(Configuration conf)
+  {
+    return conf.get(KEY_METRICS_REPORTERS, DEFAULT_METRICS_REPORTERS);
+  }
+
   public static int getProcessThreadInitialDelay(Configuration conf)
   {
     return conf.getInt(KEY_PROCESS_THREAD_INITIAL_DELAY, DEFAULT_PROCESS_THREAD_INITIAL_DELAY);
@@ -312,19 +321,24 @@ public class CacheConfig
     return conf.getBoolean(KEY_CACHE_ENABLED, DEFAULT_DATA_CACHE_ENABLED);
   }
 
+  public static boolean areCacheMetricsEnabled(Configuration conf)
+  {
+    return conf.getBoolean(KEY_METRICS_CACHE_ENABLED, DEFAULT_METRICS_CACHE_ENABLED);
+  }
+
+  public static boolean areLivenessMetricsEnabled(Configuration conf)
+  {
+    return conf.getBoolean(KEY_METRICS_LIVENESS_ENABLED, DEFAULT_METRICS_LIVENESS_ENABLED);
+  }
+
+  public static boolean areJvmMetricsEnabled(Configuration conf)
+  {
+    return conf.getBoolean(KEY_METRICS_JVM_ENABLED, DEFAULT_METRICS_JVM_ENABLED);
+  }
+
   public static boolean isOnMaster(Configuration conf)
   {
     return conf.getBoolean(KEY_RUBIX_ON_MASTER, DEFAULT_RUBIX_ON_MASTER);
-  }
-
-  public static boolean isReportStatsdMetricsOnMaster(Configuration conf)
-  {
-    return conf.getBoolean(KEY_METRICS_STATSD_REPORT_ON_MASTER, DEFAULT_METRICS_STATSD_REPORT_ON_MASTER);
-  }
-
-  public static boolean isReportStatsdMetricsOnWorker(Configuration conf)
-  {
-    return conf.getBoolean(KEY_METRICS_STATSD_REPORT_ON_WORKER, DEFAULT_METRICS_STATSD_REPORT_ON_WORKER);
   }
 
   public static boolean isStrictMode(Configuration conf)
@@ -432,6 +446,11 @@ public class CacheConfig
     conf.set(KEY_DATA_CACHE_TABLE_WHITELIST, tableWhitelist);
   }
 
+  public static void setCacheMetricsEnabled(Configuration conf, boolean cacheMetricsEnabled)
+  {
+    conf.setBoolean(KEY_METRICS_CACHE_ENABLED, cacheMetricsEnabled);
+  }
+
   public static void setHeartbeatInitialDelay(Configuration conf, int initialDelay)
   {
     conf.setInt(KEY_HEARTBEAT_INITIAL_DELAY, initialDelay);
@@ -452,6 +471,16 @@ public class CacheConfig
     conf.setBoolean(KEY_DATA_CACHE_STRICT_MODE, isParallelWarmupEnabled);
   }
 
+  public static void setJvmMetricsEnabled(Configuration conf, boolean jvmMetricsEnabled)
+  {
+    conf.setBoolean(KEY_METRICS_JVM_ENABLED, jvmMetricsEnabled);
+  }
+
+  public static void setLivenessMetricsEnabled(Configuration conf, boolean livenessMetricsEnabled)
+  {
+    conf.setBoolean(KEY_METRICS_LIVENESS_ENABLED, livenessMetricsEnabled);
+  }
+
   public static void setLocalServerPort(Configuration conf, int localServerPort)
   {
     conf.setInt(KEY_LOCAL_SERVER_PORT, localServerPort);
@@ -460,6 +489,11 @@ public class CacheConfig
   public static void setMaxDisks(Configuration conf, int maxDisks)
   {
     conf.setInt(KEY_DATA_CACHE_MAX_DISKS, maxDisks);
+  }
+
+  public static void setMetricsReporters(Configuration conf, String reporters)
+  {
+    conf.set(KEY_METRICS_REPORTERS, reporters);
   }
 
   public static void setOnMaster(Configuration conf, boolean onMaster)
@@ -500,16 +534,6 @@ public class CacheConfig
   public static void setStatsDMetricsPort(Configuration conf, int port)
   {
     conf.setInt(KEY_METRICS_STATSD_PORT, port);
-  }
-
-  public static void setReportStatsdMetricsOnMaster(Configuration conf, boolean reportOnMaster)
-  {
-    conf.setBoolean(KEY_METRICS_STATSD_REPORT_ON_MASTER, reportOnMaster);
-  }
-
-  public static void setReportStatsdMetricsOnWorker(Configuration conf, boolean reportOnWorker)
-  {
-    conf.setBoolean(KEY_METRICS_STATSD_REPORT_ON_WORKER, reportOnWorker);
   }
 
   public static void setWorkerLivenessExpiry(Configuration conf, int expiryTime)

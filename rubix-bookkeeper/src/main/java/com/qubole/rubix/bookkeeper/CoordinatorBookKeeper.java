@@ -19,6 +19,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ticker;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.spi.CacheConfig;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -30,9 +31,6 @@ import java.util.concurrent.TimeUnit;
 public class CoordinatorBookKeeper extends BookKeeper
 {
   private static Log log = LogFactory.getLog(CoordinatorBookKeeper.class.getName());
-
-  // Metric key for the number of live workers in the cluster.
-  public static final String METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE = "rubix.bookkeeper.live_workers.gauge";
 
   // Cache to store hostnames of live workers in the cluster.
   protected Cache<String, Boolean> liveWorkerCache;
@@ -66,7 +64,7 @@ public class CoordinatorBookKeeper extends BookKeeper
    */
   private void registerMetrics()
   {
-    metrics.register(METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE, new Gauge<Integer>()
+    metrics.register(BookKeeperMetrics.LivenessMetric.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE.getMetricName(), new Gauge<Integer>()
     {
       @Override
       public Integer getValue()

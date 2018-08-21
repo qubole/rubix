@@ -12,9 +12,9 @@
  */
 package com.qubole.rubix.bookkeeper;
 
-import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
-import com.qubole.rubix.bookkeeper.test.BookKeeperTestUtils;
+import com.qubole.rubix.common.TestUtil;
+import com.qubole.rubix.common.metrics.MetricsReporter;
 import com.qubole.rubix.spi.CacheConfig;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -25,49 +25,51 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import javax.management.MalformedObjectNameException;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.util.Set;
 
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
-public class TestBookKeeperServer
+public class TestBookKeeperServer extends BaseServerTest
 {
   private static final Log log = LogFactory.getLog(TestBookKeeperServer.class);
 
-  private static final String TEST_CACHE_DIR_PREFIX = BookKeeperTestUtils.getTestCacheDirPrefix("TestBookKeeperServer");
+  private static final String TEST_CACHE_DIR_PREFIX = TestUtil.getTestCacheDirPrefix("TestBookKeeperServer");
   private static final int TEST_MAX_DISKS = 1;
   private static final int TEST_PACKET_SIZE = 32;
   private static final int TEST_SOCKET_TIMEOUT = 5000;
 
   private final Configuration conf = new Configuration();
-  private final MetricRegistry metrics = new MetricRegistry();
+  private MetricRegistry metrics = new MetricRegistry();
 
   @BeforeClass
   public void setUpForClass() throws IOException
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 
-    BookKeeperTestUtils.createCacheParentDirectories(conf, TEST_MAX_DISKS);
+    TestUtil.createCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   @BeforeMethod
   public void setUp()
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
+
+    metrics = new MetricRegistry();
   }
 
   @AfterMethod
   public void tearDown()
   {
     conf.clear();
-    metrics.removeMatching(MetricFilter.ALL);
-
-    stopBookKeeperServer();
   }
 
   @AfterClass
@@ -75,23 +77,70 @@ public class TestBookKeeperServer
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 
-    BookKeeperTestUtils.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
+    TestUtil.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   /**
-   * Start an instance of the BookKeeper server.
+   * Verify that liveness metrics are registered when configured to.
    */
-  private void startBookKeeperServer()
+  @Test
+  public void testLivenessMetricsEnabled() throws InterruptedException, MalformedObjectNameException
   {
-    MockBookKeeperServer.startServer(conf, metrics);
+    super.testLivenessMetrics(ServerType.BOOKKEEPER, conf, metrics, true);
   }
 
   /**
-   * Stop the currently running BookKeeper server instance.
+   * Verify that liveness metrics are not registered when configured not to.
    */
-  private void stopBookKeeperServer()
+  @Test
+  public void testLivenessMetricsNotEnabled() throws InterruptedException, MalformedObjectNameException
   {
-    MockBookKeeperServer.stopServer();
+    super.testLivenessMetrics(ServerType.BOOKKEEPER, conf, metrics, false);
+  }
+
+  /**
+   * Verify that cache metrics are registered when configured to.
+   */
+  @Test
+  public void testCacheMetricsEnabled() throws InterruptedException, MalformedObjectNameException
+  {
+    super.testCacheMetrics(ServerType.BOOKKEEPER, conf, metrics, true);
+  }
+
+  /**
+   * Verify that cache metrics are not registered when configured not to.
+   */
+  @Test
+  public void testCacheMetricsNotEnabled() throws InterruptedException, MalformedObjectNameException
+  {
+    super.testCacheMetrics(ServerType.BOOKKEEPER, conf, metrics, false);
+  }
+
+  /**
+   * Verify that JVM metrics are registered when configured to.
+   */
+  @Test
+  public void testJvmMetricsEnabled() throws InterruptedException, MalformedObjectNameException
+  {
+    super.testJvmMetrics(ServerType.BOOKKEEPER, conf, metrics, true);
+  }
+
+  /**
+   * Verify that JVM metrics are not registered when configured not to.
+   */
+  @Test
+  public void testJvmMetricsNotEnabled() throws InterruptedException, MalformedObjectNameException
+  {
+    super.testJvmMetrics(ServerType.BOOKKEEPER, conf, metrics, false);
+  }
+
+  /**
+   * Verify that all registered metrics are removed once the BookKeeper server has stopped.
+   */
+  @Test
+  public void verifyMetricsAreRemoved() throws InterruptedException
+  {
+    super.verifyMetricsAreRemoved(ServerType.BOOKKEEPER, conf, metrics);
   }
 
   /**
@@ -114,6 +163,7 @@ public class TestBookKeeperServer
     }
     finally {
       statsDThread.stopThread();
+      stopMockBookKeeperServer();
     }
   }
 
@@ -137,6 +187,7 @@ public class TestBookKeeperServer
     }
     finally {
       statsDThread.stopThread();
+      stopMockBookKeeperServer();
     }
   }
 
@@ -160,6 +211,7 @@ public class TestBookKeeperServer
     }
     finally {
       statsDThread.stopThread();
+      stopMockBookKeeperServer();
     }
   }
 
@@ -183,24 +235,52 @@ public class TestBookKeeperServer
     }
     finally {
       statsDThread.stopThread();
+      stopMockBookKeeperServer();
     }
   }
 
   /**
-   * Verify that all registered metrics are removed once the BookKeeper server has stopped.
+   * Verify that JmxReporter reports metrics to JMX when configured to.
+   *
+   * @throws MalformedObjectNameException if the format of the pattern string does not correspond to a valid ObjectName.
+   * @throws InterruptedException if the current thread is interrupted while sleeping.
    */
   @Test
-  public void verifyMetricsAreRemoved()
+  public void verifyMetricsAreReportedToJMX() throws MalformedObjectNameException, InterruptedException
   {
-    assertTrue(metrics.getNames().size() == 0, "Metrics should not be registered before server is started.");
+    CacheConfig.setMetricsReporters(conf, MetricsReporter.JMX.name());
 
-    startBookKeeperServer();
+    Set<String> metricsNames = getJmxMetricsNames();
+    assertTrue(metricsNames.size() == 0, "Metrics should not be registered with JMX before server starts.");
 
-    assertTrue(metrics.getNames().size() > 0, "Metrics should be registered once server is started.");
+    startMockBookKeeperServer(conf, metrics);
 
-    stopBookKeeperServer();
+    metricsNames = getJmxMetricsNames();
+    assertTrue(metricsNames.size() > 0, "Metrics should be registered with JMX after server starts.");
 
-    assertTrue(metrics.getNames().size() == 0, "Metrics should not be registered after server has stopped.");
+    stopMockBookKeeperServer();
+
+    metricsNames = getJmxMetricsNames();
+    assertTrue(metricsNames.size() == 0, "Metrics should not be registered with JMX after server stops.");
+  }
+
+  /**
+   * Verify that JmxReporter does not report metrics to JMX when configured not to.
+   *
+   * @throws MalformedObjectNameException if the format of the pattern string does not correspond to a valid ObjectName.
+   * @throws InterruptedException if the current thread is interrupted while sleeping.
+   */
+  @Test
+  public void verifyMetricsAreNotReportedToJMX() throws MalformedObjectNameException, InterruptedException
+  {
+    CacheConfig.setMetricsReporters(conf, "");
+
+    startMockBookKeeperServer(conf, metrics);
+
+    final Set<String> metricsNames = getJmxMetricsNames();
+    assertTrue(metricsNames.size() == 0, "Metrics should not be registered with JMX.");
+
+    stopMockBookKeeperServer();
   }
 
   /**
@@ -215,7 +295,9 @@ public class TestBookKeeperServer
   private MockStatsDThread startServersForTestingStatsDReporterOnMaster(int statsDPort, int testCasePort, boolean shouldReportMetrics) throws SocketException, InterruptedException
   {
     CacheConfig.setOnMaster(conf, true);
-    CacheConfig.setReportStatsdMetricsOnMaster(conf, shouldReportMetrics);
+    if (shouldReportMetrics) {
+      CacheConfig.setMetricsReporters(conf, MetricsReporter.STATSD.name());
+    }
 
     return startServersForTestingStatsDReporter(statsDPort, testCasePort);
   }
@@ -232,7 +314,9 @@ public class TestBookKeeperServer
   private MockStatsDThread startServersForTestingStatsDReporterForWorker(int statsDPort, int testCasePort, boolean shouldReportMetrics) throws SocketException, InterruptedException
   {
     CacheConfig.setOnMaster(conf, false);
-    CacheConfig.setReportStatsdMetricsOnWorker(conf, shouldReportMetrics);
+    if (shouldReportMetrics) {
+      CacheConfig.setMetricsReporters(conf, MetricsReporter.STATSD.name());
+    }
 
     return startServersForTestingStatsDReporter(statsDPort, testCasePort);
   }
@@ -253,7 +337,7 @@ public class TestBookKeeperServer
     MockStatsDThread statsDThread = new MockStatsDThread(statsDPort, testCasePort);
     statsDThread.start();
 
-    startBookKeeperServer();
+    startMockBookKeeperServer(conf, metrics);
     return statsDThread;
   }
 
@@ -286,7 +370,7 @@ public class TestBookKeeperServer
    */
   private static class MockBookKeeperServer extends BookKeeperServer
   {
-    public static void startServer(Configuration conf, MetricRegistry metricRegistry)
+    public void startServer(Configuration conf, MetricRegistry metricRegistry)
     {
       try {
         new CoordinatorBookKeeper(conf, metricRegistry);
@@ -300,7 +384,7 @@ public class TestBookKeeperServer
       registerMetrics(conf);
     }
 
-    public static void stopServer()
+    public void stopServer()
     {
       removeMetrics();
     }

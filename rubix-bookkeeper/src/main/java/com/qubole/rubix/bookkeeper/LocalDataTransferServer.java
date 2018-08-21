@@ -12,8 +12,13 @@
  */
 package com.qubole.rubix.bookkeeper;
 
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.jvm.CachedThreadStatesGaugeSet;
+import com.codahale.metrics.jvm.GarbageCollectorMetricSet;
+import com.codahale.metrics.jvm.MemoryUsageGaugeSet;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
+import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
@@ -37,6 +42,7 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by sakshia on 26/10/16.
@@ -47,6 +53,8 @@ public class LocalDataTransferServer extends Configured implements Tool
   private static Log log = LogFactory.getLog(LocalDataTransferServer.class.getName());
   private static Configuration conf;
   private static LocalServer localServer;
+  private static MetricRegistry metrics;
+  private static BookKeeperMetrics bookKeeperMetrics;
 
   private LocalDataTransferServer()
   {
@@ -61,21 +69,50 @@ public class LocalDataTransferServer extends Configured implements Tool
   public int run(String[] args) throws Exception
   {
     conf = this.getConf();
-    startServer(conf);
+    startServer(conf, new MetricRegistry());
     return 0;
   }
 
-  public static void startServer(Configuration conf)
+  public static void startServer(Configuration conf, MetricRegistry metricRegistry)
   {
+    metrics = metricRegistry;
+    registerMetrics(conf);
+
     localServer = new LocalServer(conf);
     new Thread(localServer).run();
   }
 
+  /**
+   * Register desired metrics.
+   *
+   * @param conf The current Hadoop configuration.
+   */
+  private static void registerMetrics(Configuration conf)
+  {
+    bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
+
+    metrics.register(BookKeeperMetrics.LDTSJvmMetric.METRIC_LDTS_JVM_GC_PREFIX.getMetricName(), new GarbageCollectorMetricSet());
+    metrics.register(BookKeeperMetrics.LDTSJvmMetric.METRIC_LDTS_JVM_THREADS_PREFIX.getMetricName(), new CachedThreadStatesGaugeSet(CacheConfig.getStatsDMetricsInterval(conf), TimeUnit.MILLISECONDS));
+    metrics.register(BookKeeperMetrics.LDTSJvmMetric.METRIC_LDTS_JVM_MEMORY_PREFIX.getMetricName(), new MemoryUsageGaugeSet());
+  }
+
   public static void stopServer()
   {
+    removeMetrics();
     if (localServer != null) {
+      try {
+        bookKeeperMetrics.close();
+      }
+      catch (IOException e) {
+        log.error("Metrics reporters could not be closed", e);
+      }
       localServer.stop();
     }
+  }
+
+  protected static void removeMetrics()
+  {
+    metrics.removeMatching(bookKeeperMetrics.getMetricsFilter());
   }
 
   @VisibleForTesting
