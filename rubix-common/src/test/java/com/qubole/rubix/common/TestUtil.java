@@ -10,12 +10,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-
-package com.qubole.rubix.bookkeeper.test;
+package com.qubole.rubix.common;
 
 import com.google.common.base.Joiner;
 import com.qubole.rubix.core.utils.DeleteFileVisitor;
 import com.qubole.rubix.spi.CacheConfig;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
 import java.io.File;
@@ -23,10 +24,18 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-public final class BookKeeperTestUtils
+public class TestUtil
 {
-  private BookKeeperTestUtils()
+  private static final Log log = LogFactory.getLog(TestUtil.class);
+
+  private TestUtil()
   {
+  }
+
+  public static String getDefaultTestDirectoryPath(Configuration conf)
+  {
+    String directoryPath = Paths.get(CacheConfig.getCacheDirPrefixList(conf) + "0").toString();
+    return directoryPath;
   }
 
   /**
@@ -52,12 +61,6 @@ public final class BookKeeperTestUtils
     for (int i = 0; i < maxDisks; i++) {
       Files.createDirectories(Paths.get(CacheConfig.getCacheDirPrefixList(conf) + i));
     }
-  }
-
-  public static String getDefaultTestDirectoryPath(Configuration conf)
-  {
-    String directoryPath = Paths.get(CacheConfig.getCacheDirPrefixList(conf) + "0").toString();
-    return directoryPath;
   }
 
   /**

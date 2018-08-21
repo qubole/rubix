@@ -12,14 +12,15 @@
  */
 package com.qubole.rubix.bookkeeper;
 
-import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.jvm.CachedThreadStatesGaugeSet;
+import com.codahale.metrics.jvm.GarbageCollectorMetricSet;
+import com.codahale.metrics.jvm.MemoryUsageGaugeSet;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
-import com.qubole.rubix.core.utils.ClusterUtil;
+import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.thrift.BookKeeperService;
-import com.readytalk.metrics.StatsDReporter;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -33,6 +34,7 @@ import org.apache.thrift.shaded.transport.TServerTransport;
 import org.apache.thrift.shaded.transport.TTransportException;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import static com.qubole.rubix.spi.CacheConfig.getServerMaxThreads;
@@ -43,19 +45,20 @@ import static com.qubole.rubix.spi.CacheConfig.getServerPort;
  */
 public class BookKeeperServer extends Configured implements Tool
 {
-  public static BookKeeper bookKeeper;
-  public static BookKeeperService.Processor processor;
+  public BookKeeper bookKeeper;
+  public BookKeeperService.Processor processor;
 
   // Registry for gathering & storing necessary metrics
-  protected static MetricRegistry metrics;
+  protected MetricRegistry metrics;
 
-  public static Configuration conf;
+  public Configuration conf;
 
-  private static TServer server;
+  private TServer server;
 
   private static Log log = LogFactory.getLog(BookKeeperServer.class.getName());
+  private BookKeeperMetrics bookKeeperMetrics;
 
-  protected BookKeeperServer()
+  public BookKeeperServer()
   {
   }
 
@@ -79,7 +82,7 @@ public class BookKeeperServer extends Configured implements Tool
     return 0;
   }
 
-  public static void startServer(Configuration conf, MetricRegistry metricsRegistry)
+  public void startServer(Configuration conf, MetricRegistry metricsRegistry)
   {
     metrics = metricsRegistry;
     try {
@@ -119,33 +122,34 @@ public class BookKeeperServer extends Configured implements Tool
   /**
    * Register desired metrics.
    */
-  protected static void registerMetrics(Configuration conf)
+  protected void registerMetrics(Configuration conf)
   {
-    if ((CacheConfig.isOnMaster(conf) && CacheConfig.isReportStatsdMetricsOnMaster(conf))
-        || (!CacheConfig.isOnMaster(conf) && CacheConfig.isReportStatsdMetricsOnWorker(conf))) {
-      log.info("Reporting metrics to StatsD");
-      if (!CacheConfig.isOnMaster(conf)) {
-        CacheConfig.setStatsDMetricsHost(conf, ClusterUtil.getMasterHostname(conf));
-      }
-      StatsDReporter.forRegistry(metrics)
-          .build(CacheConfig.getStatsDMetricsHost(conf), CacheConfig.getStatsDMetricsPort(conf))
-          .start(CacheConfig.getStatsDMetricsInterval(conf), TimeUnit.MILLISECONDS);
-    }
+    bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
+
+    metrics.register(BookKeeperMetrics.BookKeeperJvmMetric.METRIC_BOOKKEEPER_JVM_GC_PREFIX.getMetricName(), new GarbageCollectorMetricSet());
+    metrics.register(BookKeeperMetrics.BookKeeperJvmMetric.METRIC_BOOKKEEPER_JVM_THREADS_PREFIX.getMetricName(), new CachedThreadStatesGaugeSet(CacheConfig.getStatsDMetricsInterval(conf), TimeUnit.MILLISECONDS));
+    metrics.register(BookKeeperMetrics.BookKeeperJvmMetric.METRIC_BOOKKEEPER_JVM_MEMORY_PREFIX.getMetricName(), new MemoryUsageGaugeSet());
   }
 
-  public static void stopServer()
+  public void stopServer()
   {
     removeMetrics();
+    try {
+      bookKeeperMetrics.close();
+    }
+    catch (IOException e) {
+      log.error("Metrics reporters could not be closed", e);
+    }
     server.stop();
   }
 
-  protected static void removeMetrics()
+  protected void removeMetrics()
   {
-    metrics.removeMatching(MetricFilter.ALL);
+    metrics.removeMatching(bookKeeperMetrics.getMetricsFilter());
   }
 
   @VisibleForTesting
-  public static boolean isServerUp()
+  public boolean isServerUp()
   {
     if (server != null) {
       return server.isServing();
