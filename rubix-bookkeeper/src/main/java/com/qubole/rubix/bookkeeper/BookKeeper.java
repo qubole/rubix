@@ -199,10 +199,11 @@ public abstract class BookKeeper implements BookKeeperService.Iface
 
     FileMetadata md;
     try {
-      md = fileMetadataCache.get(remotePath, new CreateFileMetadataCallable(remotePath, fileLength, lastModified, conf));
+      md = fileMetadataCache.get(remotePath, new CreateFileMetadataCallable(remotePath, fileLength, lastModified, 0, conf));
       if (isInvalidationRequired(md.getLastModified(), lastModified)) {
         invalidate(remotePath);
-        md = fileMetadataCache.get(remotePath, new CreateFileMetadataCallable(remotePath, fileLength, lastModified, conf));
+        md.deleteFiles(fileMetadataCache);
+        md = fileMetadataCache.get(remotePath, new CreateFileMetadataCallable(remotePath, fileLength, lastModified, 0, conf));
       }
     }
     catch (ExecutionException e) {
@@ -333,6 +334,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     }
     if (isInvalidationRequired(md.getLastModified(), lastModified)) {
       invalidate(remotePath);
+      md.deleteFiles(fileMetadataCache);
       return;
     }
     endBlock = setCorrectEndBlock(endBlock, fileLength, remotePath);
@@ -340,8 +342,16 @@ public abstract class BookKeeper implements BookKeeperService.Iface
 
     try {
       md.setBlocksCached(startBlock, endBlock);
+      long currentFileSize = md.incrementCurrentFileSize((endBlock - startBlock) * CacheConfig.getBlockSize(conf));
+      invalidate(remotePath);
+      md = fileMetadataCache.get(remotePath, new CreateFileMetadataCallable(remotePath, fileLength, lastModified,
+          currentFileSize, conf));
     }
     catch (IOException e) {
+      throw new TException(e);
+    }
+    catch (ExecutionException e) {
+      log.error(String.format("Could not fetch Metadata for %s : %s", remotePath, Throwables.getStackTraceAsString(e)));
       throw new TException(e);
     }
   }
@@ -592,19 +602,22 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     Configuration conf;
     long fileLength;
     long lastModified;
+    long currentFileSize;
 
-    public CreateFileMetadataCallable(String path, long fileLength, long lastModified, Configuration conf)
+    public CreateFileMetadataCallable(String path, long fileLength, long lastModified, long currentFileSize,
+                                      Configuration conf)
     {
       this.path = path;
       this.conf = conf;
       this.fileLength = fileLength;
       this.lastModified = lastModified;
+      this.currentFileSize = currentFileSize;
     }
 
     public FileMetadata call()
         throws Exception
     {
-      return new FileMetadata(path, fileLength, lastModified, conf);
+      return new FileMetadata(path, fileLength, lastModified, currentFileSize, conf);
     }
   }
 
