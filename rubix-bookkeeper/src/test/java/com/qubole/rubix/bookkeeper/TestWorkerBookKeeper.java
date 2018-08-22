@@ -15,7 +15,7 @@ package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.testing.FakeTicker;
-import com.qubole.rubix.bookkeeper.test.BookKeeperTestUtils;
+import com.qubole.rubix.common.TestUtil;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterType;
@@ -51,11 +51,12 @@ public class TestWorkerBookKeeper
 {
   private static final Log log = LogFactory.getLog(TestWorkerBookKeeper.class);
 
-  private static final String TEST_CACHE_DIR_PREFIX = BookKeeperTestUtils.getTestCacheDirPrefix("TestWorkerBookKeeper");
+  private static final String TEST_CACHE_DIR_PREFIX = TestUtil.getTestCacheDirPrefix("TestWorkerBookKeeper");
   private static final int TEST_MAX_DISKS = 1;
   private static final int TEST_MAX_RETRIES = 5;
   private static final int TEST_RETRY_INTERVAL = 500;
 
+  private BookKeeperServer bookKeeperServer;
   private final Configuration conf = new Configuration();
 
   @BeforeClass
@@ -63,7 +64,7 @@ public class TestWorkerBookKeeper
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 
-    BookKeeperTestUtils.createCacheParentDirectories(conf, TEST_MAX_DISKS);
+    TestUtil.createCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   @BeforeMethod
@@ -91,7 +92,7 @@ public class TestWorkerBookKeeper
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 
-    BookKeeperTestUtils.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
+    TestUtil.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   /**
@@ -213,16 +214,21 @@ public class TestWorkerBookKeeper
    */
   private void startBookKeeperServer() throws InterruptedException
   {
+    if (bookKeeperServer != null) {
+      throw new IllegalStateException("A BookKeeperServer is already running");
+    }
+
+    bookKeeperServer = new BookKeeperServer();
     final Thread thread = new Thread()
     {
       public void run()
       {
-        BookKeeperServer.startServer(conf, new MetricRegistry());
+        bookKeeperServer.startServer(conf, new MetricRegistry());
       }
     };
     thread.start();
 
-    while (!BookKeeperServer.isServerUp()) {
+    while (!bookKeeperServer.isServerUp()) {
       Thread.sleep(200);
       log.info("Waiting for BookKeeper Server to come up");
     }
@@ -233,6 +239,11 @@ public class TestWorkerBookKeeper
    */
   private void startBookKeeperServerWithDelay(final int initialDelay)
   {
+    if (bookKeeperServer != null) {
+      throw new IllegalStateException("A BookKeeperServer is already running");
+    }
+    bookKeeperServer = new BookKeeperServer();
+
     final Thread thread = new Thread()
     {
       public void run()
@@ -243,7 +254,7 @@ public class TestWorkerBookKeeper
         catch (InterruptedException e) {
           Thread.currentThread().interrupt();
         }
-        BookKeeperServer.startServer(conf, new MetricRegistry());
+        bookKeeperServer.startServer(conf, new MetricRegistry());
       }
     };
     thread.start();
@@ -254,6 +265,12 @@ public class TestWorkerBookKeeper
    */
   private void stopBookKeeperServer()
   {
-    BookKeeperServer.stopServer();
+    if (bookKeeperServer != null) {
+      bookKeeperServer.stopServer();
+      bookKeeperServer = null;
+    }
+    else {
+      throw new IllegalStateException("BookKeeperServer hasn't been started yet");
+    }
   }
 }
