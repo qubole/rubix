@@ -228,7 +228,7 @@ public class FileMetadata
 
   public int getWeight(Configuration conf)
   {
-    // normal entries have no weight
+    // this will return the current downloaded size of the file as weight.
     return (int) (currentFileSize / 1024 / 1024);
   }
 }
