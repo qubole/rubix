@@ -115,12 +115,13 @@ public class TestWorkerBookKeeper
 
     final MetricRegistry metricRegistry = new MetricRegistry();
     final CoordinatorBookKeeper spyCoordinator = spy(new CoordinatorBookKeeper(conf, metricRegistry));
+    bookKeeperServer = new BookKeeperServer();
 
     final Thread thread = new Thread()
     {
       public void run()
       {
-        BookKeeperServer.startServer(conf, metricRegistry, spyCoordinator);
+        bookKeeperServer.startServer(conf, metricRegistry, spyCoordinator);
       }
     };
     thread.start();

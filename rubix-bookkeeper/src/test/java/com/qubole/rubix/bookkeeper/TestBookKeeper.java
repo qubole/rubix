@@ -342,7 +342,6 @@ public class TestBookKeeper
     }
     spyBookKeeper.getCacheStatus(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER_MULTINODE.ordinal());
 
-
     assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT.getMetricName()).getCount(), totalRequests);
     assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_REQUEST_COUNT.getMetricName()).getCount(), 0);
   }

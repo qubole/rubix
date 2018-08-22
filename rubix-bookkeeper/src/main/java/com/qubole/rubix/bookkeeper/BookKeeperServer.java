@@ -101,7 +101,7 @@ public class BookKeeperServer extends Configured implements Tool
     startServer(conf, metricsRegistry, localBookKeeper);
   }
 
-  static void startServer(Configuration conf, MetricRegistry metricsRegistry, BookKeeper bookKeeper)
+  void startServer(Configuration conf, MetricRegistry metricsRegistry, BookKeeper bookKeeper)
   {
     metrics = metricsRegistry;
     bookKeeper = bookKeeper;
