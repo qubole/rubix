@@ -96,6 +96,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
 
   // Metrics to keep track of cache interactions
   private static Counter cacheEvictionCount;
+  private static Counter cacheInvalidationCount;
   private Counter totalRequestCount;
   private Counter remoteRequestCount;
   private Counter cacheRequestCount;
@@ -150,6 +151,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   private void initializeMetrics()
   {
     cacheEvictionCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_EVICTION_COUNT.getMetricName());
+    cacheInvalidationCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_INVALIDATION_COUNT.getMetricName());
     totalRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_TOTAL_REQUEST_COUNT.getMetricName());
     cacheRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_REQUEST_COUNT.getMetricName());
     nonlocalRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT.getMetricName());
@@ -594,7 +596,19 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       FileMetadata md = notification.getValue();
       try {
         md.closeAndCleanup(notification.getCause(), fileMetadataCache);
-        cacheEvictionCount.inc();
+        switch (notification.getCause()) {
+          case EXPLICIT:
+            cacheInvalidationCount.inc();
+            break;
+          case SIZE:
+            cacheEvictionCount.inc();
+            break;
+          case EXPIRED:
+            cacheEvictionCount.inc();
+            break;
+          default:
+            break;
+        }
       }
       catch (IOException e) {
         log.warn("Could not cleanup FileMetadata for " + notification.getKey(), e);
