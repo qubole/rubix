@@ -171,7 +171,7 @@ public class FileMetadata
   public void closeAndCleanup(RemovalCause cause, Cache cache)
       throws IOException
   {
-    if (cause != RemovalCause.EXPLICIT) {
+    if (cause != RemovalCause.REPLACED) {
       log.warn("Evicting " + getRemotePath().toString() + " due to " + cause);
       deleteFiles(cache);
     }
@@ -191,6 +191,11 @@ public class FileMetadata
   public String getRemotePath()
   {
     return remotePath;
+  }
+
+  public long getFileSize()
+  {
+    return this.size;
   }
 
   // Assumption: this is called after the FileMetadata has been removed from cache
