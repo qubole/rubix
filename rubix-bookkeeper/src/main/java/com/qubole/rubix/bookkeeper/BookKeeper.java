@@ -97,6 +97,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   // Metrics to keep track of cache interactions
   private static Counter cacheEvictionCount;
   private static Counter cacheInvalidationCount;
+  private static Counter cacheExpiryCount;
   private Counter totalRequestCount;
   private Counter remoteRequestCount;
   private Counter cacheRequestCount;
@@ -152,6 +153,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   {
     cacheEvictionCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_EVICTION_COUNT.getMetricName());
     cacheInvalidationCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_INVALIDATION_COUNT.getMetricName());
+    cacheExpiryCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_EXPIRY_COUNT.getMetricName());
     totalRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_TOTAL_REQUEST_COUNT.getMetricName());
     cacheRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_REQUEST_COUNT.getMetricName());
     nonlocalRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT.getMetricName());
@@ -604,7 +606,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
             cacheEvictionCount.inc();
             break;
           case EXPIRED:
-            cacheEvictionCount.inc();
+            cacheExpiryCount.inc();
             break;
           default:
             break;

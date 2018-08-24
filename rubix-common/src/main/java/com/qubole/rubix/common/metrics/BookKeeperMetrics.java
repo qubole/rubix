@@ -181,6 +181,7 @@ public class BookKeeperMetrics implements AutoCloseable
   {
     METRIC_BOOKKEEPER_CACHE_EVICTION_COUNT("rubix.bookkeeper.cache_eviction.count"),
     METRIC_BOOKKEEPER_CACHE_INVALIDATION_COUNT("rubix.bookkeeper.cache_invalidation.count"),
+    METRIC_BOOKKEEPER_CACHE_EXPIRY_COUNT("rubix.bookkeeper.cache_expiry.count"),
     METRIC_BOOKKEEPER_CACHE_HIT_RATE_GAUGE("rubix.bookkeeper.cache_hit_rate.gauge"),
     METRIC_BOOKKEEPER_CACHE_MISS_RATE_GAUGE("rubix.bookkeeper.cache_miss_rate.gauge"),
     METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE("rubix.bookkeeper.cache_size_mb.gauge"),
