@@ -59,6 +59,14 @@ public class DiskUtils
     return size * 1024;
   }
 
+  public static void clearDirectory(String path) throws IOException
+  {
+    String cmd = "rm -rf " + path;
+    ShellExec se = new ShellExec(cmd);
+    log.debug("Running: " + cmd);
+    ShellExec.CommandResult cr = se.runCmd();
+  }
+
   /**
    * Get the current size of the data cached to this system.
    *
