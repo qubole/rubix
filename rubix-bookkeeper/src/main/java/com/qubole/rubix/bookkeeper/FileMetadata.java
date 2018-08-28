@@ -39,6 +39,7 @@ public class FileMetadata
     private String mdFilePath;
     private long size;
     private long lastModified;
+    private long currentFileSize;
 
     private boolean needsRefresh = true;
 
@@ -53,12 +54,13 @@ public class FileMetadata
     {
     }
 
-    public FileMetadata(String remotePath, long fileLength, long lastModified, Configuration conf)
+    public FileMetadata(String remotePath, long fileLength, long lastModified, long currentFileSize, Configuration conf)
             throws IOException
     {
         this.remotePath = remotePath;
         this.size = fileLength;
         this.lastModified = lastModified;
+        this.currentFileSize = currentFileSize;
         localPath = CacheConfig.getLocalPath(remotePath, conf);
         mdFilePath = CacheConfig.getMDFile(remotePath, conf);
 
@@ -71,13 +73,19 @@ public class FileMetadata
          */
     }
 
+    long incrementCurrentFileSize(long incrementBy)
+    {
+        this.currentFileSize += incrementBy;
+        return this.currentFileSize;
+    }
+
     public void setNeedsRefresh()
     {
         needsRefresh = true;
     }
 
-    public void refreshBitmap()
-            throws IOException
+    void refreshBitmap()
+        throws IOException
     {
         byte[] bytes = new byte[bitmapFileSizeBytes];
         RandomAccessFile mdFile;
@@ -163,13 +171,20 @@ public class FileMetadata
     public void closeAndCleanup(RemovalCause cause, Cache cache)
             throws IOException
     {
-        log.warn("Evicting " + getRemotePath().toString() + " due to " + cause);
-        deleteFiles(cause, cache);
+        if (cause != RemovalCause.REPLACED) {
+            log.warn("Evicting " + getRemotePath().toString() + " due to " + cause);
+            deleteFiles(cache);
+        }
     }
 
     public long getLastModified()
     {
         return lastModified;
+    }
+
+    public long getFileSize()
+    {
+        return this.size;
     }
 
     @VisibleForTesting
@@ -185,7 +200,7 @@ public class FileMetadata
 
     // Assumption: this is called after the FileMetadata has been removed from cache
     // E.g. in RemovalListener
-    private void deleteFiles(RemovalCause cause, Cache<String, FileMetadata> cache)
+    private void deleteFiles(Cache<String, FileMetadata> cache)
     {
         /*
          * Cases of races when thread T1 trying to add new entry to cache and T2 is removing deleting data for same
@@ -218,7 +233,7 @@ public class FileMetadata
 
     public int getWeight(Configuration conf)
     {
-        // normal entries have no weight
-        return 1;
+        // this will return the current downloaded size of the file as weight.
+        return (int) (currentFileSize / 1024 / 1024);
     }
 }

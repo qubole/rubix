@@ -68,6 +68,9 @@ public class CacheConfig
     private static String diskReadBufferSizeConf = "hadoop.cache.data.disk.read.buffer.size";
     public static String socketReadTimeOutConf = "hadoop.cache.network.socket.read.timeout";
     private static String diskMonitorIntervalConf = "hadoop.cache.disk.monitor.interval";
+    private static final String KEY_CLEANUP_FILES_DURING_START = "rubix.cleanup.files.during.start";
+    private static final String KEY_DATA_CACHE_MAX_DISKS = "hadoop.cache.data.max.disks";
+    private static final String KEY_DATA_CACHE_DIR_SUFFIX = "hadoop.cache.data.dirsuffix";
     static String fileCacheDirSuffixConf = "/fcache/";
     static int maxDisksConf = 5;
 
@@ -85,6 +88,7 @@ public class CacheConfig
     public static final int diskReadBufferSizeDefault = 1024;
     public static int socketReadTimeOutDefault = 30000; // In milliseconds.
     private static int diskMonitorInterval = 10; // in seconds
+    private static final boolean DEFAULT_CLEANUP_FILES_DURING_START = true;
 
     private static final Log log = LogFactory.getLog(CacheConfig.class.getName());
 
@@ -180,7 +184,7 @@ public class CacheConfig
         return s.get();
     }
 
-    private static List<String> getDirPrefixList(Configuration conf)
+    public static List<String> getDirPrefixList(Configuration conf)
     {
         String cacheDirPrefixList = getCacheDirPrefixList(conf);
         return Arrays.asList(cacheDirPrefixList.split("\\s*,\\s*"));
@@ -385,5 +389,25 @@ public class CacheConfig
     public static int getDiskMonitorInterval(Configuration conf)
     {
         return conf.getInt(diskMonitorIntervalConf, diskMonitorInterval);
+    }
+
+    public static boolean isCleanupFilesDuringStartEnabled(Configuration conf)
+    {
+        return conf.getBoolean(KEY_CLEANUP_FILES_DURING_START, DEFAULT_CLEANUP_FILES_DURING_START);
+    }
+
+    public static void setCleanupFilesDuringStart(Configuration conf, boolean isCleanupRequired)
+    {
+        conf.setBoolean(KEY_CLEANUP_FILES_DURING_START, isCleanupRequired);
+    }
+
+    public static int getCacheMaxDisks(Configuration conf)
+    {
+        return conf.getInt(KEY_DATA_CACHE_MAX_DISKS, maxDisksConf);
+    }
+
+    public static String getCacheDataDirSuffix(Configuration conf)
+    {
+        return conf.get(KEY_DATA_CACHE_DIR_SUFFIX, fileCacheDirSuffixConf);
     }
 }

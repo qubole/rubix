@@ -60,8 +60,6 @@ public class BookKeeperServer
     public static void startServer(Configuration conf)
     {
         bookKeeper = new BookKeeper(conf);
-        DiskMonitorService diskMonitorService = new DiskMonitorService(conf, bookKeeper);
-        diskMonitorService.startAsync();
         processor = new BookKeeperService.Processor(bookKeeper);
         log.info("Starting BookKeeperServer on port " + getServerPort(conf));
         try {

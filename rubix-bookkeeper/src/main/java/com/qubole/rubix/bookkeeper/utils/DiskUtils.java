@@ -44,6 +44,14 @@ public class DiskUtils
         return size * 1024;
     }
 
+    public static void clearDirectory(String path) throws IOException
+    {
+        String cmd = "rm -rf " + path;
+        ShellExec se = new ShellExec(cmd);
+        log.debug("Running: " + cmd);
+        ShellExec.CommandResult cr = se.runCmd();
+    }
+
     public static int getUsedSpaceMB(org.apache.hadoop.conf.Configuration conf)
     {
         long used = 0;
