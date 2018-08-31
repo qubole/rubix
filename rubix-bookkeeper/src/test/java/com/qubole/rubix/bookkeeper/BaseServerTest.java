@@ -293,15 +293,18 @@ public class BaseServerTest
 
     startServer(serverType, conf, metrics);
 
-    metricsNames = getJmxMetricsNames();
-    if (areMetricsEnabled) {
-      assertContainsMetrics(metricsNames, metricsToVerify, usePartialMatch);
+    try {
+      metricsNames = getJmxMetricsNames();
+      if (areMetricsEnabled) {
+        assertContainsMetrics(metricsNames, metricsToVerify, usePartialMatch);
+      }
+      else {
+        assertDoesNotContainMetrics(metricsNames, metricsToVerify, usePartialMatch);
+      }
     }
-    else {
-      assertDoesNotContainMetrics(metricsNames, metricsToVerify, usePartialMatch);
+    finally {
+      stopServer(serverType);
     }
-
-    stopServer(serverType);
 
     metricsNames = getJmxMetricsNames();
     assertDoesNotContainMetrics(metricsNames, metricsToVerify, usePartialMatch);

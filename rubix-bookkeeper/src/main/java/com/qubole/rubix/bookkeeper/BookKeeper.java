@@ -26,6 +26,7 @@ import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.cache.Weigher;
 import com.qubole.rubix.bookkeeper.utils.DiskUtils;
+import com.qubole.rubix.bookkeeper.validation.CachingBehaviorValidator;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.core.ReadRequest;
@@ -89,6 +90,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   int currentNodeIndex = -1;
   static long splitSize;
   private RemoteFetchProcessor fetchProcessor;
+  private CachingBehaviorValidator cachingBehaviorValidator;
   private Ticker ticker;
 
   // Registry for gathering & storing necessary metrics
@@ -117,8 +119,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     initializeMetrics();
     initializeCache(conf, ticker);
     cleanupOldCacheFiles(conf);
-    fetchProcessor = new RemoteFetchProcessor(conf);
-    fetchProcessor.startAsync();
+    startServices();
   }
 
   // Cleanup the cached files that were downloaded as a part of previous bookkeeper session.
@@ -185,6 +186,21 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     });
   }
 
+  /**
+   * Start necessary services.
+   */
+  private void startServices()
+  {
+    fetchProcessor = new RemoteFetchProcessor(conf);
+    fetchProcessor.startAsync();
+
+    if (CacheConfig.isCachingBehaviorValidationEnabled(conf)) {
+      log.debug("Starting caching behavior validation");
+      cachingBehaviorValidator = new CachingBehaviorValidator(conf, metrics, this);
+      cachingBehaviorValidator.startAsync();
+    }
+  }
+
   @Override
   public List<BlockLocation> getCacheStatus(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock, int clusterType)
       throws TException
@@ -241,21 +257,29 @@ public abstract class BookKeeper implements BookKeeperService.Iface
 
     try {
       for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
-        totalRequestCount.inc();
+        if (!isValidatingCachingBehavior(remotePath)) {
+          totalRequestCount.inc();
+        }
 
         long split = (blockNum * blockSize) / splitSize;
         if (!blockSplits.get(split).equalsIgnoreCase(nodeName)) {
           blockLocations.add(new BlockLocation(Location.NON_LOCAL, blockSplits.get(split)));
-          nonlocalRequestCount.inc();
+          if (!isValidatingCachingBehavior(remotePath)) {
+            nonlocalRequestCount.inc();
+          }
         }
         else {
           if (md.isBlockCached(blockNum)) {
             blockLocations.add(new BlockLocation(Location.CACHED, blockSplits.get(split)));
-            cacheRequestCount.inc();
+            if (!isValidatingCachingBehavior(remotePath)) {
+              cacheRequestCount.inc();
+            }
           }
           else {
             blockLocations.add(new BlockLocation(Location.LOCAL, blockSplits.get(split)));
-            remoteRequestCount.inc();
+            if (!isValidatingCachingBehavior(remotePath)) {
+              remoteRequestCount.inc();
+            }
           }
         }
       }
@@ -598,18 +622,20 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       FileMetadata md = notification.getValue();
       try {
         md.closeAndCleanup(notification.getCause(), fileMetadataCache);
-        switch (notification.getCause()) {
-          case EXPLICIT:
-            cacheInvalidationCount.inc();
-            break;
-          case SIZE:
-            cacheEvictionCount.inc();
-            break;
-          case EXPIRED:
-            cacheExpiryCount.inc();
-            break;
-          default:
-            break;
+        if (!isValidatingCachingBehavior(md.getRemotePath())) {
+          switch (notification.getCause()) {
+            case EXPLICIT:
+              cacheInvalidationCount.inc();
+              break;
+            case SIZE:
+              cacheEvictionCount.inc();
+              break;
+            case EXPIRED:
+              cacheExpiryCount.inc();
+              break;
+            default:
+              break;
+          }
         }
       }
       catch (IOException e) {
@@ -646,7 +672,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
 
   // This method is to invalidate FileMetadata from guava cache.
   // deleteCachedFile determines whether to delete the actual file from the local filesystem or not
-  private static void invalidateFileMetadata(String key)
+  public static void invalidateFileMetadata(String key)
   {
     // We might come in here with cache not initialized e.g. fs.create
     if (fileMetadataCache != null) {
@@ -673,5 +699,10 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     }
 
     return false;
+  }
+
+  private static boolean isValidatingCachingBehavior(String remotePath)
+  {
+    return CachingBehaviorValidator.VALIDATOR_TEST_FILE_NAME.equals(CacheUtil.getName(remotePath));
   }
 }

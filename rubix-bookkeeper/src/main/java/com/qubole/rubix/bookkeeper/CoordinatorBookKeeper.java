@@ -41,7 +41,7 @@ public class CoordinatorBookKeeper extends BookKeeper
   }
 
   @VisibleForTesting
-  CoordinatorBookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker) throws FileNotFoundException
+  public CoordinatorBookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker) throws FileNotFoundException
   {
     super(conf, metrics, ticker);
     this.liveWorkerCache = CacheBuilder.newBuilder()

@@ -72,6 +72,9 @@ public class CacheConfig
   private static final String KEY_SERVICE_RETRY_INTERVAL = "rubix.network.service.retry-interval";
   private static final String KEY_SERVICE_MAX_RETRIES = "rubix.network.service.max-retries";
   private static final String KEY_SOCKET_READ_TIMEOUT = "hadoop.cache.network.socket.read.timeout";
+  private static final String KEY_VALIDATION_CACHING_BEHAVIOR_ENABLED = "rubix.validation.caching-behavior.enabled";
+  private static final String KEY_VALIDATION_INITIAL_DELAY = "rubix.validation.initial-delay";
+  private static final String KEY_VALIDATION_INTERVAL = "rubix.validation.interval";
   private static final String KEY_WORKER_LIVENESS_EXPIRY = "rubix.monitor.worker.liveness.expiry";
   private static final String KEY_PRESTO_CLUSTER_MANAGER = "rubix.presto.clustermanager.class";
   private static final String KEY_HADOOP_CLUSTER_MANAGER = "rubix.hadoop.clustermanager.class";
@@ -124,6 +127,9 @@ public class CacheConfig
   private static final int DEFAULT_SERVICE_RETRY_INTERVAL = 30000; // ms
   private static final int DEFAULT_SERVICE_MAX_RETRIES = 100;
   private static final int DEFAULT_SOCKET_READ_TIMEOUT = 30000; // ms
+  private static final boolean DEFAULT_VALIDATION_CACHING_BEHAVIOR_ENABLED = true; // ms (30min)
+  private static final int DEFAULT_VALIDATION_INITIAL_DELAY = 1800000; // ms (30min)
+  private static final int DEFAULT_VALIDATION_INTERVAL = 1800000; // ms (30min)
   private static final int DEFAULT_WORKER_LIVENESS_EXPIRY = 60000; // ms
   private static final int DEFAULT_WORKER_LIVENESS_METRIC_INITIAL_DELAY = 30000; // ms
   private static final int DEFAULT_WORKER_LIVENESS_METRIC_INTERVAL = 30000; // ms
@@ -313,6 +319,16 @@ public class CacheConfig
     return conf.getInt(KEY_METRICS_STATSD_PORT, DEFAULT_METRICS_STATSD_PORT);
   }
 
+  public static int getValidationInitialDelay(Configuration conf)
+  {
+    return conf.getInt(KEY_VALIDATION_INITIAL_DELAY, DEFAULT_VALIDATION_INITIAL_DELAY);
+  }
+
+  public static int getValidationInterval(Configuration conf)
+  {
+    return conf.getInt(KEY_VALIDATION_INTERVAL, DEFAULT_VALIDATION_INTERVAL);
+  }
+
   public static int getWorkerLivenessExpiry(Configuration conf)
   {
     return conf.getInt(KEY_WORKER_LIVENESS_EXPIRY, DEFAULT_WORKER_LIVENESS_EXPIRY);
@@ -321,6 +337,11 @@ public class CacheConfig
   public static boolean isCacheDataEnabled(Configuration conf)
   {
     return conf.getBoolean(KEY_CACHE_ENABLED, DEFAULT_DATA_CACHE_ENABLED);
+  }
+
+  public static boolean isCachingBehaviorValidationEnabled(Configuration conf)
+  {
+    return conf.getBoolean(KEY_VALIDATION_CACHING_BEHAVIOR_ENABLED, DEFAULT_VALIDATION_CACHING_BEHAVIOR_ENABLED);
   }
 
   public static boolean areCacheMetricsEnabled(Configuration conf)
@@ -468,6 +489,11 @@ public class CacheConfig
     conf.setInt(KEY_HEARTBEAT_INTERVAL, interval);
   }
 
+  public static void setCachingBehaviorValidationEnabled(Configuration conf, boolean isCachingBehaviorValidationEnabled)
+  {
+    conf.setBoolean(KEY_VALIDATION_CACHING_BEHAVIOR_ENABLED, isCachingBehaviorValidationEnabled);
+  }
+
   public static void setIsStrictMode(Configuration conf, boolean isStrictMode)
   {
     conf.setBoolean(KEY_DATA_CACHE_STRICT_MODE, isStrictMode);
@@ -541,6 +567,16 @@ public class CacheConfig
   public static void setStatsDMetricsPort(Configuration conf, int port)
   {
     conf.setInt(KEY_METRICS_STATSD_PORT, port);
+  }
+
+  public static void setValidationInitialDelay(Configuration conf, int initialDelay)
+  {
+    conf.setInt(KEY_VALIDATION_INITIAL_DELAY, initialDelay);
+  }
+
+  public static void setValidationInterval(Configuration conf, int interval)
+  {
+    conf.setInt(KEY_VALIDATION_INTERVAL, interval);
   }
 
   public static void setWorkerLivenessExpiry(Configuration conf, int expiryTime)

@@ -258,7 +258,7 @@ public class CacheUtil
    * @param remotePath  The remote path to parse.
    * @return The remote path's directory name.
    */
-  private static String getName(String remotePath)
+  public static String getName(String remotePath)
   {
     return remotePath.contains("/") ? remotePath.substring(remotePath.lastIndexOf('/') + 1) : remotePath;
   }
