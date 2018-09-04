@@ -56,6 +56,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -93,6 +94,8 @@ public abstract class BookKeeper implements BookKeeperService.Iface
 
   // Metrics to keep track of cache interactions
   private static Counter cacheEvictionCount;
+  private static Counter cacheInvalidationCount;
+  private static Counter cacheExpiryCount;
   private Counter totalRequestCount;
   private Counter remoteRequestCount;
   private Counter cacheRequestCount;
@@ -111,8 +114,34 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     this.ticker = ticker;
     initializeMetrics();
     initializeCache(conf, ticker);
+    cleanupOldCacheFiles(conf);
     fetchProcessor = new RemoteFetchProcessor(conf);
     fetchProcessor.startAsync();
+  }
+
+  // Cleanup the cached files that were downloaded as a part of previous bookkeeper session.
+  // This makes sure we always start with a clean empty cash.
+  // TODO: We need to come up with a way to persist the files being downloaded before
+  // So that we can use that info to load those files in guava cache.
+  private void cleanupOldCacheFiles(Configuration conf)
+  {
+    if (CacheConfig.isCleanupFilesDuringStartEnabled(conf)) {
+      try {
+        int numDisks = CacheConfig.getCacheMaxDisks(conf);
+        String dirSuffix = CacheConfig.getCacheDataDirSuffix(conf);
+        List<String> dirPrefixList = CacheUtil.getDirPrefixList(conf);
+
+        for (String dirPrefix : dirPrefixList) {
+          for (int i = 0; i < numDisks; i++) {
+            java.nio.file.Path path = Paths.get(dirPrefix + i, dirSuffix, "*");
+            DiskUtils.clearDirectory(path.toString());
+          }
+        }
+      }
+      catch (IOException ex) {
+        log.error("Could not clean up the old cached files");
+      }
+    }
   }
 
   /**
@@ -121,6 +150,8 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   private void initializeMetrics()
   {
     cacheEvictionCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_EVICTION_COUNT.getMetricName());
+    cacheInvalidationCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_INVALIDATION_COUNT.getMetricName());
+    cacheExpiryCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_EXPIRY_COUNT.getMetricName());
     totalRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_TOTAL_REQUEST_COUNT.getMetricName());
     cacheRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_REQUEST_COUNT.getMetricName());
     nonlocalRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT.getMetricName());
@@ -181,10 +212,10 @@ public abstract class BookKeeper implements BookKeeperService.Iface
 
     FileMetadata md;
     try {
-      md = fileMetadataCache.get(remotePath, new CreateFileMetadataCallable(remotePath, fileLength, lastModified, conf));
+      md = fileMetadataCache.get(remotePath, new CreateFileMetadataCallable(remotePath, fileLength, lastModified, 0, conf));
       if (isInvalidationRequired(md.getLastModified(), lastModified)) {
-        invalidate(remotePath);
-        md = fileMetadataCache.get(remotePath, new CreateFileMetadataCallable(remotePath, fileLength, lastModified, conf));
+        invalidateFileMetadata(remotePath);
+        md = fileMetadataCache.get(remotePath, new CreateFileMetadataCallable(remotePath, fileLength, lastModified, 0, conf));
       }
     }
     catch (ExecutionException e) {
@@ -314,7 +345,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       return;
     }
     if (isInvalidationRequired(md.getLastModified(), lastModified)) {
-      invalidate(remotePath);
+      invalidateFileMetadata(remotePath);
       return;
     }
     endBlock = setCorrectEndBlock(endBlock, fileLength, remotePath);
@@ -322,6 +353,8 @@ public abstract class BookKeeper implements BookKeeperService.Iface
 
     try {
       md.setBlocksCached(startBlock, endBlock);
+      long currentFileSize = md.incrementCurrentFileSize((endBlock - startBlock) * CacheConfig.getBlockSize(conf));
+      replaceFileMetadata(remotePath, currentFileSize, conf);
     }
     catch (IOException e) {
       throw new TException(e);
@@ -511,11 +544,6 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         .build();
   }
 
-  public void invalidateEntry(String key)
-  {
-    fileMetadataCache.invalidate(key);
-  }
-
   public FileMetadata getEntry(String key, Callable<FileMetadata> callable) throws ExecutionException
   {
     return fileMetadataCache.get(key, callable);
@@ -559,7 +587,19 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       FileMetadata md = notification.getValue();
       try {
         md.closeAndCleanup(notification.getCause(), fileMetadataCache);
-        cacheEvictionCount.inc();
+        switch (notification.getCause()) {
+          case EXPLICIT:
+            cacheInvalidationCount.inc();
+            break;
+          case SIZE:
+            cacheEvictionCount.inc();
+            break;
+          case EXPIRED:
+            cacheExpiryCount.inc();
+            break;
+          default:
+            break;
+        }
       }
       catch (IOException e) {
         log.warn("Could not cleanup FileMetadata for " + notification.getKey(), e);
@@ -574,27 +614,44 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     Configuration conf;
     long fileLength;
     long lastModified;
+    long currentFileSize;
 
-    public CreateFileMetadataCallable(String path, long fileLength, long lastModified, Configuration conf)
+    public CreateFileMetadataCallable(String path, long fileLength, long lastModified, long currentFileSize,
+                                      Configuration conf)
     {
       this.path = path;
       this.conf = conf;
       this.fileLength = fileLength;
       this.lastModified = lastModified;
+      this.currentFileSize = currentFileSize;
     }
 
     public FileMetadata call()
         throws Exception
     {
-      return new FileMetadata(path, fileLength, lastModified, conf);
+      return new FileMetadata(path, fileLength, lastModified, currentFileSize, conf);
     }
   }
 
-  public static void invalidate(String p)
+  // This method is to invalidate FileMetadata from guava cache.
+  // deleteCachedFile determines whether to delete the actual file from the local filesystem or not
+  private static void invalidateFileMetadata(String key)
   {
     // We might come in here with cache not initialized e.g. fs.create
     if (fileMetadataCache != null) {
-      fileMetadataCache.invalidate(p);
+      fileMetadataCache.invalidate(key);
+    }
+  }
+
+  private static void replaceFileMetadata(String key, long curretFileSize, Configuration conf) throws IOException
+  {
+    if (fileMetadataCache != null) {
+      FileMetadata metadata = fileMetadataCache.getIfPresent(key);
+      if (metadata != null) {
+        FileMetadata newMetaData = new FileMetadata(key, metadata.getFileSize(), metadata.getLastModified(),
+            curretFileSize, conf);
+        fileMetadataCache.put(key, newMetaData);
+      }
     }
   }
 

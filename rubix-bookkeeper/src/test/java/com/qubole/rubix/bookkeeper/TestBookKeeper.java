@@ -383,13 +383,13 @@ public class TestBookKeeper
     metrics = new MetricRegistry();
     bookKeeper = new CoordinatorBookKeeper(conf, metrics, ticker);
 
-    assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_EVICTION_COUNT.getMetricName()).getCount(), 0);
+    assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_EXPIRY_COUNT.getMetricName()).getCount(), 0);
 
     bookKeeper.getCacheStatus(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
     ticker.advance(30000, TimeUnit.MILLISECONDS);
     bookKeeper.fileMetadataCache.cleanUp();
 
-    assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_EVICTION_COUNT.getMetricName()).getCount(), 1);
+    assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_EXPIRY_COUNT.getMetricName()).getCount(), 1);
   }
 
   /**

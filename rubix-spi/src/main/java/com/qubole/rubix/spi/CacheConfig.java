@@ -80,6 +80,7 @@ public class CacheConfig
   private static final String KEY_STALE_FILEINFO_EXPIRY_PERIOD = "rubix.stale.fileinfo.expiry.period";
   private static final String KEY_CACHE_FILE_SPLIT_SIZE = "rubix.cache.filesplit.size";
   private static final String KEY_WORKER_NODEINFO_EXPIRY_PERIOD = "rubix.worker.nodeinfo.expiry.period";
+  private static final String KEY_CLEANUP_FILES_DURING_START = "rubix.cleanup.files.during.start";
 
   // default values
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
@@ -135,6 +136,7 @@ public class CacheConfig
   private static final int DEFAULT_STALE_FILEINFO_EXPIRY_PERIOD = 36000; // seconds
   private static final long DEFAULT_CACHE_FILE_SPLIT_SIZE = 256 * 1024 * 1024;
   private static final int DEFAULT_WORKER_NODEINFO_EXPIRY_PERIOD = 300; // seconds
+  private static final boolean DEFAULT_CLEANUP_FILES_DURING_START = true;
 
   private CacheConfig()
   {
@@ -405,6 +407,11 @@ public class CacheConfig
     return conf.getInt(KEY_WORKER_NODEINFO_EXPIRY_PERIOD, DEFAULT_WORKER_NODEINFO_EXPIRY_PERIOD);
   }
 
+  public static boolean isCleanupFilesDuringStartEnabled(Configuration conf)
+  {
+    return conf.getBoolean(KEY_CLEANUP_FILES_DURING_START, DEFAULT_CLEANUP_FILES_DURING_START);
+  }
+
   public static void setBlockSize(Configuration conf, int blockSize)
   {
     conf.setInt(KEY_BLOCK_SIZE, blockSize);
@@ -588,5 +595,10 @@ public class CacheConfig
   public static void setWorkerNodeInfoExpiryPeriod(Configuration conf, int expiryPeriod)
   {
     conf.setInt(KEY_WORKER_NODEINFO_EXPIRY_PERIOD, expiryPeriod);
+  }
+
+  public static void setCleanupFilesDuringStart(Configuration conf, boolean isCleanupRequired)
+  {
+    conf.setBoolean(KEY_CLEANUP_FILES_DURING_START, isCleanupRequired);
   }
 }
