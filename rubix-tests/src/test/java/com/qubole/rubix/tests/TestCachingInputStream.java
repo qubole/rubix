@@ -62,6 +62,7 @@ public class TestCachingInputStream
 
   private static final String testDirectory = testDirectoryPrefix + "dir0";
   private static Configuration conf;
+  private BookKeeperServer bookKeeperServer;
 
   private static final Log log = LogFactory.getLog(TestCachingInputStream.class.getName());
 
@@ -92,27 +93,29 @@ public class TestCachingInputStream
     CacheConfig.setCacheDataDirPrefix(conf, testDirectoryPrefix + "dir");
     CacheConfig.setMaxDisks(conf, 1);
     CacheConfig.setIsParallelWarmupEnabled(conf, false);
+    CacheConfig.setOnMaster(conf, true);
 
     Thread server = new Thread()
     {
       public void run()
       {
-        LocalDataTransferServer.startServer(conf);
+        LocalDataTransferServer.startServer(conf, new MetricRegistry());
       }
     };
     server.start();
+    bookKeeperServer = new BookKeeperServer();
     Thread thread = new Thread()
     {
       public void run()
       {
-        BookKeeperServer.startServer(conf, new MetricRegistry());
+        bookKeeperServer.startServer(conf, new MetricRegistry());
       }
     };
     thread.start();
 
     DataGen.populateFile(backendFileName);
 
-    while (!BookKeeperServer.isServerUp()) {
+    while (!bookKeeperServer.isServerUp()) {
       Thread.sleep(200);
       log.info("Waiting for BookKeeper Server to come up");
     }
@@ -139,7 +142,9 @@ public class TestCachingInputStream
   @AfterMethod
   public void cleanup()
   {
-    BookKeeperServer.stopServer();
+    if (bookKeeperServer != null) {
+      bookKeeperServer.stopServer();
+    }
     LocalDataTransferServer.stopServer();
 
     inputStream.close();
