@@ -15,6 +15,7 @@ package com.qubole.rubix.bookkeeper.validation;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Joiner;
+import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import com.qubole.rubix.bookkeeper.BookKeeper;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
@@ -32,12 +33,19 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class CachingBehaviorValidator extends AbstractScheduledService
 {
   private static Log log = LogFactory.getLog(CachingBehaviorValidator.class);
+
+  // The name of the test file to be cached to verify the caching workflow.
   public static final String VALIDATOR_TEST_FILE_NAME = "rubixCachingBehaviorTestFile";
+
+  // The path of the test file used to verify the caching workflow.
   public static final String VALIDATOR_TEST_FILE_PATH = Joiner.on(File.separator).join(System.getProperty("java.io.tmpdir"), VALIDATOR_TEST_FILE_NAME);
+
+  // The path of the test file with a defined scheme (needed for BookKeeper service calls).
   public static final String VALIDATOR_TEST_FILE_PATH_WITH_SCHEME = "file://" + VALIDATOR_TEST_FILE_PATH;
 
   private static final int VALIDATOR_START_BLOCK = 0;
@@ -50,7 +58,7 @@ public class CachingBehaviorValidator extends AbstractScheduledService
   private final int validationInitialDelay;
   private final int validationInterval;
 
-  private boolean validationSuccess;
+  private AtomicBoolean validationSuccess = new AtomicBoolean();
 
   public CachingBehaviorValidator(Configuration conf, MetricRegistry metrics, BookKeeper bookKeeper)
   {
@@ -65,8 +73,8 @@ public class CachingBehaviorValidator extends AbstractScheduledService
   @Override
   protected void runOneIteration()
   {
-    validationSuccess = validateCachingBehavior();
-    log.debug(validationSuccess ? "Validation succeeded" : "Validation did not succeed");
+    validationSuccess.set(validateCachingBehavior());
+    log.debug(validationSuccess.get() ? "Validation succeeded" : "Validation did not succeed");
   }
 
   @Override
@@ -103,14 +111,14 @@ public class CachingBehaviorValidator extends AbstractScheduledService
           VALIDATOR_START_BLOCK,
           VALIDATOR_END_BLOCK,
           VALIDATOR_CLUSTER_TYPE);
-      if (locations.size() > 0 && locations.get(0).getLocation() != Location.LOCAL) {
+      if (locations.isEmpty() || locations.get(0).getLocation() != Location.LOCAL) {
         return false;
       }
 
-      boolean dataRead = bookKeeper.readData(
+      final boolean dataRead = bookKeeper.readData(
           VALIDATOR_TEST_FILE_PATH_WITH_SCHEME,
           VALIDATOR_READ_OFFSET,
-          (int) readSize,
+          Ints.checkedCast(readSize),
           fileLength,
           fileLastModified,
           VALIDATOR_CLUSTER_TYPE);
@@ -125,7 +133,7 @@ public class CachingBehaviorValidator extends AbstractScheduledService
           VALIDATOR_START_BLOCK,
           VALIDATOR_END_BLOCK,
           VALIDATOR_CLUSTER_TYPE);
-      if (locations.size() > 0 && locations.get(0).getLocation() != Location.CACHED) {
+      if (locations.isEmpty() || locations.get(0).getLocation() != Location.CACHED) {
         return false;
       }
 
@@ -152,7 +160,7 @@ public class CachingBehaviorValidator extends AbstractScheduledService
       @Override
       public Integer getValue()
       {
-        return validationSuccess ? 1 : 0;
+        return validationSuccess.get() ? 1 : 0;
       }
     });
   }

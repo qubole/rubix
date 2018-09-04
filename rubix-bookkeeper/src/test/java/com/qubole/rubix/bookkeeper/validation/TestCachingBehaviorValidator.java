@@ -13,7 +13,6 @@
 package com.qubole.rubix.bookkeeper.validation;
 
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.collect.Lists;
 import com.qubole.rubix.bookkeeper.BookKeeper;
 import com.qubole.rubix.bookkeeper.CoordinatorBookKeeper;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
@@ -29,6 +28,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.FileNotFoundException;
+import java.util.Collections;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -44,13 +44,11 @@ public class TestCachingBehaviorValidator
 
   private static final int TEST_VALIDATION_INTERVAL = 1000; // ms
   private static final String TEST_REMOTE_LOCATION = "testLocation";
-  private static final List<BlockLocation> TEST_LOCATIONS_CACHED = Lists.newArrayList(new BlockLocation(Location.CACHED, TEST_REMOTE_LOCATION));
-  private static final List<BlockLocation> TEST_LOCATIONS_LOCAL = Lists.newArrayList(new BlockLocation(Location.LOCAL, TEST_REMOTE_LOCATION));
+  private static final List<BlockLocation> TEST_LOCATIONS_CACHED = Collections.singletonList(new BlockLocation(Location.CACHED, TEST_REMOTE_LOCATION));
+  private static final List<BlockLocation> TEST_LOCATIONS_LOCAL = Collections.singletonList(new BlockLocation(Location.LOCAL, TEST_REMOTE_LOCATION));
 
   private final Configuration conf = new Configuration();
   private MetricRegistry metrics;
-
-  private CachingBehaviorValidator cachingBehaviorValidator;
 
   @BeforeMethod
   public void setUp()
@@ -73,13 +71,7 @@ public class TestCachingBehaviorValidator
   public void testValidateCachingBehavior() throws FileNotFoundException
   {
     CacheConfig.setCachingBehaviorValidationEnabled(conf, false);
-    CacheConfig.setValidationInitialDelay(conf, TEST_VALIDATION_INTERVAL);
-    CacheConfig.setValidationInterval(conf, TEST_VALIDATION_INTERVAL);
-
-    cachingBehaviorValidator = new CachingBehaviorValidator(conf, metrics, new CoordinatorBookKeeper(conf, metrics));
-    cachingBehaviorValidator.runOneIteration();
-
-    assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_BEHAVIOR_VALIDATION.getMetricName()).getValue(), 1);
+    checkValidator(new CoordinatorBookKeeper(conf, metrics), 1);
   }
 
   /**
@@ -90,18 +82,11 @@ public class TestCachingBehaviorValidator
   @Test
   public void testValidateCachingBehavior_wrongInitialCacheStatus() throws TException
   {
-    CacheConfig.setCachingBehaviorValidationEnabled(conf, false);
-    CacheConfig.setValidationInitialDelay(conf, TEST_VALIDATION_INTERVAL);
-    CacheConfig.setValidationInterval(conf, TEST_VALIDATION_INTERVAL);
-
     final BookKeeper bookKeeper = mock(BookKeeper.class);
     when(bookKeeper.getCacheStatus(anyString(), anyLong(), anyLong(), anyLong(), anyLong(), anyInt())).thenReturn(TEST_LOCATIONS_CACHED);
     when(bookKeeper.readData(anyString(), anyLong(), anyInt(), anyLong(), anyLong(), anyInt())).thenReturn(true);
 
-    cachingBehaviorValidator = new CachingBehaviorValidator(conf, metrics, bookKeeper);
-    cachingBehaviorValidator.runOneIteration();
-
-    assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_BEHAVIOR_VALIDATION.getMetricName()).getValue(), 0);
+    checkValidator(bookKeeper, 0);
   }
 
   /**
@@ -112,17 +97,10 @@ public class TestCachingBehaviorValidator
   @Test
   public void testValidateCachingBehavior_dataNotRead() throws TException
   {
-    CacheConfig.setCachingBehaviorValidationEnabled(conf, false);
-    CacheConfig.setValidationInitialDelay(conf, TEST_VALIDATION_INTERVAL);
-    CacheConfig.setValidationInterval(conf, TEST_VALIDATION_INTERVAL);
-
     final BookKeeper bookKeeper = mock(BookKeeper.class);
     when(bookKeeper.readData(anyString(), anyLong(), anyInt(), anyLong(), anyLong(), anyInt())).thenReturn(false);
 
-    cachingBehaviorValidator = new CachingBehaviorValidator(conf, metrics, bookKeeper);
-    cachingBehaviorValidator.runOneIteration();
-
-    assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_BEHAVIOR_VALIDATION.getMetricName()).getValue(), 0);
+    checkValidator(bookKeeper, 0);
   }
 
   /**
@@ -133,18 +111,11 @@ public class TestCachingBehaviorValidator
   @Test
   public void testValidateCachingBehavior_dataRead_fileNotCached() throws TException
   {
-    CacheConfig.setCachingBehaviorValidationEnabled(conf, false);
-    CacheConfig.setValidationInitialDelay(conf, TEST_VALIDATION_INTERVAL);
-    CacheConfig.setValidationInterval(conf, TEST_VALIDATION_INTERVAL);
-
     final BookKeeper bookKeeper = mock(BookKeeper.class);
     when(bookKeeper.getCacheStatus(anyString(), anyLong(), anyLong(), anyLong(), anyLong(), anyInt())).thenReturn(TEST_LOCATIONS_LOCAL);
     when(bookKeeper.readData(anyString(), anyLong(), anyInt(), anyLong(), anyLong(), anyInt())).thenReturn(true);
 
-    cachingBehaviorValidator = new CachingBehaviorValidator(conf, metrics, bookKeeper);
-    cachingBehaviorValidator.runOneIteration();
-
-    assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_BEHAVIOR_VALIDATION.getMetricName()).getValue(), 0);
+    checkValidator(bookKeeper, 0);
   }
 
   /**
@@ -155,17 +126,10 @@ public class TestCachingBehaviorValidator
   @Test
   public void testValidateCachingBehavior_cacheStatusException() throws TException
   {
-    CacheConfig.setCachingBehaviorValidationEnabled(conf, false);
-    CacheConfig.setValidationInitialDelay(conf, TEST_VALIDATION_INTERVAL);
-    CacheConfig.setValidationInterval(conf, TEST_VALIDATION_INTERVAL);
-
     final BookKeeper bookKeeper = mock(BookKeeper.class);
     when(bookKeeper.getCacheStatus(anyString(), anyLong(), anyLong(), anyLong(), anyLong(), anyInt())).thenThrow(TException.class);
 
-    cachingBehaviorValidator = new CachingBehaviorValidator(conf, metrics, bookKeeper);
-    cachingBehaviorValidator.runOneIteration();
-
-    assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_BEHAVIOR_VALIDATION.getMetricName()).getValue(), 0);
+    checkValidator(bookKeeper, 0);
   }
 
   /**
@@ -176,17 +140,10 @@ public class TestCachingBehaviorValidator
   @Test
   public void testValidateCachingBehavior_readDataException() throws TException
   {
-    CacheConfig.setCachingBehaviorValidationEnabled(conf, false);
-    CacheConfig.setValidationInitialDelay(conf, TEST_VALIDATION_INTERVAL);
-    CacheConfig.setValidationInterval(conf, TEST_VALIDATION_INTERVAL);
-
     final BookKeeper bookKeeper = mock(BookKeeper.class);
     when(bookKeeper.readData(anyString(), anyLong(), anyInt(), anyLong(), anyLong(), anyInt())).thenThrow(TException.class);
 
-    cachingBehaviorValidator = new CachingBehaviorValidator(conf, metrics, bookKeeper);
-    cachingBehaviorValidator.runOneIteration();
-
-    assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_BEHAVIOR_VALIDATION.getMetricName()).getValue(), 0);
+    checkValidator(bookKeeper, 0);
   }
 
   /**
@@ -198,16 +155,29 @@ public class TestCachingBehaviorValidator
   public void testValidateCachingBehavior_verifyOtherMetricsUnaffected() throws FileNotFoundException
   {
     CacheConfig.setCachingBehaviorValidationEnabled(conf, false);
+    final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);
+
+    assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_TOTAL_REQUEST_COUNT.getMetricName()).getCount(), 0);
+
+    checkValidator(bookKeeper, 1);
+
+    assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_TOTAL_REQUEST_COUNT.getMetricName()).getCount(), 0);
+  }
+
+  /**
+   * Run the caching behavior validator and verify the result.
+   *
+   * @param bookKeeper      The BookKeeper client used for testing the caching behaviour.
+   * @param expectedResult  The result expected from validation.
+   */
+  private void checkValidator(BookKeeper bookKeeper, int expectedResult)
+  {
     CacheConfig.setValidationInitialDelay(conf, TEST_VALIDATION_INTERVAL);
     CacheConfig.setValidationInterval(conf, TEST_VALIDATION_INTERVAL);
 
-    final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);
-    assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_TOTAL_REQUEST_COUNT.getMetricName()).getCount(), 0);
-
-    cachingBehaviorValidator = new CachingBehaviorValidator(conf, metrics, bookKeeper);
+    CachingBehaviorValidator cachingBehaviorValidator = new CachingBehaviorValidator(conf, metrics, bookKeeper);
     cachingBehaviorValidator.runOneIteration();
 
-    assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_BEHAVIOR_VALIDATION.getMetricName()).getValue(), 1);
-    assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_TOTAL_REQUEST_COUNT.getMetricName()).getCount(), 0);
+    assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_BEHAVIOR_VALIDATION.getMetricName()).getValue(), expectedResult);
   }
 }

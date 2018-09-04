@@ -127,7 +127,7 @@ public class CacheConfig
   private static final int DEFAULT_SERVICE_RETRY_INTERVAL = 30000; // ms
   private static final int DEFAULT_SERVICE_MAX_RETRIES = 100;
   private static final int DEFAULT_SOCKET_READ_TIMEOUT = 30000; // ms
-  private static final boolean DEFAULT_VALIDATION_CACHING_BEHAVIOR_ENABLED = true; // ms (30min)
+  private static final boolean DEFAULT_VALIDATION_CACHING_BEHAVIOR_ENABLED = true;
   private static final int DEFAULT_VALIDATION_INITIAL_DELAY = 1800000; // ms (30min)
   private static final int DEFAULT_VALIDATION_INTERVAL = 1800000; // ms (30min)
   private static final int DEFAULT_WORKER_LIVENESS_EXPIRY = 60000; // ms

@@ -84,14 +84,13 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   String nodeName;
   static String nodeHostName;
   static String nodeHostAddress;
-  private Configuration conf;
+  private final Configuration conf;
   private static Integer lock = 1;
   private List<String> nodes;
   int currentNodeIndex = -1;
   static long splitSize;
-  private RemoteFetchProcessor fetchProcessor;
-  private CachingBehaviorValidator cachingBehaviorValidator;
-  private Ticker ticker;
+  private final RemoteFetchProcessor fetchProcessor;
+  private final Ticker ticker;
 
   // Registry for gathering & storing necessary metrics
   protected final MetricRegistry metrics;
@@ -119,7 +118,15 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     initializeMetrics();
     initializeCache(conf, ticker);
     cleanupOldCacheFiles(conf);
-    startServices();
+
+    fetchProcessor = new RemoteFetchProcessor(conf);
+    fetchProcessor.startAsync();
+
+    if (CacheConfig.isCachingBehaviorValidationEnabled(conf)) {
+      log.debug("Starting caching behavior validation");
+      CachingBehaviorValidator cachingBehaviorValidator = new CachingBehaviorValidator(conf, metrics, this);
+      cachingBehaviorValidator.startAsync();
+    }
   }
 
   // Cleanup the cached files that were downloaded as a part of previous bookkeeper session.
@@ -186,21 +193,6 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     });
   }
 
-  /**
-   * Start necessary services.
-   */
-  private void startServices()
-  {
-    fetchProcessor = new RemoteFetchProcessor(conf);
-    fetchProcessor.startAsync();
-
-    if (CacheConfig.isCachingBehaviorValidationEnabled(conf)) {
-      log.debug("Starting caching behavior validation");
-      cachingBehaviorValidator = new CachingBehaviorValidator(conf, metrics, this);
-      cachingBehaviorValidator.startAsync();
-    }
-  }
-
   @Override
   public List<BlockLocation> getCacheStatus(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock, int clusterType)
       throws TException
@@ -255,29 +247,30 @@ public abstract class BookKeeper implements BookKeeperService.Iface
 
     //TODO: Store Node indices too, i.e. split to nodeIndex map and compare indices here instead of strings(nodenames).
 
+    final boolean isValidating = isValidatingCachingBehavior(remotePath);
     try {
       for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
-        if (!isValidatingCachingBehavior(remotePath)) {
+        if (!isValidating) {
           totalRequestCount.inc();
         }
 
         long split = (blockNum * blockSize) / splitSize;
         if (!blockSplits.get(split).equalsIgnoreCase(nodeName)) {
           blockLocations.add(new BlockLocation(Location.NON_LOCAL, blockSplits.get(split)));
-          if (!isValidatingCachingBehavior(remotePath)) {
+          if (!isValidating) {
             nonlocalRequestCount.inc();
           }
         }
         else {
           if (md.isBlockCached(blockNum)) {
             blockLocations.add(new BlockLocation(Location.CACHED, blockSplits.get(split)));
-            if (!isValidatingCachingBehavior(remotePath)) {
+            if (!isValidating) {
               cacheRequestCount.inc();
             }
           }
           else {
             blockLocations.add(new BlockLocation(Location.LOCAL, blockSplits.get(split)));
-            if (!isValidatingCachingBehavior(remotePath)) {
+            if (!isValidating) {
               remoteRequestCount.inc();
             }
           }
