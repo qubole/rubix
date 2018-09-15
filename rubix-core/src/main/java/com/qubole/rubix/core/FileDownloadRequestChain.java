@@ -117,7 +117,7 @@ public class FileDownloadRequestChain extends ReadRequestChain
       }
       log.info("Downloaded " + totalRequestedRead + " bytes of file " + remotePath);
       log.debug("RemoteFetchRequest took : " + (System.currentTimeMillis() - startTime) + " msecs ");
-      return 0;
+      return totalRequestedRead;
     }
     finally {
       fileChannel.close();
