@@ -141,11 +141,9 @@ public class TestFileDownloader
     int dataDownloaded = downloader.processDownloadRequests(requestChains);
 
     int expectedDownloadedDataSize = 600;
-    log.info("Data Downloaded - " + dataDownloaded);
     assertTrue(expectedDownloadedDataSize == dataDownloaded, "Download size didn't match");
 
     cacheStatus = bookKeeper.getCacheStatus(backendPath.toString(), file.length(), 1000, 0, 5, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
-    log.info("CAChe Status -- " + cacheStatus.toString());
     int i = 0;
     for (i = 0; i < 4; i++) {
       assertTrue(cacheStatus.get(i).getLocation() == Location.CACHED, "Data is not cached");
