@@ -10,12 +10,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-package com.qubole.rubix.core;
+package com.qubole.rubix.bookkeeper;
 
 import com.google.common.base.Throwables;
+import com.qubole.rubix.core.ReadRequest;
+import com.qubole.rubix.core.ReadRequestChain;
+import com.qubole.rubix.core.ReadRequestChainStats;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
-import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -29,11 +31,13 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.List;
 
 import static com.google.common.base.Preconditions.checkState;
 
 public class FileDownloadRequestChain extends ReadRequestChain
 {
+  private BookKeeper bookKeeper;
   private FileSystem remoteFileSystem;
   private String localFile;
   private String remotePath;
@@ -48,9 +52,11 @@ public class FileDownloadRequestChain extends ReadRequestChain
 
   private static final Log log = LogFactory.getLog(FileDownloadRequestChain.class);
 
-  public FileDownloadRequestChain(FileSystem remoteFileSystem, String localfile, ByteBuffer directBuffer,
-                                  Configuration conf, String remotePath, long fileSize, long lastModified)
+  public FileDownloadRequestChain(BookKeeper bookKeeper, FileSystem remoteFileSystem, String localfile,
+                                  ByteBuffer directBuffer, Configuration conf, String remotePath,
+                                  long fileSize, long lastModified)
   {
+    this.bookKeeper = bookKeeper;
     this.remoteFileSystem = remoteFileSystem;
     this.localFile = localfile;
     this.conf = conf;
@@ -80,8 +86,10 @@ public class FileDownloadRequestChain extends ReadRequestChain
   public Integer call() throws IOException
   {
     Thread.currentThread().setName(threadName);
-    checkState(isLocked, "Trying to execute Chain without locking");
+    checkState(isLocked(), "Trying to execute Chain without locking");
     long startTime = System.currentTimeMillis();
+
+    List<ReadRequest> readRequests = getReadRequests();
 
     if (readRequests.size() == 0) {
       return 0;
@@ -102,17 +110,17 @@ public class FileDownloadRequestChain extends ReadRequestChain
       inputStream = remoteFileSystem.open(new Path(remotePath), CacheConfig.getBlockSize(conf));
       fileChannel = new FileOutputStream(new RandomAccessFile(file, "rw").getFD()).getChannel();
       for (ReadRequest readRequest : readRequests) {
-        if (cancelled) {
-          log.info("Request Cancelled for " + readRequest.backendReadStart);
+        if (isCancelled()) {
+          log.info("Request Cancelled for " + readRequest.getBackendReadStart());
           propagateCancel(this.getClass().getName());
         }
 
         int readBytes = 0;
-        inputStream.seek(readRequest.backendReadStart);
-        log.info("Seeking to " + readRequest.backendReadStart);
+        inputStream.seek(readRequest.getBackendReadStart());
+        log.info("Seeking to " + readRequest.getBackendReadStart());
         //log.info("Processing request of  " + readRequest.getBackendReadLength() + " from " + readRequest.backendReadStart);
         readBytes = copyIntoCache(inputStream, fileChannel, readRequest.getBackendReadLength(),
-            readRequest.backendReadStart);
+            readRequest.getBackendReadStart());
         totalRequestedRead += readBytes;
       }
       log.info("Downloaded " + totalRequestedRead + " bytes of file " + remotePath);
@@ -168,13 +176,11 @@ public class FileDownloadRequestChain extends ReadRequestChain
   public void updateCacheStatus(String remotePath, long fileSize, long lastModified, int blockSize, Configuration conf)
   {
     try {
-      log.info("Updating cache for FileDownloadRequestChain . Num Requests : " + readRequests.size() + " for remotepath : " + remotePath);
-      RetryingBookkeeperClient client = bookKeeperFactory.createBookKeeperClient(conf);
-      for (ReadRequest readRequest : readRequests) {
+      log.info("Updating cache for FileDownloadRequestChain . Num Requests : " + getReadRequests().size() + " for remotepath : " + remotePath);
+      for (ReadRequest readRequest : getReadRequests()) {
         log.debug("Setting cached from : " + toBlock(readRequest.getBackendReadStart()) + " block to : " + (toBlock(readRequest.getBackendReadEnd() - 1) + 1));
-        client.setAllCached(remotePath, fileSize, lastModified, toBlock(readRequest.getBackendReadStart()), toBlock(readRequest.getBackendReadEnd() - 1) + 1);
+        bookKeeper.setAllCached(remotePath, fileSize, lastModified, toBlock(readRequest.getBackendReadStart()), toBlock(readRequest.getBackendReadEnd() - 1) + 1);
       }
-      client.close();
     }
     catch (Exception e) {
       log.info("Could not update BookKeeper about newly cached blocks: " + Throwables.getStackTraceAsString(e));

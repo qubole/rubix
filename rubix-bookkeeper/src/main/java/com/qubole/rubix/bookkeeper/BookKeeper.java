@@ -117,7 +117,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     initializeMetrics();
     initializeCache(conf, ticker);
     cleanupOldCacheFiles(conf);
-    fetchProcessor = new RemoteFetchProcessor(conf);
+    fetchProcessor = new RemoteFetchProcessor(this, conf);
     fetchProcessor.startAsync();
   }
 

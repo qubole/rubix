@@ -12,7 +12,6 @@
  */
 package com.qubole.rubix.core;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -82,7 +81,6 @@ public abstract class ReadRequestChain implements Callable<Integer>
     isLocked = true;
   }
 
-  @VisibleForTesting
   public List<ReadRequest> getReadRequests()
   {
     return readRequests;
@@ -116,5 +114,15 @@ public abstract class ReadRequestChain implements Callable<Integer>
     {
       super(message);
     }
+  }
+
+  public boolean isCancelled()
+  {
+    return cancelled;
+  }
+
+  public boolean isLocked()
+  {
+    return isLocked;
   }
 }
