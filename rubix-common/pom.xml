@@ -39,6 +39,13 @@
             <artifactId>metrics-core</artifactId>
             <version>${dep.metrics.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>io.dropwizard.metrics</groupId>
+            <artifactId>metrics-ganglia</artifactId>
+            <version>${dep.metrics.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>com.readytalk</groupId>
             <artifactId>metrics3-statsd</artifactId>
@@ -55,6 +62,18 @@
             <artifactId>testng</artifactId>
             <version>${dep.testng.version}</version>
             <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>info.ganglia.gmetric4j</groupId>
+            <artifactId>gmetric4j</artifactId>
+            <version>1.0.2</version>
+        </dependency>
+
+        <dependency>
+        <groupId>org.acplt</groupId>
+        <artifactId>oncrpc</artifactId>
+        <version>1.0.7</version>
         </dependency>
     </dependencies>
 
@@ -102,6 +121,9 @@
                                     <include>io.dropwizard.metrics:metrics-core</include>
                                     <include>com.readytalk:metrics-statsd-common</include>
                                     <include>com.readytalk:metrics3-statsd</include>
+                                    <include>info.ganglia.gmetric4j:gmetric4j</include>
+                                    <include>org.acplt:oncrpc</include>
+                                    <include>io.dropwizard.metrics:metrics-ganglia</include>
                                 </includes>
                             </artifactSet>
                             <relocations>
@@ -113,12 +135,16 @@
                                     <pattern>com.google</pattern>
                                     <shadedPattern>com.google.shaded</shadedPattern>
                                 </relocation>
+                                <relocation>
+                                    <pattern>info.ganglia.gmetric4j</pattern>
+                                    <shadedPattern>info.ganglia.gmetric4j.shaded</shadedPattern>
+                                </relocation>
                             </relocations>
-
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
+
         </plugins>
     </build>
 

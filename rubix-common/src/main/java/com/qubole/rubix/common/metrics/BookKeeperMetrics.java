@@ -15,10 +15,12 @@ package com.qubole.rubix.common.metrics;
 
 import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.ganglia.GangliaReporter;
 import com.google.common.base.Splitter;
 import com.qubole.rubix.core.utils.ClusterUtil;
 import com.qubole.rubix.spi.CacheConfig;
 import com.readytalk.metrics.StatsDReporter;
+import info.ganglia.gmetric4j.gmetric.GMetric;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -89,6 +91,19 @@ public class BookKeeperMetrics implements AutoCloseable
           log.info(String.format("Reporting metrics to StatsD [%s:%s]", CacheConfig.getStatsDMetricsHost(conf), CacheConfig.getStatsDMetricsPort(conf)));
           statsDReporter.start(CacheConfig.getStatsDMetricsInterval(conf), TimeUnit.MILLISECONDS);
           reporters.add(statsDReporter);
+          break;
+        case GANGLIA:
+          if (!CacheConfig.isOnMaster(conf)) {
+            CacheConfig.setGangliaDMetricsHost(conf, ClusterUtil.getMasterHostname(conf));
+          }
+          log.info(String.format("Reporting metrics to Ganglia [%s:%s]", CacheConfig.getStatsDMetricsHost(conf), CacheConfig.getGangliaMetricsPort(conf)));
+          final GMetric ganglia = new GMetric(CacheConfig.getStatsDMetricsHost(conf), CacheConfig.getGangliaMetricsPort(conf), GMetric.UDPAddressingMode.MULTICAST, 1);
+          final GangliaReporter gangliaReporter = GangliaReporter.forRegistry(metrics)
+                  .convertRatesTo(TimeUnit.SECONDS)
+                  .convertDurationsTo(TimeUnit.MILLISECONDS)
+                  .build(ganglia);
+          gangliaReporter.start(CacheConfig.getStatsDMetricsInterval(conf), TimeUnit.MILLISECONDS);
+          reporters.add(gangliaReporter);
           break;
       }
     }
