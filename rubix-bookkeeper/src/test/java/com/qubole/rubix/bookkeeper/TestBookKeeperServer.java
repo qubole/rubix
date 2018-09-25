@@ -81,21 +81,21 @@ public class TestBookKeeperServer extends BaseServerTest
   }
 
   /**
-   * Verify that liveness metrics are registered when configured to.
+   * Verify that health metrics are registered when configured to.
    */
   @Test
-  public void testLivenessMetricsEnabled() throws InterruptedException, MalformedObjectNameException
+  public void testHealthMetricsEnabled() throws InterruptedException, MalformedObjectNameException
   {
-    super.testLivenessMetrics(ServerType.BOOKKEEPER, conf, metrics, true);
+    super.testHealthMetrics(ServerType.BOOKKEEPER, conf, metrics, true);
   }
 
   /**
-   * Verify that liveness metrics are not registered when configured not to.
+   * Verify that health metrics are not registered when configured not to.
    */
   @Test
-  public void testLivenessMetricsNotEnabled() throws InterruptedException, MalformedObjectNameException
+  public void testHealthMetricsNotEnabled() throws InterruptedException, MalformedObjectNameException
   {
-    super.testLivenessMetrics(ServerType.BOOKKEEPER, conf, metrics, false);
+    super.testHealthMetrics(ServerType.BOOKKEEPER, conf, metrics, false);
   }
 
   /**

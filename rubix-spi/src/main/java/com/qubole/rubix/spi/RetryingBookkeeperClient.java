@@ -74,14 +74,14 @@ public class RetryingBookkeeperClient extends BookKeeperService.Client implement
   }
 
   @Override
-  public void handleHeartbeat(final String workerHostname) throws TException
+  public void handleHeartbeat(final String workerHostname, final boolean validationSuccess) throws TException
   {
     retryConnection(new Callable<Void>()
     {
       @Override
       public Void call() throws Exception
       {
-        RetryingBookkeeperClient.super.handleHeartbeat(workerHostname);
+        RetryingBookkeeperClient.super.handleHeartbeat(workerHostname, validationSuccess);
         return null;
       }
     });

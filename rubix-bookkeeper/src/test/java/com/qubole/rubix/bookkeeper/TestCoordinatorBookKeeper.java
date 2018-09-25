@@ -77,42 +77,50 @@ public class TestCoordinatorBookKeeper
   }
 
   /**
-   * Verify that the worker liveness count metric is correctly registered.
+   * Verify that the health metrics are correctly registered.
    */
   @Test
-  public void testWorkerLivenessCountMetric() throws FileNotFoundException
+  public void testWorkerHealthMetrics() throws FileNotFoundException
   {
     final CoordinatorBookKeeper coordinatorBookKeeper = new CoordinatorBookKeeper(conf, metrics);
-    coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER1);
-    coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER2);
+    coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER1, true);
+    coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER2, true);
 
-    int workerCount = (int) metrics.getGauges().get(BookKeeperMetrics.LivenessMetric.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE.getMetricName()).getValue();
+    int workerCount = (int) metrics.getGauges().get(BookKeeperMetrics.HealthMetric.LIVE_WORKER_GAUGE.getMetricName()).getValue();
+    int validatedCount = (int) metrics.getGauges().get(BookKeeperMetrics.HealthMetric.VALIDATED_WORKER_GAUGE.getMetricName()).getValue();
+
     assertEquals(workerCount, 2, "Incorrect number of workers reporting heartbeat");
+    assertEquals(validatedCount, 2, "Incorrect number of workers reporting heartbeat");
   }
 
   /**
-   * Verify that the worker liveness status properly expires.
+   * Verify that the worker health status properly expires.
    */
   @Test
-  public void testWorkerLivenessCountMetric_workerLivenessExpired() throws FileNotFoundException
+  public void testWorkerHealthMetrics_healthStatusExpired() throws FileNotFoundException
   {
     final FakeTicker ticker = new FakeTicker();
-    final int workerLivenessExpiry = 1000; // ms
-    CacheConfig.setWorkerLivenessExpiry(conf, workerLivenessExpiry);
+    final int healthStatusExpiry = 1000; // ms
+    CacheConfig.setHealthStatusExpiry(conf, healthStatusExpiry);
 
     final CoordinatorBookKeeper coordinatorBookKeeper = new CoordinatorBookKeeper(conf, metrics, ticker);
-    final Gauge liveWorkerGauge = metrics.getGauges().get(BookKeeperMetrics.LivenessMetric.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE.getMetricName());
+    final Gauge liveWorkerGauge = metrics.getGauges().get(BookKeeperMetrics.HealthMetric.LIVE_WORKER_GAUGE.getMetricName());
+    final Gauge validatedWorkerGauge = metrics.getGauges().get(BookKeeperMetrics.HealthMetric.VALIDATED_WORKER_GAUGE.getMetricName());
 
-    coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER1);
-    coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER2);
+    coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER1, true);
+    coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER2, true);
 
     int workerCount = (int) liveWorkerGauge.getValue();
-    assertEquals(workerCount, 2, "Incorrect number of workers reporting heartbeat");
+    int validationCount = (int) liveWorkerGauge.getValue();
+    assertEquals(validationCount, 2, "Incorrect number of workers reporting heartbeat");
+    assertEquals(workerCount, 2, "Incorrect number of workers have been validated");
 
-    ticker.advance(workerLivenessExpiry, TimeUnit.MILLISECONDS);
-    coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER1);
+    ticker.advance(healthStatusExpiry, TimeUnit.MILLISECONDS);
+    coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER1, true);
 
     workerCount = (int) liveWorkerGauge.getValue();
+    validationCount = (int) validatedWorkerGauge.getValue();
     assertEquals(workerCount, 1, "Incorrect number of workers reporting heartbeat");
+    assertEquals(validationCount, 1, "Incorrect number of workers have been validated");
   }
 }

@@ -10,34 +10,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-package com.qubole.rubix.bookkeeper.validation;
+package com.qubole.rubix.bookkeeper;
 
-import com.codahale.metrics.Gauge;
-import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Joiner;
 import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.AbstractScheduledService;
-import com.qubole.rubix.bookkeeper.BookKeeper;
-import com.qubole.rubix.common.metrics.BookKeeperMetrics;
+import com.google.common.util.concurrent.Service;
+import com.qubole.rubix.core.utils.ClusterUtil;
 import com.qubole.rubix.core.utils.DataGen;
+import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterType;
+import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.Location;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.shaded.TException;
+import org.apache.thrift.shaded.transport.TTransportException;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.util.List;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
-public class CachingBehaviorValidator extends AbstractScheduledService
+public class HeartbeatService extends AbstractScheduledService
 {
-  private static Log log = LogFactory.getLog(CachingBehaviorValidator.class);
+  private Log log = LogFactory.getLog(HeartbeatService.class.getName());
 
   // The name of the test file to be cached to verify the caching workflow.
   public static final String VALIDATOR_TEST_FILE_NAME = "rubixCachingBehaviorTestFile";
@@ -53,34 +56,104 @@ public class CachingBehaviorValidator extends AbstractScheduledService
   private static final int VALIDATOR_READ_OFFSET = 0;
   private static final int VALIDATOR_CLUSTER_TYPE = ClusterType.TEST_CLUSTER_MANAGER.ordinal();
 
-  private final MetricRegistry metrics;
+  // The executor used for running listener callbacks.
+  private final Executor executor = Executors.newSingleThreadExecutor();
+
+  // The client for interacting with the master BookKeeper.
+  private final RetryingBookkeeperClient bookkeeperClient;
+
+  // The initial delay for sending heartbeats.
+  private final int heartbeatInitialDelay;
+
+  // The interval at which to send a heartbeat.
+  private final int heartbeatInterval;
+
+  // The current Hadoop configuration.
+  private final Configuration conf;
+
+  // The current BookKeeper instance.
   private final BookKeeper bookKeeper;
-  private final int validationInitialDelay;
-  private final int validationInterval;
 
-  private AtomicBoolean validationSuccess = new AtomicBoolean();
+  // The hostname of the master node.
+  private final String masterHostname;
 
-  public CachingBehaviorValidator(Configuration conf, MetricRegistry metrics, BookKeeper bookKeeper)
+  public HeartbeatService(Configuration conf, BookKeeperFactory bookKeeperFactory, BookKeeper bookKeeper)
   {
-    this.metrics = metrics;
+    this.conf = conf;
+    this.heartbeatInitialDelay = CacheConfig.getHeartbeatInitialDelay(conf);
+    this.heartbeatInterval = CacheConfig.getHeartbeatInterval(conf);
+    this.masterHostname = ClusterUtil.getMasterHostname(conf);
+    this.bookkeeperClient = initializeClientWithRetry(bookKeeperFactory);
     this.bookKeeper = bookKeeper;
-    this.validationInitialDelay = CacheConfig.getValidationInitialDelay(conf);
-    this.validationInterval = CacheConfig.getValidationInterval(conf);
+  }
 
-    registerMetrics();
+  /**
+   * Attempt to initialize the client for communicating with the master BookKeeper.
+   *
+   * @param bookKeeperFactory   The factory to use for creating a BookKeeper client.
+   * @return The client used for communication with the master node.
+   */
+  private RetryingBookkeeperClient initializeClientWithRetry(BookKeeperFactory bookKeeperFactory)
+  {
+    final int retryInterval = CacheConfig.getServiceRetryInterval(conf);
+    final int maxRetries = CacheConfig.getServiceMaxRetries(conf);
+
+    for (int failedStarts = 0; failedStarts < maxRetries; ) {
+      try {
+        RetryingBookkeeperClient client = bookKeeperFactory.createBookKeeperClient(masterHostname, conf);
+        return client;
+      }
+      catch (TTransportException e) {
+        failedStarts++;
+        log.warn(String.format("Could not start client for heartbeat service [%d/%d attempts]", failedStarts, maxRetries));
+      }
+
+      if (failedStarts == maxRetries) {
+        break;
+      }
+
+      try {
+        Thread.sleep(retryInterval);
+      }
+      catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+    }
+
+    log.fatal("Heartbeat service ran out of retries to connect to the master BookKeeper");
+    throw new RuntimeException("Could not start heartbeat service");
+  }
+
+  @Override
+  protected void startUp()
+  {
+    log.info(String.format("Starting service %s in thread %s", serviceName(), Thread.currentThread().getId()));
+    addListener(new HeartbeatService.FailureListener(), executor);
   }
 
   @Override
   protected void runOneIteration()
   {
-    validationSuccess.set(validateCachingBehavior());
-    log.debug(validationSuccess.get() ? "Validation succeeded" : "Validation did not succeed");
+    try {
+      boolean didValidationSucceed = validateCachingBehavior();
+
+      log.debug(String.format("Sending heartbeat to %s", masterHostname));
+      bookkeeperClient.handleHeartbeat(
+          InetAddress.getLocalHost().getCanonicalHostName(),
+          didValidationSucceed);
+    }
+    catch (IOException e) {
+      log.error("Could not send heartbeat", e);
+    }
+    catch (TException te) {
+      log.error(String.format("Could not connect to master node [%s]; will reattempt on next heartbeat", masterHostname));
+    }
   }
 
   @Override
-  protected Scheduler scheduler()
+  protected AbstractScheduledService.Scheduler scheduler()
   {
-    return Scheduler.newFixedDelaySchedule(validationInitialDelay, validationInterval, TimeUnit.MILLISECONDS);
+    return AbstractScheduledService.Scheduler.newFixedDelaySchedule(heartbeatInitialDelay, heartbeatInterval, TimeUnit.MILLISECONDS);
   }
 
   /**
@@ -88,7 +161,7 @@ public class CachingBehaviorValidator extends AbstractScheduledService
    *
    * @return true if caching behaves as expected, false otherwise
    */
-  private boolean validateCachingBehavior()
+  public boolean validateCachingBehavior()
   {
     try {
       DataGen.populateFile(VALIDATOR_TEST_FILE_PATH);
@@ -151,17 +224,15 @@ public class CachingBehaviorValidator extends AbstractScheduledService
   }
 
   /**
-   * Register desired metrics.
+   * Listener to handle failures for this service.
    */
-  private void registerMetrics()
+  private class FailureListener extends com.google.common.util.concurrent.Service.Listener
   {
-    metrics.register(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_BEHAVIOR_VALIDATION.getMetricName(), new Gauge<Integer>()
+    @Override
+    public void failed(Service.State from, Throwable failure)
     {
-      @Override
-      public Integer getValue()
-      {
-        return validationSuccess.get() ? 1 : 0;
-      }
-    });
+      super.failed(from, failure);
+      log.error("Encountered a problem", failure);
+    }
   }
 }

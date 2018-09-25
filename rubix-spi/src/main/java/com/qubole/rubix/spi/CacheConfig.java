@@ -55,7 +55,7 @@ public class CacheConfig
   private static final String KEY_LOCAL_SERVER_PORT = "hadoop.cache.data.local.server.port";
   private static final String KEY_MAX_RETRIES = "hadoop.cache.data.client.num-retries";
   private static final String KEY_METRICS_CACHE_ENABLED = "rubix.metrics.cache.enabled";
-  private static final String KEY_METRICS_LIVENESS_ENABLED = "rubix.metrics.liveness.enabled";
+  private static final String KEY_METRICS_HEALTH_ENABLED = "rubix.metrics.health.enabled";
   private static final String KEY_METRICS_JVM_ENABLED = "rubix.metrics.jvm.enabled";
   private static final String KEY_METRICS_STATSD_HOST = "rubix.metrics.statsd.host";
   private static final String KEY_METRICS_STATSD_INTERVAL = "rubix.metrics.statsd.interval";
@@ -75,7 +75,7 @@ public class CacheConfig
   private static final String KEY_VALIDATION_CACHING_BEHAVIOR_ENABLED = "rubix.validation.caching-behavior.enabled";
   private static final String KEY_VALIDATION_INITIAL_DELAY = "rubix.validation.initial-delay";
   private static final String KEY_VALIDATION_INTERVAL = "rubix.validation.interval";
-  private static final String KEY_WORKER_LIVENESS_EXPIRY = "rubix.monitor.worker.liveness.expiry";
+  private static final String KEY_HEALTH_STATUS_EXPIRY = "rubix.monitor.health.status.expiry";
   private static final String KEY_PRESTO_CLUSTER_MANAGER = "rubix.presto.clustermanager.class";
   private static final String KEY_HADOOP_CLUSTER_MANAGER = "rubix.hadoop.clustermanager.class";
   private static final String KEY_DUMMY_CLUSTER_MANAGER = "rubix.dummy.clustermanager.class";
@@ -110,7 +110,7 @@ public class CacheConfig
   private static final int DEFAULT_MAX_BUFFER_SIZE = 1024;
   private static final int DEFAULT_MAX_RETRIES = 3;
   private static final boolean DEFAULT_METRICS_CACHE_ENABLED = true;
-  private static final boolean DEFAULT_METRICS_LIVENESS_ENABLED = true;
+  private static final boolean DEFAULT_METRICS_HEALTH_ENABLED = true;
   private static final boolean DEFAULT_METRICS_JVM_ENABLED = false;
   private static final String DEFAULT_METRICS_STATSD_HOST = "127.0.0.1"; // localhost
   private static final int DEFAULT_METRICS_STATSD_INTERVAL = 10000; // ms
@@ -127,12 +127,7 @@ public class CacheConfig
   private static final int DEFAULT_SERVICE_RETRY_INTERVAL = 30000; // ms
   private static final int DEFAULT_SERVICE_MAX_RETRIES = 100;
   private static final int DEFAULT_SOCKET_READ_TIMEOUT = 30000; // ms
-  private static final boolean DEFAULT_VALIDATION_CACHING_BEHAVIOR_ENABLED = true;
-  private static final int DEFAULT_VALIDATION_INITIAL_DELAY = 1800000; // ms (30min)
-  private static final int DEFAULT_VALIDATION_INTERVAL = 1800000; // ms (30min)
-  private static final int DEFAULT_WORKER_LIVENESS_EXPIRY = 60000; // ms
-  private static final int DEFAULT_WORKER_LIVENESS_METRIC_INITIAL_DELAY = 30000; // ms
-  private static final int DEFAULT_WORKER_LIVENESS_METRIC_INTERVAL = 30000; // ms
+  private static final int DEFAULT_HEALTH_STATUS_EXPIRY = 60000; // ms
   private static final String DEFAULT_PRESTO_CLUSTER_MANAGER = "com.qubole.rubix.presto.PrestoClusterManager";
   private static final String DEFAULT_HADOOP_CLUSTER_MANAGER = "com.qubole.rubix.hadoop2.Hadoop2ClusterManager";
   private static final String DEFAULT_DUMMY_CLUSTER_MANAGER = "com.qubole.rubix.core.utils.DummyClusterManager";
@@ -319,19 +314,9 @@ public class CacheConfig
     return conf.getInt(KEY_METRICS_STATSD_PORT, DEFAULT_METRICS_STATSD_PORT);
   }
 
-  public static int getValidationInitialDelay(Configuration conf)
+  public static int getHealthStatusExpiry(Configuration conf)
   {
-    return conf.getInt(KEY_VALIDATION_INITIAL_DELAY, DEFAULT_VALIDATION_INITIAL_DELAY);
-  }
-
-  public static int getValidationInterval(Configuration conf)
-  {
-    return conf.getInt(KEY_VALIDATION_INTERVAL, DEFAULT_VALIDATION_INTERVAL);
-  }
-
-  public static int getWorkerLivenessExpiry(Configuration conf)
-  {
-    return conf.getInt(KEY_WORKER_LIVENESS_EXPIRY, DEFAULT_WORKER_LIVENESS_EXPIRY);
+    return conf.getInt(KEY_HEALTH_STATUS_EXPIRY, DEFAULT_HEALTH_STATUS_EXPIRY);
   }
 
   public static boolean isCacheDataEnabled(Configuration conf)
@@ -339,19 +324,14 @@ public class CacheConfig
     return conf.getBoolean(KEY_CACHE_ENABLED, DEFAULT_DATA_CACHE_ENABLED);
   }
 
-  public static boolean isCachingBehaviorValidationEnabled(Configuration conf)
-  {
-    return conf.getBoolean(KEY_VALIDATION_CACHING_BEHAVIOR_ENABLED, DEFAULT_VALIDATION_CACHING_BEHAVIOR_ENABLED);
-  }
-
   public static boolean areCacheMetricsEnabled(Configuration conf)
   {
     return conf.getBoolean(KEY_METRICS_CACHE_ENABLED, DEFAULT_METRICS_CACHE_ENABLED);
   }
 
-  public static boolean areLivenessMetricsEnabled(Configuration conf)
+  public static boolean areHealthMetricsEnabled(Configuration conf)
   {
-    return conf.getBoolean(KEY_METRICS_LIVENESS_ENABLED, DEFAULT_METRICS_LIVENESS_ENABLED);
+    return conf.getBoolean(KEY_METRICS_HEALTH_ENABLED, DEFAULT_METRICS_HEALTH_ENABLED);
   }
 
   public static boolean areJvmMetricsEnabled(Configuration conf)
@@ -509,9 +489,9 @@ public class CacheConfig
     conf.setBoolean(KEY_METRICS_JVM_ENABLED, jvmMetricsEnabled);
   }
 
-  public static void setLivenessMetricsEnabled(Configuration conf, boolean livenessMetricsEnabled)
+  public static void setHealthMetricsEnabled(Configuration conf, boolean healthMetricsEnabled)
   {
-    conf.setBoolean(KEY_METRICS_LIVENESS_ENABLED, livenessMetricsEnabled);
+    conf.setBoolean(KEY_METRICS_HEALTH_ENABLED, healthMetricsEnabled);
   }
 
   public static void setLocalServerPort(Configuration conf, int localServerPort)
@@ -579,9 +559,9 @@ public class CacheConfig
     conf.setInt(KEY_VALIDATION_INTERVAL, interval);
   }
 
-  public static void setWorkerLivenessExpiry(Configuration conf, int expiryTime)
+  public static void setHealthStatusExpiry(Configuration conf, int expiryTime)
   {
-    conf.setInt(KEY_WORKER_LIVENESS_EXPIRY, expiryTime);
+    conf.setInt(KEY_HEALTH_STATUS_EXPIRY, expiryTime);
   }
 
   public static void setPrestoClusterManager(Configuration conf, String clusterManager)

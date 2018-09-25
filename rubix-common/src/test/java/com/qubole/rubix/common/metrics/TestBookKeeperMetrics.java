@@ -143,14 +143,16 @@ public class TestBookKeeperMetrics
   }
 
   /**
-   * Verify that the collection of liveness metrics correctly returns all expected metrics.
+   * Verify that the collection of health metrics correctly returns all expected metrics.
    */
   @Test
-  public void testLivenessMetricsGetAllNames()
+  public void testHealthMetricsGetAllNames()
   {
-    Set<String> livenessMetricsNames = Sets.newHashSet(BookKeeperMetrics.LivenessMetric.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE.getMetricName());
+    Set<String> livenessMetricsNames = Sets.newHashSet(
+        BookKeeperMetrics.HealthMetric.LIVE_WORKER_GAUGE.getMetricName(),
+        BookKeeperMetrics.HealthMetric.VALIDATED_WORKER_GAUGE.getMetricName());
 
-    assertEquals(livenessMetricsNames, BookKeeperMetrics.LivenessMetric.getAllNames());
+    assertEquals(livenessMetricsNames, BookKeeperMetrics.HealthMetric.getAllNames());
   }
 
   /**
@@ -160,17 +162,16 @@ public class TestBookKeeperMetrics
   public void testCacheMetricsGetAllNames()
   {
     Set<String> cacheMetricsNames = Sets.newHashSet(
-        BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_EVICTION_COUNT.getMetricName(),
-        BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_INVALIDATION_COUNT.getMetricName(),
-        BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_EXPIRY_COUNT.getMetricName(),
-        BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_HIT_RATE_GAUGE.getMetricName(),
-        BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_MISS_RATE_GAUGE.getMetricName(),
-        BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE.getMetricName(),
-        BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_TOTAL_REQUEST_COUNT.getMetricName(),
-        BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_REQUEST_COUNT.getMetricName(),
-        BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT.getMetricName(),
-        BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_REMOTE_REQUEST_COUNT.getMetricName(),
-        BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_BEHAVIOR_VALIDATION.getMetricName());
+        BookKeeperMetrics.CacheMetric.CACHE_EVICTION_COUNT.getMetricName(),
+        BookKeeperMetrics.CacheMetric.CACHE_INVALIDATION_COUNT.getMetricName(),
+        BookKeeperMetrics.CacheMetric.CACHE_EXPIRY_COUNT.getMetricName(),
+        BookKeeperMetrics.CacheMetric.CACHE_HIT_RATE_GAUGE.getMetricName(),
+        BookKeeperMetrics.CacheMetric.CACHE_MISS_RATE_GAUGE.getMetricName(),
+        BookKeeperMetrics.CacheMetric.CACHE_SIZE_GAUGE.getMetricName(),
+        BookKeeperMetrics.CacheMetric.TOTAL_REQUEST_COUNT.getMetricName(),
+        BookKeeperMetrics.CacheMetric.CACHE_REQUEST_COUNT.getMetricName(),
+        BookKeeperMetrics.CacheMetric.NONLOCAL_REQUEST_COUNT.getMetricName(),
+        BookKeeperMetrics.CacheMetric.REMOTE_REQUEST_COUNT.getMetricName());
 
     assertEquals(cacheMetricsNames, BookKeeperMetrics.CacheMetric.getAllNames());
   }
@@ -182,9 +183,9 @@ public class TestBookKeeperMetrics
   public void testBookKeeperJvmMetricsGetAllNames()
   {
     Set<String> cacheMetricsNames = Sets.newHashSet(
-        BookKeeperMetrics.BookKeeperJvmMetric.METRIC_BOOKKEEPER_JVM_GC_PREFIX.getMetricName(),
-        BookKeeperMetrics.BookKeeperJvmMetric.METRIC_BOOKKEEPER_JVM_THREADS_PREFIX.getMetricName(),
-        BookKeeperMetrics.BookKeeperJvmMetric.METRIC_BOOKKEEPER_JVM_MEMORY_PREFIX.getMetricName());
+        BookKeeperMetrics.BookKeeperJvmMetric.BOOKKEEPER_JVM_GC_PREFIX.getMetricName(),
+        BookKeeperMetrics.BookKeeperJvmMetric.BOOKKEEPER_JVM_THREADS_PREFIX.getMetricName(),
+        BookKeeperMetrics.BookKeeperJvmMetric.BOOKKEEPER_JVM_MEMORY_PREFIX.getMetricName());
 
     assertEquals(cacheMetricsNames, BookKeeperMetrics.BookKeeperJvmMetric.getAllNames());
   }
@@ -196,9 +197,9 @@ public class TestBookKeeperMetrics
   public void testLDTSJvmMetricsGetAllNames()
   {
     Set<String> cacheMetricsNames = Sets.newHashSet(
-        BookKeeperMetrics.LDTSJvmMetric.METRIC_LDTS_JVM_GC_PREFIX.getMetricName(),
-        BookKeeperMetrics.LDTSJvmMetric.METRIC_LDTS_JVM_THREADS_PREFIX.getMetricName(),
-        BookKeeperMetrics.LDTSJvmMetric.METRIC_LDTS_JVM_MEMORY_PREFIX.getMetricName());
+        BookKeeperMetrics.LDTSJvmMetric.LDTS_JVM_GC_PREFIX.getMetricName(),
+        BookKeeperMetrics.LDTSJvmMetric.LDTS_JVM_THREADS_PREFIX.getMetricName(),
+        BookKeeperMetrics.LDTSJvmMetric.LDTS_JVM_MEMORY_PREFIX.getMetricName());
 
     assertEquals(cacheMetricsNames, BookKeeperMetrics.LDTSJvmMetric.getAllNames());
   }

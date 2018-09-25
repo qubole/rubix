@@ -29,7 +29,7 @@ service BookKeeperService
 
     bool readData(1:string path, 2:long readStart, 3:int length, 4:long fileSize, 5:long lastModified, 6:int clusterType)
 
-    oneway void handleHeartbeat(1:string workerHostname)
+    oneway void handleHeartbeat(1:string workerHostname, 2:bool validationSuccess)
 
     FileInfo getFileInfo(1: string remotePath)
 }

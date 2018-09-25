@@ -35,6 +35,9 @@ public class CoordinatorBookKeeper extends BookKeeper
   // Cache to store hostnames of live workers in the cluster.
   protected Cache<String, Boolean> liveWorkerCache;
 
+  // Cache to store hostnames of validated worker nodes.
+  protected Cache<String, Boolean> validatedWorkerCache;
+
   public CoordinatorBookKeeper(Configuration conf, MetricRegistry metrics) throws FileNotFoundException
   {
     this(conf, metrics, Ticker.systemTicker());
@@ -46,17 +49,28 @@ public class CoordinatorBookKeeper extends BookKeeper
     super(conf, metrics, ticker);
     this.liveWorkerCache = CacheBuilder.newBuilder()
         .ticker(ticker)
-        .expireAfterWrite(CacheConfig.getWorkerLivenessExpiry(conf), TimeUnit.MILLISECONDS)
+        .expireAfterWrite(CacheConfig.getHealthStatusExpiry(conf), TimeUnit.MILLISECONDS)
+        .build();
+    this.validatedWorkerCache = CacheBuilder.newBuilder()
+        .ticker(ticker)
+        .expireAfterWrite(CacheConfig.getHealthStatusExpiry(conf), TimeUnit.MILLISECONDS)
         .build();
 
     registerMetrics();
   }
 
   @Override
-  public void handleHeartbeat(String workerHostname)
+  public void handleHeartbeat(String workerHostname, boolean didValidationSucceed)
   {
     liveWorkerCache.put(workerHostname, true);
     log.debug("Received heartbeat from " + workerHostname);
+
+    if (didValidationSucceed) {
+      validatedWorkerCache.put(workerHostname, true);
+    }
+    else {
+      log.error(String.format("Caching behavior validation failed for worker node (hostname: %s)", workerHostname));
+    }
   }
 
   /**
@@ -64,13 +78,22 @@ public class CoordinatorBookKeeper extends BookKeeper
    */
   private void registerMetrics()
   {
-    metrics.register(BookKeeperMetrics.LivenessMetric.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE.getMetricName(), new Gauge<Integer>()
+    metrics.register(BookKeeperMetrics.HealthMetric.LIVE_WORKER_GAUGE.getMetricName(), new Gauge<Integer>()
     {
       @Override
       public Integer getValue()
       {
         log.debug(String.format("Reporting %s workers", liveWorkerCache.asMap().size()));
         return liveWorkerCache.asMap().size();
+      }
+    });
+    metrics.register(BookKeeperMetrics.HealthMetric.VALIDATED_WORKER_GAUGE.getMetricName(), new Gauge<Integer>()
+    {
+      @Override
+      public Integer getValue()
+      {
+        log.debug(String.format("Validated caching behavior for %s workers", validatedWorkerCache.asMap().size()));
+        return validatedWorkerCache.asMap().size();
       }
     });
   }

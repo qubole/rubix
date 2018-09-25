@@ -40,7 +40,7 @@ public class BaseServerTest
     LOCAL_DATA_TRANSFER_SERVER
   }
 
-  private BookKeeperServer bookKeeperServer;
+  private static BookKeeperServer bookKeeperServer;
   private MockBookKeeperServer mockBookKeeperServer;
 
   private static final Log log = LogFactory.getLog(BaseServerTest.class);
@@ -76,7 +76,7 @@ public class BaseServerTest
   }
 
   /**
-   * Verify the behavior of the liveness metrics for a given server type.
+   * Verify the behavior of the health metrics for a given server type.
    *
    * @param serverType        The type of server to test against.
    * @param conf              The current Hadoop configuration.
@@ -84,18 +84,18 @@ public class BaseServerTest
    * @param areMetricsEnabled Whether the metrics should be registered when the server is run.
    * @throws InterruptedException if the current thread is interrupted while sleeping.
    */
-  protected void testLivenessMetrics(ServerType serverType, Configuration conf, MetricRegistry metrics, boolean areMetricsEnabled) throws InterruptedException, MalformedObjectNameException
+  protected void testHealthMetrics(ServerType serverType, Configuration conf, MetricRegistry metrics, boolean areMetricsEnabled) throws InterruptedException, MalformedObjectNameException
   {
-    CacheConfig.setLivenessMetricsEnabled(conf, areMetricsEnabled);
+    CacheConfig.setHealthMetricsEnabled(conf, areMetricsEnabled);
     CacheConfig.setOnMaster(conf, true);
 
     Set<String> metricsToVerify;
     switch (serverType) {
       case LOCAL_DATA_TRANSFER_SERVER:
-        throw new IllegalArgumentException("No liveness metrics available for LocalDataTransferServer");
+        throw new IllegalArgumentException("No health metrics available for LocalDataTransferServer");
       case BOOKKEEPER:
       case MOCK_BOOKKEEPER:
-        metricsToVerify = BookKeeperMetrics.LivenessMetric.getAllNames();
+        metricsToVerify = BookKeeperMetrics.HealthMetric.getAllNames();
         break;
       default:
         throw new IllegalArgumentException("Invalid server type " + serverType.name());
@@ -175,7 +175,7 @@ public class BaseServerTest
    * @param metrics The current metrics registry.
    * @throws InterruptedException if the current thread is interrupted while sleeping.
    */
-  protected void startBookKeeperServer(final Configuration conf, final MetricRegistry metrics) throws InterruptedException
+  protected static void startBookKeeperServer(final Configuration conf, final MetricRegistry metrics) throws InterruptedException
   {
     if (bookKeeperServer != null) {
       throw new IllegalStateException("A BookKeeperServer is already running");
@@ -198,9 +198,39 @@ public class BaseServerTest
   }
 
   /**
+   * Start an instance of the BookKeeper server with an initial delay.
+   *
+   * @param conf          The current Hadoop configuration.
+   * @param metrics       The current metrics registry.
+   * @param initialDelay  The delay before starting the server. (ms)
+   */
+  protected static void startBookKeeperServerWithDelay(final Configuration conf, final MetricRegistry metrics, final int initialDelay)
+  {
+    if (bookKeeperServer != null) {
+      throw new IllegalStateException("A BookKeeperServer is already running");
+    }
+    bookKeeperServer = new BookKeeperServer();
+
+    final Thread thread = new Thread()
+    {
+      public void run()
+      {
+        try {
+          Thread.sleep(initialDelay);
+        }
+        catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
+        bookKeeperServer.startServer(conf, metrics);
+      }
+    };
+    thread.start();
+  }
+
+  /**
    * Stop the currently running BookKeeper server instance.
    */
-  protected void stopBookKeeperServer()
+  protected static void stopBookKeeperServer()
   {
     if (bookKeeperServer != null) {
       bookKeeperServer.stopServer();
