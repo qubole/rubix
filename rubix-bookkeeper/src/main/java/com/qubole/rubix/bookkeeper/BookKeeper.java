@@ -27,17 +27,19 @@ import com.google.common.cache.RemovalNotification;
 import com.google.common.cache.Weigher;
 import com.qubole.rubix.bookkeeper.utils.DiskUtils;
 import com.qubole.rubix.bookkeeper.validation.CacheValidator;
+import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.core.ReadRequest;
 import com.qubole.rubix.core.RemoteReadRequestChain;
-import com.qubole.rubix.spi.BlockLocation;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
-import com.qubole.rubix.spi.FileInfo;
-import com.qubole.rubix.spi.Location;
+import com.qubole.rubix.spi.thrift.BlockLocation;
+import com.qubole.rubix.spi.thrift.BookKeeperService;
+import com.qubole.rubix.spi.thrift.FileInfo;
+import com.qubole.rubix.spi.thrift.Location;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -55,6 +57,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -71,21 +74,13 @@ import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER_MULTINODE;
 /**
  * Created by stagra on 12/2/16.
  */
-public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperService.Iface
+public abstract class BookKeeper implements BookKeeperService.Iface
 {
-  public static final String METRIC_BOOKKEEPER_CACHE_EVICTION_COUNT = "rubix.bookkeeper.cache_eviction.count";
-  public static final String METRIC_BOOKKEEPER_CACHE_HIT_RATE_GAUGE = "rubix.bookkeeper.cache_hit_rate.gauge";
-  public static final String METRIC_BOOKKEEPER_CACHE_MISS_RATE_GAUGE = "rubix.bookkeeper.cache_miss_rate.gauge";
-  public static final String METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE = "rubix.bookkeeper.cache_size_mb.gauge";
-  public static final String METRIC_BOOKKEEPER_TOTAL_REQUEST_COUNT = "rubix.bookkeeper.total_request.count";
-  public static final String METRIC_BOOKKEEPER_CACHE_REQUEST_COUNT = "rubix.bookkeeper.cache_request.count";
-  public static final String METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT = "rubix.bookkeeper.nonlocal_request.count";
-  public static final String METRIC_BOOKKEEPER_REMOTE_REQUEST_COUNT = "rubix.bookkeeper.remote_request.count";
+  private static Log log = LogFactory.getLog(BookKeeper.class);
 
   protected static Cache<String, FileMetadata> fileMetadataCache;
   private static LoadingCache<String, FileInfo> fileInfoCache;
   protected static ClusterManager clusterManager;
-  private static Log log = LogFactory.getLog(BookKeeper.class.getName());
   String nodeName;
   static String nodeHostName;
   static String nodeHostAddress;
@@ -103,6 +98,8 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
 
   // Metrics to keep track of cache interactions
   private static Counter cacheEvictionCount;
+  private static Counter cacheInvalidationCount;
+  private static Counter cacheExpiryCount;
   private Counter totalRequestCount;
   private Counter remoteRequestCount;
   private Counter cacheRequestCount;
@@ -121,7 +118,33 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
     this.ticker = ticker;
     initializeMetrics();
     initializeCache(conf, ticker);
+    cleanupOldCacheFiles(conf);
     startServices();
+  }
+
+  // Cleanup the cached files that were downloaded as a part of previous bookkeeper session.
+  // This makes sure we always start with a clean empty cash.
+  // TODO: We need to come up with a way to persist the files being downloaded before
+  // So that we can use that info to load those files in guava cache.
+  private void cleanupOldCacheFiles(Configuration conf)
+  {
+    if (CacheConfig.isCleanupFilesDuringStartEnabled(conf)) {
+      try {
+        int numDisks = CacheConfig.getCacheMaxDisks(conf);
+        String dirSuffix = CacheConfig.getCacheDataDirSuffix(conf);
+        List<String> dirPrefixList = CacheUtil.getDirPrefixList(conf);
+
+        for (String dirPrefix : dirPrefixList) {
+          for (int i = 0; i < numDisks; i++) {
+            java.nio.file.Path path = Paths.get(dirPrefix + i, dirSuffix, "*");
+            DiskUtils.clearDirectory(path.toString());
+          }
+        }
+      }
+      catch (IOException ex) {
+        log.error("Could not clean up the old cached files");
+      }
+    }
   }
 
   /**
@@ -129,13 +152,15 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
    */
   private void initializeMetrics()
   {
-    cacheEvictionCount = metrics.counter(METRIC_BOOKKEEPER_CACHE_EVICTION_COUNT);
-    totalRequestCount = metrics.counter(METRIC_BOOKKEEPER_TOTAL_REQUEST_COUNT);
-    cacheRequestCount = metrics.counter(METRIC_BOOKKEEPER_CACHE_REQUEST_COUNT);
-    nonlocalRequestCount = metrics.counter(METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT);
-    remoteRequestCount = metrics.counter(METRIC_BOOKKEEPER_REMOTE_REQUEST_COUNT);
+    cacheEvictionCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_EVICTION_COUNT.getMetricName());
+    cacheInvalidationCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_INVALIDATION_COUNT.getMetricName());
+    cacheExpiryCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_EXPIRY_COUNT.getMetricName());
+    totalRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_TOTAL_REQUEST_COUNT.getMetricName());
+    cacheRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_REQUEST_COUNT.getMetricName());
+    nonlocalRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT.getMetricName());
+    remoteRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_REMOTE_REQUEST_COUNT.getMetricName());
 
-    metrics.register(METRIC_BOOKKEEPER_CACHE_HIT_RATE_GAUGE, new Gauge<Double>()
+    metrics.register(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_HIT_RATE_GAUGE.getMetricName(), new Gauge<Double>()
     {
       @Override
       public Double getValue()
@@ -143,7 +168,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
         return ((double) cacheRequestCount.getCount() / (cacheRequestCount.getCount() + remoteRequestCount.getCount()));
       }
     });
-    metrics.register(METRIC_BOOKKEEPER_CACHE_MISS_RATE_GAUGE, new Gauge<Double>()
+    metrics.register(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_MISS_RATE_GAUGE.getMetricName(), new Gauge<Double>()
     {
       @Override
       public Double getValue()
@@ -151,7 +176,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
         return ((double) remoteRequestCount.getCount() / (cacheRequestCount.getCount() + remoteRequestCount.getCount()));
       }
     });
-    metrics.register(METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE, new Gauge<Integer>()
+    metrics.register(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE.getMetricName(), new Gauge<Integer>()
     {
       @Override
       public Integer getValue()
@@ -208,10 +233,10 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
 
     FileMetadata md;
     try {
-      md = fileMetadataCache.get(remotePath, new CreateFileMetadataCallable(remotePath, fileLength, lastModified, conf));
+      md = fileMetadataCache.get(remotePath, new CreateFileMetadataCallable(remotePath, fileLength, lastModified, 0, conf));
       if (isInvalidationRequired(md.getLastModified(), lastModified)) {
-        invalidate(remotePath);
-        md = fileMetadataCache.get(remotePath, new CreateFileMetadataCallable(remotePath, fileLength, lastModified, conf));
+        invalidateFileMetadata(remotePath);
+        md = fileMetadataCache.get(remotePath, new CreateFileMetadataCallable(remotePath, fileLength, lastModified, 0, conf));
       }
     }
     catch (ExecutionException e) {
@@ -341,7 +366,7 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
       return;
     }
     if (isInvalidationRequired(md.getLastModified(), lastModified)) {
-      invalidate(remotePath);
+      invalidateFileMetadata(remotePath);
       return;
     }
     endBlock = setCorrectEndBlock(endBlock, fileLength, remotePath);
@@ -349,6 +374,8 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
 
     try {
       md.setBlocksCached(startBlock, endBlock);
+      long currentFileSize = md.incrementCurrentFileSize((endBlock - startBlock) * CacheConfig.getBlockSize(conf));
+      replaceFileMetadata(remotePath, currentFileSize, conf);
     }
     catch (IOException e) {
       throw new TException(e);
@@ -538,11 +565,6 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
         .build();
   }
 
-  public void invalidateEntry(String key)
-  {
-    fileMetadataCache.invalidate(key);
-  }
-
   public FileMetadata getEntry(String key, Callable<FileMetadata> callable) throws ExecutionException
   {
     return fileMetadataCache.get(key, callable);
@@ -586,7 +608,19 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
       FileMetadata md = notification.getValue();
       try {
         md.closeAndCleanup(notification.getCause(), fileMetadataCache);
-        cacheEvictionCount.inc();
+        switch (notification.getCause()) {
+          case EXPLICIT:
+            cacheInvalidationCount.inc();
+            break;
+          case SIZE:
+            cacheEvictionCount.inc();
+            break;
+          case EXPIRED:
+            cacheExpiryCount.inc();
+            break;
+          default:
+            break;
+        }
       }
       catch (IOException e) {
         log.warn("Could not cleanup FileMetadata for " + notification.getKey(), e);
@@ -601,27 +635,44 @@ public abstract class BookKeeper implements com.qubole.rubix.spi.BookKeeperServi
     Configuration conf;
     long fileLength;
     long lastModified;
+    long currentFileSize;
 
-    public CreateFileMetadataCallable(String path, long fileLength, long lastModified, Configuration conf)
+    public CreateFileMetadataCallable(String path, long fileLength, long lastModified, long currentFileSize,
+                                      Configuration conf)
     {
       this.path = path;
       this.conf = conf;
       this.fileLength = fileLength;
       this.lastModified = lastModified;
+      this.currentFileSize = currentFileSize;
     }
 
     public FileMetadata call()
         throws Exception
     {
-      return new FileMetadata(path, fileLength, lastModified, conf);
+      return new FileMetadata(path, fileLength, lastModified, currentFileSize, conf);
     }
   }
 
-  public static void invalidate(String p)
+  // This method is to invalidate FileMetadata from guava cache.
+  // deleteCachedFile determines whether to delete the actual file from the local filesystem or not
+  private static void invalidateFileMetadata(String key)
   {
     // We might come in here with cache not initialized e.g. fs.create
     if (fileMetadataCache != null) {
-      fileMetadataCache.invalidate(p);
+      fileMetadataCache.invalidate(key);
+    }
+  }
+
+  private static void replaceFileMetadata(String key, long curretFileSize, Configuration conf) throws IOException
+  {
+    if (fileMetadataCache != null) {
+      FileMetadata metadata = fileMetadataCache.getIfPresent(key);
+      if (metadata != null) {
+        FileMetadata newMetaData = new FileMetadata(key, metadata.getFileSize(), metadata.getLastModified(),
+            curretFileSize, conf);
+        fileMetadataCache.put(key, newMetaData);
+      }
     }
   }
 

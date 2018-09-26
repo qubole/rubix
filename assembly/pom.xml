@@ -25,6 +25,12 @@
 
         <dependency>
             <groupId>com.qubole.rubix</groupId>
+            <artifactId>rubix-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-core</artifactId>
         </dependency>
 

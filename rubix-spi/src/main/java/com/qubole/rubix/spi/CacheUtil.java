@@ -238,7 +238,7 @@ public class CacheUtil
    * @param conf  The current Hadoop configuration.
    * @return A list containing all provided prefixes,
    */
-  private static List<String> getDirPrefixList(Configuration conf)
+  public static List<String> getDirPrefixList(Configuration conf)
   {
     final String cacheDirPrefixList = CacheConfig.getCacheDirPrefixList(conf);
     return Arrays.asList(cacheDirPrefixList.split("\\s*,\\s*"));
