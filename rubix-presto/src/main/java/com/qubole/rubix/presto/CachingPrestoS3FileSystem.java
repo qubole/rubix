@@ -37,7 +37,7 @@ public class CachingPrestoS3FileSystem extends CachingFileSystem<PrestoS3FileSys
   public void initialize(URI uri, Configuration conf) throws IOException
   {
     try {
-      initializeClusterManager(conf, ClusterType.HADOOP2_CLUSTER_MANAGER);
+      initializeClusterManager(conf, ClusterType.PRESTO_CLUSTER_MANAGER);
       super.initialize(uri, conf);
     }
     catch (ClusterManagerInitilizationException ex) {

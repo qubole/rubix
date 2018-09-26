@@ -13,8 +13,8 @@
 package com.qubole.rubix.presto;
 
 import com.qubole.rubix.core.CachingFileSystem;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import com.qubole.rubix.core.ClusterManagerInitilizationException;
+import com.qubole.rubix.spi.ClusterType;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 
@@ -26,38 +26,27 @@ import java.net.URI;
  */
 public class CachingPrestoNativeAzureFileSystem extends CachingFileSystem<NativeAzureFileSystem>
 {
-  private static final Log LOG = LogFactory.getLog(CachingPrestoNativeAzureFileSystem.class);
-  private static PrestoClusterManager clusterManager;
+  private static final String SCHEME = "wasb";
 
   public CachingPrestoNativeAzureFileSystem()
   {
     super();
   }
 
-  private static final String SCHEME = "wasb";
-
   @Override
   public void initialize(URI uri, Configuration conf) throws IOException
   {
-    LOG.debug("Initializing CachingPrestoNativeAzureFileSystem - Presto");
-    if (clusterManager == null) {
-      initializeClusterManager(conf);
+    try {
+      initializeClusterManager(conf, ClusterType.PRESTO_CLUSTER_MANAGER);
+      super.initialize(uri, conf);
     }
-    setClusterManager(clusterManager);
-
-    super.initialize(uri, conf);
+    catch (ClusterManagerInitilizationException ex) {
+      throw new IOException(ex);
+    }
   }
 
   public String getScheme()
   {
     return SCHEME;
-  }
-
-  private synchronized void initializeClusterManager(Configuration conf)
-  {
-    if (clusterManager == null) {
-      clusterManager = new PrestoClusterManager();
-      clusterManager.initialize(conf);
-    }
   }
 }
