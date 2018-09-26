@@ -12,6 +12,7 @@
  */
 package com.qubole.rubix.bookkeeper.validation;
 
+import java.util.HashSet;
 import java.util.Set;
 
 public class ValidationResult
@@ -19,7 +20,11 @@ public class ValidationResult
   private int successes;
   private int totalFiles;
   private double successRate;
-  private Set<String> filesWithoutMD;
+  private Set<String> filesWithoutMD = new HashSet<>();
+
+  public ValidationResult()
+  {
+  }
 
   public ValidationResult(int successes, int totalFiles, Set<String> filesWithoutMD)
   {
@@ -30,9 +35,14 @@ public class ValidationResult
     this.successRate = totalFiles > 0 ? ((double) successes / (double) totalFiles) : 0;
   }
 
-  public int getSuccesses()
+  public int getSuccessCount()
   {
     return successes;
+  }
+
+  public int getFailureCount()
+  {
+    return totalFiles - successes;
   }
 
   public int getTotalFiles()

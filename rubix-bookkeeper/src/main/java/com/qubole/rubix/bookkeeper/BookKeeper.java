@@ -152,15 +152,15 @@ public abstract class BookKeeper implements BookKeeperService.Iface
    */
   private void initializeMetrics()
   {
-    cacheEvictionCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_EVICTION_COUNT.getMetricName());
-    cacheInvalidationCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_INVALIDATION_COUNT.getMetricName());
-    cacheExpiryCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_EXPIRY_COUNT.getMetricName());
-    totalRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_TOTAL_REQUEST_COUNT.getMetricName());
-    cacheRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_REQUEST_COUNT.getMetricName());
-    nonlocalRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT.getMetricName());
-    remoteRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_REMOTE_REQUEST_COUNT.getMetricName());
+    cacheEvictionCount = metrics.counter(BookKeeperMetrics.CacheMetric.CACHE_EVICTION_COUNT.getMetricName());
+    cacheInvalidationCount = metrics.counter(BookKeeperMetrics.CacheMetric.CACHE_INVALIDATION_COUNT.getMetricName());
+    cacheExpiryCount = metrics.counter(BookKeeperMetrics.CacheMetric.CACHE_EXPIRY_COUNT.getMetricName());
+    totalRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.TOTAL_REQUEST_COUNT.getMetricName());
+    cacheRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.CACHE_REQUEST_COUNT.getMetricName());
+    nonlocalRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.NONLOCAL_REQUEST_COUNT.getMetricName());
+    remoteRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.REMOTE_REQUEST_COUNT.getMetricName());
 
-    metrics.register(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_HIT_RATE_GAUGE.getMetricName(), new Gauge<Double>()
+    metrics.register(BookKeeperMetrics.CacheMetric.CACHE_HIT_RATE_GAUGE.getMetricName(), new Gauge<Double>()
     {
       @Override
       public Double getValue()
@@ -168,7 +168,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         return ((double) cacheRequestCount.getCount() / (cacheRequestCount.getCount() + remoteRequestCount.getCount()));
       }
     });
-    metrics.register(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_MISS_RATE_GAUGE.getMetricName(), new Gauge<Double>()
+    metrics.register(BookKeeperMetrics.CacheMetric.CACHE_MISS_RATE_GAUGE.getMetricName(), new Gauge<Double>()
     {
       @Override
       public Double getValue()
@@ -176,7 +176,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         return ((double) remoteRequestCount.getCount() / (cacheRequestCount.getCount() + remoteRequestCount.getCount()));
       }
     });
-    metrics.register(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE.getMetricName(), new Gauge<Integer>()
+    metrics.register(BookKeeperMetrics.CacheMetric.CACHE_SIZE_GAUGE.getMetricName(), new Gauge<Integer>()
     {
       @Override
       public Integer getValue()

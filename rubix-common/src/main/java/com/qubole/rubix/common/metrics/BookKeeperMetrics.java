@@ -107,9 +107,9 @@ public class BookKeeperMetrics implements AutoCloseable
    */
   public enum BookKeeperJvmMetric
   {
-    METRIC_BOOKKEEPER_JVM_GC_PREFIX("rubix.bookkeeper.jvm.gc"),
-    METRIC_BOOKKEEPER_JVM_MEMORY_PREFIX("rubix.bookkeeper.jvm.memory"),
-    METRIC_BOOKKEEPER_JVM_THREADS_PREFIX("rubix.bookkeeper.jvm.threads");
+    BOOKKEEPER_JVM_GC_PREFIX("rubix.bookkeeper.jvm.gc"),
+    BOOKKEEPER_JVM_MEMORY_PREFIX("rubix.bookkeeper.jvm.memory"),
+    BOOKKEEPER_JVM_THREADS_PREFIX("rubix.bookkeeper.jvm.threads");
 
     private final String metricName;
 
@@ -143,9 +143,9 @@ public class BookKeeperMetrics implements AutoCloseable
    */
   public enum LDTSJvmMetric
   {
-    METRIC_LDTS_JVM_GC_PREFIX("rubix.ldts.jvm.gc"),
-    METRIC_LDTS_JVM_MEMORY_PREFIX("rubix.ldts.jvm.memory"),
-    METRIC_LDTS_JVM_THREADS_PREFIX("rubix.ldts.jvm.threads");
+    LDTS_JVM_GC_PREFIX("rubix.ldts.jvm.gc"),
+    LDTS_JVM_MEMORY_PREFIX("rubix.ldts.jvm.memory"),
+    LDTS_JVM_THREADS_PREFIX("rubix.ldts.jvm.threads");
 
     private final String metricName;
 
@@ -179,16 +179,17 @@ public class BookKeeperMetrics implements AutoCloseable
    */
   public enum CacheMetric
   {
-    METRIC_BOOKKEEPER_CACHE_EVICTION_COUNT("rubix.bookkeeper.cache_eviction.count"),
-    METRIC_BOOKKEEPER_CACHE_INVALIDATION_COUNT("rubix.bookkeeper.cache_invalidation.count"),
-    METRIC_BOOKKEEPER_CACHE_EXPIRY_COUNT("rubix.bookkeeper.cache_expiry.count"),
-    METRIC_BOOKKEEPER_CACHE_HIT_RATE_GAUGE("rubix.bookkeeper.cache_hit_rate.gauge"),
-    METRIC_BOOKKEEPER_CACHE_MISS_RATE_GAUGE("rubix.bookkeeper.cache_miss_rate.gauge"),
-    METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE("rubix.bookkeeper.cache_size_mb.gauge"),
-    METRIC_BOOKKEEPER_TOTAL_REQUEST_COUNT("rubix.bookkeeper.total_request.count"),
-    METRIC_BOOKKEEPER_CACHE_REQUEST_COUNT("rubix.bookkeeper.cache_request.count"),
-    METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT("rubix.bookkeeper.nonlocal_request.count"),
-    METRIC_BOOKKEEPER_REMOTE_REQUEST_COUNT("rubix.bookkeeper.remote_request.count");
+    CACHE_EVICTION_COUNT("rubix.bookkeeper.cache_eviction.count"),
+    CACHE_INVALIDATION_COUNT("rubix.bookkeeper.cache_invalidation.count"),
+    CACHE_EXPIRY_COUNT("rubix.bookkeeper.cache_expiry.count"),
+    CACHE_HIT_RATE_GAUGE("rubix.bookkeeper.cache_hit_rate.gauge"),
+    CACHE_MISS_RATE_GAUGE("rubix.bookkeeper.cache_miss_rate.gauge"),
+    CACHE_SIZE_GAUGE("rubix.bookkeeper.cache_size_mb.gauge"),
+    TOTAL_REQUEST_COUNT("rubix.bookkeeper.total_request.count"),
+    CACHE_REQUEST_COUNT("rubix.bookkeeper.cache_request.count"),
+    NONLOCAL_REQUEST_COUNT("rubix.bookkeeper.nonlocal_request.count"),
+    REMOTE_REQUEST_COUNT("rubix.bookkeeper.remote_request.count"),
+    VALIDATION_FAILURE_GAUGE("rubix.bookkeeper.file_validation_failures.gauge");
 
     private final String metricName;
 
@@ -222,7 +223,7 @@ public class BookKeeperMetrics implements AutoCloseable
    */
   public enum LivenessMetric
   {
-    METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE("rubix.bookkeeper.live_workers.gauge");
+    LIVE_WORKER_GAUGE("rubix.bookkeeper.live_workers.gauge");
 
     private final String metricName;
 

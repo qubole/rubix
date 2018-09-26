@@ -12,7 +12,7 @@
  */
 package com.qubole.rubix.bookkeeper.validation;
 
-import com.qubole.rubix.bookkeeper.test.BookKeeperTestUtils;
+import com.qubole.rubix.common.TestUtil;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
 import org.apache.commons.logging.Log;
@@ -33,7 +33,7 @@ public class TestValidatorFileVisitor
 {
   private static final Log log = LogFactory.getLog(TestValidatorFileVisitor.class);
 
-  private static final String TEST_CACHE_DIR_PREFIX = BookKeeperTestUtils.getTestCacheDirPrefix("TestValidatorFileVisitor");
+  private static final String TEST_CACHE_DIR_PREFIX = TestUtil.getTestCacheDirPrefix("TestValidatorFileVisitor");
   private static final int TEST_MAX_DISKS = 1;
 
   private final Configuration conf = new Configuration();
@@ -44,14 +44,14 @@ public class TestValidatorFileVisitor
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     CacheConfig.setMaxDisks(conf, TEST_MAX_DISKS);
 
-    BookKeeperTestUtils.createCacheParentDirectories(conf, TEST_MAX_DISKS);
+    TestUtil.createCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   @AfterMethod
   public void tearDown() throws IOException
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
-    BookKeeperTestUtils.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
+    TestUtil.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
 
     conf.clear();
   }
@@ -166,7 +166,7 @@ public class TestValidatorFileVisitor
    */
   private void verifyCorrectness(ValidatorFileGen.FileGenResult fileGenResult, ValidationResult validationResult)
   {
-    assertEquals(validationResult.getSuccesses(), fileGenResult.getTotalMDFilesCreated());
+    assertEquals(validationResult.getSuccessCount(), fileGenResult.getTotalMDFilesCreated());
     assertEquals(validationResult.getTotalFiles(), fileGenResult.getTotalCacheFilesCreated());
     assertEquals(validationResult.getFilesWithoutMD(), fileGenResult.getFilesWithoutMd());
     assertEquals(validationResult.getSuccessRate(), fileGenResult.getSuccessRate());

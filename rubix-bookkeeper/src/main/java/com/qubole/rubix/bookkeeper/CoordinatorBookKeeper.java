@@ -64,7 +64,7 @@ public class CoordinatorBookKeeper extends BookKeeper
    */
   private void registerMetrics()
   {
-    metrics.register(BookKeeperMetrics.LivenessMetric.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE.getMetricName(), new Gauge<Integer>()
+    metrics.register(BookKeeperMetrics.LivenessMetric.LIVE_WORKER_GAUGE.getMetricName(), new Gauge<Integer>()
     {
       @Override
       public Integer getValue()

@@ -15,6 +15,7 @@ package com.qubole.rubix.bookkeeper.validation;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.util.concurrent.AbstractScheduledService;
+import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
 import org.apache.commons.logging.Log;
@@ -24,21 +25,18 @@ import org.apache.hadoop.conf.Configuration;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.HashSet;
 import java.util.concurrent.TimeUnit;
 
 public class CacheValidator extends AbstractScheduledService
 {
   private static final Log log = LogFactory.getLog(CacheValidator.class);
 
-  private static final String METRIC_BOOKKEEPER_CACHE_SUCCESS_RATE = "rubix.bookkeeper.validation_success_rate.gauge";
-
   private final Configuration conf;
   private final MetricRegistry metrics;
   private final int validationInitialDelay;
   private final int validationInterval;
 
-  private ValidationResult cacheDirectoryValidationResult;
+  private ValidationResult cacheDirectoryValidationResult = new ValidationResult();
 
   public CacheValidator(Configuration conf, MetricRegistry metrics)
   {
@@ -68,12 +66,12 @@ public class CacheValidator extends AbstractScheduledService
    */
   private void registerMetrics()
   {
-    metrics.register(METRIC_BOOKKEEPER_CACHE_SUCCESS_RATE, new Gauge<Double>()
+    metrics.register(BookKeeperMetrics.CacheMetric.VALIDATION_FAILURE_GAUGE.getMetricName(), new Gauge<Integer>()
     {
       @Override
-      public Double getValue()
+      public Integer getValue()
       {
-        return cacheDirectoryValidationResult.getSuccessRate();
+        return cacheDirectoryValidationResult.getFailureCount();
       }
     });
   }
@@ -88,12 +86,21 @@ public class CacheValidator extends AbstractScheduledService
   {
     final int maxDisks = CacheConfig.getCacheMaxDisks(conf);
 
-    final ValidationResult allDisksResult = new ValidationResult(0, 0, new HashSet<String>());
+    final ValidationResult allDisksResult = new ValidationResult();
     for (int diskIndex = 0; diskIndex < maxDisks; diskIndex++) {
       ValidatorFileVisitor validatorVisitor = new ValidatorFileVisitor(conf);
       Files.walkFileTree(Paths.get(CacheUtil.getDirPath(diskIndex, conf)), validatorVisitor);
 
       allDisksResult.addResult(validatorVisitor.getResult());
+    }
+
+    if (allDisksResult.getFailureCount() > 0) {
+      log.error("Validation Error!");
+      log.error("The following cache files do not have an associated metadata file:");
+
+      for (String fileName : allDisksResult.getFilesWithoutMD()) {
+        log.error(String.format("-- %s", fileName));
+      }
     }
 
     return allDisksResult;

@@ -86,7 +86,7 @@ public class TestCoordinatorBookKeeper
     coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER1);
     coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER2);
 
-    int workerCount = (int) metrics.getGauges().get(BookKeeperMetrics.LivenessMetric.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE.getMetricName()).getValue();
+    int workerCount = (int) metrics.getGauges().get(BookKeeperMetrics.LivenessMetric.LIVE_WORKER_GAUGE.getMetricName()).getValue();
     assertEquals(workerCount, 2, "Incorrect number of workers reporting heartbeat");
   }
 
@@ -101,7 +101,7 @@ public class TestCoordinatorBookKeeper
     CacheConfig.setWorkerLivenessExpiry(conf, workerLivenessExpiry);
 
     final CoordinatorBookKeeper coordinatorBookKeeper = new CoordinatorBookKeeper(conf, metrics, ticker);
-    final Gauge liveWorkerGauge = metrics.getGauges().get(BookKeeperMetrics.LivenessMetric.METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE.getMetricName());
+    final Gauge liveWorkerGauge = metrics.getGauges().get(BookKeeperMetrics.LivenessMetric.LIVE_WORKER_GAUGE.getMetricName());
 
     coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER1);
     coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER2);
