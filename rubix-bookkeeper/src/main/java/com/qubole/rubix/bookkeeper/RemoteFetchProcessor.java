@@ -13,7 +13,6 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.google.common.util.concurrent.AbstractScheduledService;
-import com.qubole.rubix.core.FileDownloadRequestChain;
 import com.qubole.rubix.spi.CacheConfig;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,6 +32,7 @@ public class RemoteFetchProcessor extends AbstractScheduledService
   private Configuration conf;
   private Queue<FetchRequest> processQueue;
   private FileDownloader downloader;
+  private BookKeeper bookKeeper;
 
   int processThreadInitalDelay;
   int processThreadInterval;
@@ -40,11 +40,12 @@ public class RemoteFetchProcessor extends AbstractScheduledService
 
   private static final Log log = LogFactory.getLog(RemoteFetchProcessor.class);
 
-  public RemoteFetchProcessor(Configuration conf)
+  public RemoteFetchProcessor(BookKeeper bookKeeper, Configuration conf)
   {
     this.conf = conf;
+    this.bookKeeper = bookKeeper;
     this.processQueue = new ConcurrentLinkedQueue<FetchRequest>();
-    this.downloader = new FileDownloader(conf);
+    this.downloader = new FileDownloader(bookKeeper, conf);
 
     this.processThreadInitalDelay = CacheConfig.getProcessThreadInitialDelay(conf);
     this.processThreadInterval = CacheConfig.getProcessThreadInterval(conf);
