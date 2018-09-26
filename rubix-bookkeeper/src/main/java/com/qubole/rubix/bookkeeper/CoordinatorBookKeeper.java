@@ -78,22 +78,26 @@ public class CoordinatorBookKeeper extends BookKeeper
    */
   private void registerMetrics()
   {
-    metrics.register(BookKeeperMetrics.HealthMetric.LIVE_WORKER_GAUGE.getMetricName(), new Gauge<Integer>()
+    metrics.register(BookKeeperMetrics.HealthMetric.LIVE_WORKER_GAUGE.getMetricName(), new Gauge<Long>()
     {
       @Override
-      public Integer getValue()
+      public Long getValue()
       {
-        log.debug(String.format("Reporting %s workers", liveWorkerCache.asMap().size()));
-        return liveWorkerCache.asMap().size();
+        // Clean up cache to ensure accurate size is reported.
+        liveWorkerCache.cleanUp();
+        log.debug(String.format("Reporting %d workers", liveWorkerCache.size()));
+        return liveWorkerCache.size();
       }
     });
-    metrics.register(BookKeeperMetrics.HealthMetric.VALIDATED_WORKER_GAUGE.getMetricName(), new Gauge<Integer>()
+    metrics.register(BookKeeperMetrics.HealthMetric.VALIDATED_WORKER_GAUGE.getMetricName(), new Gauge<Long>()
     {
       @Override
-      public Integer getValue()
+      public Long getValue()
       {
-        log.debug(String.format("Validated caching behavior for %s workers", validatedWorkerCache.asMap().size()));
-        return validatedWorkerCache.asMap().size();
+        // Clean up cache to ensure accurate size is reported.
+        validatedWorkerCache.cleanUp();
+        log.debug(String.format("Validated caching behavior for %d workers", validatedWorkerCache.size()));
+        return validatedWorkerCache.size();
       }
     });
   }

@@ -127,7 +127,7 @@ public class HeartbeatService extends AbstractScheduledService
   @Override
   protected void startUp()
   {
-    log.info(String.format("Starting service %s in thread %s", serviceName(), Thread.currentThread().getId()));
+    log.info(String.format("Starting service %s in thread %d", serviceName(), Thread.currentThread().getId()));
     addListener(new HeartbeatService.FailureListener(), executor);
   }
 

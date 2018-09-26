@@ -86,7 +86,7 @@ public class BookKeeperMetrics implements AutoCloseable
               .filter(metricsFilter)
               .build(CacheConfig.getStatsDMetricsHost(conf), CacheConfig.getStatsDMetricsPort(conf));
 
-          log.info(String.format("Reporting metrics to StatsD [%s:%s]", CacheConfig.getStatsDMetricsHost(conf), CacheConfig.getStatsDMetricsPort(conf)));
+          log.info(String.format("Reporting metrics to StatsD [%s:%d]", CacheConfig.getStatsDMetricsHost(conf), CacheConfig.getStatsDMetricsPort(conf)));
           statsDReporter.start(CacheConfig.getStatsDMetricsInterval(conf), TimeUnit.MILLISECONDS);
           reporters.add(statsDReporter);
           break;
