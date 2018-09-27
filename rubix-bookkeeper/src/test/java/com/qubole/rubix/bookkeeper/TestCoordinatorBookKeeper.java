@@ -86,8 +86,8 @@ public class TestCoordinatorBookKeeper
     coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER1, true);
     coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER2, true);
 
-    int workerCount = (int) metrics.getGauges().get(BookKeeperMetrics.HealthMetric.LIVE_WORKER_GAUGE.getMetricName()).getValue();
-    int validatedCount = (int) metrics.getGauges().get(BookKeeperMetrics.HealthMetric.VALIDATED_WORKER_GAUGE.getMetricName()).getValue();
+    long workerCount = (long) metrics.getGauges().get(BookKeeperMetrics.HealthMetric.LIVE_WORKER_GAUGE.getMetricName()).getValue();
+    long validatedCount = (long) metrics.getGauges().get(BookKeeperMetrics.HealthMetric.VALIDATED_WORKER_GAUGE.getMetricName()).getValue();
 
     assertEquals(workerCount, 2, "Incorrect number of workers reporting heartbeat");
     assertEquals(validatedCount, 2, "Incorrect number of workers reporting heartbeat");
@@ -110,16 +110,16 @@ public class TestCoordinatorBookKeeper
     coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER1, true);
     coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER2, true);
 
-    int workerCount = (int) liveWorkerGauge.getValue();
-    int validationCount = (int) liveWorkerGauge.getValue();
+    long workerCount = (long) liveWorkerGauge.getValue();
+    long validationCount = (long) liveWorkerGauge.getValue();
     assertEquals(validationCount, 2, "Incorrect number of workers reporting heartbeat");
     assertEquals(workerCount, 2, "Incorrect number of workers have been validated");
 
     ticker.advance(healthStatusExpiry, TimeUnit.MILLISECONDS);
     coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER1, true);
 
-    workerCount = (int) liveWorkerGauge.getValue();
-    validationCount = (int) validatedWorkerGauge.getValue();
+    workerCount = (long) liveWorkerGauge.getValue();
+    validationCount = (long) validatedWorkerGauge.getValue();
     assertEquals(workerCount, 1, "Incorrect number of workers reporting heartbeat");
     assertEquals(validationCount, 1, "Incorrect number of workers have been validated");
   }
