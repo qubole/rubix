@@ -24,6 +24,7 @@ import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import com.qubole.rubix.spi.thrift.BlockLocation;
+import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.FileInfo;
 import com.qubole.rubix.spi.thrift.Location;
 import org.apache.commons.logging.Log;
@@ -313,7 +314,10 @@ public class CachingInputStream extends FSInputStream
 
     try {
       if (bookKeeperClient != null) {
-        isCached = bookKeeperClient.getCacheStatus(remotePath, fileSize, lastModified, nextReadBlock, endBlock, clusterType.ordinal());
+        CacheStatusRequest request = new CacheStatusRequest(remotePath, fileSize, lastModified,
+            nextReadBlock, endBlock, clusterType.ordinal());
+        request.setIncrMetrics(true);
+        isCached = bookKeeperClient.getCacheStatus(request);
       }
     }
     catch (Exception e) {

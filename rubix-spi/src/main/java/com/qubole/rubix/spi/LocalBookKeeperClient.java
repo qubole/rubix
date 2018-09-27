@@ -14,6 +14,7 @@ package com.qubole.rubix.spi;
 
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.BookKeeperService;
+import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import org.apache.thrift.TException;
 import org.apache.thrift.transport.TTransport;
 import org.slf4j.Logger;
@@ -37,10 +38,9 @@ public class LocalBookKeeperClient extends RetryingBookkeeperClient
   }
 
   @Override
-  public List<BlockLocation> getCacheStatus(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock, int clusterType)
-      throws TException
+  public List<BlockLocation> getCacheStatus(CacheStatusRequest request) throws TException
   {
-    return bookKeeper.getCacheStatus(remotePath, fileLength, lastModified, startBlock, endBlock, clusterType);
+    return bookKeeper.getCacheStatus(request);
   }
 
   @Override

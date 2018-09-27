@@ -20,6 +20,7 @@ import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.thrift.BlockLocation;
+import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.Location;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -127,7 +128,10 @@ public class TestFileDownloader
     final Path backendPath = new Path("file:///" + TEST_BACKEND_FILE_NAME);
     final ConcurrentMap<String, DownloadRequestContext> contextMap = new ConcurrentHashMap<>();
 
-    List<BlockLocation> cacheStatus = bookKeeper.getCacheStatus(backendPath.toString(), file.length(), 1000, 0, 5, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+    CacheStatusRequest request = new CacheStatusRequest(backendPath.toString(), file.length(), 1000, 0, 5,
+        ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+
+    List<BlockLocation> cacheStatus = bookKeeper.getCacheStatus(request);
 
     DownloadRequestContext context = new DownloadRequestContext(backendPath.toString(), file.length(), 1000);
     contextMap.put(backendPath.toString(), context);
@@ -143,7 +147,7 @@ public class TestFileDownloader
     int expectedDownloadedDataSize = 600;
     assertTrue(expectedDownloadedDataSize == dataDownloaded, "Download size didn't match");
 
-    cacheStatus = bookKeeper.getCacheStatus(backendPath.toString(), file.length(), 1000, 0, 5, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+    cacheStatus = bookKeeper.getCacheStatus(request);
     int i = 0;
     for (i = 0; i < 4; i++) {
       assertTrue(cacheStatus.get(i).getLocation() == Location.CACHED, "Data is not cached");

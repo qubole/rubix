@@ -17,6 +17,7 @@ import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import com.qubole.rubix.spi.thrift.BlockLocation;
+import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.Location;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -78,8 +79,9 @@ public class NonLocalRequestChain extends ReadRequestChain
       log.info(" Trying to getCacheStatus from : " + remoteNodeName + " for file : " + remoteFilePath
               + " StartBlock : " + startBlock + " EndBlock : " + endBlock);
 
-      isCached = bookKeeperClient.getCacheStatus(remoteFilePath, fileSize, lastModified,
-              startBlock, endBlock, clusterType);
+      CacheStatusRequest request = new CacheStatusRequest(remoteFilePath, fileSize, lastModified, startBlock,
+          endBlock, clusterType);
+      isCached = bookKeeperClient.getCacheStatus(request);
       log.info("Cache Status : " + isCached);
     }
     catch (Exception e) {
