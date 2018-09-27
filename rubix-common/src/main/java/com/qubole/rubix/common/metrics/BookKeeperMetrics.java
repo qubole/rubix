@@ -188,7 +188,8 @@ public class BookKeeperMetrics implements AutoCloseable
     TOTAL_REQUEST_COUNT("rubix.bookkeeper.total_request.count"),
     CACHE_REQUEST_COUNT("rubix.bookkeeper.cache_request.count"),
     NONLOCAL_REQUEST_COUNT("rubix.bookkeeper.nonlocal_request.count"),
-    REMOTE_REQUEST_COUNT("rubix.bookkeeper.remote_request.count");
+    REMOTE_REQUEST_COUNT("rubix.bookkeeper.remote_request.count"),
+    VALIDATION_FAILURE_GAUGE("rubix.bookkeeper.file_validation_failures.gauge");
 
     private final String metricName;
 

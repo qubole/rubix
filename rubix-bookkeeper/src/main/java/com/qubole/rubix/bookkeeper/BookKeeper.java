@@ -26,6 +26,7 @@ import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.cache.Weigher;
 import com.qubole.rubix.bookkeeper.utils.DiskUtils;
+import com.qubole.rubix.bookkeeper.validation.CacheValidator;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.core.ReadRequest;
@@ -90,6 +91,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   static long splitSize;
   private final RemoteFetchProcessor fetchProcessor;
   private final Ticker ticker;
+  private CacheValidator cacheValidator;
 
   // Registry for gathering & storing necessary metrics
   protected final MetricRegistry metrics;
@@ -119,6 +121,9 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     cleanupOldCacheFiles(conf);
     fetchProcessor = new RemoteFetchProcessor(this, conf);
     fetchProcessor.startAsync();
+
+    cacheValidator = new CacheValidator(conf, metrics);
+    cacheValidator.startAsync();
   }
 
   // Cleanup the cached files that were downloaded as a part of previous bookkeeper session.
@@ -239,38 +244,41 @@ public abstract class BookKeeper implements BookKeeperService.Iface
 
     //TODO: Store Node indices too, i.e. split to nodeIndex map and compare indices here instead of strings(nodenames).
 
-    final boolean isValidating = isValidatingCachingBehavior(remotePath);
+    int totalRequests = 0;
+    int nonlocalRequests = 0;
+    int cacheRequests = 0;
+    int remoteRequests = 0;
+
     try {
       for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
-        if (!isValidating) {
-          totalRequestCount.inc();
-        }
+        totalRequests++;
 
         long split = (blockNum * blockSize) / splitSize;
         if (!blockSplits.get(split).equalsIgnoreCase(nodeName)) {
           blockLocations.add(new BlockLocation(Location.NON_LOCAL, blockSplits.get(split)));
-          if (!isValidating) {
-            nonlocalRequestCount.inc();
-          }
+          nonlocalRequests++;
         }
         else {
           if (md.isBlockCached(blockNum)) {
             blockLocations.add(new BlockLocation(Location.CACHED, blockSplits.get(split)));
-            if (!isValidating) {
-              cacheRequestCount.inc();
-            }
+            cacheRequests++;
           }
           else {
             blockLocations.add(new BlockLocation(Location.LOCAL, blockSplits.get(split)));
-            if (!isValidating) {
-              remoteRequestCount.inc();
-            }
+            remoteRequests++;
           }
         }
       }
     }
     catch (IOException e) {
       throw new TException(e);
+    }
+
+    if (!isValidatingCachingBehavior(remotePath)) {
+      totalRequestCount.inc(totalRequests);
+      nonlocalRequestCount.inc(nonlocalRequests);
+      cacheRequestCount.inc(cacheRequests);
+      remoteRequestCount.inc(remoteRequests);
     }
 
     return blockLocations;

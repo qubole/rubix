@@ -171,7 +171,8 @@ public class TestBookKeeperMetrics
         BookKeeperMetrics.CacheMetric.TOTAL_REQUEST_COUNT.getMetricName(),
         BookKeeperMetrics.CacheMetric.CACHE_REQUEST_COUNT.getMetricName(),
         BookKeeperMetrics.CacheMetric.NONLOCAL_REQUEST_COUNT.getMetricName(),
-        BookKeeperMetrics.CacheMetric.REMOTE_REQUEST_COUNT.getMetricName());
+        BookKeeperMetrics.CacheMetric.REMOTE_REQUEST_COUNT.getMetricName(),
+        BookKeeperMetrics.CacheMetric.VALIDATION_FAILURE_GAUGE.getMetricName());
 
     assertEquals(cacheMetricsNames, BookKeeperMetrics.CacheMetric.getAllNames());
   }
