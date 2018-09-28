@@ -47,6 +47,18 @@
         </dependency>
 
         <dependency>
+            <groupId>info.ganglia.gmetric4j</groupId>
+            <artifactId>gmetric4j</artifactId>
+            <version>1.0.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.acplt</groupId>
+            <artifactId>oncrpc</artifactId>
+            <version>1.0.7</version>
+        </dependency>
+
+        <dependency>
             <groupId>com.readytalk</groupId>
             <artifactId>metrics3-statsd</artifactId>
             <version>${dep.metrics-statsd.version}</version>
@@ -64,17 +76,6 @@
             <scope>test</scope>
         </dependency>
 
-        <dependency>
-            <groupId>info.ganglia.gmetric4j</groupId>
-            <artifactId>gmetric4j</artifactId>
-            <version>1.0.2</version>
-        </dependency>
-
-        <dependency>
-        <groupId>org.acplt</groupId>
-        <artifactId>oncrpc</artifactId>
-        <version>1.0.7</version>
-        </dependency>
     </dependencies>
 
     <build>
@@ -117,13 +118,13 @@
                             <artifactSet>
                                 <includes>
                                     <include>org.weakref:jmxutils</include>
-                                    <include>com.google.guava:guava</include>
+                                    <include>org.acplt:oncrpc</include>
+                                    <include>info.ganglia.gmetric4j:gmetric4j</include>
                                     <include>io.dropwizard.metrics:metrics-core</include>
+                                    <include>io.dropwizard.metrics:metrics-ganglia</include>
+                                    <include>com.google.guava:guava</include>
                                     <include>com.readytalk:metrics-statsd-common</include>
                                     <include>com.readytalk:metrics3-statsd</include>
-                                    <include>info.ganglia.gmetric4j:gmetric4j</include>
-                                    <include>org.acplt:oncrpc</include>
-                                    <include>io.dropwizard.metrics:metrics-ganglia</include>
                                 </includes>
                             </artifactSet>
                             <relocations>
@@ -135,16 +136,11 @@
                                     <pattern>com.google</pattern>
                                     <shadedPattern>com.google.shaded</shadedPattern>
                                 </relocation>
-                                <relocation>
-                                    <pattern>info.ganglia.gmetric4j</pattern>
-                                    <shadedPattern>info.ganglia.gmetric4j.shaded</shadedPattern>
-                                </relocation>
                             </relocations>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
-
         </plugins>
     </build>
 

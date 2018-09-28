@@ -94,10 +94,10 @@ public class BookKeeperMetrics implements AutoCloseable
           break;
         case GANGLIA:
           if (!CacheConfig.isOnMaster(conf)) {
-            CacheConfig.setGangliaDMetricsHost(conf, ClusterUtil.getMasterHostname(conf));
+            CacheConfig.setGangliaMetricsHost(conf, ClusterUtil.getMasterHostname(conf));
           }
-          log.info(String.format("Reporting metrics to Ganglia [%s:%s]", CacheConfig.getStatsDMetricsHost(conf), CacheConfig.getGangliaMetricsPort(conf)));
-          final GMetric ganglia = new GMetric(CacheConfig.getStatsDMetricsHost(conf), CacheConfig.getGangliaMetricsPort(conf), GMetric.UDPAddressingMode.MULTICAST, 1);
+          log.info(String.format("Reporting metrics to Ganglia [%s:%s]", CacheConfig.getGangliaMetricsHost(conf), CacheConfig.getGangliaMetricsPort(conf)));
+          final GMetric ganglia = new GMetric(CacheConfig.getGangliaMetricsHost(conf), CacheConfig.getGangliaMetricsPort(conf), GMetric.UDPAddressingMode.MULTICAST, 1);
           final GangliaReporter gangliaReporter = GangliaReporter.forRegistry(metrics)
                   .convertRatesTo(TimeUnit.SECONDS)
                   .convertDurationsTo(TimeUnit.MILLISECONDS)
@@ -194,16 +194,16 @@ public class BookKeeperMetrics implements AutoCloseable
    */
   public enum CacheMetric
   {
-    METRIC_BOOKKEEPER_CACHE_EVICTION_COUNT("rubix.bookkeeper.cache_eviction.count"),
-    METRIC_BOOKKEEPER_CACHE_INVALIDATION_COUNT("rubix.bookkeeper.cache_invalidation.count"),
-    METRIC_BOOKKEEPER_CACHE_EXPIRY_COUNT("rubix.bookkeeper.cache_expiry.count"),
+    METRIC_BOOKKEEPER_CACHE_EVICTION_COUNT("rubix.bookkeeper.cache_eviction"),
+    METRIC_BOOKKEEPER_CACHE_INVALIDATION_COUNT("rubix.bookkeeper.cache_invalidation"),
+    METRIC_BOOKKEEPER_CACHE_EXPIRY_COUNT("rubix.bookkeeper.cache_expiry"),
     METRIC_BOOKKEEPER_CACHE_HIT_RATE_GAUGE("rubix.bookkeeper.cache_hit_rate.gauge"),
     METRIC_BOOKKEEPER_CACHE_MISS_RATE_GAUGE("rubix.bookkeeper.cache_miss_rate.gauge"),
     METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE("rubix.bookkeeper.cache_size_mb.gauge"),
-    METRIC_BOOKKEEPER_TOTAL_REQUEST_COUNT("rubix.bookkeeper.total_request.count"),
-    METRIC_BOOKKEEPER_CACHE_REQUEST_COUNT("rubix.bookkeeper.cache_request.count"),
-    METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT("rubix.bookkeeper.nonlocal_request.count"),
-    METRIC_BOOKKEEPER_REMOTE_REQUEST_COUNT("rubix.bookkeeper.remote_request.count");
+    METRIC_BOOKKEEPER_TOTAL_REQUEST_COUNT("rubix.bookkeeper.total_request"),
+    METRIC_BOOKKEEPER_CACHE_REQUEST_COUNT("rubix.bookkeeper.cache_request"),
+    METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT("rubix.bookkeeper.nonlocal_request"),
+    METRIC_BOOKKEEPER_REMOTE_REQUEST_COUNT("rubix.bookkeeper.remote_request");
 
     private final String metricName;
 

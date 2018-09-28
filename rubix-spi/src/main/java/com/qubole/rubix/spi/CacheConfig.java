@@ -547,7 +547,7 @@ public class CacheConfig
     conf.set(KEY_METRICS_STATSD_HOST, hostname);
   }
 
-  public static void setGangliaDMetricsHost(Configuration conf, String hostname)
+  public static void setGangliaMetricsHost(Configuration conf, String hostname)
   {
     conf.set(KEY_METRICS_GANGLIA_HOST, hostname);
   }
