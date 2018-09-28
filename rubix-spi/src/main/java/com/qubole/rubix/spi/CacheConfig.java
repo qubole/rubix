@@ -489,7 +489,7 @@ public class CacheConfig
 
   public static void setIsParallelWarmupEnabled(Configuration conf, boolean isParallelWarmupEnabled)
   {
-    conf.setBoolean(KEY_DATA_CACHE_STRICT_MODE, isParallelWarmupEnabled);
+    conf.setBoolean(KEY_PARALLEL_WARMUP, isParallelWarmupEnabled);
   }
 
   public static void setJvmMetricsEnabled(Configuration conf, boolean jvmMetricsEnabled)
