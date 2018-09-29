@@ -27,9 +27,9 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.HashSet;
 import java.util.Set;
 
-public class ValidatorFileVisitor extends SimpleFileVisitor<Path>
+public class FileValidatorVisitor extends SimpleFileVisitor<Path>
 {
-  private static final Log log = LogFactory.getLog(ValidatorFileVisitor.class);
+  private static final Log log = LogFactory.getLog(FileValidatorVisitor.class);
   private static String metadataFileSuffix;
 
   private final Configuration conf;
@@ -38,7 +38,7 @@ public class ValidatorFileVisitor extends SimpleFileVisitor<Path>
   private int totalCacheFiles;
   private final Set<String> filesWithoutMd = new HashSet<>();
 
-  public ValidatorFileVisitor(Configuration conf)
+  public FileValidatorVisitor(Configuration conf)
   {
     this.conf = conf;
 
@@ -68,8 +68,8 @@ public class ValidatorFileVisitor extends SimpleFileVisitor<Path>
    *
    * @return The result of the cache validation.
    */
-  public ValidationResult getResult()
+  public FileValidatorResult getResult()
   {
-    return new ValidationResult(successes, totalCacheFiles, filesWithoutMd);
+    return new FileValidatorResult(successes, totalCacheFiles, filesWithoutMd);
   }
 }

@@ -27,7 +27,6 @@ import org.testng.annotations.Test;
 
 import javax.management.MalformedObjectNameException;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -86,7 +85,7 @@ public class TestBookKeeperServer extends BaseServerTest
   @Test
   public void testHealthMetricsEnabled() throws InterruptedException, MalformedObjectNameException
   {
-    super.testHealthMetrics(ServerType.BOOKKEEPER, conf, metrics, true);
+    super.testHealthMetrics(ServerType.COORDINATOR_BOOKKEEPER, conf, metrics, true);
   }
 
   /**
@@ -95,7 +94,7 @@ public class TestBookKeeperServer extends BaseServerTest
   @Test
   public void testHealthMetricsNotEnabled() throws InterruptedException, MalformedObjectNameException
   {
-    super.testHealthMetrics(ServerType.BOOKKEEPER, conf, metrics, false);
+    super.testHealthMetrics(ServerType.COORDINATOR_BOOKKEEPER, conf, metrics, false);
   }
 
   /**
@@ -104,7 +103,7 @@ public class TestBookKeeperServer extends BaseServerTest
   @Test
   public void testCacheMetricsEnabled() throws InterruptedException, MalformedObjectNameException
   {
-    super.testCacheMetrics(ServerType.BOOKKEEPER, conf, metrics, true);
+    super.testCacheMetrics(ServerType.COORDINATOR_BOOKKEEPER, conf, metrics, true);
   }
 
   /**
@@ -113,7 +112,7 @@ public class TestBookKeeperServer extends BaseServerTest
   @Test
   public void testCacheMetricsNotEnabled() throws InterruptedException, MalformedObjectNameException
   {
-    super.testCacheMetrics(ServerType.BOOKKEEPER, conf, metrics, false);
+    super.testCacheMetrics(ServerType.COORDINATOR_BOOKKEEPER, conf, metrics, false);
   }
 
   /**
@@ -122,7 +121,7 @@ public class TestBookKeeperServer extends BaseServerTest
   @Test
   public void testJvmMetricsEnabled() throws InterruptedException, MalformedObjectNameException
   {
-    super.testJvmMetrics(ServerType.BOOKKEEPER, conf, metrics, true);
+    super.testJvmMetrics(ServerType.COORDINATOR_BOOKKEEPER, conf, metrics, true);
   }
 
   /**
@@ -131,7 +130,25 @@ public class TestBookKeeperServer extends BaseServerTest
   @Test
   public void testJvmMetricsNotEnabled() throws InterruptedException, MalformedObjectNameException
   {
-    super.testJvmMetrics(ServerType.BOOKKEEPER, conf, metrics, false);
+    super.testJvmMetrics(ServerType.COORDINATOR_BOOKKEEPER, conf, metrics, false);
+  }
+
+  /**
+   * Verify that validation metrics are registered when configured to.
+   */
+  @Test
+  public void testValidationMetricsEnabled() throws InterruptedException, MalformedObjectNameException
+  {
+    super.testValidationMetrics(ServerType.MOCK_WORKER_BOOKKEEPER, conf, metrics, true);
+  }
+
+  /**
+   * Verify that validation metrics are not registered when configured not to.
+   */
+  @Test
+  public void testValidationMetricsNotEnabled() throws InterruptedException, MalformedObjectNameException
+  {
+    super.testValidationMetrics(ServerType.MOCK_WORKER_BOOKKEEPER, conf, metrics, false);
   }
 
   /**
@@ -140,7 +157,7 @@ public class TestBookKeeperServer extends BaseServerTest
   @Test
   public void verifyMetricsAreRemoved() throws InterruptedException
   {
-    super.verifyMetricsAreRemoved(ServerType.BOOKKEEPER, conf, metrics);
+    super.verifyMetricsAreRemoved(ServerType.COORDINATOR_BOOKKEEPER, conf, metrics);
   }
 
   /**
@@ -163,7 +180,7 @@ public class TestBookKeeperServer extends BaseServerTest
     }
     finally {
       statsDThread.stopThread();
-      stopMockBookKeeperServer();
+      stopMockCoordinatorBookKeeperServer();
     }
   }
 
@@ -187,7 +204,7 @@ public class TestBookKeeperServer extends BaseServerTest
     }
     finally {
       statsDThread.stopThread();
-      stopMockBookKeeperServer();
+      stopMockCoordinatorBookKeeperServer();
     }
   }
 
@@ -211,7 +228,7 @@ public class TestBookKeeperServer extends BaseServerTest
     }
     finally {
       statsDThread.stopThread();
-      stopMockBookKeeperServer();
+      stopMockCoordinatorBookKeeperServer();
     }
   }
 
@@ -235,7 +252,7 @@ public class TestBookKeeperServer extends BaseServerTest
     }
     finally {
       statsDThread.stopThread();
-      stopMockBookKeeperServer();
+      stopMockCoordinatorBookKeeperServer();
     }
   }
 
@@ -253,12 +270,12 @@ public class TestBookKeeperServer extends BaseServerTest
     Set<String> metricsNames = getJmxMetricsNames();
     assertTrue(metricsNames.size() == 0, "Metrics should not be registered with JMX before server starts.");
 
-    startMockBookKeeperServer(conf, metrics);
+    startMockCoordinatorBookKeeperServer(conf, metrics);
 
     metricsNames = getJmxMetricsNames();
     assertTrue(metricsNames.size() > 0, "Metrics should be registered with JMX after server starts.");
 
-    stopMockBookKeeperServer();
+    stopMockCoordinatorBookKeeperServer();
 
     metricsNames = getJmxMetricsNames();
     assertTrue(metricsNames.size() == 0, "Metrics should not be registered with JMX after server stops.");
@@ -275,12 +292,12 @@ public class TestBookKeeperServer extends BaseServerTest
   {
     CacheConfig.setMetricsReporters(conf, "");
 
-    startMockBookKeeperServer(conf, metrics);
+    startMockCoordinatorBookKeeperServer(conf, metrics);
 
     final Set<String> metricsNames = getJmxMetricsNames();
     assertTrue(metricsNames.size() == 0, "Metrics should not be registered with JMX.");
 
-    stopMockBookKeeperServer();
+    stopMockCoordinatorBookKeeperServer();
   }
 
   /**
@@ -337,7 +354,7 @@ public class TestBookKeeperServer extends BaseServerTest
     MockStatsDThread statsDThread = new MockStatsDThread(statsDPort, testCasePort);
     statsDThread.start();
 
-    startMockBookKeeperServer(conf, metrics);
+    startMockCoordinatorBookKeeperServer(conf, metrics);
     return statsDThread;
   }
 
@@ -364,31 +381,31 @@ public class TestBookKeeperServer extends BaseServerTest
 
     return true;
   }
-
-  /**
-   * Class to mock the behaviour of {@link BookKeeperServer} for testing registering & reporting metrics.
-   */
-  private static class MockBookKeeperServer extends BookKeeperServer
-  {
-    public void startServer(Configuration conf, MetricRegistry metricRegistry)
-    {
-      try {
-        new CoordinatorBookKeeper(conf, metricRegistry);
-      }
-      catch (FileNotFoundException e) {
-        log.error("Cache directories could not be created", e);
-        return;
-      }
-
-      metrics = metricRegistry;
-      registerMetrics(conf);
-    }
-
-    public void stopServer()
-    {
-      removeMetrics();
-    }
-  }
+//
+//  /**
+//   * Class to mock the behaviour of {@link BookKeeperServer} for testing registering & reporting metrics.
+//   */
+//  private static class MockBookKeeperServer extends BookKeeperServer
+//  {
+//    public void startServer(Configuration conf, MetricRegistry metricRegistry)
+//    {
+//      try {
+//        new CoordinatorBookKeeper(conf, metricRegistry);
+//      }
+//      catch (FileNotFoundException e) {
+//        log.error("Cache directories could not be created", e);
+//        return;
+//      }
+//
+//      metrics = metricRegistry;
+//      registerMetrics(conf);
+//    }
+//
+//    public void stopServer()
+//    {
+//      removeMetrics();
+//    }
+//  }
 
   /**
    * Thread to capture UDP requests from StatsDReporter intended for StatsD.

@@ -29,11 +29,11 @@ import java.util.Map;
 
 import static org.testng.Assert.assertEquals;
 
-public class TestValidatorFileVisitor
+public class TestFileValidatorVisitor
 {
-  private static final Log log = LogFactory.getLog(TestValidatorFileVisitor.class);
+  private static final Log log = LogFactory.getLog(TestFileValidatorVisitor.class);
 
-  private static final String TEST_CACHE_DIR_PREFIX = TestUtil.getTestCacheDirPrefix("TestValidatorFileVisitor");
+  private static final String TEST_CACHE_DIR_PREFIX = TestUtil.getTestCacheDirPrefix("TestFileValidatorVisitor");
   private static final int TEST_MAX_DISKS = 1;
 
   private final Configuration conf = new Configuration();
@@ -123,7 +123,7 @@ public class TestValidatorFileVisitor
   }
 
   /**
-   * Run and verify a {@link ValidatorFileVisitor}
+   * Run and verify a {@link FileValidatorVisitor}
    *
    * @param conf    The current Hadoop configuration.
    * @param depth   The depth to which directories will be created.
@@ -135,20 +135,20 @@ public class TestValidatorFileVisitor
   private void runAndVerifyValidator(Configuration conf, int depth, int dirs, int files, int mdStep) throws IOException
   {
     ValidatorFileGen.FileGenResult fileGenResult = ValidatorFileGen.generateTestFiles(conf, depth, dirs, files, mdStep);
-    ValidationResult result = validate();
+    FileValidatorResult result = validate();
 
     verifyCorrectness(fileGenResult, result);
   }
 
   /**
-   * Run a {@link ValidatorFileVisitor} on all configured cache directories.
+   * Run a {@link FileValidatorVisitor} on all configured cache directories.
    *
    * @return The result of the validation.
    * @throws IOException if an I/O error occurs while visiting files.
    */
-  private ValidationResult validate() throws IOException
+  private FileValidatorResult validate() throws IOException
   {
-    final ValidatorFileVisitor validator = new ValidatorFileVisitor(conf);
+    final FileValidatorVisitor validator = new FileValidatorVisitor(conf);
 
     final Map<Integer, String> diskMap = CacheUtil.getCacheDiskPathsMap(conf);
     for (int disk = 0; disk < diskMap.size(); disk++) {
@@ -159,16 +159,16 @@ public class TestValidatorFileVisitor
   }
 
   /**
-   * Verify the correctness of the {@link ValidatorFileVisitor}
+   * Verify the correctness of the {@link FileValidatorVisitor}
    *
-   * @param fileGenResult     The validationResult of the test file generation.
-   * @param validationResult  The validationResult of the file validation.
+   * @param fileGenResult     The fileValidatorResult of the test file generation.
+   * @param fileValidatorResult  The fileValidatorResult of the file validation.
    */
-  private void verifyCorrectness(ValidatorFileGen.FileGenResult fileGenResult, ValidationResult validationResult)
+  private void verifyCorrectness(ValidatorFileGen.FileGenResult fileGenResult, FileValidatorResult fileValidatorResult)
   {
-    assertEquals(validationResult.getSuccessCount(), fileGenResult.getTotalMDFilesCreated());
-    assertEquals(validationResult.getTotalFiles(), fileGenResult.getTotalCacheFilesCreated());
-    assertEquals(validationResult.getFilesWithoutMD(), fileGenResult.getFilesWithoutMd());
-    assertEquals(validationResult.getSuccessRate(), fileGenResult.getSuccessRate());
+    assertEquals(fileValidatorResult.getSuccessCount(), fileGenResult.getTotalMDFilesCreated());
+    assertEquals(fileValidatorResult.getTotalFiles(), fileGenResult.getTotalCacheFilesCreated());
+    assertEquals(fileValidatorResult.getFilesWithoutMD(), fileGenResult.getFilesWithoutMd());
+    assertEquals(fileValidatorResult.getSuccessRate(), fileGenResult.getSuccessRate());
   }
 }

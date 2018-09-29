@@ -39,7 +39,7 @@ public class ValidatorFileGen
   }
 
   /**
-   * Generate files used to test the {@link ValidatorFileVisitor}.
+   * Generate files used to test the {@link FileValidatorVisitor}.
    *
    * @param conf    The current Hadoop configuration.
    * @param depth   The depth to which directories will be created.

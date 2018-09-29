@@ -188,8 +188,7 @@ public class BookKeeperMetrics implements AutoCloseable
     TOTAL_REQUEST_COUNT("rubix.bookkeeper.total_request.count"),
     CACHE_REQUEST_COUNT("rubix.bookkeeper.cache_request.count"),
     NONLOCAL_REQUEST_COUNT("rubix.bookkeeper.nonlocal_request.count"),
-    REMOTE_REQUEST_COUNT("rubix.bookkeeper.remote_request.count"),
-    VALIDATION_FAILURE_GAUGE("rubix.bookkeeper.file_validation_failures.gauge");
+    REMOTE_REQUEST_COUNT("rubix.bookkeeper.remote_request.count");
 
     private final String metricName;
 
@@ -224,7 +223,8 @@ public class BookKeeperMetrics implements AutoCloseable
   public enum HealthMetric
   {
     LIVE_WORKER_GAUGE("rubix.bookkeeper.live_workers.gauge"),
-    VALIDATED_WORKER_GAUGE("rubix.bookkeeper.validated_workers.gauge");
+    CACHING_VALIDATED_WORKER_GAUGE("rubix.bookkeeper.caching_validated_workers.gauge"),
+    FILE_VALIDATED_WORKER_GAUGE("rubix.bookkeeper.file_validated_workers.gauge");
 
     private final String metricName;
 
@@ -239,7 +239,7 @@ public class BookKeeperMetrics implements AutoCloseable
     }
 
     /**
-     * Get the names for each liveness metric.
+     * Get the names for each health metric.
      *
      * @return a set of metrics names.
      */
@@ -247,6 +247,41 @@ public class BookKeeperMetrics implements AutoCloseable
     {
       Set<String> names = new HashSet<>();
       for (HealthMetric metric : values()) {
+        names.add(metric.getMetricName());
+      }
+      return names;
+    }
+  }
+
+  /**
+   * Enum for metrics relating to validation.
+   */
+  public enum ValidationMetric
+  {
+    CACHING_VALIDATION_SUCCESS_GAUGE("rubix.bookkeeper.caching_validation_success.gauge"),
+    FILE_VALIDATION_SUCCESS_GAUGE("rubix.bookkeeper.file_validation_success.gauge");
+
+    private final String metricName;
+
+    ValidationMetric(String metricName)
+    {
+      this.metricName = metricName;
+    }
+
+    public String getMetricName()
+    {
+      return metricName;
+    }
+
+    /**
+     * Get the names for each health metric.
+     *
+     * @return a set of metrics names.
+     */
+    public static Set<String> getAllNames()
+    {
+      Set<String> names = new HashSet<>();
+      for (ValidationMetric metric : values()) {
         names.add(metric.getMetricName());
       }
       return names;

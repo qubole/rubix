@@ -148,11 +148,12 @@ public class TestBookKeeperMetrics
   @Test
   public void testHealthMetricsGetAllNames()
   {
-    Set<String> livenessMetricsNames = Sets.newHashSet(
+    Set<String> healthMetricsNames = Sets.newHashSet(
         BookKeeperMetrics.HealthMetric.LIVE_WORKER_GAUGE.getMetricName(),
-        BookKeeperMetrics.HealthMetric.VALIDATED_WORKER_GAUGE.getMetricName());
+        BookKeeperMetrics.HealthMetric.CACHING_VALIDATED_WORKER_GAUGE.getMetricName(),
+        BookKeeperMetrics.HealthMetric.FILE_VALIDATED_WORKER_GAUGE.getMetricName());
 
-    assertEquals(livenessMetricsNames, BookKeeperMetrics.HealthMetric.getAllNames());
+    assertEquals(healthMetricsNames, BookKeeperMetrics.HealthMetric.getAllNames());
   }
 
   /**
@@ -171,8 +172,7 @@ public class TestBookKeeperMetrics
         BookKeeperMetrics.CacheMetric.TOTAL_REQUEST_COUNT.getMetricName(),
         BookKeeperMetrics.CacheMetric.CACHE_REQUEST_COUNT.getMetricName(),
         BookKeeperMetrics.CacheMetric.NONLOCAL_REQUEST_COUNT.getMetricName(),
-        BookKeeperMetrics.CacheMetric.REMOTE_REQUEST_COUNT.getMetricName(),
-        BookKeeperMetrics.CacheMetric.VALIDATION_FAILURE_GAUGE.getMetricName());
+        BookKeeperMetrics.CacheMetric.REMOTE_REQUEST_COUNT.getMetricName());
 
     assertEquals(cacheMetricsNames, BookKeeperMetrics.CacheMetric.getAllNames());
   }
@@ -183,12 +183,12 @@ public class TestBookKeeperMetrics
   @Test
   public void testBookKeeperJvmMetricsGetAllNames()
   {
-    Set<String> cacheMetricsNames = Sets.newHashSet(
+    Set<String> jvmMetricsNames = Sets.newHashSet(
         BookKeeperMetrics.BookKeeperJvmMetric.BOOKKEEPER_JVM_GC_PREFIX.getMetricName(),
         BookKeeperMetrics.BookKeeperJvmMetric.BOOKKEEPER_JVM_THREADS_PREFIX.getMetricName(),
         BookKeeperMetrics.BookKeeperJvmMetric.BOOKKEEPER_JVM_MEMORY_PREFIX.getMetricName());
 
-    assertEquals(cacheMetricsNames, BookKeeperMetrics.BookKeeperJvmMetric.getAllNames());
+    assertEquals(jvmMetricsNames, BookKeeperMetrics.BookKeeperJvmMetric.getAllNames());
   }
 
   /**
@@ -197,12 +197,25 @@ public class TestBookKeeperMetrics
   @Test
   public void testLDTSJvmMetricsGetAllNames()
   {
-    Set<String> cacheMetricsNames = Sets.newHashSet(
+    Set<String> jvmMetricsNames = Sets.newHashSet(
         BookKeeperMetrics.LDTSJvmMetric.LDTS_JVM_GC_PREFIX.getMetricName(),
         BookKeeperMetrics.LDTSJvmMetric.LDTS_JVM_THREADS_PREFIX.getMetricName(),
         BookKeeperMetrics.LDTSJvmMetric.LDTS_JVM_MEMORY_PREFIX.getMetricName());
 
-    assertEquals(cacheMetricsNames, BookKeeperMetrics.LDTSJvmMetric.getAllNames());
+    assertEquals(jvmMetricsNames, BookKeeperMetrics.LDTSJvmMetric.getAllNames());
+  }
+
+  /**
+   * Verify that the collection of validation metrics correctly returns all expected metrics.
+   */
+  @Test
+  public void testValidationMetricsGetAllNames()
+  {
+    Set<String> validationMetricsNames = Sets.newHashSet(
+        BookKeeperMetrics.ValidationMetric.CACHING_VALIDATION_SUCCESS_GAUGE.getMetricName(),
+        BookKeeperMetrics.ValidationMetric.FILE_VALIDATION_SUCCESS_GAUGE.getMetricName());
+
+    assertEquals(validationMetricsNames, BookKeeperMetrics.ValidationMetric.getAllNames());
   }
 
   /**

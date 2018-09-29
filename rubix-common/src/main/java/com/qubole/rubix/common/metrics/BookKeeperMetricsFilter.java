@@ -42,6 +42,9 @@ public class BookKeeperMetricsFilter implements MetricFilter
       whitelist.addAll(BookKeeperMetrics.BookKeeperJvmMetric.getAllNames());
       whitelist.addAll(BookKeeperMetrics.LDTSJvmMetric.getAllNames());
     }
+    if (CacheConfig.isValidationEnabled(conf)) {
+      whitelist.addAll(BookKeeperMetrics.ValidationMetric.getAllNames());
+    }
 
     return whitelist;
   }

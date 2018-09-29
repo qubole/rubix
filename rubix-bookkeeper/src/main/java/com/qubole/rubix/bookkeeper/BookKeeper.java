@@ -26,7 +26,7 @@ import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.cache.Weigher;
 import com.qubole.rubix.bookkeeper.utils.DiskUtils;
-import com.qubole.rubix.bookkeeper.validation.CacheValidator;
+import com.qubole.rubix.bookkeeper.validation.CachingValidator;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.core.ReadRequest;
@@ -91,7 +91,6 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   static long splitSize;
   private final RemoteFetchProcessor fetchProcessor;
   private final Ticker ticker;
-  private CacheValidator cacheValidator;
 
   // Registry for gathering & storing necessary metrics
   protected final MetricRegistry metrics;
@@ -121,9 +120,6 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     cleanupOldCacheFiles(conf);
     fetchProcessor = new RemoteFetchProcessor(this, conf);
     fetchProcessor.startAsync();
-
-    cacheValidator = new CacheValidator(conf, metrics);
-    cacheValidator.startAsync();
   }
 
   // Cleanup the cached files that were downloaded as a part of previous bookkeeper session.
@@ -696,6 +692,6 @@ public abstract class BookKeeper implements BookKeeperService.Iface
 
   private static boolean isValidatingCachingBehavior(String remotePath)
   {
-    return HeartbeatService.VALIDATOR_TEST_FILE_NAME.equals(CacheUtil.getName(remotePath));
+    return CachingValidator.VALIDATOR_TEST_FILE_NAME.equals(CacheUtil.getName(remotePath));
   }
 }

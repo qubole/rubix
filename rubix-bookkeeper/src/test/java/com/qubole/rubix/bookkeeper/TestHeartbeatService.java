@@ -14,16 +14,12 @@ package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
 import com.qubole.rubix.common.TestUtil;
-import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
-import com.qubole.rubix.spi.thrift.BlockLocation;
-import com.qubole.rubix.spi.thrift.Location;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.thrift.shaded.TException;
 import org.apache.thrift.shaded.transport.TSocket;
 import org.apache.thrift.shaded.transport.TTransportException;
 import org.mockito.ArgumentMatchers;
@@ -35,15 +31,10 @@ import org.testng.annotations.Test;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
 
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.testng.Assert.assertEquals;
 
 public class TestHeartbeatService
 {
@@ -53,10 +44,7 @@ public class TestHeartbeatService
   private static final int TEST_MAX_DISKS = 1;
   private static final int TEST_MAX_RETRIES = 5;
   private static final int TEST_RETRY_INTERVAL = 500;
-  private static final int TEST_VALIDATION_INTERVAL = 1000; // ms
   private static final String TEST_REMOTE_LOCATION = "testLocation";
-  private static final List<BlockLocation> TEST_LOCATIONS_CACHED = Collections.singletonList(new BlockLocation(Location.CACHED, TEST_REMOTE_LOCATION));
-  private static final List<BlockLocation> TEST_LOCATIONS_LOCAL = Collections.singletonList(new BlockLocation(Location.LOCAL, TEST_REMOTE_LOCATION));
 
   private final Configuration conf = new Configuration();
 
@@ -75,9 +63,9 @@ public class TestHeartbeatService
     CacheConfig.setServiceRetryInterval(conf, TEST_RETRY_INTERVAL);
     CacheConfig.setHeartbeatInterval(conf, TEST_RETRY_INTERVAL);
     CacheConfig.setServiceMaxRetries(conf, TEST_MAX_RETRIES);
-
     CacheConfig.setOnMaster(conf, true);
-    BaseServerTest.startBookKeeperServer(conf, new MetricRegistry());
+
+    BaseServerTest.startCoordinatorBookKeeperServer(conf, new MetricRegistry());
   }
 
   @AfterMethod
@@ -110,7 +98,7 @@ public class TestHeartbeatService
             CacheConfig.getMaxRetries(conf)));
 
     final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, new MetricRegistry());
-    final HeartbeatService heartbeatService = new HeartbeatService(conf, bookKeeperFactory, bookKeeper);
+    final HeartbeatService heartbeatService = new HeartbeatService(conf, new MetricRegistry(), bookKeeperFactory, bookKeeper);
   }
 
   /**
@@ -120,10 +108,10 @@ public class TestHeartbeatService
   public void testHeartbeatRetryLogic_connectAfterRetries() throws FileNotFoundException
   {
     BaseServerTest.stopBookKeeperServer();
-    BaseServerTest.startBookKeeperServerWithDelay(conf, new MetricRegistry(), TEST_RETRY_INTERVAL * 2);
+    BaseServerTest.startCoordinatorBookKeeperServerWithDelay(conf, new MetricRegistry(), TEST_RETRY_INTERVAL * 2);
 
     final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, new MetricRegistry());
-    final HeartbeatService heartbeatService = new HeartbeatService(conf, new BookKeeperFactory(), bookKeeper);
+    final HeartbeatService heartbeatService = new HeartbeatService(conf, new MetricRegistry(), new BookKeeperFactory(), bookKeeper);
   }
 
   /**
@@ -138,132 +126,6 @@ public class TestHeartbeatService
     when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenThrow(TTransportException.class);
 
     final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, new MetricRegistry());
-    final HeartbeatService heartbeatService = new HeartbeatService(conf, bookKeeperFactory, bookKeeper);
-  }
-
-  /**
-   * Verify that the behavior of the BookKeeper caching flow is correct.
-   *
-   * @throws TException when file metadata cannot be fetched or refreshed.
-   * @throws FileNotFoundException when cache directories cannot be created.
-   */
-  @Test
-  public void testValidateCachingBehavior() throws TException, FileNotFoundException
-  {
-    checkValidator(new CoordinatorBookKeeper(conf, new MetricRegistry()), true);
-  }
-
-  /**
-   * Verify that the validator reports incorrect behavior when the cache status is in the wrong initial state.
-   *
-   * @throws TException when file metadata cannot be fetched or refreshed.
-   */
-  @Test
-  public void testValidateCachingBehavior_wrongInitialCacheStatus() throws TException
-  {
-    final BookKeeper bookKeeper = mock(BookKeeper.class);
-    when(bookKeeper.getCacheStatus(anyString(), anyLong(), anyLong(), anyLong(), anyLong(), anyInt())).thenReturn(TEST_LOCATIONS_CACHED);
-    when(bookKeeper.readData(anyString(), anyLong(), anyInt(), anyLong(), anyLong(), anyInt())).thenReturn(true);
-
-    checkValidator(bookKeeper, false);
-  }
-
-  /**
-   * Verify that the validator reports incorrect behavior when the file data is unable to be read to cache.
-   *
-   * @throws TException when file metadata cannot be fetched or refreshed.
-   */
-  @Test
-  public void testValidateCachingBehavior_dataNotRead() throws TException
-  {
-    final BookKeeper bookKeeper = mock(BookKeeper.class);
-    when(bookKeeper.readData(anyString(), anyLong(), anyInt(), anyLong(), anyLong(), anyInt())).thenReturn(false);
-
-    checkValidator(bookKeeper, false);
-  }
-
-  /**
-   * Verify that the validator reports incorrect behavior when the file data was not properly cached.
-   *
-   * @throws TException when file metadata cannot be fetched or refreshed.
-   */
-  @Test
-  public void testValidateCachingBehavior_dataRead_fileNotCached() throws TException
-  {
-    final BookKeeper bookKeeper = mock(BookKeeper.class);
-    when(bookKeeper.getCacheStatus(anyString(), anyLong(), anyLong(), anyLong(), anyLong(), anyInt())).thenReturn(TEST_LOCATIONS_LOCAL);
-    when(bookKeeper.readData(anyString(), anyLong(), anyInt(), anyLong(), anyLong(), anyInt())).thenReturn(true);
-
-    checkValidator(bookKeeper, false);
-  }
-
-  /**
-   * Verify that the validator reports incorrect behavior when an exception is thrown when fetching cache status.
-   *
-   * @throws TException when file metadata cannot be fetched or refreshed.
-   */
-  @Test
-  public void testValidateCachingBehavior_cacheStatusException() throws TException
-  {
-    final BookKeeper bookKeeper = mock(BookKeeper.class);
-    when(bookKeeper.getCacheStatus(anyString(), anyLong(), anyLong(), anyLong(), anyLong(), anyInt())).thenThrow(TException.class);
-
-    checkValidator(bookKeeper, false);
-  }
-
-  /**
-   * Verify that the validator reports incorrect behavior when an exception is thrown when reading data.
-   *
-   * @throws TException when file metadata cannot be fetched or refreshed.
-   */
-  @Test
-  public void testValidateCachingBehavior_readDataException() throws TException
-  {
-    final BookKeeper bookKeeper = mock(BookKeeper.class);
-    when(bookKeeper.readData(anyString(), anyLong(), anyInt(), anyLong(), anyLong(), anyInt())).thenThrow(TException.class);
-
-    checkValidator(bookKeeper, false);
-  }
-
-  /**
-   * Verify that cache metrics are not affected during cache behavior validation.
-   *
-   * @throws TException when file metadata cannot be fetched or refreshed.
-   * @throws FileNotFoundException when cache directories cannot be created.
-   */
-  @Test
-  public void testValidateCachingBehavior_verifyOtherMetricsUnaffected() throws TException, FileNotFoundException
-  {
-    CacheConfig.setCachingBehaviorValidationEnabled(conf, false);
-    final MetricRegistry metrics = new MetricRegistry();
-    final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);
-
-    assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.TOTAL_REQUEST_COUNT.getMetricName()).getCount(), 0);
-
-    checkValidator(bookKeeper, true);
-
-    assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.TOTAL_REQUEST_COUNT.getMetricName()).getCount(), 0);
-  }
-
-  /**
-   * Run the caching behavior validator and verify the result.
-   *
-   * @param bookKeeper      The BookKeeper client used for testing the caching behaviour.
-   * @param expectedResult  The result expected from validation.
-   * @throws TException when file metadata cannot be fetched or refreshed.
-   */
-  private void checkValidator(BookKeeper bookKeeper, boolean expectedResult) throws TException
-  {
-    CacheConfig.setValidationInitialDelay(conf, TEST_VALIDATION_INTERVAL);
-    CacheConfig.setValidationInterval(conf, TEST_VALIDATION_INTERVAL);
-
-    final BookKeeperFactory bookKeeperFactory = mock(BookKeeperFactory.class);
-    when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
-        new RetryingBookkeeperClient(
-            new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf)),
-            CacheConfig.getMaxRetries(conf)));
-
-    HeartbeatService heartbeatService = new HeartbeatService(conf, bookKeeperFactory, bookKeeper);
-    assertEquals(heartbeatService.validateCachingBehavior(), expectedResult);
+    final HeartbeatService heartbeatService = new HeartbeatService(conf, new MetricRegistry(), bookKeeperFactory, bookKeeper);
   }
 }

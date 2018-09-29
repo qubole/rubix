@@ -15,6 +15,7 @@ package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
 import com.qubole.rubix.spi.BookKeeperFactory;
+import com.qubole.rubix.spi.thrift.HeartbeatStatus;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -23,17 +24,22 @@ import java.io.FileNotFoundException;
 
 public class WorkerBookKeeper extends BookKeeper
 {
-  private static Log log = LogFactory.getLog(WorkerBookKeeper.class.getName());
+  private static Log log = LogFactory.getLog(WorkerBookKeeper.class);
   private HeartbeatService heartbeatService;
 
   public WorkerBookKeeper(Configuration conf, MetricRegistry metrics) throws FileNotFoundException
   {
+    this(conf, metrics, new BookKeeperFactory());
+  }
+
+  public WorkerBookKeeper(Configuration conf, MetricRegistry metrics, BookKeeperFactory factory) throws FileNotFoundException
+  {
     super(conf, metrics);
-    startHeartbeatService(conf);
+    startHeartbeatService(conf, metrics, factory);
   }
 
   @Override
-  public void handleHeartbeat(String workerHostname, boolean validationSucceeded)
+  public void handleHeartbeat(String workerHostname, HeartbeatStatus request)
   {
     throw new UnsupportedOperationException("Worker node should not handle heartbeat");
   }
@@ -41,9 +47,9 @@ public class WorkerBookKeeper extends BookKeeper
   /**
    * Start the {@link HeartbeatService} for this worker node.
    */
-  private void startHeartbeatService(Configuration conf)
+  private void startHeartbeatService(Configuration conf, MetricRegistry metrics, BookKeeperFactory factory)
   {
-    this.heartbeatService = new HeartbeatService(conf, new BookKeeperFactory(), this);
+    this.heartbeatService = new HeartbeatService(conf, metrics, factory, this);
     heartbeatService.startAsync();
   }
 }

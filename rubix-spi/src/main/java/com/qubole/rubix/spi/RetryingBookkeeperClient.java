@@ -18,6 +18,7 @@ package com.qubole.rubix.spi;
 
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.BookKeeperService;
+import com.qubole.rubix.spi.thrift.HeartbeatStatus;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.transport.TTransport;
@@ -74,14 +75,14 @@ public class RetryingBookkeeperClient extends BookKeeperService.Client implement
   }
 
   @Override
-  public void handleHeartbeat(final String workerHostname, final boolean validationSuccess) throws TException
+  public void handleHeartbeat(final String workerHostname, final HeartbeatStatus heartbeatStatus) throws TException
   {
     retryConnection(new Callable<Void>()
     {
       @Override
       public Void call() throws Exception
       {
-        RetryingBookkeeperClient.super.handleHeartbeat(workerHostname, validationSuccess);
+        RetryingBookkeeperClient.super.handleHeartbeat(workerHostname, heartbeatStatus);
         return null;
       }
     });

@@ -15,18 +15,18 @@ package com.qubole.rubix.bookkeeper.validation;
 import java.util.HashSet;
 import java.util.Set;
 
-public class ValidationResult
+public class FileValidatorResult
 {
   private int successes;
   private int totalFiles;
   private double successRate;
   private Set<String> filesWithoutMD = new HashSet<>();
 
-  public ValidationResult()
+  public FileValidatorResult()
   {
   }
 
-  public ValidationResult(int successes, int totalFiles, Set<String> filesWithoutMD)
+  public FileValidatorResult(int successes, int totalFiles, Set<String> filesWithoutMD)
   {
     this.successes = successes;
     this.totalFiles = totalFiles;
@@ -60,7 +60,7 @@ public class ValidationResult
     return filesWithoutMD;
   }
 
-  public void addResult(ValidationResult result)
+  public void addResult(FileValidatorResult result)
   {
     this.successes += result.successes;
     this.totalFiles += result.totalFiles;

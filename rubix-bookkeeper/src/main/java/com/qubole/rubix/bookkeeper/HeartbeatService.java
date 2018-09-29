@@ -12,28 +12,26 @@
  */
 package com.qubole.rubix.bookkeeper;
 
-import com.google.common.base.Joiner;
-import com.google.common.primitives.Ints;
+import com.codahale.metrics.Gauge;
+import com.codahale.metrics.MetricRegistry;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import com.google.common.util.concurrent.Service;
+import com.qubole.rubix.bookkeeper.validation.CachingValidator;
+import com.qubole.rubix.bookkeeper.validation.FileValidator;
+import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.core.utils.ClusterUtil;
-import com.qubole.rubix.core.utils.DataGen;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
-import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
-import com.qubole.rubix.spi.thrift.BlockLocation;
-import com.qubole.rubix.spi.thrift.Location;
+import com.qubole.rubix.spi.thrift.HeartbeatStatus;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.shaded.TException;
 import org.apache.thrift.shaded.transport.TTransportException;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
-import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -41,20 +39,6 @@ import java.util.concurrent.TimeUnit;
 public class HeartbeatService extends AbstractScheduledService
 {
   private Log log = LogFactory.getLog(HeartbeatService.class.getName());
-
-  // The name of the test file to be cached to verify the caching workflow.
-  public static final String VALIDATOR_TEST_FILE_NAME = "rubixCachingBehaviorTestFile";
-
-  // The path of the test file used to verify the caching workflow.
-  public static final String VALIDATOR_TEST_FILE_PATH = Joiner.on(File.separator).join(System.getProperty("java.io.tmpdir"), VALIDATOR_TEST_FILE_NAME);
-
-  // The path of the test file with a defined scheme (needed for BookKeeper service calls).
-  public static final String VALIDATOR_TEST_FILE_PATH_WITH_SCHEME = "file://" + VALIDATOR_TEST_FILE_PATH;
-
-  private static final int VALIDATOR_START_BLOCK = 0;
-  private static final int VALIDATOR_END_BLOCK = 1;
-  private static final int VALIDATOR_READ_OFFSET = 0;
-  private static final int VALIDATOR_CLUSTER_TYPE = ClusterType.TEST_CLUSTER_MANAGER.ordinal();
 
   // The executor used for running listener callbacks.
   private final Executor executor = Executors.newSingleThreadExecutor();
@@ -77,14 +61,39 @@ public class HeartbeatService extends AbstractScheduledService
   // The hostname of the master node.
   private final String masterHostname;
 
-  public HeartbeatService(Configuration conf, BookKeeperFactory bookKeeperFactory, BookKeeper bookKeeper)
+  private FileValidator fileValidator;
+  private CachingValidator cachingValidator;
+
+  public HeartbeatService(Configuration conf, MetricRegistry metrics, BookKeeperFactory bookKeeperFactory, BookKeeper bookKeeper)
   {
     this.conf = conf;
+    this.bookKeeper = bookKeeper;
     this.heartbeatInitialDelay = CacheConfig.getHeartbeatInitialDelay(conf);
     this.heartbeatInterval = CacheConfig.getHeartbeatInterval(conf);
     this.masterHostname = ClusterUtil.getMasterHostname(conf);
     this.bookkeeperClient = initializeClientWithRetry(bookKeeperFactory);
-    this.bookKeeper = bookKeeper;
+
+    if (CacheConfig.isValidationEnabled(conf)) {
+      this.cachingValidator = new CachingValidator(conf, bookKeeper);
+      metrics.register(BookKeeperMetrics.ValidationMetric.CACHING_VALIDATION_SUCCESS_GAUGE.getMetricName(), new Gauge<Integer>()
+      {
+        @Override
+        public Integer getValue()
+        {
+          return cachingValidator.didValidationSucceed() ? 1 : 0;
+        }
+      });
+
+      this.fileValidator = new FileValidator(conf);
+      metrics.register(BookKeeperMetrics.ValidationMetric.FILE_VALIDATION_SUCCESS_GAUGE.getMetricName(), new Gauge<Integer>()
+      {
+        @Override
+        public Integer getValue()
+        {
+          return fileValidator.didValidationSucceed() ? 1 : 0;
+        }
+      });
+    }
   }
 
   /**
@@ -135,12 +144,12 @@ public class HeartbeatService extends AbstractScheduledService
   protected void runOneIteration()
   {
     try {
-      boolean didValidationSucceed = validateCachingBehavior();
+      HeartbeatStatus status = new HeartbeatStatus(
+          fileValidator.didValidationSucceed(),
+          cachingValidator.didValidationSucceed());
 
       log.debug(String.format("Sending heartbeat to %s", masterHostname));
-      bookkeeperClient.handleHeartbeat(
-          InetAddress.getLocalHost().getCanonicalHostName(),
-          didValidationSucceed);
+      bookkeeperClient.handleHeartbeat(InetAddress.getLocalHost().getCanonicalHostName(), status);
     }
     catch (IOException e) {
       log.error("Could not send heartbeat", e);
@@ -151,82 +160,15 @@ public class HeartbeatService extends AbstractScheduledService
   }
 
   @Override
-  protected AbstractScheduledService.Scheduler scheduler()
+  protected Scheduler scheduler()
   {
-    return AbstractScheduledService.Scheduler.newFixedDelaySchedule(heartbeatInitialDelay, heartbeatInterval, TimeUnit.MILLISECONDS);
-  }
-
-  /**
-   * Validate the behavior of the BookKeeper caching flow.
-   *
-   * @return true if caching behaves as expected, false otherwise
-   */
-  public boolean validateCachingBehavior()
-  {
-    try {
-      DataGen.populateFile(VALIDATOR_TEST_FILE_PATH);
-    }
-    catch (IOException e) {
-      log.error("Could not create temporary file for testing caching behavior", e);
-      return false;
-    }
-
-    final File tempFile = new File(VALIDATOR_TEST_FILE_PATH);
-    final long fileLength = tempFile.length();
-    final long readSize = tempFile.length();
-    final long fileLastModified = tempFile.lastModified();
-
-    try {
-      List<BlockLocation> locations = bookKeeper.getCacheStatus(
-          VALIDATOR_TEST_FILE_PATH_WITH_SCHEME,
-          fileLength,
-          fileLastModified,
-          VALIDATOR_START_BLOCK,
-          VALIDATOR_END_BLOCK,
-          VALIDATOR_CLUSTER_TYPE);
-      if (locations.isEmpty() || locations.get(0).getLocation() != Location.LOCAL) {
-        return false;
-      }
-
-      final boolean dataRead = bookKeeper.readData(
-          VALIDATOR_TEST_FILE_PATH_WITH_SCHEME,
-          VALIDATOR_READ_OFFSET,
-          Ints.checkedCast(readSize),
-          fileLength,
-          fileLastModified,
-          VALIDATOR_CLUSTER_TYPE);
-      if (!dataRead) {
-        return false;
-      }
-
-      locations = bookKeeper.getCacheStatus(
-          VALIDATOR_TEST_FILE_PATH_WITH_SCHEME,
-          fileLength,
-          fileLastModified,
-          VALIDATOR_START_BLOCK,
-          VALIDATOR_END_BLOCK,
-          VALIDATOR_CLUSTER_TYPE);
-      if (locations.isEmpty() || locations.get(0).getLocation() != Location.CACHED) {
-        return false;
-      }
-
-      return true;
-    }
-    catch (TException e) {
-      log.error("Unable to validate caching behavior", e);
-      return false;
-    }
-    finally {
-      // Clean cache after validation
-      BookKeeper.invalidateFileMetadata(VALIDATOR_TEST_FILE_PATH_WITH_SCHEME);
-      tempFile.delete();
-    }
+    return Scheduler.newFixedDelaySchedule(heartbeatInitialDelay, heartbeatInterval, TimeUnit.MILLISECONDS);
   }
 
   /**
    * Listener to handle failures for this service.
    */
-  private class FailureListener extends com.google.common.util.concurrent.Service.Listener
+  private class FailureListener extends Service.Listener
   {
     @Override
     public void failed(Service.State from, Throwable failure)

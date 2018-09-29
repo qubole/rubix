@@ -21,6 +21,7 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.thrift.HeartbeatStatus;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -35,8 +36,11 @@ public class CoordinatorBookKeeper extends BookKeeper
   // Cache to store hostnames of live workers in the cluster.
   protected Cache<String, Boolean> liveWorkerCache;
 
-  // Cache to store hostnames of validated worker nodes.
-  protected Cache<String, Boolean> validatedWorkerCache;
+  // Cache to store hostnames of caching-validated worker nodes.
+  protected Cache<String, Boolean> cachingValidatedWorkerCache;
+
+  // Cache to store hostnames of file-validated worker nodes.
+  protected Cache<String, Boolean> fileValidatedWorkerCache;
 
   public CoordinatorBookKeeper(Configuration conf, MetricRegistry metrics) throws FileNotFoundException
   {
@@ -47,29 +51,31 @@ public class CoordinatorBookKeeper extends BookKeeper
   public CoordinatorBookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker) throws FileNotFoundException
   {
     super(conf, metrics, ticker);
-    this.liveWorkerCache = CacheBuilder.newBuilder()
-        .ticker(ticker)
-        .expireAfterWrite(CacheConfig.getHealthStatusExpiry(conf), TimeUnit.MILLISECONDS)
-        .build();
-    this.validatedWorkerCache = CacheBuilder.newBuilder()
-        .ticker(ticker)
-        .expireAfterWrite(CacheConfig.getHealthStatusExpiry(conf), TimeUnit.MILLISECONDS)
-        .build();
+    this.liveWorkerCache = createHealthCache(conf, ticker);
+    this.cachingValidatedWorkerCache = createHealthCache(conf, ticker);
+    this.fileValidatedWorkerCache = createHealthCache(conf, ticker);
 
     registerMetrics();
   }
 
   @Override
-  public void handleHeartbeat(String workerHostname, boolean didValidationSucceed)
+  public void handleHeartbeat(String workerHostname, HeartbeatStatus heartbeatStatus)
   {
     liveWorkerCache.put(workerHostname, true);
     log.debug("Received heartbeat from " + workerHostname);
 
-    if (didValidationSucceed) {
-      validatedWorkerCache.put(workerHostname, true);
+    if (heartbeatStatus.cachingValidationSucceeded) {
+      cachingValidatedWorkerCache.put(workerHostname, true);
     }
     else {
-      log.error(String.format("Caching behavior validation failed for worker node (hostname: %s)", workerHostname));
+      log.error(String.format("Caching validation failed for worker node (hostname: %s)", workerHostname));
+    }
+
+    if (heartbeatStatus.fileValidationSucceeded) {
+      fileValidatedWorkerCache.put(workerHostname, true);
+    }
+    else {
+      log.error(String.format("File validation failed for worker node (hostname: %s)", workerHostname));
     }
   }
 
@@ -85,20 +91,46 @@ public class CoordinatorBookKeeper extends BookKeeper
       {
         // Clean up cache to ensure accurate size is reported.
         liveWorkerCache.cleanUp();
-        log.debug(String.format("Reporting %d workers", liveWorkerCache.size()));
+        log.debug(String.format("Reporting %d live workers", liveWorkerCache.size()));
         return liveWorkerCache.size();
       }
     });
-    metrics.register(BookKeeperMetrics.HealthMetric.VALIDATED_WORKER_GAUGE.getMetricName(), new Gauge<Long>()
+    metrics.register(BookKeeperMetrics.HealthMetric.CACHING_VALIDATED_WORKER_GAUGE.getMetricName(), new Gauge<Long>()
     {
       @Override
       public Long getValue()
       {
         // Clean up cache to ensure accurate size is reported.
-        validatedWorkerCache.cleanUp();
-        log.debug(String.format("Validated caching behavior for %d workers", validatedWorkerCache.size()));
-        return validatedWorkerCache.size();
+        cachingValidatedWorkerCache.cleanUp();
+        log.debug(String.format("Caching validation passed for %d workers", cachingValidatedWorkerCache.size()));
+        return cachingValidatedWorkerCache.size();
       }
     });
+    metrics.register(BookKeeperMetrics.HealthMetric.FILE_VALIDATED_WORKER_GAUGE.getMetricName(), new Gauge<Long>()
+    {
+      @Override
+      public Long getValue()
+      {
+        // Clean up cache to ensure accurate size is reported.
+        fileValidatedWorkerCache.cleanUp();
+        log.debug(String.format("File validation passed for %d workers", fileValidatedWorkerCache.size()));
+        return fileValidatedWorkerCache.size();
+      }
+    });
+  }
+
+  /**
+   * Create a cache for storing the status of worker node health checks.
+   *
+   * @param conf    The current Hadoop configuration.
+   * @param ticker  The ticker used for determining expiry of cache entries.
+   * @return a cache reflecting the health status of worker nodes.
+   */
+  private Cache<String, Boolean> createHealthCache(Configuration conf, Ticker ticker)
+  {
+    return CacheBuilder.newBuilder()
+        .ticker(ticker)
+        .expireAfterWrite(CacheConfig.getHealthStatusExpiry(conf), TimeUnit.MILLISECONDS)
+        .build();
   }
 }

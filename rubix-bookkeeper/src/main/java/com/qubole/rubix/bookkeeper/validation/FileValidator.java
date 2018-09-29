@@ -12,10 +12,7 @@
  */
 package com.qubole.rubix.bookkeeper.validation;
 
-import com.codahale.metrics.Gauge;
-import com.codahale.metrics.MetricRegistry;
 import com.google.common.util.concurrent.AbstractScheduledService;
-import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
 import org.apache.commons.logging.Log;
@@ -27,53 +24,41 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
 
-public class CacheValidator extends AbstractScheduledService
+public class FileValidator extends AbstractScheduledService
 {
-  private static final Log log = LogFactory.getLog(CacheValidator.class);
+  private static final Log log = LogFactory.getLog(FileValidator.class);
 
   private final Configuration conf;
-  private final MetricRegistry metrics;
-  private final int validationInitialDelay;
   private final int validationInterval;
 
-  private ValidationResult cacheDirectoryValidationResult = new ValidationResult();
+  private FileValidatorResult validatorResult = new FileValidatorResult();
 
-  public CacheValidator(Configuration conf, MetricRegistry metrics)
+  public FileValidator(Configuration conf)
   {
     this.conf = conf;
-    this.metrics = metrics;
-
-    this.validationInitialDelay = CacheConfig.getCacheValidationInitialDelay(conf);
-    this.validationInterval = CacheConfig.getCacheValidationInterval(conf);
-
-    registerMetrics();
+    this.validationInterval = CacheConfig.getCachingValidationInterval(conf);
   }
 
   @Override
   protected void runOneIteration() throws Exception
   {
-    cacheDirectoryValidationResult = validateCache();
+    validatorResult = validateCache();
   }
 
   @Override
   protected Scheduler scheduler()
   {
-    return Scheduler.newFixedDelaySchedule(validationInitialDelay, validationInterval, TimeUnit.MILLISECONDS);
+    return Scheduler.newFixedDelaySchedule(0, validationInterval, TimeUnit.MILLISECONDS);
   }
 
   /**
-   * Register desired metrics.
+   * Get the success of the file validation.
+   *
+   * @return true if file validation succeeded, false otherwise.
    */
-  private void registerMetrics()
+  public boolean didValidationSucceed()
   {
-    metrics.register(BookKeeperMetrics.CacheMetric.VALIDATION_FAILURE_GAUGE.getMetricName(), new Gauge<Integer>()
-    {
-      @Override
-      public Integer getValue()
-      {
-        return cacheDirectoryValidationResult.getFailureCount();
-      }
-    });
+    return validatorResult.getFailureCount() == 0;
   }
 
   /**
@@ -82,13 +67,13 @@ public class CacheValidator extends AbstractScheduledService
    * @return The result of the cache validation.
    * @throws IOException if an I/O error occurs while visiting files.
    */
-  private ValidationResult validateCache() throws IOException
+  private FileValidatorResult validateCache() throws IOException
   {
     final int maxDisks = CacheConfig.getCacheMaxDisks(conf);
 
-    final ValidationResult allDisksResult = new ValidationResult();
+    final FileValidatorResult allDisksResult = new FileValidatorResult();
     for (int diskIndex = 0; diskIndex < maxDisks; diskIndex++) {
-      ValidatorFileVisitor validatorVisitor = new ValidatorFileVisitor(conf);
+      FileValidatorVisitor validatorVisitor = new FileValidatorVisitor(conf);
       Files.walkFileTree(Paths.get(CacheUtil.getDirPath(diskIndex, conf)), validatorVisitor);
 
       allDisksResult.addResult(validatorVisitor.getResult());

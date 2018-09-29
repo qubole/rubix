@@ -33,8 +33,6 @@ public class CacheConfig
   private static final String KEY_BLOCK_SIZE = "hadoop.cache.data.block-size";
   private static final String KEY_CACHE_ENABLED = "hadoop.cache.data.enabled";
   private static final String KEY_CACHE_METADATA_FILE_SUFFIX = "rubix.cache.metadata.file.suffix";
-  private static final String KEY_CACHE_VALIDATION_INITIAL_DELAY = "rubix.cache.validation.initial.delay";
-  private static final String KEY_CACHE_VALIDATION_INTERVAL = "rubix.cache.validation.interval";
   private static final String KEY_CLIENT_TIMEOUT = "hadoop.cache.data.client.timeout";
   private static final String KEY_DATA_CACHE_EXPIRY = "hadoop.cache.data.expiration";
   private static final String KEY_DATA_CACHE_EXPIRY_AFTER_WRITE = "hadoop.cache.data.expiration.after-write";
@@ -75,9 +73,9 @@ public class CacheConfig
   private static final String KEY_SERVICE_RETRY_INTERVAL = "rubix.network.service.retry-interval";
   private static final String KEY_SERVICE_MAX_RETRIES = "rubix.network.service.max-retries";
   private static final String KEY_SOCKET_READ_TIMEOUT = "hadoop.cache.network.socket.read.timeout";
-  private static final String KEY_VALIDATION_CACHING_BEHAVIOR_ENABLED = "rubix.validation.caching-behavior.enabled";
-  private static final String KEY_VALIDATION_INITIAL_DELAY = "rubix.validation.initial-delay";
-  private static final String KEY_VALIDATION_INTERVAL = "rubix.validation.interval";
+  private static final String KEY_VALIDATION_ENABLED = "rubix.validation.enabled";
+  private static final String KEY_FILE_VALIDATION_INTERVAL = "rubix.validation.file.interval";
+  private static final String KEY_CACHING_VALIDATION_INTERVAL = "rubix.validation.caching.interval";
   private static final String KEY_HEALTH_STATUS_EXPIRY = "rubix.monitor.health.status.expiry";
   private static final String KEY_PRESTO_CLUSTER_MANAGER = "rubix.presto.clustermanager.class";
   private static final String KEY_HADOOP_CLUSTER_MANAGER = "rubix.hadoop.clustermanager.class";
@@ -90,8 +88,6 @@ public class CacheConfig
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
   private static final int DEFAULT_CLIENT_TIMEOUT = 10000; // ms
   private static final String DEFAULT_CACHE_METADATA_FILE_SUFFIX = "_mdfile";
-  private static final int DEFAULT_CACHE_VALIDATION_INITIAL_DELAY = 1800000; // ms (30min)
-  private static final int DEFAULT_CACHE_VALIDATION_INTERVAL = 1800000; // ms (30min)
   private static final String DEFAULT_DATA_CACHE_DIR_PREFIX = "/media/ephemeral";
   private static final String DEFAULT_DATA_CACHE_DIR_SUFFIX = "/fcache/";
   private static final boolean DEFAULT_DATA_CACHE_ENABLED = true;
@@ -134,6 +130,9 @@ public class CacheConfig
   private static final int DEFAULT_SERVICE_MAX_RETRIES = 100;
   private static final int DEFAULT_SOCKET_READ_TIMEOUT = 30000; // ms
   private static final int DEFAULT_HEALTH_STATUS_EXPIRY = 60000; // ms
+  private static final boolean DEFAULT_VALIDATION_ENABLED = true;
+  private static final int DEFAULT_CACHING_VALIDATION_INTERVAL = 1800000; // ms (30min)
+  private static final int DEFAULT_FILE_VALIDATION_INTERVAL = 1800000; // ms (30min)
   private static final String DEFAULT_PRESTO_CLUSTER_MANAGER = "com.qubole.rubix.presto.PrestoClusterManager";
   private static final String DEFAULT_HADOOP_CLUSTER_MANAGER = "com.qubole.rubix.hadoop2.Hadoop2ClusterManager";
   private static final String DEFAULT_DUMMY_CLUSTER_MANAGER = "com.qubole.rubix.core.utils.DummyClusterManager";
@@ -215,14 +214,14 @@ public class CacheConfig
     return conf.get(KEY_CACHE_METADATA_FILE_SUFFIX, DEFAULT_CACHE_METADATA_FILE_SUFFIX);
   }
 
-  public static int getCacheValidationInitialDelay(Configuration conf)
+  public static int getCachingValidationInterval(Configuration conf)
   {
-    return conf.getInt(KEY_CACHE_VALIDATION_INITIAL_DELAY, DEFAULT_CACHE_VALIDATION_INITIAL_DELAY);
+    return conf.getInt(KEY_CACHING_VALIDATION_INTERVAL, DEFAULT_CACHING_VALIDATION_INTERVAL);
   }
 
-  public static int getCacheValidationInterval(Configuration conf)
+  public static int getFileValidationInterval(Configuration conf)
   {
-    return conf.getInt(KEY_CACHE_VALIDATION_INTERVAL, DEFAULT_CACHE_VALIDATION_INTERVAL);
+    return conf.getInt(KEY_FILE_VALIDATION_INTERVAL, DEFAULT_FILE_VALIDATION_INTERVAL);
   }
 
   public static int getClientTimeout(Configuration conf)
@@ -375,6 +374,11 @@ public class CacheConfig
     return conf.getBoolean(KEY_PARALLEL_WARMUP, DEFAULT_PARALLEL_WARMUP);
   }
 
+  public static boolean isValidationEnabled(Configuration conf)
+  {
+    return conf.getBoolean(KEY_VALIDATION_ENABLED, DEFAULT_VALIDATION_ENABLED);
+  }
+
   public static String getPrestoClusterManager(Configuration conf)
   {
     return conf.get(KEY_PRESTO_CLUSTER_MANAGER, DEFAULT_PRESTO_CLUSTER_MANAGER);
@@ -485,16 +489,6 @@ public class CacheConfig
     conf.setBoolean(KEY_METRICS_CACHE_ENABLED, cacheMetricsEnabled);
   }
 
-  public static void setCacheValidationInitialDelay(Configuration conf, int initialDelay)
-  {
-    conf.setInt(KEY_CACHE_VALIDATION_INITIAL_DELAY, initialDelay);
-  }
-
-  public static void setCacheValidationInterval(Configuration conf, int interval)
-  {
-    conf.setInt(KEY_CACHE_VALIDATION_INTERVAL, interval);
-  }
-
   public static void setHeartbeatInitialDelay(Configuration conf, int initialDelay)
   {
     conf.setInt(KEY_HEARTBEAT_INITIAL_DELAY, initialDelay);
@@ -505,9 +499,9 @@ public class CacheConfig
     conf.setInt(KEY_HEARTBEAT_INTERVAL, interval);
   }
 
-  public static void setCachingBehaviorValidationEnabled(Configuration conf, boolean isCachingBehaviorValidationEnabled)
+  public static void setValidationEnabled(Configuration conf, boolean isValidationEnabled)
   {
-    conf.setBoolean(KEY_VALIDATION_CACHING_BEHAVIOR_ENABLED, isCachingBehaviorValidationEnabled);
+    conf.setBoolean(KEY_VALIDATION_ENABLED, isValidationEnabled);
   }
 
   public static void setIsStrictMode(Configuration conf, boolean isStrictMode)
@@ -585,14 +579,14 @@ public class CacheConfig
     conf.setInt(KEY_METRICS_STATSD_PORT, port);
   }
 
-  public static void setValidationInitialDelay(Configuration conf, int initialDelay)
+  public static void setCachingValidationInterval(Configuration conf, int interval)
   {
-    conf.setInt(KEY_VALIDATION_INITIAL_DELAY, initialDelay);
+    conf.setInt(KEY_CACHING_VALIDATION_INTERVAL, interval);
   }
 
-  public static void setValidationInterval(Configuration conf, int interval)
+  public static void setFileValidationInterval(Configuration conf, int interval)
   {
-    conf.setInt(KEY_VALIDATION_INTERVAL, interval);
+    conf.setInt(KEY_FILE_VALIDATION_INTERVAL, interval);
   }
 
   public static void setHealthStatusExpiry(Configuration conf, int expiryTime)
