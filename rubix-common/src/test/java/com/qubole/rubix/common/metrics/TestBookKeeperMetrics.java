@@ -169,7 +169,12 @@ public class TestBookKeeperMetrics
         BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_TOTAL_REQUEST_COUNT.getMetricName(),
         BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_REQUEST_COUNT.getMetricName(),
         BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT.getMetricName(),
-        BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_REMOTE_REQUEST_COUNT.getMetricName());
+        BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_REMOTE_REQUEST_COUNT.getMetricName(),
+        BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_REMOTE_REQUEST_COUNT.getMetricName(),
+        BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_TOTAL_ASYNC_REQUEST_COUNT.getMetricName(),
+        BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_PROCESSED_ASYNC_REQUEST_COUNT.getMetricName(),
+        BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_ASYNC_QUEUE_SIZE_GAUGE.getMetricName(),
+        BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_ASYNC_DOWNLOADED_MB_COUNT.getMetricName());
 
     assertEquals(cacheMetricsNames, BookKeeperMetrics.CacheMetric.getAllNames());
   }

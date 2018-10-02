@@ -85,7 +85,8 @@ public class TestRemoteFetchProcessor
   public void testMergeRequests() throws Exception
   {
     CacheConfig.setRemoteFetchProcessInterval(conf, TEST_REMOTE_FETCH_PROCESS_INTERVAL);
-    final RemoteFetchProcessor processor = new RemoteFetchProcessor(bookKeeper, conf);
+    MetricRegistry metrics = new MetricRegistry();
+    final RemoteFetchProcessor processor = new RemoteFetchProcessor(bookKeeper, metrics, conf);
 
     log.info("Merge Test 1 when requests are all from different file");
     for (int i = 0; i < 100; i++) {
@@ -150,7 +151,8 @@ public class TestRemoteFetchProcessor
     final int maxOffset = 400;
 
     CacheConfig.setRemoteFetchProcessInterval(conf, TEST_REMOTE_FETCH_PROCESS_INTERVAL);
-    final RemoteFetchProcessor processsor = new RemoteFetchProcessor(bookKeeper, conf);
+    MetricRegistry metrics = new MetricRegistry();
+    final RemoteFetchProcessor processsor = new RemoteFetchProcessor(bookKeeper, metrics, conf);
 
     for (int offset = 0; offset <= maxOffset; offset += offsetStep) {
       processsor.addToProcessQueue(backendPath.toString(), offset, 100, file.length(), (long) 10000);
@@ -177,7 +179,8 @@ public class TestRemoteFetchProcessor
     final int maxOffset = 1000;
 
     CacheConfig.setRemoteFetchProcessInterval(conf, TEST_REMOTE_FETCH_PROCESS_INTERVAL);
-    final RemoteFetchProcessor processsor = new RemoteFetchProcessor(bookKeeper, conf);
+    MetricRegistry metrics = new MetricRegistry();
+    final RemoteFetchProcessor processsor = new RemoteFetchProcessor(bookKeeper, metrics, conf);
 
     for (int offset = 0; offset <= maxOffset; offset += offsetStep) {
       processsor.addToProcessQueue(backendPath.toString(), offset, 100, file.length(), (long) 10000);

@@ -52,7 +52,6 @@ public class TestFileDownloader
 
   private final Configuration conf = new Configuration();
   private BookKeeper bookKeeper;
-  private MetricRegistry metrics;
 
   @BeforeClass
   public void setUpForClass() throws Exception
@@ -68,7 +67,7 @@ public class TestFileDownloader
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     CacheConfig.setBlockSize(conf, 200);
-    metrics = new MetricRegistry();
+    MetricRegistry metrics = new MetricRegistry();
     bookKeeper = new CoordinatorBookKeeper(conf, metrics);
   }
 
@@ -104,7 +103,8 @@ public class TestFileDownloader
     context.addDownloadRange(100, 200);
     context.addDownloadRange(500, 800);
 
-    final FileDownloader downloader = new FileDownloader(bookKeeper, conf);
+    MetricRegistry metrics = new MetricRegistry();
+    final FileDownloader downloader = new FileDownloader(bookKeeper, metrics, conf);
     final List<FileDownloadRequestChain> requestChains = downloader.getFileDownloadRequestChains(contextMap);
 
     assertTrue(requestChains.size() == 2,
@@ -135,7 +135,8 @@ public class TestFileDownloader
     context.addDownloadRange(250, 400);
     context.addDownloadRange(500, 800);
 
-    final FileDownloader downloader = new FileDownloader(bookKeeper, conf);
+    MetricRegistry metrics = new MetricRegistry();
+    final FileDownloader downloader = new FileDownloader(bookKeeper, metrics, conf);
     final List<FileDownloadRequestChain> requestChains = downloader.getFileDownloadRequestChains(contextMap);
 
     int dataDownloaded = downloader.processDownloadRequests(requestChains);
