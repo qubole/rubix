@@ -144,9 +144,9 @@ public class HeartbeatService extends AbstractScheduledService
   protected void runOneIteration()
   {
     try {
-      HeartbeatStatus status = new HeartbeatStatus(
-          fileValidator.didValidationSucceed(),
-          cachingValidator.didValidationSucceed());
+      HeartbeatStatus status = CacheConfig.isValidationEnabled(conf)
+          ? new HeartbeatStatus(fileValidator.didValidationSucceed(), cachingValidator.didValidationSucceed())
+          : new HeartbeatStatus();
 
       log.debug(String.format("Sending heartbeat to %s", masterHostname));
       bookkeeperClient.handleHeartbeat(InetAddress.getLocalHost().getCanonicalHostName(), status);
