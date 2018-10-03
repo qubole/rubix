@@ -62,6 +62,11 @@ public class RemoteFetchProcessor extends AbstractScheduledService
     initializeMetrics();
   }
 
+  FileDownloader getFileDownloaderInstance()
+  {
+    return downloader;
+  }
+
   private void initializeMetrics()
   {
     totalDownloadRequests = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_TOTAL_ASYNC_REQUEST_COUNT.getMetricName());

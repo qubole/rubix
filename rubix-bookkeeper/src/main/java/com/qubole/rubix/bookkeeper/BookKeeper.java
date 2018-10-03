@@ -121,6 +121,11 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     fetchProcessor.startAsync();
   }
 
+  RemoteFetchProcessor getRemoteFetchProcessorInstance()
+  {
+    return fetchProcessor;
+  }
+
   protected MetricRegistry getMetricRegistry()
   {
     return metrics;
