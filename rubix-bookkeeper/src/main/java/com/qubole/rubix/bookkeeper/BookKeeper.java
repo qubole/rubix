@@ -126,11 +126,6 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     return fetchProcessor;
   }
 
-  protected MetricRegistry getMetricRegistry()
-  {
-    return metrics;
-  }
-
   // Cleanup the cached files that were downloaded as a part of previous bookkeeper session.
   // This makes sure we always start with a clean empty cash.
   // TODO: We need to come up with a way to persist the files being downloaded before
