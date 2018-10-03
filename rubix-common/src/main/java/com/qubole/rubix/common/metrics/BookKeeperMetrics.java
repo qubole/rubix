@@ -89,7 +89,7 @@ public class BookKeeperMetrics implements AutoCloseable
               .build(CacheConfig.getStatsDMetricsHost(conf), CacheConfig.getStatsDMetricsPort(conf));
 
           log.info(String.format("Reporting metrics to StatsD [%s:%s]", CacheConfig.getStatsDMetricsHost(conf), CacheConfig.getStatsDMetricsPort(conf)));
-          statsDReporter.start(CacheConfig.getStatsDMetricsInterval(conf), TimeUnit.MILLISECONDS);
+          statsDReporter.start(CacheConfig.getMetricsReportingInterval(conf), TimeUnit.MILLISECONDS);
           reporters.add(statsDReporter);
           break;
         case GANGLIA:
@@ -101,8 +101,9 @@ public class BookKeeperMetrics implements AutoCloseable
           final GangliaReporter gangliaReporter = GangliaReporter.forRegistry(metrics)
                   .convertRatesTo(TimeUnit.SECONDS)
                   .convertDurationsTo(TimeUnit.MILLISECONDS)
+                  .filter(metricsFilter)
                   .build(ganglia);
-          gangliaReporter.start(CacheConfig.getStatsDMetricsInterval(conf), TimeUnit.MILLISECONDS);
+          gangliaReporter.start(CacheConfig.getMetricsReportingInterval(conf), TimeUnit.MILLISECONDS);
           reporters.add(gangliaReporter);
           break;
       }
