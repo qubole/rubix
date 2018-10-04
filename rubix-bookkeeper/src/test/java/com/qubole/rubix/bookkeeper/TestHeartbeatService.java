@@ -14,6 +14,7 @@ package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
 import com.qubole.rubix.common.TestUtil;
+import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
@@ -35,6 +36,8 @@ import java.io.IOException;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
 
 public class TestHeartbeatService
 {
@@ -127,5 +130,53 @@ public class TestHeartbeatService
 
     final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, new MetricRegistry());
     final HeartbeatService heartbeatService = new HeartbeatService(conf, new MetricRegistry(), bookKeeperFactory, bookKeeper);
+  }
+
+  /**
+   * Verify that the validation success metrics are correctly registered when validation is enabled.
+   *
+   * @throws TTransportException if the BookKeeper client cannot be created.
+   */
+  @Test
+  public void verifyValidationMetricsAreCorrectlyRegistered_validationEnabled() throws FileNotFoundException, TTransportException
+  {
+    CacheConfig.setValidationEnabled(conf, true);
+
+    final BookKeeperFactory bookKeeperFactory = mock(BookKeeperFactory.class);
+    when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
+        new RetryingBookkeeperClient(
+            new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf)),
+            CacheConfig.getMaxRetries(conf)));
+
+    final MetricRegistry metrics = new MetricRegistry();
+    final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);
+    final HeartbeatService heartbeatService = new HeartbeatService(conf, metrics, bookKeeperFactory, bookKeeper);
+
+    assertNotNull(metrics.getGauges().get(BookKeeperMetrics.ValidationMetric.CACHING_VALIDATION_SUCCESS_GAUGE.getMetricName()), "Caching validation success metric should be registered!");
+    assertNotNull(metrics.getGauges().get(BookKeeperMetrics.ValidationMetric.FILE_VALIDATION_SUCCESS_GAUGE.getMetricName()), "File validation success metric should be registered!");
+  }
+
+  /**
+   * Verify that the validation success metrics are not registered when validation is disabled.
+   *
+   * @throws TTransportException if the BookKeeper client cannot be created.
+   */
+  @Test
+  public void verifyValidationMetricsAreCorrectlyRegistered_validationDisabled() throws FileNotFoundException, TTransportException
+  {
+    CacheConfig.setValidationEnabled(conf, false);
+
+    final BookKeeperFactory bookKeeperFactory = mock(BookKeeperFactory.class);
+    when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
+        new RetryingBookkeeperClient(
+            new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf)),
+            CacheConfig.getMaxRetries(conf)));
+
+    final MetricRegistry metrics = new MetricRegistry();
+    final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);
+    final HeartbeatService heartbeatService = new HeartbeatService(conf, metrics, bookKeeperFactory, bookKeeper);
+
+    assertNull(metrics.getGauges().get(BookKeeperMetrics.ValidationMetric.CACHING_VALIDATION_SUCCESS_GAUGE.getMetricName()), "Caching validation success metric should not be registered!");
+    assertNull(metrics.getGauges().get(BookKeeperMetrics.ValidationMetric.FILE_VALIDATION_SUCCESS_GAUGE.getMetricName()), "File validation success metric should not be registered!");
   }
 }

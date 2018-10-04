@@ -34,6 +34,8 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
 
 public class TestCoordinatorBookKeeper
 {
@@ -84,6 +86,8 @@ public class TestCoordinatorBookKeeper
   @Test
   public void testWorkerHealthMetrics() throws FileNotFoundException
   {
+    CacheConfig.setValidationEnabled(conf, true);
+
     final CoordinatorBookKeeper coordinatorBookKeeper = new CoordinatorBookKeeper(conf, metrics);
     coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER1, TEST_STATUS_ALL_VALIDATED);
     coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER2, TEST_STATUS_ALL_VALIDATED);
@@ -131,5 +135,31 @@ public class TestCoordinatorBookKeeper
     assertEquals(workerCount, 1, "Incorrect number of workers reporting heartbeat");
     assertEquals(cachingValidationCount, 1, "Incorrect number of workers have been validated");
     assertEquals(fileValidationCount, 1, "Incorrect number of workers have been validated");
+  }
+
+  /**
+   * Verify that the validated workers metrics are correctly registered when validation is enabled.
+   */
+  @Test
+  public void testWorkerHealthMetrics_validatedWorkersMetricsRegisteredWhenValidationEnabled() throws FileNotFoundException
+  {
+    CacheConfig.setValidationEnabled(conf, true);
+    final CoordinatorBookKeeper coordinatorBookKeeper = new CoordinatorBookKeeper(conf, metrics);
+
+    assertNotNull(metrics.getGauges().get(BookKeeperMetrics.HealthMetric.CACHING_VALIDATED_WORKER_GAUGE.getMetricName()), "Caching-validated workers metric should be registered!");
+    assertNotNull(metrics.getGauges().get(BookKeeperMetrics.HealthMetric.FILE_VALIDATED_WORKER_GAUGE.getMetricName()), "File-validated workers metric should be registered!");
+  }
+
+  /**
+   * Verify that the validated workers metrics are not registered when validation is disabled.
+   */
+  @Test
+  public void testWorkerHealthMetrics_validatedWorkersMetricsNotRegisteredWhenValidationDisabled() throws FileNotFoundException
+  {
+    CacheConfig.setValidationEnabled(conf, false);
+    final CoordinatorBookKeeper coordinatorBookKeeper = new CoordinatorBookKeeper(conf, metrics);
+
+    assertNull(metrics.getGauges().get(BookKeeperMetrics.HealthMetric.CACHING_VALIDATED_WORKER_GAUGE.getMetricName()), "Caching-validated workers metric should not be registered!");
+    assertNull(metrics.getGauges().get(BookKeeperMetrics.HealthMetric.FILE_VALIDATED_WORKER_GAUGE.getMetricName()), "File-validated workers metric should not be registered!");
   }
 }
