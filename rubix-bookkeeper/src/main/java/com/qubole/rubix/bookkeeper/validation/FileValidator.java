@@ -21,6 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
 
@@ -65,16 +66,22 @@ public class FileValidator extends AbstractScheduledService
    * Validate all configured cache directories.
    *
    * @return The result of the cache validation.
-   * @throws IOException if an I/O error occurs while visiting files.
    */
-  private FileValidatorResult validateCache() throws IOException
+  private FileValidatorResult validateCache()
   {
     final int maxDisks = CacheConfig.getCacheMaxDisks(conf);
 
     final FileValidatorResult allDisksResult = new FileValidatorResult();
     for (int diskIndex = 0; diskIndex < maxDisks; diskIndex++) {
-      FileValidatorVisitor validatorVisitor = new FileValidatorVisitor(conf);
-      Files.walkFileTree(Paths.get(CacheUtil.getDirPath(diskIndex, conf)), validatorVisitor);
+      final FileValidatorVisitor validatorVisitor = new FileValidatorVisitor(conf);
+
+      final Path diskCachePath = Paths.get(CacheUtil.getDirPath(diskIndex, conf), CacheConfig.getCacheDataDirSuffix(conf));
+      try {
+        Files.walkFileTree(diskCachePath, validatorVisitor);
+      }
+      catch (IOException e) {
+        log.error("Encountered issue while verifying files", e);
+      }
 
       allDisksResult.addResult(validatorVisitor.getResult());
     }

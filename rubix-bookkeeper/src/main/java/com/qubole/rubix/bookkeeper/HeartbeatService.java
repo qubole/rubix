@@ -75,6 +75,7 @@ public class HeartbeatService extends AbstractScheduledService
 
     if (CacheConfig.isValidationEnabled(conf)) {
       this.cachingValidator = new CachingValidator(conf, bookKeeper);
+      this.cachingValidator.startAsync();
       metrics.register(BookKeeperMetrics.ValidationMetric.CACHING_VALIDATION_SUCCESS_GAUGE.getMetricName(), new Gauge<Integer>()
       {
         @Override
@@ -85,6 +86,7 @@ public class HeartbeatService extends AbstractScheduledService
       });
 
       this.fileValidator = new FileValidator(conf);
+      this.fileValidator.startAsync();
       metrics.register(BookKeeperMetrics.ValidationMetric.FILE_VALIDATION_SUCCESS_GAUGE.getMetricName(), new Gauge<Integer>()
       {
         @Override
