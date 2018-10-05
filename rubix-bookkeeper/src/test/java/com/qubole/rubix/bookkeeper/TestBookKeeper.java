@@ -312,6 +312,9 @@ public class TestBookKeeper
     final int readOffset = 0;
     final int readLength = 100;
 
+    CacheConfig.setIsParallelWarmupEnabled(conf, false);
+    bookKeeper = new CoordinatorBookKeeper(conf, new MetricRegistry());
+
     // Since the value returned from a gauge metric is an object rather than a primitive, boxing is required here to properly compare the values.
     assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE.getMetricName()).getValue(), 0);
 

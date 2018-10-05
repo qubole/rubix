@@ -15,6 +15,7 @@ package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
 import com.qubole.rubix.common.TestUtil;
+import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.core.utils.DataGen;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
@@ -52,6 +53,7 @@ public class TestFileDownloader
 
   private final Configuration conf = new Configuration();
   private BookKeeper bookKeeper;
+  private FileDownloader downloader;
   private MetricRegistry metrics;
 
   @BeforeClass
@@ -70,6 +72,7 @@ public class TestFileDownloader
     CacheConfig.setBlockSize(conf, 200);
     metrics = new MetricRegistry();
     bookKeeper = new CoordinatorBookKeeper(conf, metrics);
+    downloader = bookKeeper.getRemoteFetchProcessorInstance().getFileDownloaderInstance();
   }
 
   @AfterMethod
@@ -104,7 +107,6 @@ public class TestFileDownloader
     context.addDownloadRange(100, 200);
     context.addDownloadRange(500, 800);
 
-    final FileDownloader downloader = new FileDownloader(bookKeeper, conf);
     final List<FileDownloadRequestChain> requestChains = downloader.getFileDownloadRequestChains(contextMap);
 
     assertTrue(requestChains.size() == 2,
@@ -135,13 +137,15 @@ public class TestFileDownloader
     context.addDownloadRange(250, 400);
     context.addDownloadRange(500, 800);
 
-    final FileDownloader downloader = new FileDownloader(bookKeeper, conf);
     final List<FileDownloadRequestChain> requestChains = downloader.getFileDownloadRequestChains(contextMap);
 
     int dataDownloaded = downloader.processDownloadRequests(requestChains);
 
     int expectedDownloadedDataSize = 600;
     assertTrue(expectedDownloadedDataSize == dataDownloaded, "Download size didn't match");
+
+    assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_ASYNC_DOWNLOADED_MB_COUNT.getMetricName())
+        .getCount() == expectedDownloadedDataSize, "Total downloaded bytes didn't match");
 
     cacheStatus = bookKeeper.getCacheStatus(backendPath.toString(), file.length(), 1000, 0, 5, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
     int i = 0;

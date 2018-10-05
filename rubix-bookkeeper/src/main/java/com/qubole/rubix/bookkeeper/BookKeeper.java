@@ -117,8 +117,13 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     initializeMetrics();
     initializeCache(conf, ticker);
     cleanupOldCacheFiles(conf);
-    fetchProcessor = new RemoteFetchProcessor(this, conf);
+    fetchProcessor = new RemoteFetchProcessor(this, metrics, conf);
     fetchProcessor.startAsync();
+  }
+
+  RemoteFetchProcessor getRemoteFetchProcessorInstance()
+  {
+    return fetchProcessor;
   }
 
   // Cleanup the cached files that were downloaded as a part of previous bookkeeper session.
