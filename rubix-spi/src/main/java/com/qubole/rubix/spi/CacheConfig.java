@@ -113,7 +113,7 @@ public class CacheConfig
   private static final int DEFAULT_METRICS_STATSD_INTERVAL = 10000; // ms
   private static final int DEFAULT_METRICS_STATSD_PORT = 8125; // default StatsD port
   private static final String DEFAULT_METRICS_REPORTERS = "JMX";
-  private static final boolean DEFAULT_PARALLEL_WARMUP = false;
+  private static final boolean DEFAULT_PARALLEL_WARMUP = true;
   private static final int DEFAULT_PROCESS_THREAD_INITIAL_DELAY = 1000; // ms
   private static final int DEFAULT_PROCESS_THREAD_INTERVAL = 1000; // ms
   private static final int DEFAULT_REMOTE_FETCH_PROCESS_INTERVAL = 10000; // ms

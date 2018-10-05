@@ -64,6 +64,7 @@ public class TestThriftServerJVM extends Configured
   private static final String setCacheMaxDisks = "-Dhadoop.cache.data.max.disks=1";
   private static final String setCacheDirectory = "-Dhadoop.cache.data.dirprefix.list=" + testDirectoryPrefix + "dir";
   private static final String setmasterbookkeeper = "-Drubix.cluster.on-master=true";
+  private static final String disableParallelWarmup = "-Drubix.parallel.warmup=false";
 
   public BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
 
@@ -92,8 +93,8 @@ public class TestThriftServerJVM extends Configured
     /*
      * Spinning up the separate JVMs for bookKeeper and Local Data Transfer Servers
      * */
-    String[] bookKeeperStartCmd = {hadoopDirectory, "jar", bookKeeperJarPath, bookKeeperClass, setDataBlockSize, setCacheMaxDisks, setCacheDirectory, setmasterbookkeeper};
-    String[] localDataTransferStartCmd = {hadoopDirectory, "jar", bookKeeperJarPath, localDataTransferServerClass, setDataBlockSize, setCacheMaxDisks, setCacheDirectory, setmasterbookkeeper};
+    String[] bookKeeperStartCmd = {hadoopDirectory, "jar", bookKeeperJarPath, bookKeeperClass, setDataBlockSize, setCacheMaxDisks, setCacheDirectory, setmasterbookkeeper, disableParallelWarmup};
+    String[] localDataTransferStartCmd = {hadoopDirectory, "jar", bookKeeperJarPath, localDataTransferServerClass, setDataBlockSize, setCacheMaxDisks, setCacheDirectory, setmasterbookkeeper, disableParallelWarmup};
 
     ProcessBuilder pJVMBuilder = new ProcessBuilder();
     pJVMBuilder.redirectErrorStream(true);
@@ -128,6 +129,7 @@ public class TestThriftServerJVM extends Configured
     CacheConfig.setCacheDataDirPrefix(conf, testDirectoryPrefix + "dir");
     CacheConfig.setMaxDisks(conf, 1);
     CacheConfig.setBlockSize(conf, 200);
+    CacheConfig.setIsParallelWarmupEnabled(conf, false);
   }
 
   @AfterMethod
