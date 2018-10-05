@@ -152,7 +152,6 @@ public class TestFileDownloader
         .getCount() == expectedDownloadedDataSize, "Total downloaded bytes didn't match");
 
     cacheStatus = bookKeeper.getCacheStatus(request);
-    cacheStatus = bookKeeper.getCacheStatus(backendPath.toString(), file.length(), 1000, 0, 5, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
 
     int i = 0;
     for (i = 0; i < 4; i++) {
