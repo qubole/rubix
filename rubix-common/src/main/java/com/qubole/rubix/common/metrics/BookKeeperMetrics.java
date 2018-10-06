@@ -204,7 +204,11 @@ public class BookKeeperMetrics implements AutoCloseable
     METRIC_BOOKKEEPER_TOTAL_REQUEST_COUNT("rubix.bookkeeper.count.total_request"),
     METRIC_BOOKKEEPER_CACHE_REQUEST_COUNT("rubix.bookkeeper.count.cache_request"),
     METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT("rubix.bookkeeper.count.nonlocal_request"),
-    METRIC_BOOKKEEPER_REMOTE_REQUEST_COUNT("rubix.bookkeeper.count.remote_request");
+    METRIC_BOOKKEEPER_REMOTE_REQUEST_COUNT("rubix.bookkeeper.count.remote_request"),
+    METRIC_BOOKKEEPER_TOTAL_ASYNC_REQUEST_COUNT("rubix.bookkeeper.count.total_async_request"),
+    METRIC_BOOKKEEPER_PROCESSED_ASYNC_REQUEST_COUNT("rubix.bookkeeper.count.processed_async_request"),
+    METRIC_BOOKKEEPER_ASYNC_QUEUE_SIZE_GAUGE("rubix.bookkeeper.gauge.async_queue_size"),
+    METRIC_BOOKKEEPER_ASYNC_DOWNLOADED_MB_COUNT("rubix.bookkeeper.count.async_downloaded_mb");
 
     private final String metricName;
 
