@@ -15,10 +15,12 @@ package com.qubole.rubix.common.metrics;
 
 import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.ganglia.GangliaReporter;
 import com.google.common.base.Splitter;
 import com.qubole.rubix.core.utils.ClusterUtil;
 import com.qubole.rubix.spi.CacheConfig;
 import com.readytalk.metrics.StatsDReporter;
+import info.ganglia.gmetric4j.gmetric.GMetric;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -87,8 +89,22 @@ public class BookKeeperMetrics implements AutoCloseable
               .build(CacheConfig.getStatsDMetricsHost(conf), CacheConfig.getStatsDMetricsPort(conf));
 
           log.info(String.format("Reporting metrics to StatsD [%s:%s]", CacheConfig.getStatsDMetricsHost(conf), CacheConfig.getStatsDMetricsPort(conf)));
-          statsDReporter.start(CacheConfig.getStatsDMetricsInterval(conf), TimeUnit.MILLISECONDS);
+          statsDReporter.start(CacheConfig.getMetricsReportingInterval(conf), TimeUnit.MILLISECONDS);
           reporters.add(statsDReporter);
+          break;
+        case GANGLIA:
+          if (!CacheConfig.isOnMaster(conf)) {
+            CacheConfig.setGangliaMetricsHost(conf, ClusterUtil.getMasterHostname(conf));
+          }
+          log.info(String.format("Reporting metrics to Ganglia [%s:%s]", CacheConfig.getGangliaMetricsHost(conf), CacheConfig.getGangliaMetricsPort(conf)));
+          final GMetric ganglia = new GMetric(CacheConfig.getGangliaMetricsHost(conf), CacheConfig.getGangliaMetricsPort(conf), GMetric.UDPAddressingMode.MULTICAST, 1);
+          final GangliaReporter gangliaReporter = GangliaReporter.forRegistry(metrics)
+                  .convertRatesTo(TimeUnit.SECONDS)
+                  .convertDurationsTo(TimeUnit.MILLISECONDS)
+                  .filter(metricsFilter)
+                  .build(ganglia);
+          gangliaReporter.start(CacheConfig.getMetricsReportingInterval(conf), TimeUnit.MILLISECONDS);
+          reporters.add(gangliaReporter);
           break;
       }
     }
@@ -179,20 +195,20 @@ public class BookKeeperMetrics implements AutoCloseable
    */
   public enum CacheMetric
   {
-    METRIC_BOOKKEEPER_CACHE_EVICTION_COUNT("rubix.bookkeeper.cache_eviction.count"),
-    METRIC_BOOKKEEPER_CACHE_INVALIDATION_COUNT("rubix.bookkeeper.cache_invalidation.count"),
-    METRIC_BOOKKEEPER_CACHE_EXPIRY_COUNT("rubix.bookkeeper.cache_expiry.count"),
-    METRIC_BOOKKEEPER_CACHE_HIT_RATE_GAUGE("rubix.bookkeeper.cache_hit_rate.gauge"),
-    METRIC_BOOKKEEPER_CACHE_MISS_RATE_GAUGE("rubix.bookkeeper.cache_miss_rate.gauge"),
-    METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE("rubix.bookkeeper.cache_size_mb.gauge"),
-    METRIC_BOOKKEEPER_TOTAL_REQUEST_COUNT("rubix.bookkeeper.total_request.count"),
-    METRIC_BOOKKEEPER_CACHE_REQUEST_COUNT("rubix.bookkeeper.cache_request.count"),
-    METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT("rubix.bookkeeper.nonlocal_request.count"),
-    METRIC_BOOKKEEPER_REMOTE_REQUEST_COUNT("rubix.bookkeeper.remote_request.count"),
-    METRIC_BOOKKEEPER_TOTAL_ASYNC_REQUEST_COUNT("rubix.bookkeeper.total_async_request.count"),
-    METRIC_BOOKKEEPER_PROCESSED_ASYNC_REQUEST_COUNT("rubix.bookkeeper.processed_async_request.count"),
-    METRIC_BOOKKEEPER_ASYNC_QUEUE_SIZE_GAUGE("rubix.bookkeeper.async_queue_size.gauge"),
-    METRIC_BOOKKEEPER_ASYNC_DOWNLOADED_MB_COUNT("rubix.bookkeeper.async_downloaded_mb.count");
+    METRIC_BOOKKEEPER_CACHE_EVICTION_COUNT("rubix.bookkeeper.count.cache_eviction"),
+    METRIC_BOOKKEEPER_CACHE_INVALIDATION_COUNT("rubix.bookkeeper.count.cache_invalidation"),
+    METRIC_BOOKKEEPER_CACHE_EXPIRY_COUNT("rubix.bookkeeper.count.cache_expiry"),
+    METRIC_BOOKKEEPER_CACHE_HIT_RATE_GAUGE("rubix.bookkeeper.gauge.cache_hit_rate"),
+    METRIC_BOOKKEEPER_CACHE_MISS_RATE_GAUGE("rubix.bookkeeper.gauge.cache_miss_rate"),
+    METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE("rubix.bookkeeper.gauge.cache_size_mb"),
+    METRIC_BOOKKEEPER_TOTAL_REQUEST_COUNT("rubix.bookkeeper.count.total_request"),
+    METRIC_BOOKKEEPER_CACHE_REQUEST_COUNT("rubix.bookkeeper.count.cache_request"),
+    METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT("rubix.bookkeeper.count.nonlocal_request"),
+    METRIC_BOOKKEEPER_REMOTE_REQUEST_COUNT("rubix.bookkeeper.count.remote_request"),
+    METRIC_BOOKKEEPER_TOTAL_ASYNC_REQUEST_COUNT("rubix.bookkeeper.count.total_async_request"),
+    METRIC_BOOKKEEPER_PROCESSED_ASYNC_REQUEST_COUNT("rubix.bookkeeper.count.processed_async_request"),
+    METRIC_BOOKKEEPER_ASYNC_QUEUE_SIZE_GAUGE("rubix.bookkeeper.gauge.async_queue_size"),
+    METRIC_BOOKKEEPER_ASYNC_DOWNLOADED_MB_COUNT("rubix.bookkeeper.count.async_downloaded_mb");
 
     private final String metricName;
 
@@ -226,7 +242,7 @@ public class BookKeeperMetrics implements AutoCloseable
    */
   public enum LivenessMetric
   {
-    METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE("rubix.bookkeeper.live_workers.gauge");
+    METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE("rubix.bookkeeper.gauge.live_workers");
 
     private final String metricName;
 
