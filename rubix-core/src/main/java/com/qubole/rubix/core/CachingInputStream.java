@@ -403,7 +403,7 @@ public class CachingInputStream extends FSInputStream
               if (directReadRequestChain == null) {
                 directReadRequestChain = new DirectReadRequestChain(getParentDataInputStream());
               }
-              directReadRequestChain.addReadRequest(readRequest);
+              directReadRequestChain.addReadRequest(readRequest.clone(false));
             }
           }
           else {
@@ -433,7 +433,7 @@ public class CachingInputStream extends FSInputStream
             }
 
             directReadRequestChain.addReadRequest(readRequest);
-            remoteFetchRequestChain.addReadRequest(readRequest.clone());
+            remoteFetchRequestChain.addReadRequest(readRequest.clone(true));
           }
           else {
             log.debug(String.format("Sending block %d to remoteReadRequestChain", blockNum));

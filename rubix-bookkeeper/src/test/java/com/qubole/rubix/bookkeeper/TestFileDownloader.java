@@ -14,6 +14,7 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
+import com.qubole.rubix.bookkeeper.utils.DiskUtils;
 import com.qubole.rubix.common.TestUtil;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.core.utils.DataGen;
@@ -149,7 +150,7 @@ public class TestFileDownloader
     assertTrue(expectedDownloadedDataSize == dataDownloaded, "Download size didn't match");
 
     assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.ASYNC_DOWNLOADED_MB_COUNT.getMetricName())
-        .getCount() == expectedDownloadedDataSize, "Total downloaded bytes didn't match");
+        .getCount() == DiskUtils.bytesToMB(expectedDownloadedDataSize), "Total downloaded bytes didn't match");
 
     cacheStatus = bookKeeper.getCacheStatus(request);
 
