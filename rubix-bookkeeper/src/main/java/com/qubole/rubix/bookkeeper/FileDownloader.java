@@ -17,6 +17,7 @@ import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.Range;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.qubole.rubix.bookkeeper.utils.DiskUtils;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.core.ReadRequest;
 import com.qubole.rubix.spi.CacheConfig;
@@ -49,7 +50,7 @@ class FileDownloader
   private ExecutorService processService;
   int diskReadBufferSize;
   private MetricRegistry metrics;
-  private Counter totalBytesDownloaded;
+  private Counter totalMBDownloaded;
   BookKeeper bookKeeper;
 
   private static final Log log = LogFactory.getLog(FileDownloader.class);
@@ -71,7 +72,7 @@ class FileDownloader
 
   private void initializeMetrics()
   {
-    totalBytesDownloaded = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_ASYNC_DOWNLOADED_MB_COUNT.getMetricName());
+    totalMBDownloaded = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_ASYNC_DOWNLOADED_MB_COUNT.getMetricName());
   }
 
   protected List<FileDownloadRequestChain> getFileDownloadRequestChains(ConcurrentMap<String, DownloadRequestContext> contextMap)
@@ -143,7 +144,8 @@ class FileDownloader
         requestChain.cancel();
       }
     }
-    totalBytesDownloaded.inc(sizeRead);
+    int dataDownloadedInMB = DiskUtils.bytesToMB(sizeRead);
+    this.totalMBDownloaded.inc(dataDownloadedInMB);
     return sizeRead;
   }
 }
