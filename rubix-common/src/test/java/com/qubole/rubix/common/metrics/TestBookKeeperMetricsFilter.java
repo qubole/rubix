@@ -42,27 +42,27 @@ public class TestBookKeeperMetricsFilter
   }
 
   /**
-   * Verify that the metrics filter matches against liveness metrics when they are enabled.
+   * Verify that the metrics filter matches against health metrics when they are enabled.
    */
   @Test
-  public void testMatches_livenessMetricsEnabled()
+  public void testMatches_healthMetricsEnabled()
   {
-    CacheConfig.setLivenessMetricsEnabled(conf, true);
-    Set<String> livenessMetricsNames = BookKeeperMetrics.LivenessMetric.getAllNames();
+    CacheConfig.setHealthMetricsEnabled(conf, true);
+    Set<String> healthMetricsNames = BookKeeperMetrics.HealthMetric.getAllNames();
 
-    checkMetricsFilter(livenessMetricsNames, true);
+    checkMetricsFilter(healthMetricsNames, true);
   }
 
   /**
-   * Verify that the metrics filter does not match against liveness metrics when they are disabled.
+   * Verify that the metrics filter does not match against health metrics when they are disabled.
    */
   @Test
-  public void testMatches_livenessMetricsDisabled()
+  public void testMatches_healthMetricsDisabled()
   {
-    CacheConfig.setLivenessMetricsEnabled(conf, false);
-    Set<String> livenessMetricsNames = BookKeeperMetrics.LivenessMetric.getAllNames();
+    CacheConfig.setHealthMetricsEnabled(conf, false);
+    Set<String> healthMetricsNames = BookKeeperMetrics.HealthMetric.getAllNames();
 
-    checkMetricsFilter(livenessMetricsNames, false);
+    checkMetricsFilter(healthMetricsNames, false);
   }
 
   /**

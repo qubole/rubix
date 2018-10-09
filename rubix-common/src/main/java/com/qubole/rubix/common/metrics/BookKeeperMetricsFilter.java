@@ -32,8 +32,8 @@ public class BookKeeperMetricsFilter implements MetricFilter
   private List<String> createWhitelist(Configuration conf)
   {
     List<String> whitelist = new ArrayList<>();
-    if (CacheConfig.areLivenessMetricsEnabled(conf)) {
-      whitelist.addAll(BookKeeperMetrics.LivenessMetric.getAllNames());
+    if (CacheConfig.areHealthMetricsEnabled(conf)) {
+      whitelist.addAll(BookKeeperMetrics.HealthMetric.getAllNames());
     }
     if (CacheConfig.areCacheMetricsEnabled(conf)) {
       whitelist.addAll(BookKeeperMetrics.CacheMetric.getAllNames());
@@ -41,6 +41,9 @@ public class BookKeeperMetricsFilter implements MetricFilter
     if (CacheConfig.areJvmMetricsEnabled(conf)) {
       whitelist.addAll(BookKeeperMetrics.BookKeeperJvmMetric.getAllNames());
       whitelist.addAll(BookKeeperMetrics.LDTSJvmMetric.getAllNames());
+    }
+    if (CacheConfig.isValidationEnabled(conf)) {
+      whitelist.addAll(BookKeeperMetrics.ValidationMetric.getAllNames());
     }
 
     return whitelist;

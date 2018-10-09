@@ -149,7 +149,7 @@ public class TestFileDownloader
     int expectedDownloadedDataSize = 600;
     assertTrue(expectedDownloadedDataSize == dataDownloaded, "Download size didn't match");
 
-    assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_ASYNC_DOWNLOADED_MB_COUNT.getMetricName())
+    assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.ASYNC_DOWNLOADED_MB_COUNT.getMetricName())
         .getCount() == DiskUtils.bytesToMB(expectedDownloadedDataSize), "Total downloaded bytes didn't match");
 
     cacheStatus = bookKeeper.getCacheStatus(request);

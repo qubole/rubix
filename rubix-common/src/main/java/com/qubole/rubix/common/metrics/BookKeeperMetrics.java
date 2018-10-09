@@ -88,7 +88,7 @@ public class BookKeeperMetrics implements AutoCloseable
               .filter(metricsFilter)
               .build(CacheConfig.getStatsDMetricsHost(conf), CacheConfig.getStatsDMetricsPort(conf));
 
-          log.info(String.format("Reporting metrics to StatsD [%s:%s]", CacheConfig.getStatsDMetricsHost(conf), CacheConfig.getStatsDMetricsPort(conf)));
+          log.info(String.format("Reporting metrics to StatsD [%s:%d]", CacheConfig.getStatsDMetricsHost(conf), CacheConfig.getStatsDMetricsPort(conf)));
           statsDReporter.start(CacheConfig.getMetricsReportingInterval(conf), TimeUnit.MILLISECONDS);
           reporters.add(statsDReporter);
           break;
@@ -123,9 +123,9 @@ public class BookKeeperMetrics implements AutoCloseable
    */
   public enum BookKeeperJvmMetric
   {
-    METRIC_BOOKKEEPER_JVM_GC_PREFIX("rubix.bookkeeper.jvm.gc"),
-    METRIC_BOOKKEEPER_JVM_MEMORY_PREFIX("rubix.bookkeeper.jvm.memory"),
-    METRIC_BOOKKEEPER_JVM_THREADS_PREFIX("rubix.bookkeeper.jvm.threads");
+    BOOKKEEPER_JVM_GC_PREFIX("rubix.bookkeeper.jvm.gc"),
+    BOOKKEEPER_JVM_MEMORY_PREFIX("rubix.bookkeeper.jvm.memory"),
+    BOOKKEEPER_JVM_THREADS_PREFIX("rubix.bookkeeper.jvm.threads");
 
     private final String metricName;
 
@@ -159,9 +159,9 @@ public class BookKeeperMetrics implements AutoCloseable
    */
   public enum LDTSJvmMetric
   {
-    METRIC_LDTS_JVM_GC_PREFIX("rubix.ldts.jvm.gc"),
-    METRIC_LDTS_JVM_MEMORY_PREFIX("rubix.ldts.jvm.memory"),
-    METRIC_LDTS_JVM_THREADS_PREFIX("rubix.ldts.jvm.threads");
+    LDTS_JVM_GC_PREFIX("rubix.ldts.jvm.gc"),
+    LDTS_JVM_MEMORY_PREFIX("rubix.ldts.jvm.memory"),
+    LDTS_JVM_THREADS_PREFIX("rubix.ldts.jvm.threads");
 
     private final String metricName;
 
@@ -195,20 +195,20 @@ public class BookKeeperMetrics implements AutoCloseable
    */
   public enum CacheMetric
   {
-    METRIC_BOOKKEEPER_CACHE_EVICTION_COUNT("rubix.bookkeeper.count.cache_eviction"),
-    METRIC_BOOKKEEPER_CACHE_INVALIDATION_COUNT("rubix.bookkeeper.count.cache_invalidation"),
-    METRIC_BOOKKEEPER_CACHE_EXPIRY_COUNT("rubix.bookkeeper.count.cache_expiry"),
-    METRIC_BOOKKEEPER_CACHE_HIT_RATE_GAUGE("rubix.bookkeeper.gauge.cache_hit_rate"),
-    METRIC_BOOKKEEPER_CACHE_MISS_RATE_GAUGE("rubix.bookkeeper.gauge.cache_miss_rate"),
-    METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE("rubix.bookkeeper.gauge.cache_size_mb"),
-    METRIC_BOOKKEEPER_TOTAL_REQUEST_COUNT("rubix.bookkeeper.count.total_request"),
-    METRIC_BOOKKEEPER_CACHE_REQUEST_COUNT("rubix.bookkeeper.count.cache_request"),
-    METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT("rubix.bookkeeper.count.nonlocal_request"),
-    METRIC_BOOKKEEPER_REMOTE_REQUEST_COUNT("rubix.bookkeeper.count.remote_request"),
-    METRIC_BOOKKEEPER_TOTAL_ASYNC_REQUEST_COUNT("rubix.bookkeeper.count.total_async_request"),
-    METRIC_BOOKKEEPER_PROCESSED_ASYNC_REQUEST_COUNT("rubix.bookkeeper.count.processed_async_request"),
-    METRIC_BOOKKEEPER_ASYNC_QUEUE_SIZE_GAUGE("rubix.bookkeeper.gauge.async_queue_size"),
-    METRIC_BOOKKEEPER_ASYNC_DOWNLOADED_MB_COUNT("rubix.bookkeeper.count.async_downloaded_mb");
+    CACHE_EVICTION_COUNT("rubix.bookkeeper.count.cache_eviction"),
+    CACHE_INVALIDATION_COUNT("rubix.bookkeeper.count.cache_invalidation"),
+    CACHE_EXPIRY_COUNT("rubix.bookkeeper.count.cache_expiry"),
+    CACHE_HIT_RATE_GAUGE("rubix.bookkeeper.gauge.cache_hit_rate"),
+    CACHE_MISS_RATE_GAUGE("rubix.bookkeeper.gauge.cache_miss_rate"),
+    CACHE_SIZE_GAUGE("rubix.bookkeeper.gauge.cache_size_mb"),
+    TOTAL_REQUEST_COUNT("rubix.bookkeeper.count.total_request"),
+    CACHE_REQUEST_COUNT("rubix.bookkeeper.count.cache_request"),
+    NONLOCAL_REQUEST_COUNT("rubix.bookkeeper.count.nonlocal_request"),
+    REMOTE_REQUEST_COUNT("rubix.bookkeeper.count.remote_request"),
+    TOTAL_ASYNC_REQUEST_COUNT("rubix.bookkeeper.count.total_async_request"),
+    PROCESSED_ASYNC_REQUEST_COUNT("rubix.bookkeeper.count.processed_async_request"),
+    ASYNC_QUEUE_SIZE_GAUGE("rubix.bookkeeper.gauge.async_queue_size"),
+    ASYNC_DOWNLOADED_MB_COUNT("rubix.bookkeeper.count.async_downloaded_mb");
 
     private final String metricName;
 
@@ -238,15 +238,17 @@ public class BookKeeperMetrics implements AutoCloseable
   }
 
   /**
-   * Enum for metrics relating to daemon & service liveness.
+   * Enum for metrics relating to daemon & service health.
    */
-  public enum LivenessMetric
+  public enum HealthMetric
   {
-    METRIC_BOOKKEEPER_LIVE_WORKER_GAUGE("rubix.bookkeeper.gauge.live_workers");
+    LIVE_WORKER_GAUGE("rubix.bookkeeper.gauge.live_workers"),
+    CACHING_VALIDATED_WORKER_GAUGE("rubix.bookkeeper.gauge.caching_validated_workers"),
+    FILE_VALIDATED_WORKER_GAUGE("rubix.bookkeeper.gauge.file_validated_workers");
 
     private final String metricName;
 
-    LivenessMetric(String metricName)
+    HealthMetric(String metricName)
     {
       this.metricName = metricName;
     }
@@ -257,14 +259,49 @@ public class BookKeeperMetrics implements AutoCloseable
     }
 
     /**
-     * Get the names for each liveness metric.
+     * Get the names for each health metric.
      *
      * @return a set of metrics names.
      */
     public static Set<String> getAllNames()
     {
       Set<String> names = new HashSet<>();
-      for (LivenessMetric metric : values()) {
+      for (HealthMetric metric : values()) {
+        names.add(metric.getMetricName());
+      }
+      return names;
+    }
+  }
+
+  /**
+   * Enum for metrics relating to validation.
+   */
+  public enum ValidationMetric
+  {
+    CACHING_VALIDATION_SUCCESS_GAUGE("rubix.bookkeeper.gauge.caching_validation_success"),
+    FILE_VALIDATION_SUCCESS_GAUGE("rubix.bookkeeper.gauge.file_validation_success");
+
+    private final String metricName;
+
+    ValidationMetric(String metricName)
+    {
+      this.metricName = metricName;
+    }
+
+    public String getMetricName()
+    {
+      return metricName;
+    }
+
+    /**
+     * Get the names for each health metric.
+     *
+     * @return a set of metrics names.
+     */
+    public static Set<String> getAllNames()
+    {
+      Set<String> names = new HashSet<>();
+      for (ValidationMetric metric : values()) {
         names.add(metric.getMetricName());
       }
       return names;

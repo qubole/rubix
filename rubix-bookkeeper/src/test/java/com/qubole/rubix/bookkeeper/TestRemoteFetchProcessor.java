@@ -33,6 +33,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentMap;
 
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
 /**
@@ -97,7 +98,7 @@ public class TestRemoteFetchProcessor
       processor.addToProcessQueue(path, i, i + 10, 100, 1000);
     }
 
-    assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_TOTAL_ASYNC_REQUEST_COUNT.getMetricName())
+    assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.TOTAL_ASYNC_REQUEST_COUNT.getMetricName())
         .getCount() == totalRequests, "Total number of requests don't match");
 
     ConcurrentMap<String, DownloadRequestContext> contextMap = processor.mergeRequests(System.currentTimeMillis() + 3000);
@@ -106,7 +107,7 @@ public class TestRemoteFetchProcessor
     assertTrue(expected == contextMap.size(),
         "Merge didn't work. Expecting Number of File Requests " + expected + " Got : " + contextMap.size());
 
-    assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_PROCESSED_ASYNC_REQUEST_COUNT.getMetricName())
+    assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.PROCESSED_ASYNC_REQUEST_COUNT.getMetricName())
         .getCount() == totalRequests, "Not all the requests are processed");
   }
 
@@ -121,7 +122,7 @@ public class TestRemoteFetchProcessor
       processor.addToProcessQueue(path, i, i + 10, 100, 1000);
     }
 
-    assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_TOTAL_ASYNC_REQUEST_COUNT.getMetricName())
+    assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.TOTAL_ASYNC_REQUEST_COUNT.getMetricName())
         .getCount() == totalRequests, "Total number of requests don't match");
 
     ConcurrentMap<String, DownloadRequestContext> contextMap = processor.mergeRequests(System.currentTimeMillis() + 3000);
@@ -130,7 +131,7 @@ public class TestRemoteFetchProcessor
     assertTrue(expected == contextMap.size(),
         "Merge didn't work. Expecting Number of File Requests " + expected + " Got : " + contextMap.size());
 
-    assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_PROCESSED_ASYNC_REQUEST_COUNT.getMetricName())
+    assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.PROCESSED_ASYNC_REQUEST_COUNT.getMetricName())
         .getCount() == totalRequests, "Not all the requests are processed");
   }
 
@@ -145,7 +146,7 @@ public class TestRemoteFetchProcessor
       path = "File--1";
       processor.addToProcessQueue(path, i, 10, 100, 1000);
     }
-    assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_TOTAL_ASYNC_REQUEST_COUNT.getMetricName())
+    assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.TOTAL_ASYNC_REQUEST_COUNT.getMetricName())
         .getCount() == (totalRequests / jump), "Total number of requests don't match");
 
     ConcurrentMap<String, DownloadRequestContext> contextMap = processor.mergeRequests(System.currentTimeMillis() + 3000);
@@ -155,7 +156,7 @@ public class TestRemoteFetchProcessor
     assertTrue(expected == result,
         "Merge didn't work. Expecting Number Ranges in file " + expected + " Got : " + result);
 
-    assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_PROCESSED_ASYNC_REQUEST_COUNT.getMetricName())
+    assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.PROCESSED_ASYNC_REQUEST_COUNT.getMetricName())
         .getCount() == (totalRequests / jump), "Not all the requests are processed");
   }
 
@@ -171,7 +172,7 @@ public class TestRemoteFetchProcessor
       processor.addToProcessQueue(path, i, 50, 100, 1000);
     }
 
-    assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_TOTAL_ASYNC_REQUEST_COUNT.getMetricName())
+    assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.TOTAL_ASYNC_REQUEST_COUNT.getMetricName())
         .getCount() == (totalRequests / jump), "Total number of requests don't match");
 
     ConcurrentMap<String, DownloadRequestContext> contextMap = processor.mergeRequests(System.currentTimeMillis() + 3000);
@@ -181,7 +182,7 @@ public class TestRemoteFetchProcessor
     assertTrue(expected == result,
         "Merge didn't work. Expecting Number Ranges in file " + expected + " Got : " + result);
 
-    assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_PROCESSED_ASYNC_REQUEST_COUNT.getMetricName())
+    assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.PROCESSED_ASYNC_REQUEST_COUNT.getMetricName())
         .getCount() == (totalRequests / jump), "Not all the requests are processed");
   }
 
@@ -198,13 +199,13 @@ public class TestRemoteFetchProcessor
       processor.addToProcessQueue(backendPath.toString(), offset, 100, file.length(), (long) 10000);
     }
 
-    assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_TOTAL_ASYNC_REQUEST_COUNT.getMetricName())
+    assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.TOTAL_ASYNC_REQUEST_COUNT.getMetricName())
         .getCount() == (maxOffset / offsetStep), "Total number of requests don't match");
 
     processor.processRequest(System.currentTimeMillis() + TEST_REMOTE_FETCH_PROCESS_INTERVAL);
 
-    assertTrue(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_ASYNC_QUEUE_SIZE_GAUGE.getMetricName())
-        .getValue() == 0, "All the requests should have been processed and the queue size should be zero");
+    assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.ASYNC_QUEUE_SIZE_GAUGE.getMetricName())
+        .getValue(), 0, "All the requests should have been processed and the queue size should be zero");
 
     final String downloadedFile = CacheUtil.getLocalPath(backendPath.toString(), conf);
     final String resultString = new String(DataGen.readBytesFromFile(downloadedFile, 0, 450));
@@ -215,7 +216,7 @@ public class TestRemoteFetchProcessor
     assertTrue(expected.equals(resultString),
         "Downloaded data didn't match Expected : " + expected + " Got : " + resultString);
 
-    assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_PROCESSED_ASYNC_REQUEST_COUNT.getMetricName())
+    assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.PROCESSED_ASYNC_REQUEST_COUNT.getMetricName())
         .getCount() == (maxOffset / offsetStep), "Not all the requests are processed");
   }
 
@@ -232,15 +233,15 @@ public class TestRemoteFetchProcessor
       processor.addToProcessQueue(backendPath.toString(), offset, 100, file.length(), (long) 10000);
     }
 
-    assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_TOTAL_ASYNC_REQUEST_COUNT.getMetricName())
+    assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.TOTAL_ASYNC_REQUEST_COUNT.getMetricName())
         .getCount() == (maxOffset / offsetStep), "Total number of requests don't match");
 
     processor.processRequest(System.currentTimeMillis() + TEST_REMOTE_FETCH_PROCESS_INTERVAL);
 
-    assertTrue(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_ASYNC_QUEUE_SIZE_GAUGE.getMetricName())
-        .getValue() == 0, "All the requests should have been processed and the queue size should be zero");
+    assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.ASYNC_QUEUE_SIZE_GAUGE.getMetricName())
+        .getValue(), 0, "All the requests should have been processed and the queue size should be zero");
 
-    assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_PROCESSED_ASYNC_REQUEST_COUNT.getMetricName())
+    assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.PROCESSED_ASYNC_REQUEST_COUNT.getMetricName())
         .getCount() == (maxOffset / offsetStep), "Not all the requests are processed");
 
     final String downloadedFile = CacheUtil.getLocalPath(backendPath.toString(), conf);

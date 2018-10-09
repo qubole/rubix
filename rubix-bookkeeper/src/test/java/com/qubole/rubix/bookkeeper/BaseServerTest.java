@@ -15,10 +15,15 @@ package com.qubole.rubix.bookkeeper;
 import com.codahale.metrics.MetricRegistry;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.common.metrics.MetricsReporter;
+import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.thrift.shaded.transport.TSocket;
+import org.apache.thrift.shaded.transport.TTransportException;
+import org.mockito.ArgumentMatchers;
 
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
@@ -28,6 +33,9 @@ import java.lang.management.ManagementFactory;
 import java.util.HashSet;
 import java.util.Set;
 
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
@@ -35,13 +43,15 @@ public class BaseServerTest
 {
   protected enum ServerType
   {
-    BOOKKEEPER,
-    MOCK_BOOKKEEPER,
+    COORDINATOR_BOOKKEEPER,
+    MOCK_COORDINATOR_BOOKKEEPER,
+    MOCK_WORKER_BOOKKEEPER,
     LOCAL_DATA_TRANSFER_SERVER
   }
 
-  private BookKeeperServer bookKeeperServer;
-  private MockBookKeeperServer mockBookKeeperServer;
+  private static BookKeeperServer bookKeeperServer;
+  private static MockCoordinatorBookKeeperServer mockCoordinatorBookKeeperServer;
+  private static MockWorkerBookKeeperServer mockWorkerBookKeeperServer;
 
   private static final Log log = LogFactory.getLog(BaseServerTest.class);
   protected static final String JMX_METRIC_NAME_PATTERN = "metrics:*";
@@ -64,8 +74,9 @@ public class BaseServerTest
     switch (serverType) {
       case LOCAL_DATA_TRANSFER_SERVER:
         throw new IllegalArgumentException("No cache metrics available for LocalDataTransferServer");
-      case BOOKKEEPER:
-      case MOCK_BOOKKEEPER:
+      case COORDINATOR_BOOKKEEPER:
+      case MOCK_COORDINATOR_BOOKKEEPER:
+      case MOCK_WORKER_BOOKKEEPER:
         metricsToVerify = BookKeeperMetrics.CacheMetric.getAllNames();
         break;
       default:
@@ -76,7 +87,7 @@ public class BaseServerTest
   }
 
   /**
-   * Verify the behavior of the liveness metrics for a given server type.
+   * Verify the behavior of the health metrics for a given server type.
    *
    * @param serverType        The type of server to test against.
    * @param conf              The current Hadoop configuration.
@@ -84,19 +95,21 @@ public class BaseServerTest
    * @param areMetricsEnabled Whether the metrics should be registered when the server is run.
    * @throws InterruptedException if the current thread is interrupted while sleeping.
    */
-  protected void testLivenessMetrics(ServerType serverType, Configuration conf, MetricRegistry metrics, boolean areMetricsEnabled) throws InterruptedException, MalformedObjectNameException
+  protected void testHealthMetrics(ServerType serverType, Configuration conf, MetricRegistry metrics, boolean areMetricsEnabled) throws InterruptedException, MalformedObjectNameException
   {
-    CacheConfig.setLivenessMetricsEnabled(conf, areMetricsEnabled);
+    CacheConfig.setHealthMetricsEnabled(conf, areMetricsEnabled);
     CacheConfig.setOnMaster(conf, true);
 
     Set<String> metricsToVerify;
     switch (serverType) {
       case LOCAL_DATA_TRANSFER_SERVER:
-        throw new IllegalArgumentException("No liveness metrics available for LocalDataTransferServer");
-      case BOOKKEEPER:
-      case MOCK_BOOKKEEPER:
-        metricsToVerify = BookKeeperMetrics.LivenessMetric.getAllNames();
+        throw new IllegalArgumentException("No health metrics available for LocalDataTransferServer");
+      case COORDINATOR_BOOKKEEPER:
+      case MOCK_COORDINATOR_BOOKKEEPER:
+        metricsToVerify = BookKeeperMetrics.HealthMetric.getAllNames();
         break;
+      case MOCK_WORKER_BOOKKEEPER:
+        throw new IllegalArgumentException("No health metrics available for WorkerBookKeeper");
       default:
         throw new IllegalArgumentException("Invalid server type " + serverType.name());
     }
@@ -123,9 +136,40 @@ public class BaseServerTest
       case LOCAL_DATA_TRANSFER_SERVER:
         metricsToVerify = BookKeeperMetrics.LDTSJvmMetric.getAllNames();
         break;
-      case BOOKKEEPER:
-      case MOCK_BOOKKEEPER:
+      case COORDINATOR_BOOKKEEPER:
+      case MOCK_COORDINATOR_BOOKKEEPER:
+      case MOCK_WORKER_BOOKKEEPER:
         metricsToVerify = BookKeeperMetrics.BookKeeperJvmMetric.getAllNames();
+        break;
+      default:
+        throw new IllegalArgumentException("Invalid server type " + serverType.name());
+    }
+
+    checkMetrics(serverType, conf, metrics, metricsToVerify, areMetricsEnabled, true);
+  }
+
+  /**
+   * Verify the behavior of the validation metrics for a given server type.
+   *
+   * @param serverType        The type of server to test against.
+   * @param conf              The current Hadoop configuration.
+   * @param metrics           The metrics registry to check against.
+   * @param areMetricsEnabled Whether the metrics should be registered when the server is run.
+   * @throws InterruptedException if the current thread is interrupted while sleeping.
+   */
+  protected void testValidationMetrics(ServerType serverType, Configuration conf, MetricRegistry metrics, boolean areMetricsEnabled) throws MalformedObjectNameException, InterruptedException
+  {
+    CacheConfig.setValidationEnabled(conf, areMetricsEnabled);
+
+    Set<String> metricsToVerify;
+    switch (serverType) {
+      case LOCAL_DATA_TRANSFER_SERVER:
+        throw new IllegalArgumentException("No validation metrics available for LocalDataTransferServer");
+      case COORDINATOR_BOOKKEEPER:
+      case MOCK_COORDINATOR_BOOKKEEPER:
+        throw new IllegalArgumentException("No validation metrics available for CoordinatorBookKeeper");
+      case MOCK_WORKER_BOOKKEEPER:
+        metricsToVerify = BookKeeperMetrics.ValidationMetric.getAllNames();
         break;
       default:
         throw new IllegalArgumentException("Invalid server type " + serverType.name());
@@ -175,11 +219,13 @@ public class BaseServerTest
    * @param metrics The current metrics registry.
    * @throws InterruptedException if the current thread is interrupted while sleeping.
    */
-  protected void startBookKeeperServer(final Configuration conf, final MetricRegistry metrics) throws InterruptedException
+  protected static void startCoordinatorBookKeeperServer(final Configuration conf, final MetricRegistry metrics) throws InterruptedException
   {
     if (bookKeeperServer != null) {
       throw new IllegalStateException("A BookKeeperServer is already running");
     }
+
+    CacheConfig.setOnMaster(conf, true);
 
     bookKeeperServer = new BookKeeperServer();
     final Thread thread = new Thread()
@@ -198,9 +244,41 @@ public class BaseServerTest
   }
 
   /**
+   * Start an instance of the BookKeeper server with an initial delay.
+   *
+   * @param conf          The current Hadoop configuration.
+   * @param metrics       The current metrics registry.
+   * @param initialDelay  The delay before starting the server. (ms)
+   */
+  protected static void startCoordinatorBookKeeperServerWithDelay(final Configuration conf, final MetricRegistry metrics, final int initialDelay)
+  {
+    if (bookKeeperServer != null) {
+      throw new IllegalStateException("A BookKeeperServer is already running");
+    }
+
+    CacheConfig.setOnMaster(conf, true);
+
+    bookKeeperServer = new BookKeeperServer();
+    final Thread thread = new Thread()
+    {
+      public void run()
+      {
+        try {
+          Thread.sleep(initialDelay);
+        }
+        catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
+        bookKeeperServer.startServer(conf, metrics);
+      }
+    };
+    thread.start();
+  }
+
+  /**
    * Stop the currently running BookKeeper server instance.
    */
-  protected void stopBookKeeperServer()
+  protected static void stopBookKeeperServer()
   {
     if (bookKeeperServer != null) {
       bookKeeperServer.stopServer();
@@ -244,32 +322,90 @@ public class BaseServerTest
   }
 
   /**
-   * Start an instance of the mock BookKeeper server.
+   * Start an instance of the mock CoordinatorBookKeeper server.
    *
    * @param conf    The current Hadoop configuration.
    * @param metrics The current metrics registry.
    */
-  protected void startMockBookKeeperServer(final Configuration conf, final MetricRegistry metrics)
+  protected void startMockCoordinatorBookKeeperServer(final Configuration conf, final MetricRegistry metrics) throws InterruptedException
   {
-    if (mockBookKeeperServer != null) {
-      throw new IllegalStateException("A MockBookKeeperServer is already running");
+    if (mockCoordinatorBookKeeperServer != null) {
+      throw new IllegalStateException("A MockCoordinatorBookKeeperServer is already running");
     }
 
-    mockBookKeeperServer = new MockBookKeeperServer();
-    mockBookKeeperServer.startServer(conf, metrics);
+    CacheConfig.setOnMaster(conf, true);
+
+    mockCoordinatorBookKeeperServer = new MockCoordinatorBookKeeperServer();
+    final Thread thread = new Thread()
+    {
+      public void run()
+      {
+        mockCoordinatorBookKeeperServer.startServer(conf, metrics);
+      }
+    };
+    thread.start();
+
+    while (!mockCoordinatorBookKeeperServer.isServerUp()) {
+      Thread.sleep(200);
+      log.info("Waiting for Mock CoordinatorBookKeeper Server to come up");
+    }
   }
 
   /**
-   * Stop the currently running mock BookKeeper server instance.
+   * Stop the currently running MockCoordinatorBookKeeperServer instance.
    */
-  protected void stopMockBookKeeperServer()
+  protected void stopMockCoordinatorBookKeeperServer()
   {
-    if (mockBookKeeperServer != null) {
-      mockBookKeeperServer.stopServer();
-      mockBookKeeperServer = null;
+    if (mockCoordinatorBookKeeperServer != null) {
+      mockCoordinatorBookKeeperServer.stopServer();
+      mockCoordinatorBookKeeperServer = null;
     }
     else {
-      throw new IllegalStateException("MockBookKeeperServer hasn't been started yet");
+      throw new IllegalStateException("MockCoordinatorBookKeeperServer hasn't been started yet");
+    }
+  }
+
+  /**
+   * Start an instance of the mock WorkerBookKeeper server.
+   *
+   * @param conf    The current Hadoop configuration.
+   * @param metrics The current metrics registry.
+   */
+  protected void startMockWorkerBookKeeperServer(final Configuration conf, final MetricRegistry metrics) throws InterruptedException
+  {
+    if (mockWorkerBookKeeperServer != null) {
+      throw new IllegalStateException("A MockWorkerBookKeeperServer is already running");
+    }
+
+    CacheConfig.setOnMaster(conf, false);
+
+    mockWorkerBookKeeperServer = new MockWorkerBookKeeperServer();
+    final Thread thread = new Thread()
+    {
+      public void run()
+      {
+        mockWorkerBookKeeperServer.startServer(conf, metrics);
+      }
+    };
+    thread.start();
+
+    while (!mockWorkerBookKeeperServer.isServerUp()) {
+      Thread.sleep(200);
+      log.info("Waiting for Mock WorkerBookKeeper Server to come up");
+    }
+  }
+
+  /**
+   * Stop the currently running MockWorkerBookKeeperServer instance.
+   */
+  protected void stopMockWorkerBookKeeperServer()
+  {
+    if (mockWorkerBookKeeperServer != null) {
+      mockWorkerBookKeeperServer.stopServer();
+      mockWorkerBookKeeperServer = null;
+    }
+    else {
+      throw new IllegalStateException("MockWorkerBookKeeperServer hasn't been started yet");
     }
   }
 
@@ -293,15 +429,18 @@ public class BaseServerTest
 
     startServer(serverType, conf, metrics);
 
-    metricsNames = getJmxMetricsNames();
-    if (areMetricsEnabled) {
-      assertContainsMetrics(metricsNames, metricsToVerify, usePartialMatch);
+    try {
+      metricsNames = getJmxMetricsNames();
+      if (areMetricsEnabled) {
+        assertContainsMetrics(metricsNames, metricsToVerify, usePartialMatch);
+      }
+      else {
+        assertDoesNotContainMetrics(metricsNames, metricsToVerify, usePartialMatch);
+      }
     }
-    else {
-      assertDoesNotContainMetrics(metricsNames, metricsToVerify, usePartialMatch);
+    finally {
+      stopServer(serverType);
     }
-
-    stopServer(serverType);
 
     metricsNames = getJmxMetricsNames();
     assertDoesNotContainMetrics(metricsNames, metricsToVerify, usePartialMatch);
@@ -318,11 +457,14 @@ public class BaseServerTest
   private void startServer(ServerType serverType, Configuration conf, MetricRegistry metrics) throws InterruptedException
   {
     switch (serverType) {
-      case BOOKKEEPER:
-        startBookKeeperServer(conf, metrics);
+      case COORDINATOR_BOOKKEEPER:
+        startCoordinatorBookKeeperServer(conf, metrics);
         break;
-      case MOCK_BOOKKEEPER:
-        startMockBookKeeperServer(conf, metrics);
+      case MOCK_COORDINATOR_BOOKKEEPER:
+        startMockCoordinatorBookKeeperServer(conf, metrics);
+        break;
+      case MOCK_WORKER_BOOKKEEPER:
+        startMockWorkerBookKeeperServer(conf, metrics);
         break;
       case LOCAL_DATA_TRANSFER_SERVER:
         startLocalDataTransferServer(conf, metrics);
@@ -338,11 +480,14 @@ public class BaseServerTest
   private void stopServer(ServerType serverType)
   {
     switch (serverType) {
-      case BOOKKEEPER:
+      case COORDINATOR_BOOKKEEPER:
         stopBookKeeperServer();
         break;
-      case MOCK_BOOKKEEPER:
-        stopMockBookKeeperServer();
+      case MOCK_COORDINATOR_BOOKKEEPER:
+        stopMockCoordinatorBookKeeperServer();
+        break;
+      case MOCK_WORKER_BOOKKEEPER:
+        stopMockWorkerBookKeeperServer();
         break;
       case LOCAL_DATA_TRANSFER_SERVER:
         stopLocalDataTransferServer();
@@ -408,8 +553,10 @@ public class BaseServerTest
   /**
    * Class to mock the behaviour of {@link BookKeeperServer} for testing registering & reporting metrics.
    */
-  private static class MockBookKeeperServer extends BookKeeperServer
+  private static class MockCoordinatorBookKeeperServer extends BookKeeperServer
   {
+    private boolean isServerUp;
+
     public void startServer(Configuration conf, MetricRegistry metricRegistry)
     {
       metrics = metricRegistry;
@@ -422,11 +569,62 @@ public class BaseServerTest
         return;
       }
       registerMetrics(conf);
+      isServerUp = true;
     }
 
     public void stopServer()
     {
       removeMetrics();
+      isServerUp = false;
+    }
+
+    public boolean isServerUp()
+    {
+      return isServerUp;
+    }
+  }
+
+  /**
+   * Class to mock the behaviour of {@link BookKeeperServer} for testing registering & reporting metrics.
+   */
+  private static class MockWorkerBookKeeperServer extends BookKeeperServer
+  {
+    private boolean isServerUp;
+
+    public void startServer(Configuration conf, MetricRegistry metricRegistry)
+    {
+      final BookKeeperFactory bookKeeperFactory = mock(BookKeeperFactory.class);
+      try {
+        when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
+            new RetryingBookkeeperClient(
+                new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf)),
+                CacheConfig.getMaxRetries(conf)));
+      }
+      catch (TTransportException e) {
+        log.error("Error starting MockWorkerBookKeeperServer for test", e);
+      }
+
+      metrics = metricRegistry;
+      try {
+        new WorkerBookKeeper(conf, metrics, bookKeeperFactory);
+      }
+      catch (FileNotFoundException e) {
+        log.error("Cache directories could not be created", e);
+        return;
+      }
+      registerMetrics(conf);
+      isServerUp = true;
+    }
+
+    public void stopServer()
+    {
+      removeMetrics();
+      isServerUp = false;
+    }
+
+    public boolean isServerUp()
+    {
+      return isServerUp;
     }
   }
 }

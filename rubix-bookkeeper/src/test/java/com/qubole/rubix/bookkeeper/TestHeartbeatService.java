@@ -1,0 +1,182 @@
+/**
+ * Copyright (c) 2018. Qubole Inc
+ * Licensed under the Apache License, Version 2.0 (the License);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an AS IS BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
+ */
+package com.qubole.rubix.bookkeeper;
+
+import com.codahale.metrics.MetricRegistry;
+import com.qubole.rubix.common.TestUtil;
+import com.qubole.rubix.common.metrics.BookKeeperMetrics;
+import com.qubole.rubix.spi.BookKeeperFactory;
+import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.thrift.shaded.transport.TSocket;
+import org.apache.thrift.shaded.transport.TTransportException;
+import org.mockito.ArgumentMatchers;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Test;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
+
+public class TestHeartbeatService
+{
+  private static final Log log = LogFactory.getLog(TestWorkerBookKeeper.class);
+
+  private static final String TEST_CACHE_DIR_PREFIX = TestUtil.getTestCacheDirPrefix("TestWorkerBookKeeper");
+  private static final int TEST_MAX_DISKS = 1;
+  private static final int TEST_MAX_RETRIES = 5;
+  private static final int TEST_RETRY_INTERVAL = 500;
+  private static final String TEST_REMOTE_LOCATION = "testLocation";
+
+  private final Configuration conf = new Configuration();
+
+  @BeforeClass
+  public void setUpForClass() throws IOException
+  {
+    CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
+
+    TestUtil.createCacheParentDirectories(conf, TEST_MAX_DISKS);
+  }
+
+  @BeforeMethod
+  public void setUp() throws InterruptedException
+  {
+    CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
+    CacheConfig.setServiceRetryInterval(conf, TEST_RETRY_INTERVAL);
+    CacheConfig.setHeartbeatInterval(conf, TEST_RETRY_INTERVAL);
+    CacheConfig.setServiceMaxRetries(conf, TEST_MAX_RETRIES);
+    CacheConfig.setOnMaster(conf, true);
+
+    BaseServerTest.startCoordinatorBookKeeperServer(conf, new MetricRegistry());
+  }
+
+  @AfterMethod
+  public void tearDown()
+  {
+    conf.clear();
+
+    BaseServerTest.stopBookKeeperServer();
+  }
+
+  @AfterClass
+  public void tearDownForClass() throws IOException
+  {
+    CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
+
+    TestUtil.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
+  }
+  /**
+   * Verify that the heartbeat service correctly makes a connection using a BookKeeper client.
+   *
+   * @throws TTransportException if the BookKeeper client cannot be created.
+   */
+  @Test
+  public void testHeartbeatRetryLogic_noRetriesNeeded() throws TTransportException, FileNotFoundException
+  {
+    final BookKeeperFactory bookKeeperFactory = mock(BookKeeperFactory.class);
+    when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
+        new RetryingBookkeeperClient(
+            new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf)),
+            CacheConfig.getMaxRetries(conf)));
+
+    final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, new MetricRegistry());
+    final HeartbeatService heartbeatService = new HeartbeatService(conf, new MetricRegistry(), bookKeeperFactory, bookKeeper);
+  }
+
+  /**
+   * Verify that the heartbeat service correctly makes a connection using a BookKeeper client after a number of retries.
+   */
+  @Test
+  public void testHeartbeatRetryLogic_connectAfterRetries() throws FileNotFoundException
+  {
+    BaseServerTest.stopBookKeeperServer();
+    BaseServerTest.startCoordinatorBookKeeperServerWithDelay(conf, new MetricRegistry(), TEST_RETRY_INTERVAL * 2);
+
+    final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, new MetricRegistry());
+    final HeartbeatService heartbeatService = new HeartbeatService(conf, new MetricRegistry(), new BookKeeperFactory(), bookKeeper);
+  }
+
+  /**
+   * Verify that the heartbeat service no longer attempts to connect once it runs out of retry attempts.
+   *
+   * @throws TTransportException if the BookKeeper client cannot be created.
+   */
+  @Test(expectedExceptions = RuntimeException.class)
+  public void testHeartbeatRetryLogic_outOfRetries() throws TTransportException, FileNotFoundException
+  {
+    final BookKeeperFactory bookKeeperFactory = mock(BookKeeperFactory.class);
+    when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenThrow(TTransportException.class);
+
+    final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, new MetricRegistry());
+    final HeartbeatService heartbeatService = new HeartbeatService(conf, new MetricRegistry(), bookKeeperFactory, bookKeeper);
+  }
+
+  /**
+   * Verify that the validation success metrics are correctly registered when validation is enabled.
+   *
+   * @throws TTransportException if the BookKeeper client cannot be created.
+   */
+  @Test
+  public void verifyValidationMetricsAreCorrectlyRegistered_validationEnabled() throws FileNotFoundException, TTransportException
+  {
+    CacheConfig.setValidationEnabled(conf, true);
+
+    final BookKeeperFactory bookKeeperFactory = mock(BookKeeperFactory.class);
+    when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
+        new RetryingBookkeeperClient(
+            new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf)),
+            CacheConfig.getMaxRetries(conf)));
+
+    final MetricRegistry metrics = new MetricRegistry();
+    final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);
+    final HeartbeatService heartbeatService = new HeartbeatService(conf, metrics, bookKeeperFactory, bookKeeper);
+
+    assertNotNull(metrics.getGauges().get(BookKeeperMetrics.ValidationMetric.CACHING_VALIDATION_SUCCESS_GAUGE.getMetricName()), "Caching validation success metric should be registered!");
+    assertNotNull(metrics.getGauges().get(BookKeeperMetrics.ValidationMetric.FILE_VALIDATION_SUCCESS_GAUGE.getMetricName()), "File validation success metric should be registered!");
+  }
+
+  /**
+   * Verify that the validation success metrics are not registered when validation is disabled.
+   *
+   * @throws TTransportException if the BookKeeper client cannot be created.
+   */
+  @Test
+  public void verifyValidationMetricsAreCorrectlyRegistered_validationDisabled() throws FileNotFoundException, TTransportException
+  {
+    CacheConfig.setValidationEnabled(conf, false);
+
+    final BookKeeperFactory bookKeeperFactory = mock(BookKeeperFactory.class);
+    when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
+        new RetryingBookkeeperClient(
+            new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf)),
+            CacheConfig.getMaxRetries(conf)));
+
+    final MetricRegistry metrics = new MetricRegistry();
+    final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);
+    final HeartbeatService heartbeatService = new HeartbeatService(conf, metrics, bookKeeperFactory, bookKeeper);
+
+    assertNull(metrics.getGauges().get(BookKeeperMetrics.ValidationMetric.CACHING_VALIDATION_SUCCESS_GAUGE.getMetricName()), "Caching validation success metric should not be registered!");
+    assertNull(metrics.getGauges().get(BookKeeperMetrics.ValidationMetric.FILE_VALIDATION_SUCCESS_GAUGE.getMetricName()), "File validation success metric should not be registered!");
+  }
+}

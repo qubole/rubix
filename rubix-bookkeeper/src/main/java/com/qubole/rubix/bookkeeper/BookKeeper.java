@@ -26,6 +26,7 @@ import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.cache.Weigher;
 import com.qubole.rubix.bookkeeper.utils.DiskUtils;
+import com.qubole.rubix.bookkeeper.validation.CachingValidator;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.core.ReadRequest;
@@ -84,13 +85,13 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   String nodeName;
   static String nodeHostName;
   static String nodeHostAddress;
-  private Configuration conf;
+  private final Configuration conf;
   private static Integer lock = 1;
   private List<String> nodes;
   int currentNodeIndex = -1;
   static long splitSize;
-  private RemoteFetchProcessor fetchProcessor;
-  private Ticker ticker;
+  private final RemoteFetchProcessor fetchProcessor;
+  private final Ticker ticker;
 
   // Registry for gathering & storing necessary metrics
   protected final MetricRegistry metrics;
@@ -157,15 +158,15 @@ public abstract class BookKeeper implements BookKeeperService.Iface
    */
   private void initializeMetrics()
   {
-    cacheEvictionCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_EVICTION_COUNT.getMetricName());
-    cacheInvalidationCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_INVALIDATION_COUNT.getMetricName());
-    cacheExpiryCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_EXPIRY_COUNT.getMetricName());
-    totalRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_TOTAL_REQUEST_COUNT.getMetricName());
-    cacheRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_REQUEST_COUNT.getMetricName());
-    nonlocalRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_NONLOCAL_REQUEST_COUNT.getMetricName());
-    remoteRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_REMOTE_REQUEST_COUNT.getMetricName());
+    cacheEvictionCount = metrics.counter(BookKeeperMetrics.CacheMetric.CACHE_EVICTION_COUNT.getMetricName());
+    cacheInvalidationCount = metrics.counter(BookKeeperMetrics.CacheMetric.CACHE_INVALIDATION_COUNT.getMetricName());
+    cacheExpiryCount = metrics.counter(BookKeeperMetrics.CacheMetric.CACHE_EXPIRY_COUNT.getMetricName());
+    totalRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.TOTAL_REQUEST_COUNT.getMetricName());
+    cacheRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.CACHE_REQUEST_COUNT.getMetricName());
+    nonlocalRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.NONLOCAL_REQUEST_COUNT.getMetricName());
+    remoteRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.REMOTE_REQUEST_COUNT.getMetricName());
 
-    metrics.register(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_HIT_RATE_GAUGE.getMetricName(), new Gauge<Double>()
+    metrics.register(BookKeeperMetrics.CacheMetric.CACHE_HIT_RATE_GAUGE.getMetricName(), new Gauge<Double>()
     {
       @Override
       public Double getValue()
@@ -173,7 +174,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         return ((double) cacheRequestCount.getCount() / (cacheRequestCount.getCount() + remoteRequestCount.getCount()));
       }
     });
-    metrics.register(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_MISS_RATE_GAUGE.getMetricName(), new Gauge<Double>()
+    metrics.register(BookKeeperMetrics.CacheMetric.CACHE_MISS_RATE_GAUGE.getMetricName(), new Gauge<Double>()
     {
       @Override
       public Double getValue()
@@ -181,7 +182,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         return ((double) remoteRequestCount.getCount() / (cacheRequestCount.getCount() + remoteRequestCount.getCount()));
       }
     });
-    metrics.register(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_CACHE_SIZE_GAUGE.getMetricName(), new Gauge<Integer>()
+    metrics.register(BookKeeperMetrics.CacheMetric.CACHE_SIZE_GAUGE.getMetricName(), new Gauge<Integer>()
     {
       @Override
       public Integer getValue()
@@ -280,11 +281,11 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       throw new TException(e);
     }
 
-    if (request.isIncrMetrics()) {
+    if (request.isIncrMetrics() && !isValidatingCachingBehavior(remotePath)) {
       totalRequestCount.inc(totalRequests);
+      nonlocalRequestCount.inc(nonLocalRequests);
       cacheRequestCount.inc(cacheRequests);
       remoteRequestCount.inc(remoteRequests);
-      nonlocalRequestCount.inc(nonLocalRequests);
     }
 
     return blockLocations;
@@ -622,18 +623,20 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       FileMetadata md = notification.getValue();
       try {
         md.closeAndCleanup(notification.getCause(), fileMetadataCache);
-        switch (notification.getCause()) {
-          case EXPLICIT:
-            cacheInvalidationCount.inc();
-            break;
-          case SIZE:
-            cacheEvictionCount.inc();
-            break;
-          case EXPIRED:
-            cacheExpiryCount.inc();
-            break;
-          default:
-            break;
+        if (!isValidatingCachingBehavior(md.getRemotePath())) {
+          switch (notification.getCause()) {
+            case EXPLICIT:
+              cacheInvalidationCount.inc();
+              break;
+            case SIZE:
+              cacheEvictionCount.inc();
+              break;
+            case EXPIRED:
+              cacheExpiryCount.inc();
+              break;
+            default:
+              break;
+          }
         }
       }
       catch (IOException e) {
@@ -670,7 +673,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
 
   // This method is to invalidate FileMetadata from guava cache.
   // deleteCachedFile determines whether to delete the actual file from the local filesystem or not
-  private static void invalidateFileMetadata(String key)
+  public static void invalidateFileMetadata(String key)
   {
     // We might come in here with cache not initialized e.g. fs.create
     if (fileMetadataCache != null) {
@@ -697,5 +700,10 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     }
 
     return false;
+  }
+
+  private static boolean isValidatingCachingBehavior(String remotePath)
+  {
+    return CachingValidator.VALIDATOR_TEST_FILE_NAME.equals(CacheUtil.getName(remotePath));
   }
 }

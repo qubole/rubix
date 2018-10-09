@@ -72,7 +72,7 @@ class FileDownloader
 
   private void initializeMetrics()
   {
-    totalMBDownloaded = metrics.counter(BookKeeperMetrics.CacheMetric.METRIC_BOOKKEEPER_ASYNC_DOWNLOADED_MB_COUNT.getMetricName());
+    totalMBDownloaded = metrics.counter(BookKeeperMetrics.CacheMetric.ASYNC_DOWNLOADED_MB_COUNT.getMetricName());
   }
 
   protected List<FileDownloadRequestChain> getFileDownloadRequestChains(ConcurrentMap<String, DownloadRequestContext> contextMap)
