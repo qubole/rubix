@@ -278,8 +278,8 @@ public class BookKeeperMetrics implements AutoCloseable
    */
   public enum ValidationMetric
   {
-    CACHING_VALIDATION_SUCCESS_GAUGE("rubix.bookkeeper.caching_validation_success.gauge"),
-    FILE_VALIDATION_SUCCESS_GAUGE("rubix.bookkeeper.file_validation_success.gauge");
+    CACHING_VALIDATION_SUCCESS_GAUGE("rubix.bookkeeper.gauge.caching_validation_success"),
+    FILE_VALIDATION_SUCCESS_GAUGE("rubix.bookkeeper.gauge.file_validation_success");
 
     private final String metricName;
 
