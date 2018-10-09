@@ -14,6 +14,7 @@ package com.qubole.rubix.common.metrics;
 
 import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.ganglia.GangliaReporter;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Sets;
 import com.qubole.rubix.common.TestUtil;
@@ -111,6 +112,21 @@ public class TestBookKeeperMetrics
   }
 
   /**
+   * Verify that a Ganglia reporter is correctly registered when the configuration option is set.
+   *
+   * @throws IOException if an I/O error occurs while closing a reporter.
+   */
+  @Test
+  public void testInitializeReporters_initializeGanglia() throws IOException
+  {
+    CacheConfig.setMetricsReporters(conf, MetricsReporter.GANGLIA.name());
+
+    try (final BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, metrics)) {
+      assertTrue(containsReporterType(bookKeeperMetrics.reporters, GangliaReporter.class));
+    }
+  }
+
+  /**
    * Verify that both JMX and StatsD reporters are correctly registered when the configuration option is set.
    *
    * @throws IOException if an I/O error occurs while closing a reporter.
@@ -172,7 +188,11 @@ public class TestBookKeeperMetrics
         BookKeeperMetrics.CacheMetric.TOTAL_REQUEST_COUNT.getMetricName(),
         BookKeeperMetrics.CacheMetric.CACHE_REQUEST_COUNT.getMetricName(),
         BookKeeperMetrics.CacheMetric.NONLOCAL_REQUEST_COUNT.getMetricName(),
-        BookKeeperMetrics.CacheMetric.REMOTE_REQUEST_COUNT.getMetricName());
+        BookKeeperMetrics.CacheMetric.REMOTE_REQUEST_COUNT.getMetricName(),
+        BookKeeperMetrics.CacheMetric.TOTAL_ASYNC_REQUEST_COUNT.getMetricName(),
+        BookKeeperMetrics.CacheMetric.PROCESSED_ASYNC_REQUEST_COUNT.getMetricName(),
+        BookKeeperMetrics.CacheMetric.ASYNC_QUEUE_SIZE_GAUGE.getMetricName(),
+        BookKeeperMetrics.CacheMetric.ASYNC_DOWNLOADED_MB_COUNT.getMetricName());
 
     assertEquals(cacheMetricsNames, BookKeeperMetrics.CacheMetric.getAllNames());
   }

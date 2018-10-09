@@ -51,7 +51,6 @@ public class CacheUtil
     for (String dirPrefix : dirPrefixList) {
       for (int i = 0; i < maxDisks; ++i) {
         final String cacheParentDir = dirPrefix + i;
-        log.debug("Checking for " + cacheParentDir);
 
         if (exists(cacheParentDir)) {
           parentDirectoryExists = true;
@@ -99,7 +98,6 @@ public class CacheUtil
         for (String dirPrefix : dirPrefixList) {
           for (int i = 0; i < maxDisks; ++i) {
             final String cacheDirPath = dirPrefix + i + "/" + dirSuffix;
-            log.debug("Checking " + cacheDirPath);
             if (exists(cacheDirPath)) {
               dirPathMap.put(numDisks, dirPrefix + i);
               ++numDisks;

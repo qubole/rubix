@@ -38,6 +38,7 @@ import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.BookKeeperService;
+import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.FileInfo;
 import com.qubole.rubix.spi.thrift.Location;
 import org.apache.commons.logging.Log;
@@ -118,8 +119,13 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     initializeMetrics();
     initializeCache(conf, ticker);
     cleanupOldCacheFiles(conf);
-    fetchProcessor = new RemoteFetchProcessor(this, conf);
+    fetchProcessor = new RemoteFetchProcessor(this, metrics, conf);
     fetchProcessor.startAsync();
+  }
+
+  RemoteFetchProcessor getRemoteFetchProcessorInstance()
+  {
+    return fetchProcessor;
   }
 
   // Cleanup the cached files that were downloaded as a part of previous bookkeeper session.
@@ -187,19 +193,18 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   }
 
   @Override
-  public List<BlockLocation> getCacheStatus(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock, int clusterType)
-      throws TException
+  public List<BlockLocation> getCacheStatus(CacheStatusRequest request) throws TException
   {
     try {
-      initializeClusterManager(clusterType);
+      initializeClusterManager(request.getClusterType());
     }
     catch (ClusterManagerInitilizationException ex) {
-      log.error("Not able to initialize ClusterManager for cluster type : " + ClusterType.findByValue(clusterType) +
-          " with Exception : " + ex);
+      log.error("Not able to initialize ClusterManager for cluster type : " +
+          ClusterType.findByValue(request.getClusterType()) + " with Exception : " + ex);
       return null;
     }
     if (nodeName == null) {
-      log.error("Node name is null for Cluster Type" + ClusterType.findByValue(clusterType));
+      log.error("Node name is null for Cluster Type" + ClusterType.findByValue(request.getClusterType()));
       return null;
     }
 
@@ -210,6 +215,13 @@ public abstract class BookKeeper implements BookKeeperService.Iface
 
     Map<Long, String> blockSplits = new HashMap<>();
     long blockNumber = 0;
+
+    long fileLength = request.getFileLength();
+    String remotePath = request.getRemotePath();
+    long lastModified = request.getLastModified();
+    long startBlock = request.getStartBlock();
+    long endBlock = request.getEndBlock();
+    boolean incrMetrics = request.isIncrMetrics();
 
     for (long i = 0; i < fileLength; i = i + splitSize) {
       long end = i + splitSize;
@@ -239,11 +251,10 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     int blockSize = CacheConfig.getBlockSize(conf);
 
     //TODO: Store Node indices too, i.e. split to nodeIndex map and compare indices here instead of strings(nodenames).
-
     int totalRequests = 0;
-    int nonlocalRequests = 0;
     int cacheRequests = 0;
     int remoteRequests = 0;
+    int nonLocalRequests = 0;
 
     try {
       for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
@@ -252,7 +263,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         long split = (blockNum * blockSize) / splitSize;
         if (!blockSplits.get(split).equalsIgnoreCase(nodeName)) {
           blockLocations.add(new BlockLocation(Location.NON_LOCAL, blockSplits.get(split)));
-          nonlocalRequests++;
+          nonLocalRequests++;
         }
         else {
           if (md.isBlockCached(blockNum)) {
@@ -270,9 +281,9 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       throw new TException(e);
     }
 
-    if (!isValidatingCachingBehavior(remotePath)) {
+    if (request.isIncrMetrics() && !isValidatingCachingBehavior(remotePath)) {
       totalRequestCount.inc(totalRequests);
-      nonlocalRequestCount.inc(nonlocalRequests);
+      nonlocalRequestCount.inc(nonLocalRequests);
       cacheRequestCount.inc(cacheRequests);
       remoteRequestCount.inc(remoteRequests);
     }
@@ -465,7 +476,8 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     long endBlock = ((offset + (length - 1)) / CacheConfig.getBlockSize(conf)) + 1;
     try {
       int idx = 0;
-      List<BlockLocation> blockLocations = getCacheStatus(remotePath, fileSize, lastModified, startBlock, endBlock, clusterType);
+      CacheStatusRequest request = new CacheStatusRequest(remotePath, fileSize, lastModified, startBlock, endBlock, clusterType);
+      List<BlockLocation> blockLocations = getCacheStatus(request);
 
       for (long blockNum = startBlock; blockNum < endBlock; blockNum++, idx++) {
         long readStart = blockNum * blockSize;

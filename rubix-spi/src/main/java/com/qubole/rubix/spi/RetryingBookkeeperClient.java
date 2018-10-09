@@ -18,6 +18,7 @@ package com.qubole.rubix.spi;
 
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.BookKeeperService;
+import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.HeartbeatStatus;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
@@ -44,8 +45,7 @@ public class RetryingBookkeeperClient extends BookKeeperService.Client implement
   }
 
   @Override
-  public List<BlockLocation> getCacheStatus(final String remotePath, final long fileLength, final long lastModified, final long startBlock, final long endBlock, final int clusterType)
-      throws TException
+  public List<BlockLocation> getCacheStatus(final CacheStatusRequest request) throws TException
   {
     return retryConnection(new Callable<List<BlockLocation>>()
     {
@@ -53,14 +53,14 @@ public class RetryingBookkeeperClient extends BookKeeperService.Client implement
       public List<BlockLocation> call()
           throws TException
       {
-        return RetryingBookkeeperClient.super.getCacheStatus(remotePath, fileLength, lastModified, startBlock, endBlock, clusterType);
+        return RetryingBookkeeperClient.super.getCacheStatus(request);
       }
     });
   }
 
   @Override
-  public void setAllCached(final String remotePath, final long fileLength, final long lastModified, final long startBlock, final long endBlock)
-      throws TException
+  public void setAllCached(final String remotePath, final long fileLength, final long lastModified,
+                           final long startBlock, final long endBlock) throws TException
   {
     retryConnection(new Callable<Void>()
     {

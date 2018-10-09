@@ -15,10 +15,12 @@ package com.qubole.rubix.common.metrics;
 
 import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.ganglia.GangliaReporter;
 import com.google.common.base.Splitter;
 import com.qubole.rubix.core.utils.ClusterUtil;
 import com.qubole.rubix.spi.CacheConfig;
 import com.readytalk.metrics.StatsDReporter;
+import info.ganglia.gmetric4j.gmetric.GMetric;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -87,8 +89,22 @@ public class BookKeeperMetrics implements AutoCloseable
               .build(CacheConfig.getStatsDMetricsHost(conf), CacheConfig.getStatsDMetricsPort(conf));
 
           log.info(String.format("Reporting metrics to StatsD [%s:%d]", CacheConfig.getStatsDMetricsHost(conf), CacheConfig.getStatsDMetricsPort(conf)));
-          statsDReporter.start(CacheConfig.getStatsDMetricsInterval(conf), TimeUnit.MILLISECONDS);
+          statsDReporter.start(CacheConfig.getMetricsReportingInterval(conf), TimeUnit.MILLISECONDS);
           reporters.add(statsDReporter);
+          break;
+        case GANGLIA:
+          if (!CacheConfig.isOnMaster(conf)) {
+            CacheConfig.setGangliaMetricsHost(conf, ClusterUtil.getMasterHostname(conf));
+          }
+          log.info(String.format("Reporting metrics to Ganglia [%s:%s]", CacheConfig.getGangliaMetricsHost(conf), CacheConfig.getGangliaMetricsPort(conf)));
+          final GMetric ganglia = new GMetric(CacheConfig.getGangliaMetricsHost(conf), CacheConfig.getGangliaMetricsPort(conf), GMetric.UDPAddressingMode.MULTICAST, 1);
+          final GangliaReporter gangliaReporter = GangliaReporter.forRegistry(metrics)
+                  .convertRatesTo(TimeUnit.SECONDS)
+                  .convertDurationsTo(TimeUnit.MILLISECONDS)
+                  .filter(metricsFilter)
+                  .build(ganglia);
+          gangliaReporter.start(CacheConfig.getMetricsReportingInterval(conf), TimeUnit.MILLISECONDS);
+          reporters.add(gangliaReporter);
           break;
       }
     }
@@ -179,16 +195,20 @@ public class BookKeeperMetrics implements AutoCloseable
    */
   public enum CacheMetric
   {
-    CACHE_EVICTION_COUNT("rubix.bookkeeper.cache_eviction.count"),
-    CACHE_INVALIDATION_COUNT("rubix.bookkeeper.cache_invalidation.count"),
-    CACHE_EXPIRY_COUNT("rubix.bookkeeper.cache_expiry.count"),
-    CACHE_HIT_RATE_GAUGE("rubix.bookkeeper.cache_hit_rate.gauge"),
-    CACHE_MISS_RATE_GAUGE("rubix.bookkeeper.cache_miss_rate.gauge"),
-    CACHE_SIZE_GAUGE("rubix.bookkeeper.cache_size_mb.gauge"),
-    TOTAL_REQUEST_COUNT("rubix.bookkeeper.total_request.count"),
-    CACHE_REQUEST_COUNT("rubix.bookkeeper.cache_request.count"),
-    NONLOCAL_REQUEST_COUNT("rubix.bookkeeper.nonlocal_request.count"),
-    REMOTE_REQUEST_COUNT("rubix.bookkeeper.remote_request.count");
+    CACHE_EVICTION_COUNT("rubix.bookkeeper.count.cache_eviction"),
+    CACHE_INVALIDATION_COUNT("rubix.bookkeeper.count.cache_invalidation"),
+    CACHE_EXPIRY_COUNT("rubix.bookkeeper.count.cache_expiry"),
+    CACHE_HIT_RATE_GAUGE("rubix.bookkeeper.gauge.cache_hit_rate"),
+    CACHE_MISS_RATE_GAUGE("rubix.bookkeeper.gauge.cache_miss_rate"),
+    CACHE_SIZE_GAUGE("rubix.bookkeeper.gauge.cache_size_mb"),
+    TOTAL_REQUEST_COUNT("rubix.bookkeeper.count.total_request"),
+    CACHE_REQUEST_COUNT("rubix.bookkeeper.count.cache_request"),
+    NONLOCAL_REQUEST_COUNT("rubix.bookkeeper.count.nonlocal_request"),
+    REMOTE_REQUEST_COUNT("rubix.bookkeeper.count.remote_request"),
+    TOTAL_ASYNC_REQUEST_COUNT("rubix.bookkeeper.count.total_async_request"),
+    PROCESSED_ASYNC_REQUEST_COUNT("rubix.bookkeeper.count.processed_async_request"),
+    ASYNC_QUEUE_SIZE_GAUGE("rubix.bookkeeper.gauge.async_queue_size"),
+    ASYNC_DOWNLOADED_MB_COUNT("rubix.bookkeeper.count.async_downloaded_mb");
 
     private final String metricName;
 
@@ -222,9 +242,9 @@ public class BookKeeperMetrics implements AutoCloseable
    */
   public enum HealthMetric
   {
-    LIVE_WORKER_GAUGE("rubix.bookkeeper.live_workers.gauge"),
-    CACHING_VALIDATED_WORKER_GAUGE("rubix.bookkeeper.caching_validated_workers.gauge"),
-    FILE_VALIDATED_WORKER_GAUGE("rubix.bookkeeper.file_validated_workers.gauge");
+    LIVE_WORKER_GAUGE("rubix.bookkeeper.gauge.live_workers"),
+    CACHING_VALIDATED_WORKER_GAUGE("rubix.bookkeeper.gauge.caching_validated_workers"),
+    FILE_VALIDATED_WORKER_GAUGE("rubix.bookkeeper.gauge.file_validated_workers");
 
     private final String metricName;
 

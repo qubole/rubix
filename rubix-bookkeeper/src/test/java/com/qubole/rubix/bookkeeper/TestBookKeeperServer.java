@@ -349,7 +349,7 @@ public class TestBookKeeperServer extends BaseServerTest
   private MockStatsDThread startServersForTestingStatsDReporter(int statsDPort, int testCasePort) throws SocketException, InterruptedException
   {
     CacheConfig.setStatsDMetricsPort(conf, statsDPort);
-    CacheConfig.setStatsDMetricsInterval(conf, 1000);
+    CacheConfig.setMetricsReportingInterval(conf, 1000);
 
     MockStatsDThread statsDThread = new MockStatsDThread(statsDPort, testCasePort);
     statsDThread.start();

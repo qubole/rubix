@@ -59,8 +59,10 @@ public class CacheConfig
   private static final String KEY_METRICS_HEALTH_ENABLED = "rubix.metrics.health.enabled";
   private static final String KEY_METRICS_JVM_ENABLED = "rubix.metrics.jvm.enabled";
   private static final String KEY_METRICS_STATSD_HOST = "rubix.metrics.statsd.host";
-  private static final String KEY_METRICS_STATSD_INTERVAL = "rubix.metrics.statsd.interval";
+  private static final String KEY_METRICS_GANGLIA_HOST = "rubix.metrics.ganglia.host";
+  private static final String KEY_METRICS_REPORTING_INTERVAL = "rubix.metrics.reporting.interval";
   private static final String KEY_METRICS_STATSD_PORT = "rubix.metrics.statsd.port";
+  private static final String KEY_METRICS_GANGLIA_PORT = "rubix.metrics.ganglia.port";
   private static final String KEY_METRICS_REPORTERS = "rubix.metrics.reporters";
   private static final String KEY_PARALLEL_WARMUP = "rubix.parallel.warmup";
   private static final String KEY_PROCESS_THREAD_INITIAL_DELAY = "rubix.request.process.initial.delay";
@@ -115,9 +117,11 @@ public class CacheConfig
   private static final boolean DEFAULT_METRICS_HEALTH_ENABLED = true;
   private static final boolean DEFAULT_METRICS_JVM_ENABLED = false;
   private static final String DEFAULT_METRICS_STATSD_HOST = "127.0.0.1"; // localhost
-  private static final int DEFAULT_METRICS_STATSD_INTERVAL = 10000; // ms
+  private static final int DEFAULT_METRICS_REPORTING_INTERVAL = 10000; // ms
   private static final int DEFAULT_METRICS_STATSD_PORT = 8125; // default StatsD port
-  private static final String DEFAULT_METRICS_REPORTERS = "JMX";
+  private static final String DEFAULT_METRICS_GANGLIA_HOST = "127.0.0.1"; // localhost
+  private static final int DEFAULT_METRICS_GANGLIA_PORT = 8649; // default Ganglia port
+  private static final String DEFAULT_METRICS_REPORTERS = "JMX, GANGLIA";
   private static final boolean DEFAULT_PARALLEL_WARMUP = false;
   private static final int DEFAULT_PROCESS_THREAD_INITIAL_DELAY = 1000; // ms
   private static final int DEFAULT_PROCESS_THREAD_INTERVAL = 1000; // ms
@@ -324,9 +328,14 @@ public class CacheConfig
     return conf.get(KEY_METRICS_STATSD_HOST, DEFAULT_METRICS_STATSD_HOST);
   }
 
-  public static int getStatsDMetricsInterval(Configuration conf)
+  public static int getMetricsReportingInterval(Configuration conf)
   {
-    return conf.getInt(KEY_METRICS_STATSD_INTERVAL, DEFAULT_METRICS_STATSD_INTERVAL);
+    return conf.getInt(KEY_METRICS_REPORTING_INTERVAL, DEFAULT_METRICS_REPORTING_INTERVAL);
+  }
+
+  public static String getGangliaMetricsHost(Configuration conf)
+  {
+    return conf.get(KEY_METRICS_GANGLIA_HOST, DEFAULT_METRICS_GANGLIA_HOST);
   }
 
   public static int getStatsDMetricsPort(Configuration conf)
@@ -337,6 +346,11 @@ public class CacheConfig
   public static int getHealthStatusExpiry(Configuration conf)
   {
     return conf.getInt(KEY_HEALTH_STATUS_EXPIRY, DEFAULT_HEALTH_STATUS_EXPIRY);
+  }
+
+  public static int getGangliaMetricsPort(Configuration conf)
+  {
+    return conf.getInt(KEY_METRICS_GANGLIA_PORT, DEFAULT_METRICS_GANGLIA_PORT);
   }
 
   public static boolean isCacheDataEnabled(Configuration conf)
@@ -569,9 +583,14 @@ public class CacheConfig
     conf.set(KEY_METRICS_STATSD_HOST, hostname);
   }
 
-  public static void setStatsDMetricsInterval(Configuration conf, int interval)
+  public static void setGangliaMetricsHost(Configuration conf, String hostname)
   {
-    conf.setInt(KEY_METRICS_STATSD_INTERVAL, interval);
+    conf.set(KEY_METRICS_GANGLIA_HOST, hostname);
+  }
+
+  public static void setMetricsReportingInterval(Configuration conf, int interval)
+  {
+    conf.setInt(KEY_METRICS_REPORTING_INTERVAL, interval);
   }
 
   public static void setStatsDMetricsPort(Configuration conf, int port)
@@ -592,6 +611,11 @@ public class CacheConfig
   public static void setHealthStatusExpiry(Configuration conf, int expiryTime)
   {
     conf.setInt(KEY_HEALTH_STATUS_EXPIRY, expiryTime);
+  }
+
+  public static void setGangliaMetricsPort(Configuration conf, int port)
+  {
+    conf.setInt(KEY_METRICS_GANGLIA_PORT, port);
   }
 
   public static void setPrestoClusterManager(Configuration conf, String clusterManager)

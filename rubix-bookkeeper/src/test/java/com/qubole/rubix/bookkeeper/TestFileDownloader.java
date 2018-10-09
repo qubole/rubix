@@ -15,11 +15,13 @@ package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
 import com.qubole.rubix.common.TestUtil;
+import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.core.utils.DataGen;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.thrift.BlockLocation;
+import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.Location;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -52,6 +54,7 @@ public class TestFileDownloader
 
   private final Configuration conf = new Configuration();
   private BookKeeper bookKeeper;
+  private FileDownloader downloader;
   private MetricRegistry metrics;
 
   @BeforeClass
@@ -70,6 +73,7 @@ public class TestFileDownloader
     CacheConfig.setBlockSize(conf, 200);
     metrics = new MetricRegistry();
     bookKeeper = new CoordinatorBookKeeper(conf, metrics);
+    downloader = bookKeeper.getRemoteFetchProcessorInstance().getFileDownloaderInstance();
   }
 
   @AfterMethod
@@ -104,7 +108,6 @@ public class TestFileDownloader
     context.addDownloadRange(100, 200);
     context.addDownloadRange(500, 800);
 
-    final FileDownloader downloader = new FileDownloader(bookKeeper, conf);
     final List<FileDownloadRequestChain> requestChains = downloader.getFileDownloadRequestChains(contextMap);
 
     assertTrue(requestChains.size() == 2,
@@ -127,7 +130,10 @@ public class TestFileDownloader
     final Path backendPath = new Path("file:///" + TEST_BACKEND_FILE_NAME);
     final ConcurrentMap<String, DownloadRequestContext> contextMap = new ConcurrentHashMap<>();
 
-    List<BlockLocation> cacheStatus = bookKeeper.getCacheStatus(backendPath.toString(), file.length(), 1000, 0, 5, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+    CacheStatusRequest request = new CacheStatusRequest(backendPath.toString(), file.length(), 1000, 0, 5,
+        ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+
+    List<BlockLocation> cacheStatus = bookKeeper.getCacheStatus(request);
 
     DownloadRequestContext context = new DownloadRequestContext(backendPath.toString(), file.length(), 1000);
     contextMap.put(backendPath.toString(), context);
@@ -135,7 +141,6 @@ public class TestFileDownloader
     context.addDownloadRange(250, 400);
     context.addDownloadRange(500, 800);
 
-    final FileDownloader downloader = new FileDownloader(bookKeeper, conf);
     final List<FileDownloadRequestChain> requestChains = downloader.getFileDownloadRequestChains(contextMap);
 
     int dataDownloaded = downloader.processDownloadRequests(requestChains);
@@ -143,7 +148,11 @@ public class TestFileDownloader
     int expectedDownloadedDataSize = 600;
     assertTrue(expectedDownloadedDataSize == dataDownloaded, "Download size didn't match");
 
-    cacheStatus = bookKeeper.getCacheStatus(backendPath.toString(), file.length(), 1000, 0, 5, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+    assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.ASYNC_DOWNLOADED_MB_COUNT.getMetricName())
+        .getCount() == expectedDownloadedDataSize, "Total downloaded bytes didn't match");
+
+    cacheStatus = bookKeeper.getCacheStatus(request);
+
     int i = 0;
     for (i = 0; i < 4; i++) {
       assertTrue(cacheStatus.get(i).getLocation() == Location.CACHED, "Data is not cached");

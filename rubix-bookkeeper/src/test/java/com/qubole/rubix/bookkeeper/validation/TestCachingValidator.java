@@ -21,6 +21,7 @@ import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import com.qubole.rubix.spi.thrift.BlockLocation;
+import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.Location;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,6 +36,7 @@ import org.testng.annotations.Test;
 import java.io.FileNotFoundException;
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -85,7 +87,7 @@ public class TestCachingValidator
   public void testValidateCachingBehavior_wrongInitialCacheStatus() throws TException
   {
     final BookKeeper bookKeeper = mock(BookKeeper.class);
-    when(bookKeeper.getCacheStatus(anyString(), anyLong(), anyLong(), anyLong(), anyLong(), anyInt())).thenReturn(TEST_LOCATIONS_CACHED);
+    when(bookKeeper.getCacheStatus(any(CacheStatusRequest.class))).thenReturn(TEST_LOCATIONS_CACHED);
     when(bookKeeper.readData(anyString(), anyLong(), anyInt(), anyLong(), anyLong(), anyInt())).thenReturn(true);
 
     checkValidator(bookKeeper, false);
@@ -114,7 +116,7 @@ public class TestCachingValidator
   public void testValidateCachingBehavior_dataRead_fileNotCached() throws TException
   {
     final BookKeeper bookKeeper = mock(BookKeeper.class);
-    when(bookKeeper.getCacheStatus(anyString(), anyLong(), anyLong(), anyLong(), anyLong(), anyInt())).thenReturn(TEST_LOCATIONS_LOCAL);
+    when(bookKeeper.getCacheStatus(any(CacheStatusRequest.class))).thenReturn(TEST_LOCATIONS_LOCAL);
     when(bookKeeper.readData(anyString(), anyLong(), anyInt(), anyLong(), anyLong(), anyInt())).thenReturn(true);
 
     checkValidator(bookKeeper, false);
@@ -129,7 +131,7 @@ public class TestCachingValidator
   public void testValidateCachingBehavior_cacheStatusException() throws TException
   {
     final BookKeeper bookKeeper = mock(BookKeeper.class);
-    when(bookKeeper.getCacheStatus(anyString(), anyLong(), anyLong(), anyLong(), anyLong(), anyInt())).thenThrow(TException.class);
+    when(bookKeeper.getCacheStatus(any(CacheStatusRequest.class))).thenThrow(TException.class);
 
     checkValidator(bookKeeper, false);
   }
