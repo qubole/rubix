@@ -14,8 +14,6 @@ package com.qubole.rubix.presto;
 
 import com.qubole.rubix.core.CachingFileSystem;
 import com.qubole.rubix.spi.ClusterType;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 
@@ -27,15 +25,12 @@ import java.net.URI;
  */
 public class CachingPrestoNativeAzureFileSystem extends CachingFileSystem<NativeAzureFileSystem>
 {
-  private static final Log LOG = LogFactory.getLog(CachingPrestoNativeAzureFileSystem.class);
-  private static PrestoClusterManager clusterManager;
+  private static final String SCHEME = "wasb";
 
   public CachingPrestoNativeAzureFileSystem()
   {
     super();
   }
-
-  private static final String SCHEME = "wasb";
 
   @Override
   public void initialize(URI uri, Configuration conf) throws IOException

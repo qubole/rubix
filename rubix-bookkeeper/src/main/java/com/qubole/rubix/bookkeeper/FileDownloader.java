@@ -13,9 +13,12 @@
 
 package com.qubole.rubix.bookkeeper;
 
+import com.codahale.metrics.Counter;
+import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.Range;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.qubole.rubix.core.FileDownloadRequestChain;
+import com.qubole.rubix.bookkeeper.utils.DiskUtils;
+import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.core.ReadRequest;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
@@ -46,18 +49,30 @@ class FileDownloader
   Configuration conf;
   private ExecutorService processService;
   int diskReadBufferSize;
+  private MetricRegistry metrics;
+  private Counter totalMBDownloaded;
+  BookKeeper bookKeeper;
 
   private static final Log log = LogFactory.getLog(FileDownloader.class);
   private static DirectBufferPool bufferPool = new DirectBufferPool();
 
-  public FileDownloader(Configuration conf)
+  public FileDownloader(BookKeeper bookKeeper, MetricRegistry metrics, Configuration conf)
   {
+    this.bookKeeper = bookKeeper;
     this.conf = conf;
+    this.metrics = metrics;
     int numThreads = CacheConfig.getRemoteFetchThreads(conf);
     this.diskReadBufferSize = CacheConfig.getDiskReadBufferSize(conf);
 
     ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(numThreads);
     processService = MoreExecutors.getExitingExecutorService(executor);
+
+    initializeMetrics();
+  }
+
+  private void initializeMetrics()
+  {
+    totalMBDownloaded = metrics.counter(BookKeeperMetrics.CacheMetric.ASYNC_DOWNLOADED_MB_COUNT.getMetricName());
   }
 
   protected List<FileDownloadRequestChain> getFileDownloadRequestChains(ConcurrentMap<String, DownloadRequestContext> contextMap)
@@ -77,7 +92,7 @@ class FileDownloader
       log.info("Processing Request for File : " + path.toString() + " LocalFile : " + localPath);
       ByteBuffer directWriteBuffer = bufferPool.getBuffer(diskReadBufferSize);
 
-      FileDownloadRequestChain requestChain = new FileDownloadRequestChain(fs, localPath,
+      FileDownloadRequestChain requestChain = new FileDownloadRequestChain(bookKeeper, fs, localPath,
           directWriteBuffer, conf, context.getRemoteFilePath(), context.getFileSize(),
           context.getLastModifiedTime());
 
@@ -96,7 +111,7 @@ class FileDownloader
     return readRequestChainList;
   }
 
-  protected void processDownloadRequests(List<FileDownloadRequestChain> readRequestChainList)
+  protected int processDownloadRequests(List<FileDownloadRequestChain> readRequestChainList)
   {
     int sizeRead = 0;
     List<Future<Integer>> futures = new ArrayList<Future<Integer>>();
@@ -121,13 +136,16 @@ class FileDownloader
         if (read == totalBytesToBeDownloaded) {
           requestChain.updateCacheStatus(requestChain.getRemotePath(), requestChain.getFileSize(),
               requestChain.getLastModified(), CacheConfig.getBlockSize(conf), conf);
+          sizeRead += read;
         }
-        sizeRead += read;
       }
       catch (ExecutionException | InterruptedException ex) {
         log.error(ex.getStackTrace());
         requestChain.cancel();
       }
     }
+    int dataDownloadedInMB = DiskUtils.bytesToMB(sizeRead);
+    this.totalMBDownloaded.inc(dataDownloadedInMB);
+    return sizeRead;
   }
 }

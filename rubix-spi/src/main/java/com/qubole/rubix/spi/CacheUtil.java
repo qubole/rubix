@@ -51,7 +51,6 @@ public class CacheUtil
     for (String dirPrefix : dirPrefixList) {
       for (int i = 0; i < maxDisks; ++i) {
         final String cacheParentDir = dirPrefix + i;
-        log.debug("Checking for " + cacheParentDir);
 
         if (exists(cacheParentDir)) {
           parentDirectoryExists = true;
@@ -99,7 +98,6 @@ public class CacheUtil
         for (String dirPrefix : dirPrefixList) {
           for (int i = 0; i < maxDisks; ++i) {
             final String cacheDirPath = dirPrefix + i + "/" + dirSuffix;
-            log.debug("Checking " + cacheDirPath);
             if (exists(cacheDirPath)) {
               dirPathMap.put(numDisks, dirPrefix + i);
               ++numDisks;
@@ -148,7 +146,19 @@ public class CacheUtil
   public static String getMetadataFilePath(String remotePath, Configuration conf)
   {
     final String absLocation = getDirectory(remotePath, conf);
-    return absLocation + "/" + getName(remotePath) + "_mdfile";
+    return absLocation + "/" + getName(remotePath) + CacheConfig.getCacheMetadataFileSuffix(conf);
+  }
+
+  /**
+   * Determine whether the file at the given path is a metadata file.
+   *
+   * @param filePath  The path to a possible metadata file.
+   * @param conf      The current Hadoop configuration.
+   * @return true if the file is a metadata file, false otherwise
+   */
+  public static boolean isMetadataFile(String filePath, Configuration conf)
+  {
+    return filePath.endsWith(CacheConfig.getCacheMetadataFileSuffix(conf));
   }
 
   /**
@@ -258,7 +268,7 @@ public class CacheUtil
    * @param remotePath  The remote path to parse.
    * @return The remote path's directory name.
    */
-  private static String getName(String remotePath)
+  public static String getName(String remotePath)
   {
     return remotePath.contains("/") ? remotePath.substring(remotePath.lastIndexOf('/') + 1) : remotePath;
   }

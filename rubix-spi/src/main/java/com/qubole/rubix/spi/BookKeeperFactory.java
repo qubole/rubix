@@ -13,6 +13,8 @@
 package com.qubole.rubix.spi;
 
 import com.qubole.rubix.spi.thrift.BookKeeperService;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
@@ -24,6 +26,7 @@ import org.apache.thrift.transport.TTransportException;
 public class BookKeeperFactory
 {
   BookKeeperService.Iface bookKeeper;
+  private static Log log = LogFactory.getLog(BookKeeperFactory.class.getName());
 
   public BookKeeperFactory()
   {

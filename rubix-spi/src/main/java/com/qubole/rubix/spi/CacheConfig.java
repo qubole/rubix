@@ -32,6 +32,7 @@ public class CacheConfig
 
   private static final String KEY_BLOCK_SIZE = "hadoop.cache.data.block-size";
   private static final String KEY_CACHE_ENABLED = "hadoop.cache.data.enabled";
+  private static final String KEY_CACHE_METADATA_FILE_SUFFIX = "rubix.cache.metadata.file.suffix";
   private static final String KEY_CLIENT_TIMEOUT = "hadoop.cache.data.client.timeout";
   private static final String KEY_DATA_CACHE_EXPIRY = "hadoop.cache.data.expiration";
   private static final String KEY_DATA_CACHE_EXPIRY_AFTER_WRITE = "hadoop.cache.data.expiration.after-write";
@@ -55,11 +56,13 @@ public class CacheConfig
   private static final String KEY_LOCAL_SERVER_PORT = "hadoop.cache.data.local.server.port";
   private static final String KEY_MAX_RETRIES = "hadoop.cache.data.client.num-retries";
   private static final String KEY_METRICS_CACHE_ENABLED = "rubix.metrics.cache.enabled";
-  private static final String KEY_METRICS_LIVENESS_ENABLED = "rubix.metrics.liveness.enabled";
+  private static final String KEY_METRICS_HEALTH_ENABLED = "rubix.metrics.health.enabled";
   private static final String KEY_METRICS_JVM_ENABLED = "rubix.metrics.jvm.enabled";
   private static final String KEY_METRICS_STATSD_HOST = "rubix.metrics.statsd.host";
-  private static final String KEY_METRICS_STATSD_INTERVAL = "rubix.metrics.statsd.interval";
+  private static final String KEY_METRICS_GANGLIA_HOST = "rubix.metrics.ganglia.host";
+  private static final String KEY_METRICS_REPORTING_INTERVAL = "rubix.metrics.reporting.interval";
   private static final String KEY_METRICS_STATSD_PORT = "rubix.metrics.statsd.port";
+  private static final String KEY_METRICS_GANGLIA_PORT = "rubix.metrics.ganglia.port";
   private static final String KEY_METRICS_REPORTERS = "rubix.metrics.reporters";
   private static final String KEY_PARALLEL_WARMUP = "rubix.parallel.warmup";
   private static final String KEY_PROCESS_THREAD_INITIAL_DELAY = "rubix.request.process.initial.delay";
@@ -72,7 +75,10 @@ public class CacheConfig
   private static final String KEY_SERVICE_RETRY_INTERVAL = "rubix.network.service.retry-interval";
   private static final String KEY_SERVICE_MAX_RETRIES = "rubix.network.service.max-retries";
   private static final String KEY_SOCKET_READ_TIMEOUT = "hadoop.cache.network.socket.read.timeout";
-  private static final String KEY_WORKER_LIVENESS_EXPIRY = "rubix.monitor.worker.liveness.expiry";
+  private static final String KEY_VALIDATION_ENABLED = "rubix.validation.enabled";
+  private static final String KEY_FILE_VALIDATION_INTERVAL = "rubix.validation.file.interval";
+  private static final String KEY_CACHING_VALIDATION_INTERVAL = "rubix.validation.caching.interval";
+  private static final String KEY_HEALTH_STATUS_EXPIRY = "rubix.monitor.health.status.expiry";
   private static final String KEY_PRESTO_CLUSTER_MANAGER = "rubix.presto.clustermanager.class";
   private static final String KEY_HADOOP_CLUSTER_MANAGER = "rubix.hadoop.clustermanager.class";
   private static final String KEY_DUMMY_CLUSTER_MANAGER = "rubix.dummy.clustermanager.class";
@@ -85,12 +91,13 @@ public class CacheConfig
   // default values
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
   private static final int DEFAULT_CLIENT_TIMEOUT = 10000; // ms
+  private static final String DEFAULT_CACHE_METADATA_FILE_SUFFIX = "_mdfile";
   private static final String DEFAULT_DATA_CACHE_DIR_PREFIX = "/media/ephemeral";
   private static final String DEFAULT_DATA_CACHE_DIR_SUFFIX = "/fcache/";
   private static final boolean DEFAULT_DATA_CACHE_ENABLED = true;
   private static final int DEFAULT_DATA_CACHE_EXPIRY_AFTER_WRITE = Integer.MAX_VALUE; // ms; infinite by default
   private static final int DEFAULT_DATA_CACHE_EXPIRY = Integer.MAX_VALUE;
-  private static final int DEFAULT_DATA_CACHE_FULLNESS = 80; // percent
+  private static final int DEFAULT_DATA_CACHE_FULLNESS = 50; // percent
   private static final String DEFAULT_DATA_CACHE_LOCATION_BLACKLIST = ""; // regex
   private static final String DEFAULT_DATA_CACHE_LOCATION_WHITELIST = ".*"; // regex
   private static final int DEFAULT_DATA_CACHE_MAX_DISKS = 5;
@@ -109,12 +116,14 @@ public class CacheConfig
   private static final int DEFAULT_MAX_BUFFER_SIZE = 1024;
   private static final int DEFAULT_MAX_RETRIES = 3;
   private static final boolean DEFAULT_METRICS_CACHE_ENABLED = true;
-  private static final boolean DEFAULT_METRICS_LIVENESS_ENABLED = true;
+  private static final boolean DEFAULT_METRICS_HEALTH_ENABLED = true;
   private static final boolean DEFAULT_METRICS_JVM_ENABLED = false;
   private static final String DEFAULT_METRICS_STATSD_HOST = "127.0.0.1"; // localhost
-  private static final int DEFAULT_METRICS_STATSD_INTERVAL = 10000; // ms
+  private static final int DEFAULT_METRICS_REPORTING_INTERVAL = 10000; // ms
   private static final int DEFAULT_METRICS_STATSD_PORT = 8125; // default StatsD port
-  private static final String DEFAULT_METRICS_REPORTERS = "JMX";
+  private static final String DEFAULT_METRICS_GANGLIA_HOST = "127.0.0.1"; // localhost
+  private static final int DEFAULT_METRICS_GANGLIA_PORT = 8649; // default Ganglia port
+  private static final String DEFAULT_METRICS_REPORTERS = "JMX, GANGLIA";
   private static final boolean DEFAULT_PARALLEL_WARMUP = false;
   private static final int DEFAULT_PROCESS_THREAD_INITIAL_DELAY = 1000; // ms
   private static final int DEFAULT_PROCESS_THREAD_INTERVAL = 1000; // ms
@@ -126,9 +135,10 @@ public class CacheConfig
   private static final int DEFAULT_SERVICE_RETRY_INTERVAL = 30000; // ms
   private static final int DEFAULT_SERVICE_MAX_RETRIES = 100;
   private static final int DEFAULT_SOCKET_READ_TIMEOUT = 30000; // ms
-  private static final int DEFAULT_WORKER_LIVENESS_EXPIRY = 60000; // ms
-  private static final int DEFAULT_WORKER_LIVENESS_METRIC_INITIAL_DELAY = 30000; // ms
-  private static final int DEFAULT_WORKER_LIVENESS_METRIC_INTERVAL = 30000; // ms
+  private static final int DEFAULT_HEALTH_STATUS_EXPIRY = 60000; // ms
+  private static final boolean DEFAULT_VALIDATION_ENABLED = true;
+  private static final int DEFAULT_CACHING_VALIDATION_INTERVAL = 1800000; // ms (30min)
+  private static final int DEFAULT_FILE_VALIDATION_INTERVAL = 1800000; // ms (30min)
   private static final String DEFAULT_PRESTO_CLUSTER_MANAGER = "com.qubole.rubix.presto.PrestoClusterManager";
   private static final String DEFAULT_HADOOP_CLUSTER_MANAGER = "com.qubole.rubix.hadoop2.Hadoop2ClusterManager";
   private static final String DEFAULT_DUMMY_CLUSTER_MANAGER = "com.qubole.rubix.core.utils.DummyClusterManager";
@@ -205,6 +215,21 @@ public class CacheConfig
   public static int getCacheMaxDisks(Configuration conf)
   {
     return conf.getInt(KEY_DATA_CACHE_MAX_DISKS, DEFAULT_DATA_CACHE_MAX_DISKS);
+  }
+
+  public static String getCacheMetadataFileSuffix(Configuration conf)
+  {
+    return conf.get(KEY_CACHE_METADATA_FILE_SUFFIX, DEFAULT_CACHE_METADATA_FILE_SUFFIX);
+  }
+
+  public static int getCachingValidationInterval(Configuration conf)
+  {
+    return conf.getInt(KEY_CACHING_VALIDATION_INTERVAL, DEFAULT_CACHING_VALIDATION_INTERVAL);
+  }
+
+  public static int getFileValidationInterval(Configuration conf)
+  {
+    return conf.getInt(KEY_FILE_VALIDATION_INTERVAL, DEFAULT_FILE_VALIDATION_INTERVAL);
   }
 
   public static int getClientTimeout(Configuration conf)
@@ -307,9 +332,14 @@ public class CacheConfig
     return conf.get(KEY_METRICS_STATSD_HOST, DEFAULT_METRICS_STATSD_HOST);
   }
 
-  public static int getStatsDMetricsInterval(Configuration conf)
+  public static int getMetricsReportingInterval(Configuration conf)
   {
-    return conf.getInt(KEY_METRICS_STATSD_INTERVAL, DEFAULT_METRICS_STATSD_INTERVAL);
+    return conf.getInt(KEY_METRICS_REPORTING_INTERVAL, DEFAULT_METRICS_REPORTING_INTERVAL);
+  }
+
+  public static String getGangliaMetricsHost(Configuration conf)
+  {
+    return conf.get(KEY_METRICS_GANGLIA_HOST, DEFAULT_METRICS_GANGLIA_HOST);
   }
 
   public static int getStatsDMetricsPort(Configuration conf)
@@ -317,9 +347,14 @@ public class CacheConfig
     return conf.getInt(KEY_METRICS_STATSD_PORT, DEFAULT_METRICS_STATSD_PORT);
   }
 
-  public static int getWorkerLivenessExpiry(Configuration conf)
+  public static int getHealthStatusExpiry(Configuration conf)
   {
-    return conf.getInt(KEY_WORKER_LIVENESS_EXPIRY, DEFAULT_WORKER_LIVENESS_EXPIRY);
+    return conf.getInt(KEY_HEALTH_STATUS_EXPIRY, DEFAULT_HEALTH_STATUS_EXPIRY);
+  }
+
+  public static int getGangliaMetricsPort(Configuration conf)
+  {
+    return conf.getInt(KEY_METRICS_GANGLIA_PORT, DEFAULT_METRICS_GANGLIA_PORT);
   }
 
   public static boolean isCacheDataEnabled(Configuration conf)
@@ -332,9 +367,9 @@ public class CacheConfig
     return conf.getBoolean(KEY_METRICS_CACHE_ENABLED, DEFAULT_METRICS_CACHE_ENABLED);
   }
 
-  public static boolean areLivenessMetricsEnabled(Configuration conf)
+  public static boolean areHealthMetricsEnabled(Configuration conf)
   {
-    return conf.getBoolean(KEY_METRICS_LIVENESS_ENABLED, DEFAULT_METRICS_LIVENESS_ENABLED);
+    return conf.getBoolean(KEY_METRICS_HEALTH_ENABLED, DEFAULT_METRICS_HEALTH_ENABLED);
   }
 
   public static boolean areJvmMetricsEnabled(Configuration conf)
@@ -355,6 +390,11 @@ public class CacheConfig
   public static boolean isParallelWarmupEnabled(Configuration conf)
   {
     return conf.getBoolean(KEY_PARALLEL_WARMUP, DEFAULT_PARALLEL_WARMUP);
+  }
+
+  public static boolean isValidationEnabled(Configuration conf)
+  {
+    return conf.getBoolean(KEY_VALIDATION_ENABLED, DEFAULT_VALIDATION_ENABLED);
   }
 
   public static String getPrestoClusterManager(Configuration conf)
@@ -467,6 +507,11 @@ public class CacheConfig
     conf.set(KEY_DATA_CACHE_TABLE_WHITELIST, tableWhitelist);
   }
 
+  public static void setCacheMetadataFileSuffix(Configuration conf, String fileSuffix)
+  {
+    conf.set(KEY_CACHE_METADATA_FILE_SUFFIX, fileSuffix);
+  }
+
   public static void setCacheMetricsEnabled(Configuration conf, boolean cacheMetricsEnabled)
   {
     conf.setBoolean(KEY_METRICS_CACHE_ENABLED, cacheMetricsEnabled);
@@ -482,6 +527,11 @@ public class CacheConfig
     conf.setInt(KEY_HEARTBEAT_INTERVAL, interval);
   }
 
+  public static void setValidationEnabled(Configuration conf, boolean isValidationEnabled)
+  {
+    conf.setBoolean(KEY_VALIDATION_ENABLED, isValidationEnabled);
+  }
+
   public static void setIsStrictMode(Configuration conf, boolean isStrictMode)
   {
     conf.setBoolean(KEY_DATA_CACHE_STRICT_MODE, isStrictMode);
@@ -489,7 +539,7 @@ public class CacheConfig
 
   public static void setIsParallelWarmupEnabled(Configuration conf, boolean isParallelWarmupEnabled)
   {
-    conf.setBoolean(KEY_DATA_CACHE_STRICT_MODE, isParallelWarmupEnabled);
+    conf.setBoolean(KEY_PARALLEL_WARMUP, isParallelWarmupEnabled);
   }
 
   public static void setJvmMetricsEnabled(Configuration conf, boolean jvmMetricsEnabled)
@@ -497,9 +547,9 @@ public class CacheConfig
     conf.setBoolean(KEY_METRICS_JVM_ENABLED, jvmMetricsEnabled);
   }
 
-  public static void setLivenessMetricsEnabled(Configuration conf, boolean livenessMetricsEnabled)
+  public static void setHealthMetricsEnabled(Configuration conf, boolean healthMetricsEnabled)
   {
-    conf.setBoolean(KEY_METRICS_LIVENESS_ENABLED, livenessMetricsEnabled);
+    conf.setBoolean(KEY_METRICS_HEALTH_ENABLED, healthMetricsEnabled);
   }
 
   public static void setLocalServerPort(Configuration conf, int localServerPort)
@@ -547,9 +597,14 @@ public class CacheConfig
     conf.set(KEY_METRICS_STATSD_HOST, hostname);
   }
 
-  public static void setStatsDMetricsInterval(Configuration conf, int interval)
+  public static void setGangliaMetricsHost(Configuration conf, String hostname)
   {
-    conf.setInt(KEY_METRICS_STATSD_INTERVAL, interval);
+    conf.set(KEY_METRICS_GANGLIA_HOST, hostname);
+  }
+
+  public static void setMetricsReportingInterval(Configuration conf, int interval)
+  {
+    conf.setInt(KEY_METRICS_REPORTING_INTERVAL, interval);
   }
 
   public static void setStatsDMetricsPort(Configuration conf, int port)
@@ -557,9 +612,24 @@ public class CacheConfig
     conf.setInt(KEY_METRICS_STATSD_PORT, port);
   }
 
-  public static void setWorkerLivenessExpiry(Configuration conf, int expiryTime)
+  public static void setCachingValidationInterval(Configuration conf, int interval)
   {
-    conf.setInt(KEY_WORKER_LIVENESS_EXPIRY, expiryTime);
+    conf.setInt(KEY_CACHING_VALIDATION_INTERVAL, interval);
+  }
+
+  public static void setFileValidationInterval(Configuration conf, int interval)
+  {
+    conf.setInt(KEY_FILE_VALIDATION_INTERVAL, interval);
+  }
+
+  public static void setHealthStatusExpiry(Configuration conf, int expiryTime)
+  {
+    conf.setInt(KEY_HEALTH_STATUS_EXPIRY, expiryTime);
+  }
+
+  public static void setGangliaMetricsPort(Configuration conf, int port)
+  {
+    conf.setInt(KEY_METRICS_GANGLIA_PORT, port);
   }
 
   public static void setPrestoClusterManager(Configuration conf, String clusterManager)

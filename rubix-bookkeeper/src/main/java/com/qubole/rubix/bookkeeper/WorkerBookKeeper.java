@@ -18,33 +18,28 @@ import com.google.common.base.Ticker;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.google.common.util.concurrent.AbstractScheduledService;
-import com.google.common.util.concurrent.Service;
 import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.core.utils.ClusterUtil;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.thrift.HeartbeatStatus;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.thrift.shaded.TException;
 import org.apache.thrift.shaded.transport.TTransportException;
 
 import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.net.InetAddress;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class WorkerBookKeeper extends BookKeeper
 {
-  private static Log log = LogFactory.getLog(WorkerBookKeeper.class.getName());
+  private static Log log = LogFactory.getLog(WorkerBookKeeper.class);
   private LoadingCache<Integer, List<String>> nodeListCache;
   private HeartbeatService heartbeatService;
   private BookKeeperFactory bookKeeperFactory;
@@ -54,15 +49,15 @@ public class WorkerBookKeeper extends BookKeeper
 
   public WorkerBookKeeper(Configuration conf, MetricRegistry metrics) throws FileNotFoundException
   {
-    this(conf, metrics, Ticker.systemTicker());
+    this(conf, metrics, Ticker.systemTicker(), new BookKeeperFactory());
   }
 
-  public WorkerBookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker) throws FileNotFoundException
+  public WorkerBookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker, BookKeeperFactory factory) throws FileNotFoundException
   {
     super(conf, metrics, Ticker.systemTicker());
-    this.bookKeeperFactory = new BookKeeperFactory();
+    this.bookKeeperFactory = factory;
     this.masterHostname = ClusterUtil.getMasterHostname(conf);
-    startHeartbeatService(conf);
+    startHeartbeatService(conf, metrics, factory);
     initializeNodesCache(conf, ticker);
   }
 
@@ -80,14 +75,19 @@ public class WorkerBookKeeper extends BookKeeper
             if (client == null) {
               client = initializeClientWithRetry(bookKeeperFactory, conf, masterHostname);
             }
-            log.info("Fetching list of nodes for cluster type " + s.intValue() + " from master : " + masterHostname);
+            log.info("Fetching list of nodes for cluster type " + s.intValue() + " from master : " + masterHostname + " Client " + client);
             return client.getNodeHostNames(s.intValue());
           }
         }, executor));
   }
 
+  public WorkerBookKeeper(Configuration conf, MetricRegistry metrics, BookKeeperFactory factory) throws FileNotFoundException
+  {
+    this(conf, metrics, Ticker.systemTicker(), factory);
+  }
+
   @Override
-  public void handleHeartbeat(String workerHostname)
+  public void handleHeartbeat(String workerHostname, HeartbeatStatus request)
   {
     throw new UnsupportedOperationException("Worker node should not handle heartbeat");
   }
@@ -127,9 +127,9 @@ public class WorkerBookKeeper extends BookKeeper
   /**
    * Start the {@link HeartbeatService} for this worker node.
    */
-  private void startHeartbeatService(Configuration conf)
+  private void startHeartbeatService(Configuration conf, MetricRegistry metrics, BookKeeperFactory factory)
   {
-    this.heartbeatService = new HeartbeatService(conf, this.bookKeeperFactory);
+    this.heartbeatService = new HeartbeatService(conf, metrics, factory, this);
     heartbeatService.startAsync();
   }
 
@@ -168,81 +168,5 @@ public class WorkerBookKeeper extends BookKeeper
 
     log.fatal("Heartbeat service ran out of retries to connect to the master BookKeeper");
     throw new RuntimeException("Could not start heartbeat service");
-  }
-
-  /**
-   * Class to send a heartbeat to the master node in the cluster.
-   */
-  protected static class HeartbeatService extends AbstractScheduledService
-  {
-    private static final String KEY_MASTER_HOSTNAME = "master.hostname";
-    private static final String KEY_YARN_RESOURCEMANAGER_ADDRESS = "yarn.resourcemanager.address";
-
-    // The executor used for running listener callbacks.
-    private final Executor executor = Executors.newSingleThreadExecutor();
-
-    // The client for interacting with the master BookKeeper.
-    private RetryingBookkeeperClient bookkeeperClient;
-
-    // The initial delay for sending heartbeats.
-    private final int heartbeatInitialDelay;
-
-    // The interval at which to send a heartbeat.
-    private final int heartbeatInterval;
-
-    // The current Hadoop configuration.
-    private final Configuration conf;
-
-    private final String hostName;
-
-    public HeartbeatService(Configuration conf, BookKeeperFactory bookKeeperFactory)
-    {
-      this.conf = conf;
-      this.heartbeatInitialDelay = CacheConfig.getHeartbeatInitialDelay(conf);
-      this.heartbeatInterval = CacheConfig.getHeartbeatInterval(conf);
-      this.hostName = ClusterUtil.getMasterHostname(conf);
-      this.bookkeeperClient = initializeClientWithRetry(bookKeeperFactory, conf, hostName);
-    }
-
-    @Override
-    protected void startUp()
-    {
-      log.info(String.format("Starting service %s in thread %s", serviceName(), Thread.currentThread().getId()));
-      addListener(new HeartbeatService.FailureListener(), executor);
-    }
-
-    @Override
-    protected void runOneIteration()
-    {
-      try {
-        log.debug(String.format("Sending heartbeat to %s", hostName));
-        bookkeeperClient.handleHeartbeat(InetAddress.getLocalHost().getCanonicalHostName());
-      }
-      catch (IOException e) {
-        log.error("Could not send heartbeat", e);
-      }
-      catch (TException te) {
-        log.error(String.format("Could not connect to master node [%s]; will reattempt on next heartbeat", hostName));
-      }
-    }
-
-    @Override
-    protected AbstractScheduledService.Scheduler scheduler()
-    {
-      return AbstractScheduledService.Scheduler.newFixedDelaySchedule(heartbeatInitialDelay, heartbeatInterval, TimeUnit.MILLISECONDS);
-    }
-
-    /**
-     * Listener to handle failures for this service.
-     */
-    private static class FailureListener extends com.google.common.util.concurrent.Service.Listener
-    {
-      @Override
-      public void failed(Service.State from, Throwable failure)
-      {
-        super.failed(from, failure);
-        log.error("Encountered a problem", failure);
-      }
-    }
   }
 }
