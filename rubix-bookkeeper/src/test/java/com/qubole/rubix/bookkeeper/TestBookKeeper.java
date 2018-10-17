@@ -79,7 +79,7 @@ public class TestBookKeeper
 
     metrics = new MetricRegistry();
     bookKeeper = new CoordinatorBookKeeper(conf, metrics);
-    bookKeeper.clusterManager = null;
+    bookKeeper.getClusterManagerMap().clear();
   }
 
   @AfterMethod
