@@ -87,8 +87,6 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   static String nodeHostAddress;
   private final Configuration conf;
   private static Integer lock = 1;
-  //private List<String> nodes;
-  //int currentNodeIndex = -1;
   static long splitSize;
   private final RemoteFetchProcessor fetchProcessor;
   private final Ticker ticker;
@@ -237,7 +235,6 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         end = fileLength;
       }
       String key = remotePath + i + end;
-      log.info("NodeSize -- " + clusterNodes.size());
       int nodeIndex = metadata.getClusterManager().getNodeIndex(clusterNodes.size(), key);
       blockSplits.put(blockNumber, clusterNodes.get(nodeIndex));
       blockNumber++;
