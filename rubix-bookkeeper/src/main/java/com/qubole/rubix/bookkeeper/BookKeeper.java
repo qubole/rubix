@@ -81,7 +81,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
 
   protected static Cache<String, FileMetadata> fileMetadataCache;
   private static LoadingCache<String, FileInfo> fileInfoCache;
-  private Map<Integer, ClusterManagerMetadata> clusterManagerMap;
+  private Map<Integer, ClusterManager> clusterManagerMap;
   String nodeName;
   static String nodeHostName;
   static String nodeHostAddress;
@@ -114,7 +114,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     this.conf = conf;
     this.metrics = metrics;
     this.ticker = ticker;
-    clusterManagerMap = new HashMap<Integer, ClusterManagerMetadata>();
+    clusterManagerMap = new HashMap<Integer, ClusterManager>();
     initializeMetrics();
     initializeCache(conf, ticker);
     cleanupOldCacheFiles(conf);
@@ -127,7 +127,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     return fetchProcessor;
   }
 
-  Map<Integer, ClusterManagerMetadata> getClusterManagerMap()
+  Map<Integer, ClusterManager> getClusterManagerMap()
   {
     return clusterManagerMap;
   }
@@ -226,8 +226,8 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     long startBlock = request.getStartBlock();
     long endBlock = request.getEndBlock();
     boolean incrMetrics = request.isIncrMetrics();
-    ClusterManagerMetadata metadata = clusterManagerMap.get(request.getClusterType());
-    List<String> clusterNodes = metadata.getClusterNodes();
+    ClusterManager clusterManager = clusterManagerMap.get(request.getClusterType());
+    List<String> clusterNodes = clusterManager.getNodes();
 
     for (long i = 0; i < fileLength; i = i + splitSize) {
       long end = i + splitSize;
@@ -235,7 +235,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         end = fileLength;
       }
       String key = remotePath + i + end;
-      int nodeIndex = metadata.getClusterManager().getNodeIndex(clusterNodes.size(), key);
+      int nodeIndex = clusterManager.getNodeIndex(clusterNodes.size(), key);
       blockSplits.put(blockNumber, clusterNodes.get(nodeIndex));
       blockNumber++;
     }
@@ -317,44 +317,33 @@ public abstract class BookKeeper implements BookKeeperService.Iface
           manager.initialize(conf);
           splitSize = manager.getSplitSize();
 
-          ClusterManagerMetadata metadata = new ClusterManagerMetadata(manager);
-          clusterManagerMap.put(clusterType, metadata);
+          clusterManagerMap.put(clusterType, manager);
 
           if (clusterType == TEST_CLUSTER_MANAGER.ordinal() || clusterType == TEST_CLUSTER_MANAGER_MULTINODE.ordinal()) {
-            metadata.setCurrentNodeIndex(0);
             List<String> nodes = manager.getNodes();
             nodeName = nodes.get(0);
-            if (clusterType == TEST_CLUSTER_MANAGER_MULTINODE.ordinal()) {
-              nodes.add(nodeName + "_copy");
-            }
-            metadata.setClusterNodes(nodes);
             return;
           }
         }
       }
     }
 
-    ClusterManagerMetadata clusterManagerMetadata = clusterManagerMap.get(clusterType);
-    List<String> nodes = clusterManagerMetadata.getClusterManager().getNodes();
-    int currentNodeIndex = -1;
+    ClusterManager clusterManager = clusterManagerMap.get(clusterType);
+    List<String> nodes = clusterManager.getNodes();
+
     if (nodes == null || nodes.size() == 0) {
       log.error("Could not initialize as no cluster node is found");
     }
     else if (nodes.indexOf(nodeHostName) >= 0) {
-      currentNodeIndex = nodes.indexOf(nodeHostName);
       nodeName = nodeHostName;
     }
     else if (nodes.indexOf(nodeHostAddress) >= 0) {
-      currentNodeIndex = nodes.indexOf(nodeHostAddress);
       nodeName = nodeHostAddress;
     }
     else {
       log.error(String.format("Could not initialize cluster nodes=%s nodeHostName=%s nodeHostAddress=%s " +
-          "currentNodeIndex=%d", nodes, nodeHostName, nodeHostAddress, currentNodeIndex));
+          nodes, nodeHostName, nodeHostAddress));
     }
-
-    clusterManagerMetadata.setClusterNodes(nodes);
-    clusterManagerMetadata.setCurrentNodeIndex(currentNodeIndex);
   }
 
   @VisibleForTesting
@@ -656,43 +645,6 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       catch (IOException e) {
         log.warn("Could not cleanup FileMetadata for " + notification.getKey(), e);
       }
-    }
-  }
-
-  private class ClusterManagerMetadata
-  {
-    ClusterManager manager;
-    List<String> nodes;
-    int currentNodeIndex;
-
-    public ClusterManagerMetadata(ClusterManager manager)
-    {
-      this.manager = manager;
-    }
-
-    public ClusterManager getClusterManager()
-    {
-      return manager;
-    }
-
-    public List<String> getClusterNodes()
-    {
-      return nodes;
-    }
-
-    public int getCurrentNodeIndex()
-    {
-      return currentNodeIndex;
-    }
-
-    public void setClusterNodes(List<String> nodes)
-    {
-      this.nodes = nodes;
-    }
-
-    public void setCurrentNodeIndex(int index)
-    {
-      this.currentNodeIndex = index;
     }
   }
 

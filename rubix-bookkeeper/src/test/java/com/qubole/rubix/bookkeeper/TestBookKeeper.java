@@ -34,6 +34,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.thrift.shaded.TException;
+import org.mockito.Mockito;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -41,10 +42,15 @@ import org.testng.annotations.Test;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 
 /**
  * Created by Abhishek on 6/15/18.
@@ -322,11 +328,53 @@ public class TestBookKeeper
     assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.NONLOCAL_REQUEST_COUNT.getMetricName()).getCount(), 0);
     assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.CACHE_REQUEST_COUNT.getMetricName()).getCount(), 0);
 
+    BookKeeper spyBookKeeper = Mockito.spy(bookKeeper);
+    try {
+      Mockito.when(spyBookKeeper.getClusterManagerInstance(ClusterType.TEST_CLUSTER_MANAGER_MULTINODE, conf)).thenReturn(
+          new ClusterManager()
+          {
+            @Override
+            public List<String> getNodes()
+            {
+              List<String> list = new ArrayList<String>();
+              String hostName = "";
+              try {
+                hostName = InetAddress.getLocalHost().getCanonicalHostName();
+              }
+              catch (UnknownHostException e) {
+                hostName = "localhost";
+              }
+              list.add(hostName);
+              list.add(hostName + "_copy");
+              return list;
+            }
+            @Override
+            public Integer getNextRunningNodeIndex(int startIndex)
+            {
+              return startIndex;
+            }
+            @Override
+            public Integer getPreviousRunningNodeIndex(int startIndex)
+            {
+              return startIndex;
+            }
+
+            @Override
+            public boolean isMaster()
+            {
+              return false;
+            }
+          });
+    }
+    catch (ClusterManagerInitilizationException ex) {
+      fail("Not able to initialize Cluster Manager");
+    }
+
     CacheStatusRequest request = new CacheStatusRequest(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
         TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER_MULTINODE.ordinal());
     request.setIncrMetrics(true);
 
-    bookKeeper.getCacheStatus(request);
+    spyBookKeeper.getCacheStatus(request);
 
     assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.NONLOCAL_REQUEST_COUNT.getMetricName()).getCount(), totalRequests);
     assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.CACHE_REQUEST_COUNT.getMetricName()).getCount(), 0);
