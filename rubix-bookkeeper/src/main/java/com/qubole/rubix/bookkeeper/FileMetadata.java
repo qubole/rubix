@@ -16,6 +16,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.cache.Cache;
 import com.google.common.cache.RemovalCause;
 import com.google.common.util.concurrent.Striped;
+import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -26,8 +27,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.concurrent.locks.Lock;
-
-import static com.qubole.rubix.spi.CacheConfig.getBlockSize;
 
 /**
  * Created by stagra on 29/12/15.
@@ -40,6 +39,7 @@ public class FileMetadata
   private long size;
   private long lastModified;
   private long currentFileSize;
+  private int blockSize;
 
   private boolean needsRefresh = true;
 
@@ -63,8 +63,9 @@ public class FileMetadata
     this.currentFileSize = currentFileSize;
     localPath = CacheUtil.getLocalPath(remotePath, conf);
     mdFilePath = CacheUtil.getMetadataFilePath(remotePath, conf);
+    blockSize = CacheConfig.getBlockSize(conf);
 
-    int bitsRequired = (int) Math.ceil((double) size / getBlockSize(conf)); //numBlocks
+    int bitsRequired = (int) Math.ceil((double) size / blockSize); //numBlocks
     bitmapFileSizeBytes = (int) Math.ceil((double) bitsRequired / 8);
 
     /*
@@ -73,9 +74,28 @@ public class FileMetadata
      */
   }
 
+  public int getNumCachedBlock() throws IOException
+  {
+    int blocksCached = 0;
+    int numBlocks = (int) Math.ceil((double) size / blockSize);
+
+    for (int i = 0; i < numBlocks; i++) {
+      if (isBlockCached(i)) {
+        blocksCached++;
+      }
+    }
+
+    return blocksCached;
+  }
+
   long incrementCurrentFileSize(long incrementBy)
   {
     this.currentFileSize += incrementBy;
+    return this.currentFileSize;
+  }
+
+  public long getCurrentFileSize()
+  {
     return this.currentFileSize;
   }
 

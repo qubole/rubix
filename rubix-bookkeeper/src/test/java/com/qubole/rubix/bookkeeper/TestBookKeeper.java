@@ -28,6 +28,7 @@ import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.FileInfo;
+import com.qubole.rubix.spi.thrift.UpdateCacheRequest;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -295,6 +296,7 @@ public class TestBookKeeper
   public void verifyLocalRequestMetricIsReported() throws TException
   {
     final long totalRequests = TEST_END_BLOCK - TEST_START_BLOCK;
+    final long totalCachedData = totalRequests * TEST_BLOCK_SIZE;
 
     assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.CACHE_REQUEST_COUNT.getMetricName()).getCount(), 0);
 
@@ -303,7 +305,11 @@ public class TestBookKeeper
     request.setIncrMetrics(true);
 
     bookKeeper.getCacheStatus(request);
-    bookKeeper.setAllCached(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, TEST_START_BLOCK, TEST_END_BLOCK);
+
+    UpdateCacheRequest updateRequest = new UpdateCacheRequest(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
+        TEST_START_BLOCK, TEST_END_BLOCK, totalCachedData);
+    bookKeeper.setAllCached(updateRequest);
+
     bookKeeper.getCacheStatus(request);
 
     assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.CACHE_REQUEST_COUNT.getMetricName()).getCount(), totalRequests);
@@ -404,7 +410,11 @@ public class TestBookKeeper
     assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.CACHE_HIT_RATE_GAUGE.getMetricName()).getValue(), 0.0);
     assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.CACHE_MISS_RATE_GAUGE.getMetricName()).getValue(), 1.0);
 
-    bookKeeper.setAllCached(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, TEST_START_BLOCK, TEST_END_BLOCK);
+    final long totalCachedData = (TEST_END_BLOCK - TEST_START_BLOCK) * TEST_BLOCK_SIZE;
+    UpdateCacheRequest updateRequest = new UpdateCacheRequest(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
+        TEST_START_BLOCK, TEST_END_BLOCK, totalCachedData);
+    bookKeeper.setAllCached(updateRequest);
+
     bookKeeper.getCacheStatus(request);
 
     assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.CACHE_HIT_RATE_GAUGE.getMetricName()).getValue(), 0.5);

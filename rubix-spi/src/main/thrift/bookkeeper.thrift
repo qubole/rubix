@@ -34,11 +34,20 @@ struct CacheStatusRequest {
 		7: optional bool incrMetrics = false;
 }
 
+struct UpdateCacheRequest {
+		1: required string remotePath;
+		2: required long fileLength;
+		3: required long lastModified;
+		4: required long startBlock;
+		5: required long endBlock;
+		6: required long downloadedDataSize;
+}
+
 service BookKeeperService
 {
     list<BlockLocation> getCacheStatus(1:CacheStatusRequest request)
 
-    oneway void setAllCached(1:string remotePath, 2:long fileLength, 3:long lastModified, 4:long startBlock, 5:long endBlock)
+    oneway void setAllCached(1:UpdateCacheRequest request)
 
     map<string,double> getCacheStats()
 

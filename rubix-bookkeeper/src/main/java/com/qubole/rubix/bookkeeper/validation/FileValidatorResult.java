@@ -21,16 +21,18 @@ public class FileValidatorResult
   private int totalFiles;
   private double successRate;
   private Set<String> filesWithoutMD = new HashSet<>();
+  private Set<String> corruptedCachedFiles = new HashSet<>();
 
   public FileValidatorResult()
   {
   }
 
-  public FileValidatorResult(int successes, int totalFiles, Set<String> filesWithoutMD)
+  public FileValidatorResult(int successes, int totalFiles, Set<String> filesWithoutMD, Set<String> corruptedCachedFiles)
   {
     this.successes = successes;
     this.totalFiles = totalFiles;
     this.filesWithoutMD = filesWithoutMD;
+    this.corruptedCachedFiles = corruptedCachedFiles;
 
     this.successRate = totalFiles > 0 ? ((double) successes / (double) totalFiles) : 0;
   }
@@ -60,11 +62,17 @@ public class FileValidatorResult
     return filesWithoutMD;
   }
 
+  public Set<String> getCorruptedCachedFiles()
+  {
+    return corruptedCachedFiles;
+  }
+
   public void addResult(FileValidatorResult result)
   {
     this.successes += result.successes;
     this.totalFiles += result.totalFiles;
     filesWithoutMD.addAll(result.filesWithoutMD);
+    corruptedCachedFiles.addAll(result.corruptedCachedFiles);
 
     this.successRate = (double) successes / (double) totalFiles;
   }

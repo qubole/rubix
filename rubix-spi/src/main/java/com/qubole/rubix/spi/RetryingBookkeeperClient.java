@@ -20,6 +20,7 @@ import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.BookKeeperService;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.HeartbeatStatus;
+import com.qubole.rubix.spi.thrift.UpdateCacheRequest;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.transport.TTransport;
@@ -59,8 +60,7 @@ public class RetryingBookkeeperClient extends BookKeeperService.Client implement
   }
 
   @Override
-  public void setAllCached(final String remotePath, final long fileLength, final long lastModified,
-                           final long startBlock, final long endBlock) throws TException
+  public void setAllCached(final UpdateCacheRequest request) throws TException
   {
     retryConnection(new Callable<Void>()
     {
@@ -68,7 +68,7 @@ public class RetryingBookkeeperClient extends BookKeeperService.Client implement
       public Void call()
           throws Exception
       {
-        RetryingBookkeeperClient.super.setAllCached(remotePath, fileLength, lastModified, startBlock, endBlock);
+        RetryingBookkeeperClient.super.setAllCached(request);
         return null;
       }
     });

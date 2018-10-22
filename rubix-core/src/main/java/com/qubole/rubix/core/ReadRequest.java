@@ -37,6 +37,8 @@ public class ReadRequest
 
   long backendFileSize;
 
+  long actualDataDownloaded;
+
   public ReadRequest() {};
 
   public ReadRequest(long backendReadStart, long backendReadEnd, long actualReadStart, long actualReadEnd, byte[] destBuffer, int destBufferOffset, long backendFileSize)
@@ -128,6 +130,16 @@ public class ReadRequest
   public int getBackendReadLength()
   {
     return (int) (backendReadEnd - backendReadStart);
+  }
+
+  public long getActualDataDownloaded()
+  {
+    return this.actualDataDownloaded;
+  }
+
+  public void setActualDataDownloaded(long dataDownloaded)
+  {
+    this.actualDataDownloaded = dataDownloaded;
   }
 
   public ReadRequest clone(boolean createNewBuffer)

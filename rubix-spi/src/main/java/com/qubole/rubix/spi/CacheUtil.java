@@ -136,6 +136,14 @@ public class CacheUtil
     return absLocation + "/" + getName(remotePath);
   }
 
+  public static String getRemotePath(String localPath, Configuration conf)
+  {
+    String cacheSuffix = CacheConfig.getCacheDataDirSuffix(conf);
+    int index = localPath.indexOf(cacheSuffix);
+    String remotePath = localPath.substring(index + cacheSuffix.length() - 1);
+    return remotePath;
+  }
+
   /**
    * Determine the metadata file path for a given remote path.
    *

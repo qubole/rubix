@@ -219,7 +219,7 @@ public class BaseServerTest
    * @param metrics The current metrics registry.
    * @throws InterruptedException if the current thread is interrupted while sleeping.
    */
-  protected static void startCoordinatorBookKeeperServer(final Configuration conf, final MetricRegistry metrics) throws InterruptedException
+  public static void startCoordinatorBookKeeperServer(final Configuration conf, final MetricRegistry metrics) throws InterruptedException
   {
     if (bookKeeperServer != null) {
       throw new IllegalStateException("A BookKeeperServer is already running");
@@ -278,7 +278,7 @@ public class BaseServerTest
   /**
    * Stop the currently running BookKeeper server instance.
    */
-  protected static void stopBookKeeperServer()
+  public static void stopBookKeeperServer()
   {
     if (bookKeeperServer != null) {
       bookKeeperServer.stopServer();

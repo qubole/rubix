@@ -41,6 +41,7 @@ import com.qubole.rubix.spi.thrift.BookKeeperService;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.FileInfo;
 import com.qubole.rubix.spi.thrift.Location;
+import com.qubole.rubix.spi.thrift.UpdateCacheRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -368,28 +369,28 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   }
 
   @Override
-  public void setAllCached(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock)
+  public void setAllCached(UpdateCacheRequest request)
       throws TException
   {
     FileMetadata md;
-    md = fileMetadataCache.getIfPresent(remotePath);
+    md = fileMetadataCache.getIfPresent(request.getRemotePath());
 
     //md will be null when 2 users try to update the file in parallel and both their entries are invalidated.
     // TODO: find a way to optimize this so that the file doesn't have to be read again in next request (new data is stored instead of invalidation)
     if (md == null) {
       return;
     }
-    if (isInvalidationRequired(md.getLastModified(), lastModified)) {
-      invalidateFileMetadata(remotePath);
+    if (isInvalidationRequired(md.getLastModified(), request.getLastModified())) {
+      invalidateFileMetadata(request.getRemotePath());
       return;
     }
-    endBlock = setCorrectEndBlock(endBlock, fileLength, remotePath);
-    log.debug("Updating cache for " + remotePath + " StarBlock : " + startBlock + " EndBlock : " + endBlock);
+    long endBlock = setCorrectEndBlock(request.getEndBlock(), request.getFileLength(), request.getRemotePath());
+    log.debug("Updating cache for " + request.getRemotePath() + " StarBlock : " + request.getStartBlock() + " EndBlock : " + endBlock);
 
     try {
-      md.setBlocksCached(startBlock, endBlock);
-      long currentFileSize = md.incrementCurrentFileSize((endBlock - startBlock) * CacheConfig.getBlockSize(conf));
-      replaceFileMetadata(remotePath, currentFileSize, conf);
+      md.setBlocksCached(request.getStartBlock(), endBlock);
+      long currentFileSize = md.incrementCurrentFileSize(request.getDownloadedDataSize());
+      replaceFileMetadata(request.getRemotePath(), currentFileSize, conf);
     }
     catch (IOException e) {
       throw new TException(e);
@@ -580,9 +581,9 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         .build();
   }
 
-  public FileMetadata getEntry(String key, Callable<FileMetadata> callable) throws ExecutionException
+  public FileMetadata getFileMetadata(String key)
   {
-    return fileMetadataCache.get(key, callable);
+    return fileMetadataCache.getIfPresent(key);
   }
 
   private static void initializeFileInfoCache(final Configuration conf, final Ticker ticker)

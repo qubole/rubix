@@ -12,6 +12,8 @@
  */
 package com.qubole.rubix.bookkeeper.validation;
 
+import com.qubole.rubix.bookkeeper.BookKeeper;
+import com.qubole.rubix.bookkeeper.FileMetadata;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
 import org.apache.commons.logging.Log;
@@ -33,14 +35,18 @@ public class FileValidatorVisitor extends SimpleFileVisitor<Path>
   private static String metadataFileSuffix;
 
   private final Configuration conf;
+  private final BookKeeper bookKeeper;
 
   private int successes;
   private int totalCacheFiles;
+  private int filesNotPresentInMemory;
   private final Set<String> filesWithoutMd = new HashSet<>();
+  private final Set<String> corruptedCachedFiles = new HashSet<>();
 
-  public FileValidatorVisitor(Configuration conf)
+  public FileValidatorVisitor(Configuration conf, BookKeeper bookKeeper)
   {
     this.conf = conf;
+    this.bookKeeper = bookKeeper;
 
     metadataFileSuffix = CacheConfig.getCacheMetadataFileSuffix(conf);
   }
@@ -53,7 +59,23 @@ public class FileValidatorVisitor extends SimpleFileVisitor<Path>
 
       Path mdFile = file.resolveSibling(file.getFileName() + metadataFileSuffix);
       if (Files.exists(mdFile)) {
-        successes++;
+        String remotePath = CacheUtil.getRemotePath(file.toString(), conf);
+        FileMetadata metadata = bookKeeper.getFileMetadata(remotePath);
+        if (metadata == null) {
+          filesNotPresentInMemory++;
+        }
+        else {
+          int blocksCached = metadata.getNumCachedBlock();
+          long fileSizeInMemory = metadata.getCurrentFileSize();
+          long dataSize = blocksCached * CacheConfig.getBlockSize(conf);
+          if (dataSize == fileSizeInMemory) {
+            successes++;
+          }
+          else {
+            log.info("data size " + dataSize + " Filesize in memory " + fileSizeInMemory);
+            corruptedCachedFiles.add(file.toString());
+          }
+        }
       }
       else {
         filesWithoutMd.add(file.toString());
@@ -70,6 +92,6 @@ public class FileValidatorVisitor extends SimpleFileVisitor<Path>
    */
   public FileValidatorResult getResult()
   {
-    return new FileValidatorResult(successes, totalCacheFiles, filesWithoutMd);
+    return new FileValidatorResult(successes, totalCacheFiles, filesWithoutMd, corruptedCachedFiles);
   }
 }

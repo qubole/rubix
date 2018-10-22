@@ -85,7 +85,7 @@ public class HeartbeatService extends AbstractScheduledService
         }
       });
 
-      this.fileValidator = new FileValidator(conf);
+      this.fileValidator = new FileValidator(conf, bookKeeper);
       this.fileValidator.startAsync();
       metrics.register(BookKeeperMetrics.ValidationMetric.FILE_VALIDATION_SUCCESS_GAUGE.getMetricName(), new Gauge<Integer>()
       {

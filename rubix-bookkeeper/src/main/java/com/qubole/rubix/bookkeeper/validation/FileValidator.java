@@ -13,6 +13,7 @@
 package com.qubole.rubix.bookkeeper.validation;
 
 import com.google.common.util.concurrent.AbstractScheduledService;
+import com.qubole.rubix.bookkeeper.BookKeeper;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
 import org.apache.commons.logging.Log;
@@ -30,13 +31,15 @@ public class FileValidator extends AbstractScheduledService
   private static final Log log = LogFactory.getLog(FileValidator.class);
 
   private final Configuration conf;
+  private final BookKeeper bookKeeper;
   private final int validationInterval;
 
   private FileValidatorResult validatorResult = new FileValidatorResult();
 
-  public FileValidator(Configuration conf)
+  public FileValidator(Configuration conf, BookKeeper bookKeeper)
   {
     this.conf = conf;
+    this.bookKeeper = bookKeeper;
     this.validationInterval = CacheConfig.getCachingValidationInterval(conf);
   }
 
@@ -73,7 +76,7 @@ public class FileValidator extends AbstractScheduledService
 
     final FileValidatorResult allDisksResult = new FileValidatorResult();
     for (int diskIndex = 0; diskIndex < maxDisks; diskIndex++) {
-      final FileValidatorVisitor validatorVisitor = new FileValidatorVisitor(conf);
+      final FileValidatorVisitor validatorVisitor = new FileValidatorVisitor(conf, bookKeeper);
 
       final Path diskCachePath = Paths.get(CacheUtil.getDirPath(diskIndex, conf), CacheConfig.getCacheDataDirSuffix(conf));
       try {
