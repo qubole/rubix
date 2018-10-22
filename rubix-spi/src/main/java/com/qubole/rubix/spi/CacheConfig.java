@@ -85,6 +85,7 @@ public class CacheConfig
   private static final String KEY_ENABLE_FILE_STALESSNESS_CHECK = "rubix.enable.file.staleness-check";
   private static final String KEY_STALE_FILEINFO_EXPIRY_PERIOD = "rubix.stale.fileinfo.expiry.period";
   private static final String KEY_CLEANUP_FILES_DURING_START = "rubix.cleanup.files.during.start";
+  private static final String KEY_MAX_CACHE_SIZE = "hadoop.cache.data.fullness.size";
 
   // default values
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
@@ -143,6 +144,7 @@ public class CacheConfig
   private static final boolean DEFAULT_ENABLE_FILE_STALESSNESS_CHECK = true;
   private static final int DEFAULT_STALE_FILEINFO_EXPIRY_PERIOD = 36000; // seconds
   private static final boolean DEFAULT_CLEANUP_FILES_DURING_START = true;
+  private static final long DEFAULT_MAX_CACHE_SIZE = 0;
 
   private CacheConfig()
   {
@@ -176,6 +178,11 @@ public class CacheConfig
   public static int getCacheDataFullnessPercentage(Configuration conf)
   {
     return conf.getInt(KEY_DATA_CACHE_FULLNESS, DEFAULT_DATA_CACHE_FULLNESS);
+  }
+
+  public static long getCacheDataFullnessMaxSize(Configuration conf)
+  {
+    return conf.getLong(KEY_MAX_CACHE_SIZE, DEFAULT_MAX_CACHE_SIZE);
   }
 
   public static String getCacheDataLocationBlacklist(Configuration conf)
