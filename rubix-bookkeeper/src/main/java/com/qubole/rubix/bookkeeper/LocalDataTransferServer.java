@@ -238,7 +238,7 @@ public class LocalDataTransferServer extends Configured implements Tool
           long blockNum = startBlock;
           for (BlockLocation location : blockLocations) {
             if (location.getLocation() != Location.CACHED) {
-              log.error(String.format("The requested data for block {0} of file {1} in not in cache. " +
+              log.error(String.format("The requested data for block %d of file %s in not in cache. " +
                   " The data will be read from object store", blockNum, remotePath));
               throw new Exception("The requested data in not in cache. The data will be read from object store");
             }
