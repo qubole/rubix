@@ -85,6 +85,7 @@ public class TestBookKeeperServer extends BaseServerTest
   @Test
   public void testHealthMetricsEnabled() throws InterruptedException, MalformedObjectNameException
   {
+    CacheConfig.setValidationEnabled(conf, true);
     super.testHealthMetrics(ServerType.COORDINATOR_BOOKKEEPER, conf, metrics, true);
   }
 
