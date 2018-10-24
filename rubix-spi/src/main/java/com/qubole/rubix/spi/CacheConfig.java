@@ -95,7 +95,7 @@ public class CacheConfig
   private static final boolean DEFAULT_DATA_CACHE_ENABLED = true;
   private static final int DEFAULT_DATA_CACHE_EXPIRY_AFTER_WRITE = Integer.MAX_VALUE; // ms; infinite by default
   private static final int DEFAULT_DATA_CACHE_EXPIRY = Integer.MAX_VALUE;
-  private static final int DEFAULT_DATA_CACHE_FULLNESS = 50; // percent
+  private static final int DEFAULT_DATA_CACHE_FULLNESS = 80; // percent
   private static final String DEFAULT_DATA_CACHE_LOCATION_BLACKLIST = ""; // regex
   private static final String DEFAULT_DATA_CACHE_LOCATION_WHITELIST = ".*"; // regex
   private static final int DEFAULT_DATA_CACHE_MAX_DISKS = 5;
