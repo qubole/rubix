@@ -360,7 +360,7 @@ public class TestBookKeeper
     bookKeeper.readData(remotePathWithScheme, readOffset, readLength, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
 
     final long mdSize = FileUtils.sizeOf(new File(CacheUtil.getMetadataFilePath(TEST_REMOTE_PATH, conf)));
-    final int totalCacheSize = DiskUtils.bytesToMB(readLength + mdSize);
+    final int totalCacheSize = (int) DiskUtils.bytesToMB(readLength + mdSize);
     assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.CACHE_SIZE_GAUGE.getMetricName()).getValue(), totalCacheSize);
   }
 

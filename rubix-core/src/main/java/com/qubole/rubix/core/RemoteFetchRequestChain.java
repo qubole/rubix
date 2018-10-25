@@ -19,6 +19,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 
+import java.io.IOException;
+
 public class RemoteFetchRequestChain extends ReadRequestChain
 {
   private static final Log log = LogFactory.getLog(RemoteFetchRequestChain.class);
@@ -64,8 +66,15 @@ public class RemoteFetchRequestChain extends ReadRequestChain
       }
     }
     finally {
-      client.close();
-      client = null;
+      try {
+        if (client != null) {
+          client.close();
+          client = null;
+        }
+      }
+      catch (IOException ex) {
+        log.error("Could not close bookkeeper client. Exception: " + ex.toString());
+      }
     }
     log.info("Send request to remote took " + (System.currentTimeMillis() - startTime) + " :msecs");
 

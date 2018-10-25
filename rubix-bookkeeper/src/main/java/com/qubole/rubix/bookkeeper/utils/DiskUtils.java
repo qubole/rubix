@@ -41,9 +41,9 @@ public class DiskUtils
    * @param bytes   The number of bytes.
    * @return the number of bytes as MB.
    */
-  public static int bytesToMB(long bytes)
+  public static long bytesToMB(long bytes)
   {
-    return (int) (bytes / 1024 / 1024);
+    return (bytes / 1024 / 1024);
   }
 
   // Return actual size of a sparse file in bytes
@@ -82,7 +82,7 @@ public class DiskUtils
       long cacheDirSize = FileUtils.sizeOfDirectory(new File(diskMap.get(disk) + cacheDirSuffix));
       cacheSize += cacheDirSize;
     }
-    return DiskUtils.bytesToMB(cacheSize);
+    return (int) DiskUtils.bytesToMB(cacheSize);
   }
 
   public static int getUsedSpaceMB(Configuration conf)
@@ -92,6 +92,6 @@ public class DiskUtils
       File localPath = new File(CacheUtil.getDirPath(d, conf));
       used += localPath.getTotalSpace() - localPath.getUsableSpace();
     }
-    return bytesToMB(used);
+    return (int) bytesToMB(used);
   }
 }

@@ -25,6 +25,9 @@ import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.DataTransferClientHelper;
 import com.qubole.rubix.spi.DataTransferHeader;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.thrift.BlockLocation;
+import com.qubole.rubix.spi.thrift.CacheStatusRequest;
+import com.qubole.rubix.spi.thrift.Location;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -40,6 +43,7 @@ import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -213,14 +217,32 @@ public class LocalDataTransferServer extends Configured implements Tool
           throw new Exception("Could not create BookKeeper Client " + Throwables.getStackTraceAsString(e));
         }
 
-        if (!bookKeeperClient.readData(remotePath, offset, readLength, header.getFileSize(), header.getLastModified(), header.getClusterType())) {
-          throw new Exception("Could not cache data required by non-local node");
-        }
-
         if (!CacheConfig.isParallelWarmupEnabled(conf)) {
           if (!bookKeeperClient.readData(remotePath, offset, readLength, header.getFileSize(),
               header.getLastModified(), header.getClusterType())) {
             throw new Exception("Could not cache data required by non-local node");
+          }
+        }
+        else {
+          // Just make sure the requested blocks are present in the cache. If any the blocks is
+          // not presnt in the cache, throw an exception so that the caller NonLocalReadRequestChain
+          // can read the data from the object store
+          long blockSize = CacheConfig.getBlockSize(conf);
+          long startBlock = offset / blockSize;
+          long endBlock = ((offset + (readLength - 1)) / blockSize) + 1;
+
+          CacheStatusRequest request = new CacheStatusRequest(remotePath, header.getFileSize(), header.getLastModified(),
+              startBlock, endBlock, header.getClusterType());
+          List<BlockLocation> blockLocations = bookKeeperClient.getCacheStatus(request);
+
+          long blockNum = startBlock;
+          for (BlockLocation location : blockLocations) {
+            if (location.getLocation() != Location.CACHED) {
+              log.error(String.format("The requested data for block %d of file %s in not in cache. " +
+                  " The data will be read from object store", blockNum, remotePath));
+              throw new Exception("The requested data in not in cache. The data will be read from object store");
+            }
+            blockNum++;
           }
         }
 

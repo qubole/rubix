@@ -95,7 +95,7 @@ public class CacheConfig
   private static final boolean DEFAULT_DATA_CACHE_ENABLED = true;
   private static final int DEFAULT_DATA_CACHE_EXPIRY_AFTER_WRITE = Integer.MAX_VALUE; // ms; infinite by default
   private static final int DEFAULT_DATA_CACHE_EXPIRY = Integer.MAX_VALUE;
-  private static final int DEFAULT_DATA_CACHE_FULLNESS = 50; // percent
+  private static final int DEFAULT_DATA_CACHE_FULLNESS = 80; // percent
   private static final String DEFAULT_DATA_CACHE_LOCATION_BLACKLIST = ""; // regex
   private static final String DEFAULT_DATA_CACHE_LOCATION_WHITELIST = ".*"; // regex
   private static final int DEFAULT_DATA_CACHE_MAX_DISKS = 5;
@@ -134,7 +134,7 @@ public class CacheConfig
   private static final int DEFAULT_SERVICE_MAX_RETRIES = 100;
   private static final int DEFAULT_SOCKET_READ_TIMEOUT = 30000; // ms
   private static final int DEFAULT_HEALTH_STATUS_EXPIRY = 60000; // ms
-  private static final boolean DEFAULT_VALIDATION_ENABLED = true;
+  private static final boolean DEFAULT_VALIDATION_ENABLED = false;
   private static final int DEFAULT_CACHING_VALIDATION_INTERVAL = 1800000; // ms (30min)
   private static final int DEFAULT_FILE_VALIDATION_INTERVAL = 1800000; // ms (30min)
   private static final String DEFAULT_PRESTO_CLUSTER_MANAGER = "com.qubole.rubix.presto.PrestoClusterManager";
