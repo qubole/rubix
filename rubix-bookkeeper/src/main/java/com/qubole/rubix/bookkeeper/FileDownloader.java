@@ -111,9 +111,13 @@ class FileDownloader
     return readRequestChainList;
   }
 
-  protected int processDownloadRequests(List<FileDownloadRequestChain> readRequestChainList)
+  protected long processDownloadRequests(List<FileDownloadRequestChain> readRequestChainList)
   {
-    int sizeRead = 0;
+    if (readRequestChainList.size() == 0) {
+      return 0;
+    }
+
+    long sizeRead = 0;
     List<Future<Integer>> futures = new ArrayList<Future<Integer>>();
 
     for (FileDownloadRequestChain requestChain : readRequestChainList) {
@@ -129,7 +133,7 @@ class FileDownloader
         totalBytesToBeDownloaded += request.getBackendReadLength();
       }
       try {
-        int read = future.get();
+        long read = future.get();
         // Updating the cache only when we have downloaded the same amount of data that we requested
         // This takes care of the scenario where the data is download partially but the cache
         // metadata gets updated for all the requested blocks.
@@ -138,13 +142,17 @@ class FileDownloader
               requestChain.getLastModified(), CacheConfig.getBlockSize(conf), conf);
           sizeRead += read;
         }
+        else {
+          log.error("ReadData didn't match with requested value. RequestedData: " + totalBytesToBeDownloaded +
+              " ReadData: " + read);
+        }
       }
       catch (ExecutionException | InterruptedException ex) {
         log.error(ex.getStackTrace());
         requestChain.cancel();
       }
     }
-    int dataDownloadedInMB = DiskUtils.bytesToMB(sizeRead);
+    long dataDownloadedInMB = DiskUtils.bytesToMB(sizeRead);
     this.totalMBDownloaded.inc(dataDownloadedInMB);
     return sizeRead;
   }
