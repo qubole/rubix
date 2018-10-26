@@ -109,6 +109,7 @@ public class TestCoordinatorBookKeeper
   {
     final FakeTicker ticker = new FakeTicker();
     final int healthStatusExpiry = 1000; // ms
+    CacheConfig.setValidationEnabled(conf, true);
     CacheConfig.setHealthStatusExpiry(conf, healthStatusExpiry);
 
     final CoordinatorBookKeeper coordinatorBookKeeper = new CoordinatorBookKeeper(conf, metrics, ticker);

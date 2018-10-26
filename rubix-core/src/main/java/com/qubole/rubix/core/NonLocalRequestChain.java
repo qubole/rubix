@@ -88,15 +88,17 @@ public class NonLocalRequestChain extends ReadRequestChain
       if (strictMode) {
         throw Throwables.propagate(e);
       }
-      log.info("Could not get cache status from server " + Throwables.getStackTraceAsString(e));
+      log.error("Could not get cache status from server " + Throwables.getStackTraceAsString(e));
     }
     finally {
       try {
-        bookKeeperClient.close();
-        bookKeeperClient = null;
+        if (bookKeeperClient != null) {
+          bookKeeperClient.close();
+          bookKeeperClient = null;
+        }
       }
       catch (Exception e) {
-        log.info("Could not close BookKeeper client " + Throwables.getStackTraceAsString(e));
+        log.error("Could not close BookKeeper client " + Throwables.getStackTraceAsString(e));
       }
     }
   }
@@ -159,7 +161,7 @@ public class NonLocalRequestChain extends ReadRequestChain
       remoteFetchRequestChain.call();
     }
 
-    log.info("NonLocalRequest took : " + (System.currentTimeMillis() - startTime) + " msecs ");
+    log.debug("NonLocalRequest took : " + (System.currentTimeMillis() - startTime) + " msecs ");
 
     return nonLocalReadBytes;
   }

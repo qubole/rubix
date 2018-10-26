@@ -151,12 +151,15 @@ public class NonLocalReadRequestChain extends ReadRequestChain
         }
       }
       finally {
+        log.info(String.format("Read %d bytes internally from node %s", totalRead, remoteNodeName));
         if (statistics != null) {
           statistics.incrementBytesRead(totalRead);
         }
         try {
-          log.info(String.format("Read %d bytes internally from node %s", totalRead, remoteNodeName));
-          dataTransferClient.close();
+          if (dataTransferClient != null) {
+            dataTransferClient.close();
+            dataTransferClient = null;
+          }
         }
         catch (IOException e) {
           log.info("Error closing Data Transfer client : " + remoteNodeName, e);

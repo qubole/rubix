@@ -128,8 +128,15 @@ public class FileDownloadRequestChain extends ReadRequestChain
       return totalRequestedRead;
     }
     finally {
-      fileChannel.close();
-      inputStream.close();
+      if (fileChannel != null) {
+        fileChannel.close();
+      }
+
+      if (inputStream != null) {
+        inputStream.close();
+      }
+
+      remoteFileSystem.close();
     }
   }
 

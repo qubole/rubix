@@ -144,7 +144,7 @@ public class TestFileDownloader
 
     final List<FileDownloadRequestChain> requestChains = downloader.getFileDownloadRequestChains(contextMap);
 
-    int dataDownloaded = downloader.processDownloadRequests(requestChains);
+    int dataDownloaded = (int) downloader.processDownloadRequests(requestChains);
 
     int expectedDownloadedDataSize = 600;
     assertTrue(expectedDownloadedDataSize == dataDownloaded, "Download size didn't match");

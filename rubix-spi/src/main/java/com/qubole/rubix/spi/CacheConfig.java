@@ -135,7 +135,7 @@ public class CacheConfig
   private static final int DEFAULT_SERVICE_MAX_RETRIES = 100;
   private static final int DEFAULT_SOCKET_READ_TIMEOUT = 30000; // ms
   private static final int DEFAULT_HEALTH_STATUS_EXPIRY = 60000; // ms
-  private static final boolean DEFAULT_VALIDATION_ENABLED = true;
+  private static final boolean DEFAULT_VALIDATION_ENABLED = false;
   private static final int DEFAULT_CACHING_VALIDATION_INTERVAL = 1800000; // ms (30min)
   private static final int DEFAULT_FILE_VALIDATION_INTERVAL = 1800000; // ms (30min)
   private static final String DEFAULT_PRESTO_CLUSTER_MANAGER = "com.qubole.rubix.presto.PrestoClusterManager";
