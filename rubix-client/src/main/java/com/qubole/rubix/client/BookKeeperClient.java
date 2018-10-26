@@ -14,26 +14,17 @@ package com.qubole.rubix.client;
 
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
-import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.shaded.TException;
 import org.apache.thrift.shaded.transport.TTransportException;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.Map;
-import java.util.Random;
 
-public class RubixClientLibrary
+public class BookKeeperClient
 {
-  private BookKeeperFactory factory = new BookKeeperFactory();
-  private Configuration conf = new Configuration();
-
-  public RubixClientLibrary()
-  {
-  }
+  private final BookKeeperFactory factory = new BookKeeperFactory();
+  private final Configuration conf = new Configuration();
 
   /**
    * Read data from a given file into the BookKeeper cache.
@@ -63,56 +54,6 @@ public class RubixClientLibrary
     try (RetryingBookkeeperClient client = createBookKeeperClient()) {
       return client.getCacheMetrics();
     }
-  }
-
-  /**
-   * Get the combined size of all configured cache directories.
-   *
-   * @param dirPath     The root path for the cache directories
-   * @param dirSuffix   The cache directory suffix.
-   * @param numDisks    The expected number of cache disks.
-   * @return The size of the cache in MB.
-   */
-  public long getCacheDirSizeMb(String dirPath, String dirSuffix, int numDisks)
-  {
-    long cacheSize = 0;
-    for (int disk = 0; disk < numDisks; disk++) {
-      long cacheDirSize = FileUtils.sizeOfDirectory(new File(dirPath + disk + dirSuffix));
-      cacheSize += cacheDirSize;
-    }
-
-    return (cacheSize / 1024 / 1024);
-  }
-
-  /**
-   * Generate a file to be used during testing.
-   *
-   * @param filename  The name of the file.
-   * @param size      The size of the file in bytes.
-   * @throws IOException if an error occurs while writing to the specified file.
-   */
-  public void generateTestFile(String filename, long size) throws IOException
-  {
-    String content = generateContent(size);
-    Files.write(Paths.get(filename), content.getBytes());
-  }
-
-  /**
-   * Generate a random character string.
-   *
-   * @param size  The size of the string to generate.
-   * @return A random string of the specified size.
-   */
-  private String generateContent(long size)
-  {
-    StringBuilder builder = new StringBuilder();
-    Random random = new Random();
-
-    for (int i = 0; i < size; i++) {
-      char randomChar = (char) (33 + random.nextInt(93));
-      builder.append(randomChar);
-    }
-    return builder.toString();
   }
 
   /**

@@ -25,6 +25,7 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.cache.Weigher;
+import com.google.common.collect.ImmutableMap;
 import com.qubole.rubix.bookkeeper.utils.DiskUtils;
 import com.qubole.rubix.bookkeeper.validation.CachingValidator;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
@@ -404,7 +405,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     final long nonLocalRequests = nonlocalRequestCount.getCount();
     final long totalRequests = totalRequestCount.getCount();
 
-    Map<String, Double> cacheMetrics = new HashMap<>();
+    ImmutableMap.Builder<String, Double> cacheMetrics = ImmutableMap.builder();
     cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_HIT_RATE_GAUGE.getMetricName(), ((double) cachedRequests / (cachedRequests + remoteRequests)));
     cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_MISS_RATE_GAUGE.getMetricName(), ((double) (remoteRequests) / (cachedRequests + remoteRequests)));
     cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_REQUEST_COUNT.getMetricName(), ((double) cachedRequests));
@@ -415,7 +416,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_INVALIDATION_COUNT.getMetricName(), (double) cacheInvalidationCount.getCount());
     cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_EXPIRY_COUNT.getMetricName(), (double) cacheExpiryCount.getCount());
     cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_SIZE_GAUGE.getMetricName(), (double) DiskUtils.getCacheSizeMB(conf));
-    return cacheMetrics;
+    return cacheMetrics.build();
   }
 
   //This method is to ensure that data required by another node is cached before it is read by that node

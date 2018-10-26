@@ -33,7 +33,7 @@ Test cache eviction
     ...                 hadoop.cache.data.fullness.size=${CACHE_MAX_SIZE}
     [Teardown]          Cache test teardown
 
-    Generate and cache test files   ${NUM_TEST_FILES}
+    Generate and cache test files   ${NUM_TEST_FILES}   ${START_BLOCK}   ${END_BLOCK}   ${FILE_LENGTH}   ${LAST_MODIFIED}   ${CLUSTER_TYPE}
 
     ${evictionCount} =              Get metric value        ${METRIC_EVICTION}
     Should be equal as integers     ${evictionCount}        ${NUM_EXPECTED_EVICTIONS}
@@ -48,27 +48,3 @@ Cache test setup
 
 Cache test teardown
     Stop BKS            &{bksOptions}
-
-Generate and cache test files
-    [Arguments]     ${numFiles}
-    :FOR    ${index}    IN RANGE    ${numFiles}
-    \  ${testFile} =        Set variable  ${REMOTE_PATH}${index}
-    \  Generate test file   ${testFile}   ${FILE_LENGTH}
-    \  Read test file data  ${testFile}   ${START_BLOCK}   ${END_BLOCK}   ${FILE_LENGTH}   ${LAST_MODIFIED}   ${CLUSTER_TYPE}
-
-Read test file data
-    [Arguments]     ${fileName}  ${startBlock}  ${endBlock}  ${fileLength}  ${lastModified}  ${clusterType}
-    ${didRead} =    Read data
-    ...             file://${fileName}
-    ...             ${startBlock}
-    ...             ${endBlock}
-    ...             ${fileLength}
-    ...             ${lastModified}
-    ...             ${clusterType}
-    Should be true  ${didRead}
-
-Get metric value
-    [Arguments]             ${metricName}
-    &{metrics} =            Get cache metrics
-    Should not be empty     ${metrics}
-    [Return]                &{metrics}[${METRIC_EVICTION}]
