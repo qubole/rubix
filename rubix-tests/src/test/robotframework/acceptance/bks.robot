@@ -2,7 +2,7 @@
 Library     Collections
 Library     OperatingSystem
 Library     Process
-Library     com.qubole.rubix.client.BookKeeperClientRFLibrary
+Library     com.qubole.rubix.client.robotframework.BookKeeperClientRFLibrary
 
 *** Keywords ***
 Start BKS

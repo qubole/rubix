@@ -59,6 +59,7 @@
     <modules>
         <module>rubix-spi</module>
         <module>rubix-core</module>
+        <module>rubix-client</module>
         <module>rubix-common</module>
         <module>rubix-presto</module>
         <module>rubix-hadoop2</module>
@@ -104,6 +105,12 @@
             <dependency>
                 <groupId>com.qubole.rubix</groupId>
                 <artifactId>rubix-spi</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.qubole.rubix</groupId>
+                <artifactId>rubix-client</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

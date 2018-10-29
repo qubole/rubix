@@ -1,7 +1,6 @@
 *** Settings ***
 Documentation   Rubix Integration Test PoC
 Resource        bks.robot
-Library         com.qubole.rubix.client.RubixClientLibrary
 
 *** Variables ***
 ${METRIC_EVICTION}  rubix.bookkeeper.count.cache_eviction

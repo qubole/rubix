@@ -12,8 +12,10 @@
  */
 package com.qubole.rubix.client.robotframework;
 
-import com.qubole.rubix.client.BookKeeperClient;
+import com.qubole.rubix.spi.BookKeeperFactory;
+import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.shaded.TException;
 import org.apache.thrift.shaded.transport.TTransportException;
 
@@ -26,7 +28,8 @@ import java.util.Random;
 
 public class BookKeeperClientRFLibrary
 {
-  private final BookKeeperClient client = new BookKeeperClient();
+  private final BookKeeperFactory factory = new BookKeeperFactory();
+  private final Configuration conf = new Configuration();
 
   /**
    * Read data from a given file into the BookKeeper cache.
@@ -41,7 +44,9 @@ public class BookKeeperClientRFLibrary
    */
   public boolean readData(String remotePath, long readStart, int readLength, long fileLength, long lastModified, int clusterType) throws IOException, TException
   {
-    return client.readData(remotePath, readStart, readLength, fileLength, lastModified, clusterType);
+    try (RetryingBookkeeperClient client = createBookKeeperClient()) {
+      return client.readData(remotePath, readStart, readLength, fileLength, lastModified, clusterType);
+    }
   }
 
   /**
@@ -51,7 +56,9 @@ public class BookKeeperClientRFLibrary
    */
   public Map<String, Double> getCacheMetrics() throws IOException, TException
   {
-    return client.getCacheMetrics();
+    try (RetryingBookkeeperClient client = createBookKeeperClient()) {
+      return client.getCacheMetrics();
+    }
   }
 
   /**
@@ -102,5 +109,16 @@ public class BookKeeperClientRFLibrary
       builder.append(randomChar);
     }
     return builder.toString();
+  }
+
+  /**
+   * Create a client for interacting to a BookKeeper server.
+   *
+   * @return The BookKeeper client.
+   * @throws TTransportException if an error occurs when trying to connect to the BookKeeper server.
+   */
+  private RetryingBookkeeperClient createBookKeeperClient() throws TTransportException
+  {
+    return factory.createBookKeeperClient(conf);
   }
 }
