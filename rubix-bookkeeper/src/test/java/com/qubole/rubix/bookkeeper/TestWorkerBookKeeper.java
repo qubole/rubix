@@ -101,13 +101,14 @@ public class TestWorkerBookKeeper
   }
 
   @Test
-  public void testGetClusterNodeHostNameFromCoordinatorAndThenWorkerCache() throws FileNotFoundException, TTransportException
+  public void testGetClusterNodeHostNameFromCoordinatorAndThenWorkerCache() throws FileNotFoundException, TTransportException, InterruptedException
   {
     List<String> mockList = new ArrayList<>();
 
     final MetricRegistry metricRegistry = new MetricRegistry();
     final CoordinatorBookKeeper spyCoordinator = spy(new CoordinatorBookKeeper(conf, metricRegistry));
     final BookKeeperServer bookKeeperServer = new BookKeeperServer();
+    log.info("testGetClusterNodeHostNameFromCoordinatorAndThenWorkerCache -- Staring bookkeeper on 1234");
 
     CacheConfig.setServerPort(conf, 1234);
     final Thread thread = new Thread()
@@ -118,6 +119,11 @@ public class TestWorkerBookKeeper
       }
     };
     thread.start();
+
+    while (!bookKeeperServer.isServerUp()) {
+      Thread.sleep(200);
+      log.info("Waiting for BookKeeper Server to come up");
+    }
 
     String testLocalhost = "localhost_test";
     mockList.add(testLocalhost);
