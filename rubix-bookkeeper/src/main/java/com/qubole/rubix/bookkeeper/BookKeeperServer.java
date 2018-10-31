@@ -45,7 +45,6 @@ import static com.qubole.rubix.spi.CacheConfig.getServerPort;
  */
 public class BookKeeperServer extends Configured implements Tool
 {
-  public BookKeeper bookKeeper;
   public BookKeeperService.Processor processor;
 
   // Registry for gathering & storing necessary metrics
@@ -104,7 +103,6 @@ public class BookKeeperServer extends Configured implements Tool
   void startServer(Configuration conf, MetricRegistry metricsRegistry, BookKeeper bookKeeper)
   {
     metrics = metricsRegistry;
-    bookKeeper = bookKeeper;
 
     registerMetrics(conf);
 

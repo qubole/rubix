@@ -86,12 +86,6 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
 
   public abstract String getScheme();
 
-  public void setBookKeeper(BookKeeperFactory bookKeeperFactory, Configuration conf)
-  {
-    this.bookKeeperFactory = bookKeeperFactory;
-    this.setConf(conf);
-  }
-
   public void setClusterType(ClusterType clusterType)
   {
     this.clusterType = clusterType;
