@@ -32,11 +32,9 @@ public abstract class ClusterManager
 {
   private long splitSize = 256 * 1024 * 1024; // 256MB
 
-  private int nodeRefreshTime = 300; //sec
+  private int nodeRefreshTime;
 
   public static String splitSizeConf = "caching.fs.split-size";
-
-  public static String nodeRefreshTimeConf = "caching.fs.node-refresh-time";
 
   public ClusterType getClusterType()
   {
@@ -47,7 +45,7 @@ public abstract class ClusterManager
 
   {
     splitSize = conf.getLong(splitSizeConf, splitSize);
-    nodeRefreshTime = conf.getInt(nodeRefreshTimeConf, nodeRefreshTime);
+    nodeRefreshTime = CacheConfig.getClusterNodeRefreshTime(conf);
   }
 
   public int getNodeIndex(int numNodes, String key)
