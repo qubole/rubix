@@ -148,7 +148,7 @@ public class CacheConfig
   private static final long DEFAULT_CACHE_FILE_SPLIT_SIZE = 256 * 1024 * 1024;
   private static final int DEFAULT_WORKER_NODEINFO_EXPIRY_PERIOD = 300; // seconds
   private static final boolean DEFAULT_CLEANUP_FILES_DURING_START = true;
-  private static final int DEFAULT_CLUSTER_NODE_REFRESH_TIME = 120;
+  private static final int DEFAULT_CLUSTER_NODE_REFRESH_TIME = 120; //seconds
 
   private CacheConfig()
   {
