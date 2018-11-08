@@ -12,15 +12,20 @@
  */
 package com.qubole.rubix.client.robotframework;
 
+import com.qubole.rubix.core.MockCachingFileSystem;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.Path;
 import org.apache.thrift.shaded.TException;
 import org.apache.thrift.shaded.transport.TTransportException;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Map;
@@ -32,20 +37,36 @@ public class BookKeeperClientRFLibrary
   private final Configuration conf = new Configuration();
 
   /**
-   * Read data from a given file into the BookKeeper cache.
+   * Read data from a given file into the BookKeeper cache using the BookKeeper Thrift API.
    *
    * @param remotePath    The remote path location.
    * @param readStart     The block to start reading from.
-   * @param readLength    The amount
+   * @param readLength    The amount of data to read.
    * @param fileLength    The length of the file.
    * @param lastModified  The time at which the file was last modified.
    * @param clusterType   The type id of cluster being used.
-   * @return True if the data was read into the cache correctly, false
+   * @return True if the data was read into the cache correctly, false otherwise.
    */
-  public boolean readData(String remotePath, long readStart, int readLength, long fileLength, long lastModified, int clusterType) throws IOException, TException
+  public boolean readDataApi(String remotePath, long readStart, int readLength, long fileLength, long lastModified, int clusterType) throws IOException, TException
   {
     try (RetryingBookkeeperClient client = createBookKeeperClient()) {
       return client.readData(remotePath, readStart, readLength, fileLength, lastModified, clusterType);
+    }
+  }
+
+  /**
+   * Read data from a given file into the BookKeeper cache using a client caching file system.
+   *
+   * @param remotePath    The remote path location.
+   * @param readStart     The block to start reading from.
+   * @param readLength    The amount of data to read.
+   * @return True if the data was read into the cache correctly, false otherwise.
+   */
+  public boolean readDataFs(String remotePath, long readStart, int readLength) throws IOException, TException, URISyntaxException
+  {
+    try (FSDataInputStream mockFS = createFSInputStream(remotePath, readLength)) {
+      final int readSize = mockFS.read(new byte[readLength], (int) readStart, readLength);
+      return readSize == readLength;
     }
   }
 
@@ -112,6 +133,26 @@ public class BookKeeperClientRFLibrary
   }
 
   /**
+   * Clear the Hadoop configuration for the library.
+   */
+  public void clearLibraryConfiguration()
+  {
+    conf.clear();
+  }
+
+  /**
+   * Set the Hadoop configuration for the library.
+   *
+   * @param configurationOptions The options to set.
+   */
+  public void setLibraryConfiguration(Map<String, String> configurationOptions)
+  {
+    for (final Map.Entry<String, String> option : configurationOptions.entrySet()) {
+      conf.set(option.getKey(), option.getValue());
+    }
+  }
+
+  /**
    * Create a client for interacting to a BookKeeper server.
    *
    * @return The BookKeeper client.
@@ -120,5 +161,20 @@ public class BookKeeperClientRFLibrary
   private RetryingBookkeeperClient createBookKeeperClient() throws TTransportException
   {
     return factory.createBookKeeperClient(conf);
+  }
+
+  /**
+   * Creates & initializes an input stream for executing client caching.
+   *
+   * @param remotePath  The path of the file to cache.
+   * @return the input stream for the file.
+   * @throws URISyntaxException if the path does not have the correct syntax
+   * @throws IOException if an error occurs when initializing the file system.
+   */
+  private FSDataInputStream createFSInputStream(String remotePath, int readLength) throws URISyntaxException, IOException
+  {
+    final MockCachingFileSystem mockFS = new MockCachingFileSystem();
+    mockFS.initialize(new URI("file://" + remotePath), conf);
+    return mockFS.open(new Path(remotePath), readLength);
   }
 }

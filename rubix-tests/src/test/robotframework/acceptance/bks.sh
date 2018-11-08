@@ -37,7 +37,7 @@ log4j.logger.com.qubole.rubix=DEBUG
 log4j.logger.org.apache.hadoop.fs.s3a.S3AFileSystem=DEBUG
 
 EOF
-) >> ${LOG4J_FILE}
+) > ${LOG4J_FILE}
 }
 
 set-cache-options() {

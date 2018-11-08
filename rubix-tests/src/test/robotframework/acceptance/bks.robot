@@ -25,21 +25,19 @@ Get options argument
     ${optionArgs} =     Join Command Line   ${optionsList}
     [Return]            ${optionArgs}
 
-Generate and cache test files
+Generate test files
     [Arguments]     ${numFiles}
-    ...             ${startBlock}
-    ...             ${endBlock}
     ...             ${fileLength}
-    ...             ${lastModified}
-    ...             ${clusterType}
+    @{testFileList} =   Create List
     :FOR    ${index}    IN RANGE    ${numFiles}
-    \  ${testFile} =        Set variable  ${REMOTE_PATH}${index}
-    \  Generate test file   ${testFile}   ${fileLength}
-    \  Read test file data  ${testFile}   ${startBlock}   ${endBlock}   ${fileLength}   ${lastModified}   ${clusterType}
+    \   ${testFile} =        Set variable  ${REMOTE_PATH}${index}
+    \   Generate test file   ${testFile}   ${fileLength}
+    \   Append To List       ${testFileList}    ${testFile}
+    [Return]        @{testFileList}
 
-Read test file data
+Read test file data API
     [Arguments]     ${fileName}  ${startBlock}  ${endBlock}  ${fileLength}  ${lastModified}  ${clusterType}
-    ${didRead} =    Read data
+    ${didRead} =    Read data api
     ...             file://${fileName}
     ...             ${startBlock}
     ...             ${endBlock}
@@ -48,8 +46,24 @@ Read test file data
     ...             ${clusterType}
     Should be true  ${didRead}
 
-Get metric value
-    [Arguments]             ${metricName}
-    &{metrics} =            Get cache metrics
-    Should not be empty     ${metrics}
-    [Return]                &{metrics}[${metricName}]
+Read test file data FS
+    [Arguments]     ${fileName}  ${startBlock}  ${endBlock}
+    ${didRead} =    Read data fs
+    ...             ${fileName}
+    ...             ${startBlock}
+    ...             ${endBlock}
+    Should be true  ${didRead}
+
+Verify cache directories
+    [Arguments]     ${cachePrefix}
+    ...             ${cacheSuffix}
+    ...             ${cacheNumDisks}
+    ...             ${expectedCacheSize}
+    ${cacheDirSize} =               Get cache dir size MB   ${cachePrefix}   ${cacheSuffix}    ${cacheNumDisks}
+    Should be equal as integers     ${cacheDirSize}         ${expectedCacheSize}
+
+Verify metric value
+    [Arguments]                 ${metricName}   ${expectedValue}
+    &{metrics} =                Get cache metrics
+    Should not be empty         ${metrics}
+    Should be equal as numbers  &{metrics}[${metricName}]   ${expectedValue}
