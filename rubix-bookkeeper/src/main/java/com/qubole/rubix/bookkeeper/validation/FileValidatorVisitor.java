@@ -39,9 +39,9 @@ public class FileValidatorVisitor extends SimpleFileVisitor<Path>
 
   private int successes;
   private int totalCacheFiles;
-  private int filesNotPresentInMemory;
   private final Set<String> filesWithoutMd = new HashSet<>();
   private final Set<String> corruptedCachedFiles = new HashSet<>();
+  private final Set<String> untrackedCachedFiles = new HashSet<>();
 
   public FileValidatorVisitor(Configuration conf, BookKeeper bookKeeper)
   {
@@ -62,7 +62,7 @@ public class FileValidatorVisitor extends SimpleFileVisitor<Path>
         String remotePath = CacheUtil.getRemotePath(file.toString(), conf);
         FileMetadata metadata = bookKeeper.getFileMetadata(remotePath);
         if (metadata == null) {
-          filesNotPresentInMemory++;
+          untrackedCachedFiles.add(file.toString());
         }
         else {
           int blocksCached = metadata.getNumCachedBlock();
@@ -92,6 +92,6 @@ public class FileValidatorVisitor extends SimpleFileVisitor<Path>
    */
   public FileValidatorResult getResult()
   {
-    return new FileValidatorResult(successes, totalCacheFiles, filesWithoutMd, corruptedCachedFiles);
+    return new FileValidatorResult(successes, totalCacheFiles, filesWithoutMd, corruptedCachedFiles, untrackedCachedFiles);
   }
 }
