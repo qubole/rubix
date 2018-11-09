@@ -34,7 +34,7 @@ Test cache eviction API
 
     @{testFiles} =      Generate test files   ${NUM_TEST_FILES}   ${FILE_LENGTH}
     :FOR    ${file}     IN      @{testFiles}
-    \    Read test file data API    ${file}     ${START_BLOCK}   ${END_BLOCK}   ${FILE_LENGTH}   ${LAST_MODIFIED}   ${CLUSTER_TYPE}
+    \    Read test file data using API    ${file}     ${START_BLOCK}   ${END_BLOCK}   ${FILE_LENGTH}   ${LAST_MODIFIED}   ${CLUSTER_TYPE}
 
     Verify metric value         ${METRIC_EVICTION}  ${NUM_EXPECTED_EVICTIONS}
     Verify cache directories    ${CACHE_DIR_PFX}    ${CACHE_DIR_SFX}    ${CACHE_NUM_DISKS}    ${CACHE_MAX_SIZE}
@@ -52,18 +52,17 @@ Test cache eviction FS
 
     @{testFiles} =      Generate test files   ${NUM_TEST_FILES}   ${FILE_LENGTH}
     :FOR    ${file}     IN      @{testFiles}
-    \    Read test file data FS   ${file}     ${START_BLOCK}   ${END_BLOCK}
+    \    Read test file data using FS   ${file}     ${START_BLOCK}   ${END_BLOCK}
 
     Verify metric value         ${METRIC_EVICTION}   ${NUM_EXPECTED_EVICTIONS}
     Verify cache directories    ${CACHE_DIR_PFX}     ${CACHE_DIR_SFX}    ${CACHE_NUM_DISKS}    ${CACHE_MAX_SIZE}
 
 *** Keywords ***
 Cache test setup
-    [Arguments]                 &{options}
-    Set Test Variable           &{bksOptions}   &{options}
-    Start BKS                   &{bksOptions}
-    Clear Library Configuration
-    Set Library Configuration   &{bksOptions}
+    [Arguments]         &{options}
+    Set Test Variable   &{bksOptions}   &{options}
+    Start BKS           &{bksOptions}
+    Initialize Library Configuration    &{bksOptions}
 
 Cache test teardown
     Stop BKS            &{bksOptions}

@@ -47,7 +47,7 @@ public class BookKeeperClientRFLibrary
    * @param clusterType   The type id of cluster being used.
    * @return True if the data was read into the cache correctly, false otherwise.
    */
-  public boolean readDataApi(String remotePath, long readStart, int readLength, long fileLength, long lastModified, int clusterType) throws IOException, TException
+  public boolean readDataUsingClientApi(String remotePath, long readStart, int readLength, long fileLength, long lastModified, int clusterType) throws IOException, TException
   {
     try (RetryingBookkeeperClient client = createBookKeeperClient()) {
       return client.readData(remotePath, readStart, readLength, fileLength, lastModified, clusterType);
@@ -62,7 +62,7 @@ public class BookKeeperClientRFLibrary
    * @param readLength    The amount of data to read.
    * @return True if the data was read into the cache correctly, false otherwise.
    */
-  public boolean readDataFs(String remotePath, long readStart, int readLength) throws IOException, TException, URISyntaxException
+  public boolean readDataUsingFileSystem(String remotePath, long readStart, int readLength) throws IOException, TException, URISyntaxException
   {
     try (FSDataInputStream mockFS = createFSInputStream(remotePath, readLength)) {
       final int readSize = mockFS.read(new byte[readLength], (int) readStart, readLength);
@@ -133,20 +133,13 @@ public class BookKeeperClientRFLibrary
   }
 
   /**
-   * Clear the Hadoop configuration for the library.
-   */
-  public void clearLibraryConfiguration()
-  {
-    conf.clear();
-  }
-
-  /**
-   * Set the Hadoop configuration for the library.
+   * Initializes the Hadoop configuration for the library.
    *
    * @param configurationOptions The options to set.
    */
-  public void setLibraryConfiguration(Map<String, String> configurationOptions)
+  public void initializeLibraryConfiguration(Map<String, String> configurationOptions)
   {
+    conf.clear();
     for (final Map.Entry<String, String> option : configurationOptions.entrySet()) {
       conf.set(option.getKey(), option.getValue());
     }
@@ -168,13 +161,12 @@ public class BookKeeperClientRFLibrary
    *
    * @param remotePath  The path of the file to cache.
    * @return the input stream for the file.
-   * @throws URISyntaxException if the path does not have the correct syntax
    * @throws IOException if an error occurs when initializing the file system.
    */
-  private FSDataInputStream createFSInputStream(String remotePath, int readLength) throws URISyntaxException, IOException
+  private FSDataInputStream createFSInputStream(String remotePath, int readLength) throws IOException
   {
     final MockCachingFileSystem mockFS = new MockCachingFileSystem();
-    mockFS.initialize(new URI("file://" + remotePath), conf);
+    mockFS.initialize(URI.create("file://" + remotePath), conf);
     return mockFS.open(new Path(remotePath), readLength);
   }
 }

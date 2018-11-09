@@ -35,9 +35,9 @@ Generate test files
     \   Append To List       ${testFileList}    ${testFile}
     [Return]        @{testFileList}
 
-Read test file data API
+Read test file data using API
     [Arguments]     ${fileName}  ${startBlock}  ${endBlock}  ${fileLength}  ${lastModified}  ${clusterType}
-    ${didRead} =    Read data api
+    ${didRead} =    Read data using client api
     ...             file://${fileName}
     ...             ${startBlock}
     ...             ${endBlock}
@@ -46,9 +46,9 @@ Read test file data API
     ...             ${clusterType}
     Should be true  ${didRead}
 
-Read test file data FS
+Read test file data using FS
     [Arguments]     ${fileName}  ${startBlock}  ${endBlock}
-    ${didRead} =    Read data fs
+    ${didRead} =    Read data using file system
     ...             ${fileName}
     ...             ${startBlock}
     ...             ${endBlock}
