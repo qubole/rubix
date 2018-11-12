@@ -122,6 +122,7 @@ public class CacheUtil
           for (String dirPrefix : dirPrefixList) {
             for (int i = 0; i < maxDisks; ++i) {
               final String cacheDirPath = dirPrefix + i + "/" + dirSuffix;
+              log.info("Abhishek -- Checking the directory for " + cacheDirPath);
               if (exists(cacheDirPath)) {
                 dirPathMap.put(numDisks, dirPrefix + i);
                 ++numDisks;

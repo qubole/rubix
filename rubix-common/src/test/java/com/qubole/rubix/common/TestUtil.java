@@ -15,6 +15,7 @@ package com.qubole.rubix.common;
 import com.google.common.base.Joiner;
 import com.qubole.rubix.core.utils.DeleteFileVisitor;
 import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.CacheUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -24,6 +25,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 
 public class TestUtil
 {
@@ -59,8 +61,11 @@ public class TestUtil
    */
   public static void createCacheParentDirectories(Configuration conf, int maxDisks) throws IOException
   {
-    for (int i = 0; i < maxDisks; i++) {
-      Files.createDirectories(Paths.get(CacheConfig.getCacheDirPrefixList(conf) + i));
+    List<String> dirPrefixes = CacheUtil.getDirPrefixList(conf);
+    for (String dirPrefix : dirPrefixes) {
+      for (int i = 0; i < maxDisks; i++) {
+        Files.createDirectories(Paths.get(dirPrefix + i));
+      }
     }
   }
 
@@ -73,10 +78,13 @@ public class TestUtil
    */
   public static void removeCacheParentDirectories(Configuration conf, int maxDisks) throws IOException
   {
-    for (int i = 0; i < maxDisks; i++) {
-      Path directory = Paths.get(CacheConfig.getCacheDirPrefixList(conf) + i);
-      Files.walkFileTree(directory, new DeleteFileVisitor());
-      Files.deleteIfExists(directory);
+    List  <String> dirPrefixes = CacheUtil.getDirPrefixList(conf);
+    for (String dirPrefix : dirPrefixes) {
+      for (int i = 0; i < maxDisks; i++) {
+        Path directory = Paths.get(dirPrefix + i);
+        Files.walkFileTree(directory, new DeleteFileVisitor());
+        Files.deleteIfExists(directory);
+      }
     }
   }
 }
