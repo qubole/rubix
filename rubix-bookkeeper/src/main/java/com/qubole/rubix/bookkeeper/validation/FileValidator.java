@@ -69,7 +69,7 @@ public class FileValidator extends AbstractScheduledService
    */
   private FileValidatorResult validateCache()
   {
-    final int maxDisks = CacheConfig.getCacheMaxDisks(conf);
+    final int maxDisks = CacheUtil.getCacheDiskCount(conf);
 
     final FileValidatorResult allDisksResult = new FileValidatorResult();
     for (int diskIndex = 0; diskIndex < maxDisks; diskIndex++) {

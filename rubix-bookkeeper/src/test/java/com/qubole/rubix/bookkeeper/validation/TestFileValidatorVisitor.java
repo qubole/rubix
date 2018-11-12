@@ -25,7 +25,7 @@ import org.testng.annotations.Test;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Map;
+import java.util.List;
 
 import static org.testng.Assert.assertEquals;
 
@@ -48,7 +48,7 @@ public class TestFileValidatorVisitor
   }
 
   @AfterMethod
-  public void tearDown() throws IOException
+  public void tearDown() throws Exception
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     TestUtil.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
@@ -60,7 +60,7 @@ public class TestFileValidatorVisitor
   public void testValidatorFileVisitor_allMdExists() throws IOException
   {
     final int maxDepth = 1;
-    final int maxDirs = 0;
+    final int maxDirs = 1;
     final int maxFiles = 10;
     final int mdSkip = 1;
 
@@ -71,7 +71,7 @@ public class TestFileValidatorVisitor
   public void testValidatorFileVisitor_mdDoesNotExist() throws IOException
   {
     final int maxDepth = 1;
-    final int maxDirs = 0;
+    final int maxDirs = 1;
     final int maxFiles = 10;
     final int mdSkip = 10;
 
@@ -82,7 +82,7 @@ public class TestFileValidatorVisitor
   public void testValidatorFileVisitor_someMdExists() throws IOException
   {
     final int maxDepth = 1;
-    final int maxDirs = 0;
+    final int maxDirs = 1;
     final int maxFiles = 10;
     final int mdSkip = 5;
 
@@ -150,9 +150,9 @@ public class TestFileValidatorVisitor
   {
     final FileValidatorVisitor validator = new FileValidatorVisitor(conf);
 
-    final Map<Integer, String> diskMap = CacheUtil.getCacheDiskPathsMap(conf);
-    for (int disk = 0; disk < diskMap.size(); disk++) {
-      Files.walkFileTree(Paths.get(diskMap.get(disk)), validator);
+    List<String> cacheDirectories = CacheUtil.getCacheDirectories(conf);
+    for (String cacheDirectory : cacheDirectories) {
+      Files.walkFileTree(Paths.get(cacheDirectory), validator);
     }
 
     return validator.getResult();

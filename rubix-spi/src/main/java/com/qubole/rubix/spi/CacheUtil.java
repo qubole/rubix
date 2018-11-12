@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -31,6 +32,7 @@ import java.util.List;
 public class CacheUtil
 {
   private static final Log log = LogFactory.getLog(CacheUtil.class.getName());
+  private static Supplier<HashMap<Integer, String>> diskPathMapSupplier;
 
   private CacheUtil()
   {
@@ -65,6 +67,28 @@ public class CacheUtil
     }
   }
 
+  public static List<String> getCacheDirectories(Configuration conf)
+  {
+    final List<String> dirPrefixList = getDirPrefixList(conf);
+    final int maxDisks = CacheConfig.getCacheMaxDisks(conf);
+    boolean parentDirectoryExists = false;
+    List<String> cacheDirectories = new ArrayList<>();
+    String cacheDirPath = "";
+
+    for (String dirPrefix : dirPrefixList) {
+      for (int i = 0; i < maxDisks; ++i) {
+        final String cacheParentDir = dirPrefix + i;
+
+        if (exists(cacheParentDir)) {
+          cacheDirPath = cacheParentDir + "/" + CacheConfig.getCacheDataDirSuffix(conf);
+          cacheDirectories.add(cacheDirPath);
+        }
+      }
+    }
+
+    return cacheDirectories;
+  }
+
   /**
    * Get the number of disks available for use on the filesystem.
    *
@@ -84,29 +108,31 @@ public class CacheUtil
    */
   public static HashMap<Integer, String> getCacheDiskPathsMap(final Configuration conf)
   {
-    Supplier<HashMap<Integer, String>> diskPathMapSupplier = Suppliers.memoize(new Supplier<HashMap<Integer, String>>()
-    {
-      @Override
-      public HashMap<Integer, String> get()
-      {
-        final HashMap<Integer, String> dirPathMap = new HashMap<>();
-        final List<String> dirPrefixList = getDirPrefixList(conf);
-        final String dirSuffix = CacheConfig.getCacheDataDirSuffix(conf);
-        final int maxDisks = CacheConfig.getCacheMaxDisks(conf);
+    if (diskPathMapSupplier == null) {
+      diskPathMapSupplier = Suppliers.memoize(new Supplier<HashMap<Integer, String>>() {
+        @Override
+        public HashMap<Integer, String> get()
+        {
+          final HashMap<Integer, String> dirPathMap = new HashMap<>();
+          final List<String> dirPrefixList = getDirPrefixList(conf);
+          final String dirSuffix = CacheConfig.getCacheDataDirSuffix(conf);
+          final int maxDisks = CacheConfig.getCacheMaxDisks(conf);
 
-        int numDisks = 0;
-        for (String dirPrefix : dirPrefixList) {
-          for (int i = 0; i < maxDisks; ++i) {
-            final String cacheDirPath = dirPrefix + i + "/" + dirSuffix;
-            if (exists(cacheDirPath)) {
-              dirPathMap.put(numDisks, dirPrefix + i);
-              ++numDisks;
+          int numDisks = 0;
+          for (String dirPrefix : dirPrefixList) {
+            for (int i = 0; i < maxDisks; ++i) {
+              final String cacheDirPath = dirPrefix + i + "/" + dirSuffix;
+              if (exists(cacheDirPath)) {
+                dirPathMap.put(numDisks, dirPrefix + i);
+                ++numDisks;
+              }
             }
           }
+          return dirPathMap;
         }
-        return dirPathMap;
-      }
-    });
+      });
+    }
+
     return diskPathMapSupplier.get();
   }
 

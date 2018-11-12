@@ -24,7 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashSet;
-import java.util.Map;
+import java.util.List;
 import java.util.Set;
 
 public class ValidatorFileGen
@@ -52,11 +52,11 @@ public class ValidatorFileGen
   public static FileGenResult generateTestFiles(Configuration conf, int depth, int dirs, int files, int mdStep) throws IOException
   {
     CacheUtil.createCacheDirectories(conf);
-    final Map<Integer, String> diskMap = CacheUtil.getCacheDiskPathsMap(conf);
+    List<String> cacheDirectories = CacheUtil.getCacheDirectories(conf);
 
     FileGenResult result = new FileGenResult(0, 0, new HashSet<String>());
-    for (int disk = 0; disk < diskMap.size(); disk++) {
-      result.addResult(createCacheSubDirectories(conf, Paths.get(diskMap.get(disk)), 1, depth, dirs, files, mdStep));
+    for (String cacheDirectory : cacheDirectories) {
+      result.addResult(createCacheSubDirectories(conf, Paths.get(cacheDirectory), 0, depth, dirs, files, mdStep));
     }
 
     return result;

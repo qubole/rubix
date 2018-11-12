@@ -36,7 +36,7 @@ import static org.testng.Assert.fail;
 public class TestCacheUtil
 {
   private static final String cacheTestDirPrefix = System.getProperty("java.io.tmpdir") + "/cacheUtilTest/";
-  private static final int maxDisks = 5;
+  private static final int maxDisks = 1;
 
   private final Configuration conf = new Configuration();
 
@@ -122,16 +122,35 @@ public class TestCacheUtil
   }
 
   @Test
+  public void testGetCacheDiskPathsMap()
+  {
+    CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
+    CacheConfig.setCacheDataDirSuffix(conf, "/fcache/");
+    CacheConfig.setMaxDisks(conf, maxDisks);
+
+    createCacheDirectoriesForTest(conf);
+
+    HashMap<Integer, String> diskPathsMap = CacheUtil.getCacheDiskPathsMap(conf);
+    assertEquals(diskPathsMap.size(), maxDisks, "Sizes don't match!");
+
+    CacheConfig.setMaxDisks(conf, 2);
+    createCacheDirectoriesForTest(conf);
+    diskPathsMap = CacheUtil.getCacheDiskPathsMap(conf);
+
+    assertEquals(diskPathsMap.size(), maxDisks, "Size should not change");
+  }
+
+  @Test
   public void testGetDirPath()
   {
     CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
     CacheConfig.setCacheDataDirSuffix(conf, "/fcache/");
-    CacheConfig.setMaxDisks(conf, 2);
+    CacheConfig.setMaxDisks(conf, 1);
 
     createCacheDirectoriesForTest(conf);
-    String dirPath = CacheUtil.getDirPath(1, conf);
+    String dirPath = CacheUtil.getDirPath(0, conf);
 
-    assertEquals(dirPath, cacheTestDirPrefix + "1", "Paths don't match");
+    assertEquals(dirPath, cacheTestDirPrefix + "0", "Paths don't match");
   }
 
   @Test

@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class TestUtil
@@ -73,7 +74,9 @@ public class TestUtil
   public static void removeCacheParentDirectories(Configuration conf, int maxDisks) throws IOException
   {
     for (int i = 0; i < maxDisks; i++) {
-      Files.walkFileTree(Paths.get(CacheConfig.getCacheDirPrefixList(conf) + i), new DeleteFileVisitor());
+      Path directory = Paths.get(CacheConfig.getCacheDirPrefixList(conf) + i);
+      Files.walkFileTree(directory, new DeleteFileVisitor());
+      Files.deleteIfExists(directory);
     }
   }
 }
