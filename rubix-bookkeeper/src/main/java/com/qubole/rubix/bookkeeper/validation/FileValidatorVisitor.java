@@ -74,11 +74,13 @@ public class FileValidatorVisitor extends SimpleFileVisitor<Path>
           else {
             log.info("data size " + dataSize + " Filesize in memory " + fileSizeInMemory);
             corruptedCachedFiles.add(file.toString());
+            BookKeeper.invalidateFileMetadata(file.toString());
           }
         }
       }
       else {
         filesWithoutMd.add(file.toString());
+        BookKeeper.invalidateFileMetadata(file.toString());
       }
     }
 
