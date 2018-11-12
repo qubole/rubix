@@ -48,7 +48,7 @@ public class TestFileValidatorVisitor
   }
 
   @AfterMethod
-  public void tearDown() throws Exception
+  public void tearDown() throws IOException
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     TestUtil.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
