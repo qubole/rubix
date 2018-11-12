@@ -78,7 +78,7 @@ public class TestUtil
    */
   public static void removeCacheParentDirectories(Configuration conf, int maxDisks) throws IOException
   {
-    List  <String> dirPrefixes = CacheUtil.getDirPrefixList(conf);
+    List<String> dirPrefixes = CacheUtil.getDirPrefixList(conf);
     for (String dirPrefix : dirPrefixes) {
       for (int i = 0; i < maxDisks; i++) {
         Path directory = Paths.get(dirPrefix + i);
