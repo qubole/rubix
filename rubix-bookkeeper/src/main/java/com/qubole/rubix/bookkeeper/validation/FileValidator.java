@@ -91,9 +91,19 @@ public class FileValidator extends AbstractScheduledService
 
     if (allDisksResult.getFailureCount() > 0) {
       log.error("Validation Error!");
-      log.error("The following cache files do not have an associated metadata file:");
+      log.error("The following cached files do not have an associated metadata file:");
 
       for (String fileName : allDisksResult.getFilesWithoutMD()) {
+        log.error(String.format("-- %s", fileName));
+      }
+
+      log.error("The following cached files have become corrupted:");
+      for (String fileName : allDisksResult.getCorruptedCachedFiles()) {
+        log.error(String.format("-- %s", fileName));
+      }
+
+      log.error("The following files are not being tracked:");
+      for (String fileName : allDisksResult.getUntrackedCachedFiles()) {
         log.error(String.format("-- %s", fileName));
       }
     }
