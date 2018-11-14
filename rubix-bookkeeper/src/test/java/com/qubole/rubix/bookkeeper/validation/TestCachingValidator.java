@@ -69,8 +69,10 @@ public class TestCachingValidator
   }
 
   @AfterMethod
-  public void tearDown()
+  public void tearDown() throws IOException
   {
+    TestUtil.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
+
     conf.clear();
   }
 
