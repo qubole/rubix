@@ -74,6 +74,7 @@ public class FileMetadata
      */
   }
 
+  // This method returns the number of block already cached. This will be helpful determining the actual file size.
   public int getNumCachedBlock() throws IOException
   {
     int blocksCached = 0;

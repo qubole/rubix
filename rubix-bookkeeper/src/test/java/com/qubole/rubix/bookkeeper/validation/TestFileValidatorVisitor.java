@@ -154,11 +154,9 @@ public class TestFileValidatorVisitor
   {
     String filePath = CacheUtil.getLocalPath(TEST_REMOTE_PATH_ONE, conf);
     Files.createFile(Paths.get(filePath));
-    log.info("FilePath " + filePath);
 
     filePath = CacheUtil.getLocalPath(TEST_REMOTE_PATH_TWO, conf);
     Files.createFile(Paths.get(filePath));
-    log.info("FilePath " + filePath);
 
     CacheStatusRequest request = new CacheStatusRequest(TEST_REMOTE_PATH_ONE, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
         TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());

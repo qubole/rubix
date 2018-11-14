@@ -156,6 +156,40 @@ public class TestRemoteReadRequestChain
     assertTrue(expectedCacheOutput.equals(actualCacheOutput), "Wrong data read in local randomAccessFile, expected\n" + expectedCacheOutput + "\nBut got\n" + actualCacheOutput);
   }
 
+  @Test
+  public void testActualDataDownloaded_WithNoPrefixData() throws IOException
+  {
+    byte[] buffer = new byte[900];
+    ReadRequest readRequest = new ReadRequest(0, 100, 0, 100, buffer, 0, backendFile.length());
+
+    remoteReadRequestChain.addReadRequest(readRequest);
+    remoteReadRequestChain.lock();
+
+    int readSize = remoteReadRequestChain.call();
+
+    assertTrue(readSize == 100, "Data read size didn't match");
+
+    long actualDataDownloaded = readRequest.getActualDataDownloaded();
+    assertTrue(actualDataDownloaded == 100, "Downloaded data size didn't match");
+  }
+
+  @Test
+  public void testActualDataDownloaded_WithPrefixData() throws IOException
+  {
+    byte[] buffer = new byte[900];
+    ReadRequest readRequest = new ReadRequest(0, 100, 25, 75, buffer, 0, backendFile.length());
+
+    remoteReadRequestChain.addReadRequest(readRequest);
+    remoteReadRequestChain.lock();
+
+    int readSize = remoteReadRequestChain.call();
+
+    assertTrue(readSize == 50, "Data read size didn't match");
+
+    long actualDataDownloaded = readRequest.getActualDataDownloaded();
+    assertTrue(actualDataDownloaded == 100, "Downloaded data size didn't match");
+  }
+
   @AfterMethod
   public void cleanup()
       throws IOException
