@@ -63,7 +63,7 @@ public class TestCachingValidator
   public void setUp() throws IOException
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
-    CacheConfig.setMaxDisks(conf, 1);
+    CacheConfig.setMaxDisks(conf, TEST_MAX_DISKS);
 
     TestUtil.createCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
