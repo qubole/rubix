@@ -58,6 +58,11 @@
             <version>${dep.testng.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.3</version>
+        </dependency>
 
     </dependencies>
 
@@ -92,6 +97,7 @@
                             <artifactSet>
                                 <includes>
                                     <include>com.google.code.gson:gson</include>
+                                    <include>org.apache.httpcomponents:httpclient</include>
                                     <include>com.google.guava:guava</include>
                                 </includes>
                             </artifactSet>
