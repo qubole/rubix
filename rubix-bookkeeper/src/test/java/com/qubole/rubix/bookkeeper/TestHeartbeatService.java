@@ -41,9 +41,9 @@ import static org.testng.Assert.assertNull;
 
 public class TestHeartbeatService
 {
-  private static final Log log = LogFactory.getLog(TestWorkerBookKeeper.class);
+  private static final Log log = LogFactory.getLog(TestHeartbeatService.class);
 
-  private static final String TEST_CACHE_DIR_PREFIX = TestUtil.getTestCacheDirPrefix("TestWorkerBookKeeper");
+  private static final String TEST_CACHE_DIR_PREFIX = TestUtil.getTestCacheDirPrefix("TestHeartbeatService");
   private static final int TEST_MAX_DISKS = 1;
   private static final int TEST_MAX_RETRIES = 5;
   private static final int TEST_RETRY_INTERVAL = 500;
