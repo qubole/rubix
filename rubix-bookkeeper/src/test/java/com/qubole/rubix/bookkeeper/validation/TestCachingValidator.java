@@ -16,6 +16,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.Lists;
 import com.qubole.rubix.bookkeeper.BookKeeper;
 import com.qubole.rubix.bookkeeper.CoordinatorBookKeeper;
+import com.qubole.rubix.common.TestUtil;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
@@ -34,6 +35,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -48,6 +50,8 @@ public class TestCachingValidator
 {
   private static final Log log = LogFactory.getLog(TestCachingValidator.class);
 
+  private static final String TEST_CACHE_DIR_PREFIX = TestUtil.getTestCacheDirPrefix("TestCachingValidator");
+  private static final int TEST_MAX_DISKS = 1;
   private static final int TEST_VALIDATION_INTERVAL = 1000; // ms
   private static final String TEST_REMOTE_LOCATION = "testLocation";
   private static final List<BlockLocation> TEST_LOCATIONS_CACHED = Lists.newArrayList(new BlockLocation(Location.CACHED, TEST_REMOTE_LOCATION));
@@ -56,8 +60,12 @@ public class TestCachingValidator
   private final Configuration conf = new Configuration();
 
   @BeforeMethod
-  public void setUp()
+  public void setUp() throws IOException
   {
+    CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
+    CacheConfig.setMaxDisks(conf, 1);
+
+    TestUtil.createCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
 
   @AfterMethod
