@@ -61,6 +61,7 @@ public class TestBookKeeperServer extends BaseServerTest
   public void setUp()
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
+    CacheConfig.setMaxDisks(conf, TEST_MAX_DISKS);
 
     metrics = new MetricRegistry();
   }
