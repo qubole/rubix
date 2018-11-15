@@ -357,14 +357,13 @@ public class CachingInputStream extends FSInputStream
 
       lengthAlreadyConsidered += readRequest.getActualReadLength();
 
-      if (isCached == null) {
+      if (isCached == null || isCached.get(idx).getLocation() == Location.UNKNOWN) {
         log.debug(String.format("Sending block %d to DirectReadRequestChain", blockNum));
         if (directReadRequestChain == null) {
           directReadRequestChain = new DirectReadRequestChain(getParentDataInputStream());
         }
         directReadRequestChain.addReadRequest(readRequest);
       }
-
       else if (isCached.get(idx).getLocation() == Location.CACHED) {
         log.debug(String.format("Sending cached block %d to cachedReadRequestChain", blockNum));
         try {

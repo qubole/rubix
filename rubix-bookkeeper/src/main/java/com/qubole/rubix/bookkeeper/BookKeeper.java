@@ -250,7 +250,10 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         totalRequests++;
 
         long split = (blockNum * blockSize) / splitSize;
-        if (!blockSplits.get(split).equalsIgnoreCase(nodeName)) {
+        if (blockSplits.get(split) == null) {
+          blockLocations.add(new BlockLocation(Location.UNKNOWN, blockSplits.get(split)));
+        }
+        else if (!blockSplits.get(split).equalsIgnoreCase(nodeName)) {
           blockLocations.add(new BlockLocation(Location.NON_LOCAL, blockSplits.get(split)));
           nonLocalRequests++;
         }

@@ -6,7 +6,8 @@ typedef i32 int
 enum Location {
 CACHED,
 LOCAL,
-NON_LOCAL
+NON_LOCAL,
+UNKNOWN
 }
 
 struct BlockLocation {

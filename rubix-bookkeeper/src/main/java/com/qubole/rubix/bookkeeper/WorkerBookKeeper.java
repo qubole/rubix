@@ -118,7 +118,7 @@ public class WorkerBookKeeper extends BookKeeper
       return hostName;
     }
     catch (ExecutionException e) {
-      e.printStackTrace();
+      log.error("Could not get node host name from cache with Exception : " + e);
     }
 
     return null;
@@ -150,7 +150,7 @@ public class WorkerBookKeeper extends BookKeeper
         return bookKeeperFactory.createBookKeeperClient(hostName, conf);
       }
       catch (TTransportException e) {
-        log.warn("Could not start client for heartbeat service", e);
+        log.warn(String.format("Could not create bookkeeper client to fetch list of nodes from master [%d/%d attempts]", failedStarts, maxRetries));
       }
 
       failedStarts++;
@@ -166,7 +166,7 @@ public class WorkerBookKeeper extends BookKeeper
       }
     }
 
-    log.fatal("Heartbeat service ran out of retries to connect to the master BookKeeper");
-    throw new RuntimeException("Could not start heartbeat service");
+    log.fatal("Ran out of retries to create bookkeeper client to fetch list of nodes from master.");
+    throw new RuntimeException("Could not create bookkeeper client");
   }
 }
