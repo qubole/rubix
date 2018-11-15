@@ -126,6 +126,7 @@ public class TestWorkerBookKeeper
     }
 
     String testLocalhost = "localhost_test";
+    String changedTestLocalhost = "changed_localhost";
     mockList.add(testLocalhost);
 
     doReturn(mockList).when(spyCoordinator).getNodeHostNames(anyInt());
@@ -148,7 +149,7 @@ public class TestWorkerBookKeeper
     assertTrue(hostName.equals(testLocalhost), "HostName is not correct from the coordinator");
 
     mockList.clear();
-    mockList.add("changed_localhost");
+    mockList.add(changedTestLocalhost);
 
     doReturn(mockList).when(spyCoordinator).getNodeHostNames(anyInt());
     hostName = workerBookKeeper.getClusterNodeHostName("remotepath", ClusterType.TEST_CLUSTER_MANAGER.ordinal());
@@ -157,7 +158,7 @@ public class TestWorkerBookKeeper
     ticker.advance(200, TimeUnit.SECONDS);
 
     hostName = workerBookKeeper.getClusterNodeHostName("remotepath", ClusterType.TEST_CLUSTER_MANAGER.ordinal());
-    assertTrue(hostName.equals("changed_localhost"), "HostName is not refreshed from Coordinator");
+    assertTrue(hostName.equals(changedTestLocalhost), "HostName is not refreshed from Coordinator");
 
     bookKeeperServer.stopServer();
   }
