@@ -47,7 +47,7 @@ public class BookKeeperClientRFLibrary
    * @param clusterType   The type id of cluster being used.
    * @return True if the data was read into the cache correctly, false otherwise.
    */
-  public boolean readDataUsingClientApi(String remotePath, long readStart, int readLength, long fileLength, long lastModified, int clusterType) throws IOException, TException
+  public boolean downloadDataToCache(String remotePath, long readStart, int readLength, long fileLength, long lastModified, int clusterType) throws IOException, TException
   {
     try (RetryingBookkeeperClient client = createBookKeeperClient()) {
       return client.readData(remotePath, readStart, readLength, fileLength, lastModified, clusterType);
@@ -62,10 +62,10 @@ public class BookKeeperClientRFLibrary
    * @param readLength    The amount of data to read.
    * @return True if the data was read into the cache correctly, false otherwise.
    */
-  public boolean readDataUsingFileSystem(String remotePath, long readStart, int readLength) throws IOException, TException, URISyntaxException
+  public boolean readData(String remotePath, long readStart, int readLength) throws IOException, TException, URISyntaxException
   {
-    try (FSDataInputStream mockFS = createFSInputStream(remotePath, readLength)) {
-      final int readSize = mockFS.read(new byte[readLength], (int) readStart, readLength);
+    try (FSDataInputStream inputStream = createFSInputStream(remotePath, readLength)) {
+      final int readSize = inputStream.read(new byte[readLength], (int) readStart, readLength);
       return readSize == readLength;
     }
   }

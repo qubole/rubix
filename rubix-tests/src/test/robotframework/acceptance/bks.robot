@@ -25,6 +25,18 @@ Get options argument
     ${optionArgs} =     Join Command Line   ${optionsList}
     [Return]            ${optionArgs}
 
+Create cache parent directories
+    [Arguments]         ${cachePrefix}
+    ...                 ${cacheNumDisks}
+    :FOR    ${index}    IN RANGE    ${cacheNumDisks}
+    \   Create directory    ${cachePrefix}${index}
+
+Remove cache parent directories
+    [Arguments]         ${cachePrefix}
+    ...                 ${cacheNumDisks}
+    :FOR    ${index}    IN RANGE    ${cacheNumDisks}
+    \   Remove directory    ${cachePrefix}${index}  recursive=${True}
+
 Generate test files
     [Arguments]     ${numFiles}
     ...             ${fileLength}
@@ -35,9 +47,9 @@ Generate test files
     \   Append To List       ${testFileList}    ${testFile}
     [Return]        @{testFileList}
 
-Read test file data using API
+Download test file data to cache
     [Arguments]     ${fileName}  ${startBlock}  ${endBlock}  ${fileLength}  ${lastModified}  ${clusterType}
-    ${didRead} =    Read data using client api
+    ${didRead} =    Download data to cache
     ...             file://${fileName}
     ...             ${startBlock}
     ...             ${endBlock}
@@ -46,15 +58,15 @@ Read test file data using API
     ...             ${clusterType}
     Should be true  ${didRead}
 
-Read test file data using FS
+Read test file data
     [Arguments]     ${fileName}  ${startBlock}  ${endBlock}
-    ${didRead} =    Read data using file system
+    ${didRead} =    Read data
     ...             ${fileName}
     ...             ${startBlock}
     ...             ${endBlock}
     Should be true  ${didRead}
 
-Verify cache directories
+Verify cache directory size
     [Arguments]     ${cachePrefix}
     ...             ${cacheSuffix}
     ...             ${cacheNumDisks}
