@@ -20,6 +20,7 @@ import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
+import com.qubole.rubix.spi.thrift.HeartbeatStatus;
 import com.qubole.rubix.spi.thrift.Location;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -171,12 +172,13 @@ public class TestThriftServerJVM extends Configured
     log.info(" Value of Result : " + result);
   }
 
-  @Test(enabled = true, expectedExceptions = org.apache.thrift.shaded.transport.TTransportException.class)
+  @Test(enabled = true, expectedExceptions = org.apache.thrift.shaded.TException.class)
   public void testCreateBookKeeperClient_OnNotRunningPort() throws IOException, InterruptedException, Exception
   {
-    //1234 is a random port to test if TTransportException is being thrown or not
+    //1234 is a random port to test if TException is being thrown or not
     CacheConfig.setServerPort(conf, 1234);
     String host = "localhost";
-    bookKeeperFactory.createBookKeeperClient(host, conf);
+    RetryingBookkeeperClient client = bookKeeperFactory.createBookKeeperClient(host, conf);
+    client.handleHeartbeat(host, new HeartbeatStatus());
   }
 }

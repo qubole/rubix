@@ -73,7 +73,7 @@ public class WorkerBookKeeper extends BookKeeper
           public List<String> load(Integer s) throws Exception
           {
             if (client == null) {
-              client = initializeClientWithRetry(bookKeeperFactory, conf, masterHostname);
+              client = createBookKeeperClient(bookKeeperFactory, conf, masterHostname);
             }
             log.info("Fetching list of nodes for cluster type " + s.intValue() + " from master : " + masterHostname + " Client " + client);
             return client.getNodeHostNames(s.intValue());
@@ -139,34 +139,18 @@ public class WorkerBookKeeper extends BookKeeper
    * @param bookKeeperFactory   The factory to use for creating a BookKeeper client.
    * @return The client used for communication with the master node.
    */
-  private static RetryingBookkeeperClient initializeClientWithRetry(BookKeeperFactory bookKeeperFactory, Configuration conf,
+  private static RetryingBookkeeperClient createBookKeeperClient(BookKeeperFactory bookKeeperFactory, Configuration conf,
                                                              String hostName)
   {
     final int retryInterval = CacheConfig.getServiceRetryInterval(conf);
     final int maxRetries = CacheConfig.getServiceMaxRetries(conf);
 
-    for (int failedStarts = 0; failedStarts < maxRetries; ) {
-      try {
-        return bookKeeperFactory.createBookKeeperClient(hostName, conf);
-      }
-      catch (TTransportException e) {
-        log.warn(String.format("Could not create bookkeeper client to fetch list of nodes from master [%d/%d attempts]", failedStarts, maxRetries));
-      }
-
-      failedStarts++;
-      if (failedStarts == maxRetries) {
-        break;
-      }
-
-      try {
-        Thread.sleep(retryInterval);
-      }
-      catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-      }
+    try {
+      return bookKeeperFactory.createBookKeeperClient(hostName, conf, maxRetries, retryInterval);
     }
-
-    log.fatal("Ran out of retries to create bookkeeper client to fetch list of nodes from master.");
-    throw new RuntimeException("Could not create bookkeeper client");
+    catch (TTransportException e) {
+      log.fatal("Could not create bookkeeper client to fetch list of nodes from master.");
+      throw new RuntimeException("Could not create bookkeeper client");
+    }
   }
 }

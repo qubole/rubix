@@ -35,13 +35,15 @@ public class RetryingBookkeeperClient extends BookKeeperService.Client implement
 {
   private static final Logger LOG = LoggerFactory.getLogger(RetryingBookkeeperClient.class);
   private int maxRetries;
+  private long retryInterval;
   TTransport transport;
 
-  public RetryingBookkeeperClient(TTransport transport, int maxRetries)
+  public RetryingBookkeeperClient(TTransport transport, int maxRetries, long retryInterval)
   {
     super(new TBinaryProtocol(transport));
     this.transport = transport;
     this.maxRetries = maxRetries;
+    this.retryInterval = retryInterval;
   }
 
   @Override
@@ -54,6 +56,20 @@ public class RetryingBookkeeperClient extends BookKeeperService.Client implement
           throws TException
       {
         return RetryingBookkeeperClient.super.getCacheStatus(request);
+      }
+    });
+  }
+
+  @Override
+  public boolean readData(final String remotePath, final long offset, final int length, final long fileSize,
+                          final long lastModified, final int clusterType) throws TException
+  {
+    return retryConnection(new Callable<Boolean>()
+    {
+      @Override
+      public Boolean call() throws Exception
+      {
+        return RetryingBookkeeperClient.super.readData(remotePath, offset, length, fileSize, lastModified, clusterType);
       }
     });
   }
@@ -88,22 +104,63 @@ public class RetryingBookkeeperClient extends BookKeeperService.Client implement
     });
   }
 
+  @Override
+  public String getClusterNodeHostName(final String remotePath, final int clusterType) throws TException
+  {
+    return retryConnection(new Callable<String>()
+    {
+      @Override
+      public String call() throws Exception
+      {
+        return RetryingBookkeeperClient.super.getClusterNodeHostName(remotePath, clusterType);
+      }
+    });
+  }
+
+  @Override
+  public List<String> getNodeHostNames(final int clusterType) throws TException
+  {
+    return retryConnection(new Callable<List<String>>()
+    {
+      @Override
+      public List<String> call() throws Exception
+      {
+        return RetryingBookkeeperClient.super.getNodeHostNames(clusterType);
+      }
+    });
+  }
+
   private <V> V retryConnection(Callable<V> callable)
       throws TException
   {
     int errors = 0;
 
-    while (errors < maxRetries) {
-      try {
-        if (!transport.isOpen()) {
-          transport.open();
+    try {
+      while (errors < maxRetries) {
+        try {
+          if (!transport.isOpen()) {
+            transport.open();
+          }
+          return callable.call();
         }
-        return callable.call();
+        catch (Exception e) {
+          LOG.info("Error while connecting : ", e);
+          errors++;
+        }
+        if (transport.isOpen()) {
+          transport.close();
+        }
+
+        try {
+          Thread.sleep(retryInterval);
+        }
+        catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
       }
-      catch (Exception e) {
-        LOG.info("Error while connecting : ", e);
-        errors++;
-      }
+    }
+
+    finally {
       if (transport.isOpen()) {
         transport.close();
       }
@@ -116,6 +173,8 @@ public class RetryingBookkeeperClient extends BookKeeperService.Client implement
   public void close()
       throws IOException
   {
-    transport.close();
+    if (!transport.isOpen()) {
+      transport.close();
+    }
   }
 }

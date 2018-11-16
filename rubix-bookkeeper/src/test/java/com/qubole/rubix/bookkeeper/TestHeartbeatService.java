@@ -98,7 +98,7 @@ public class TestHeartbeatService
     when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
         new RetryingBookkeeperClient(
             new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf)),
-            CacheConfig.getMaxRetries(conf)));
+            CacheConfig.getMaxRetries(conf), 0));
 
     final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, new MetricRegistry());
     final HeartbeatService heartbeatService = new HeartbeatService(conf, new MetricRegistry(), bookKeeperFactory, bookKeeper);
@@ -115,6 +115,7 @@ public class TestHeartbeatService
 
     final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, new MetricRegistry());
     final HeartbeatService heartbeatService = new HeartbeatService(conf, new MetricRegistry(), new BookKeeperFactory(), bookKeeper);
+    heartbeatService.runOneIteration();
   }
 
   /**
@@ -130,6 +131,7 @@ public class TestHeartbeatService
 
     final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, new MetricRegistry());
     final HeartbeatService heartbeatService = new HeartbeatService(conf, new MetricRegistry(), bookKeeperFactory, bookKeeper);
+    heartbeatService.runOneIteration();
   }
 
   /**
@@ -146,7 +148,7 @@ public class TestHeartbeatService
     when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
         new RetryingBookkeeperClient(
             new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf)),
-            CacheConfig.getMaxRetries(conf)));
+            CacheConfig.getMaxRetries(conf), 0));
 
     final MetricRegistry metrics = new MetricRegistry();
     final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);
@@ -170,7 +172,7 @@ public class TestHeartbeatService
     when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
         new RetryingBookkeeperClient(
             new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf)),
-            CacheConfig.getMaxRetries(conf)));
+            CacheConfig.getMaxRetries(conf), 0));
 
     final MetricRegistry metrics = new MetricRegistry();
     final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);

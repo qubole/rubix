@@ -71,7 +71,7 @@ public class HeartbeatService extends AbstractScheduledService
     this.heartbeatInitialDelay = CacheConfig.getHeartbeatInitialDelay(conf);
     this.heartbeatInterval = CacheConfig.getHeartbeatInterval(conf);
     this.masterHostname = ClusterUtil.getMasterHostname(conf);
-    this.bookkeeperClient = initializeClientWithRetry(bookKeeperFactory);
+    this.bookkeeperClient = createBookKeeperClient(bookKeeperFactory);
 
     if (CacheConfig.isValidationEnabled(conf)) {
       this.cachingValidator = new CachingValidator(conf, bookKeeper);
@@ -104,35 +104,19 @@ public class HeartbeatService extends AbstractScheduledService
    * @param bookKeeperFactory   The factory to use for creating a BookKeeper client.
    * @return The client used for communication with the master node.
    */
-  private RetryingBookkeeperClient initializeClientWithRetry(BookKeeperFactory bookKeeperFactory)
+  private RetryingBookkeeperClient createBookKeeperClient(BookKeeperFactory bookKeeperFactory)
   {
     final int retryInterval = CacheConfig.getServiceRetryInterval(conf);
     final int maxRetries = CacheConfig.getServiceMaxRetries(conf);
 
-    for (int failedStarts = 0; failedStarts < maxRetries; ) {
-      try {
-        RetryingBookkeeperClient client = bookKeeperFactory.createBookKeeperClient(masterHostname, conf);
-        return client;
-      }
-      catch (TTransportException e) {
-        failedStarts++;
-        log.warn(String.format("Could not start client for heartbeat service [%d/%d attempts]", failedStarts, maxRetries));
-      }
-
-      if (failedStarts == maxRetries) {
-        break;
-      }
-
-      try {
-        Thread.sleep(retryInterval);
-      }
-      catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-      }
+    try {
+      RetryingBookkeeperClient client = bookKeeperFactory.createBookKeeperClient(masterHostname, conf, maxRetries, retryInterval);
+      return client;
     }
-
-    log.fatal("Heartbeat service ran out of retries to connect to the master BookKeeper");
-    throw new RuntimeException("Could not start heartbeat service");
+    catch (TTransportException e) {
+      log.fatal("Heartbeat service ran out of retries to connect to the master BookKeeper");
+      throw new RuntimeException("Could not start heartbeat service");
+    }
   }
 
   @Override

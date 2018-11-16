@@ -182,7 +182,7 @@ public class TestCachingValidator
     when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
         new RetryingBookkeeperClient(
             new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf)),
-            CacheConfig.getMaxRetries(conf)));
+            CacheConfig.getMaxRetries(conf), 0));
 
     CachingValidator validator = new CachingValidator(conf, bookKeeper);
     assertEquals(validator.validateCachingBehavior(), expectedResult);
