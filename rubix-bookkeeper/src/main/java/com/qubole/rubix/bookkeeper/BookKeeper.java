@@ -468,7 +468,6 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     int blockSize = CacheConfig.getBlockSize(conf);
     byte[] buffer = new byte[blockSize];
     ByteBuffer byteBuffer = null;
-    String localPath = CacheUtil.getLocalPath(remotePath, conf);
     FileSystem fs = null;
     FSDataInputStream inputStream = null;
     Path path = new Path(remotePath);
@@ -476,6 +475,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     long endBlock = ((offset + (length - 1)) / CacheConfig.getBlockSize(conf)) + 1;
     try {
       int idx = 0;
+      String localPath = CacheUtil.getLocalPath(remotePath, conf);
       CacheStatusRequest request = new CacheStatusRequest(remotePath, fileSize, lastModified, startBlock, endBlock, clusterType);
       List<BlockLocation> blockLocations = getCacheStatus(request);
 

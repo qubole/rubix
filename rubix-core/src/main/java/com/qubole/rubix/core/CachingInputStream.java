@@ -135,6 +135,7 @@ public class CachingInputStream extends FSInputStream
     this.strictMode = CacheConfig.isStrictMode(conf);
     try {
       this.bookKeeperClient = bookKeeperFactory.createBookKeeperClient(conf);
+      this.localPath = CacheUtil.getLocalPath(backendPath, conf);
     }
     catch (Exception e) {
       if (strictMode) {
@@ -144,7 +145,6 @@ public class CachingInputStream extends FSInputStream
       bookKeeperClient = null;
     }
     this.blockSize = CacheConfig.getBlockSize(conf);
-    this.localPath = CacheUtil.getLocalPath(backendPath, conf);
     this.diskReadBufferSize = CacheConfig.getDiskReadBufferSize(conf);
   }
 

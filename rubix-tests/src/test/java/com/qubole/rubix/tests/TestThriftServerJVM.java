@@ -133,7 +133,7 @@ public class TestThriftServerJVM extends Configured
   }
 
   @AfterMethod
-  public static void cleanup()
+  public static void cleanup() throws IOException
   {
     File file = new File(backendFileName);
     file.delete();

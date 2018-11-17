@@ -21,9 +21,12 @@ import com.google.common.hash.Hashing;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -49,6 +52,7 @@ public class CacheUtil
     final List<String> dirPrefixList = getDirPrefixList(conf);
     final int maxDisks = CacheConfig.getCacheMaxDisks(conf);
     boolean parentDirectoryExists = false;
+    log.info("Creating cache dircetory");
 
     for (String dirPrefix : dirPrefixList) {
       for (int i = 0; i < maxDisks; ++i) {
@@ -108,7 +112,7 @@ public class CacheUtil
    */
   public static HashMap<Integer, String> getCacheDiskPathsMap(final Configuration conf)
   {
-    if (diskPathMapSupplier == null) {
+    if (diskPathMapSupplier == null || diskPathMapSupplier.get().size() == 0) {
       diskPathMapSupplier = Suppliers.memoize(new Supplier<HashMap<Integer, String>>() {
         @Override
         public HashMap<Integer, String> get()
@@ -156,7 +160,7 @@ public class CacheUtil
    * @param conf        The current Hadoop configuration.
    * @return The local path location.
    */
-  public static String getLocalPath(String remotePath, Configuration conf)
+  public static String getLocalPath(String remotePath, Configuration conf) throws IOException
   {
     final String absLocation = getDirectory(remotePath, conf);
     return absLocation + "/" + getName(remotePath);
@@ -169,7 +173,7 @@ public class CacheUtil
    * @param conf        The current Hadoop configuration.
    * @return The metadata file path.
    */
-  public static String getMetadataFilePath(String remotePath, Configuration conf)
+  public static String getMetadataFilePath(String remotePath, Configuration conf) throws IOException
   {
     final String absLocation = getDirectory(remotePath, conf);
     return absLocation + "/" + getName(remotePath) + CacheConfig.getCacheMetadataFileSuffix(conf);
@@ -245,12 +249,23 @@ public class CacheUtil
    * @param conf        The current Hadoop configuration.
    * @return The path to the cache directory.
    */
-  private static String getDirectory(String remotePath, Configuration conf)
+  private static String getDirectory(String remotePath, Configuration conf) throws IOException
   {
     final String parentPath = getParent(remotePath);
-    final String relLocation = parentPath.contains(":") ? parentPath.substring(parentPath.indexOf(':') + 3) : parentPath;
-    final String absLocation = getLocalDirFor(remotePath, conf) + relLocation;
+    String relLocation = parentPath;
 
+    if (parentPath.contains(":")) {
+      URI parentUri = new Path(parentPath).toUri();
+      StringBuilder sb = new StringBuilder();
+      sb.append(parentUri.getAuthority() != null ? parentUri.getAuthority() : "");
+      sb.append(parentUri.getPath() != null ? parentUri.getPath() : "");
+      relLocation = sb.toString();
+      if (relLocation.startsWith("/")) {
+        relLocation = relLocation.substring(1);
+      }
+    }
+
+    final String absLocation = getLocalDirFor(remotePath, conf) + relLocation;
     createCacheDirectory(absLocation);
 
     return absLocation;
@@ -275,9 +290,14 @@ public class CacheUtil
    * @param conf        The current Hadoop configuration.
    * @return The local directory path.
    */
-  private static String getLocalDirFor(String remotePath, Configuration conf)
+  private static String getLocalDirFor(String remotePath, Configuration conf) throws IOException
   {
     final int numDisks = getCacheDiskCount(conf);
+    if (numDisks == 0) {
+      log.error("Num disk cannot be zero. The directories are not setup yet");
+      throw new IOException("Cache Directories are not setup");
+    }
+
     final int numBuckets = 100 * numDisks;
     final HashFunction hf = Hashing.murmur3_32();
     final HashCode hc = hf.hashString(remotePath, Charsets.UTF_8);

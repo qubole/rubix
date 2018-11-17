@@ -140,7 +140,7 @@ public class TestCachingInputStream
   }
 
   @AfterMethod
-  public void cleanup()
+  public void cleanup() throws IOException
   {
     if (bookKeeperServer != null) {
       bookKeeperServer.stopServer();
