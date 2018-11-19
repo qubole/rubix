@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class CacheUtil
 {
@@ -113,7 +114,8 @@ public class CacheUtil
   public static HashMap<Integer, String> getCacheDiskPathsMap(final Configuration conf)
   {
     if (diskPathMapSupplier == null || diskPathMapSupplier.get().size() == 0) {
-      diskPathMapSupplier = Suppliers.memoize(new Supplier<HashMap<Integer, String>>() {
+      long refreshTTL = CacheConfig.getCacheDirectoryRefreshTTL(conf);
+      diskPathMapSupplier = Suppliers.memoizeWithExpiration(new Supplier<HashMap<Integer, String>>() {
         @Override
         public HashMap<Integer, String> get()
         {
@@ -134,7 +136,7 @@ public class CacheUtil
           }
           return dirPathMap;
         }
-      });
+      }, refreshTTL, TimeUnit.SECONDS);
     }
 
     return diskPathMapSupplier.get();

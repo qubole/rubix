@@ -85,6 +85,7 @@ public class CacheConfig
   private static final String KEY_ENABLE_FILE_STALESSNESS_CHECK = "rubix.enable.file.staleness-check";
   private static final String KEY_STALE_FILEINFO_EXPIRY_PERIOD = "rubix.stale.fileinfo.expiry.period";
   private static final String KEY_CLEANUP_FILES_DURING_START = "rubix.cleanup.files.during.start";
+  private static final String KEY_CACHE_DIRECTORY_REFRESH_TTL = "rubix.cache.dircetory.refresh.ttl";
 
   // default values
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
@@ -143,6 +144,7 @@ public class CacheConfig
   private static final boolean DEFAULT_ENABLE_FILE_STALESSNESS_CHECK = true;
   private static final int DEFAULT_STALE_FILEINFO_EXPIRY_PERIOD = 36000; // seconds
   private static final boolean DEFAULT_CLEANUP_FILES_DURING_START = true;
+  private static final long DEFAULT_CACHE_DIRECTORY_REFRESH_TTL = 600; //seconds
 
   private CacheConfig()
   {
@@ -438,6 +440,11 @@ public class CacheConfig
     return conf.getBoolean(KEY_CLEANUP_FILES_DURING_START, DEFAULT_CLEANUP_FILES_DURING_START);
   }
 
+  public static long getCacheDirectoryRefreshTTL(Configuration conf)
+  {
+    return conf.getLong(KEY_CACHE_DIRECTORY_REFRESH_TTL, DEFAULT_CACHE_DIRECTORY_REFRESH_TTL);
+  }
+
   public static void setBlockSize(Configuration conf, int blockSize)
   {
     conf.setInt(KEY_BLOCK_SIZE, blockSize);
@@ -646,5 +653,10 @@ public class CacheConfig
   public static void setCleanupFilesDuringStart(Configuration conf, boolean isCleanupRequired)
   {
     conf.setBoolean(KEY_CLEANUP_FILES_DURING_START, isCleanupRequired);
+  }
+
+  private static void setCacheDirectoryRefreshTTL(Configuration conf, long time)
+  {
+    conf.setLong(KEY_CACHE_DIRECTORY_REFRESH_TTL, time);
   }
 }
