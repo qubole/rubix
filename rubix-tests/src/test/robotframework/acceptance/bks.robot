@@ -5,6 +5,9 @@ Library     Process
 Library     com.qubole.rubix.client.robotframework.BookKeeperClientRFLibrary
 
 *** Keywords ***
+
+## Test Setup ##
+
 Start BKS
     [Arguments]         &{options}
     ${optionArgs} =     Get options argument    &{options}
@@ -37,6 +40,8 @@ Remove cache parent directories
     :FOR    ${index}    IN RANGE    ${cacheNumDisks}
     \   Remove directory    ${cachePrefix}${index}  recursive=${True}
 
+## Execution ##
+
 Generate test files
     [Arguments]     ${numFiles}
     ...             ${fileLength}
@@ -65,6 +70,8 @@ Read test file data
     ...             ${startBlock}
     ...             ${endBlock}
     Should be true  ${didRead}
+
+## Verification ##
 
 Verify cache directory size
     [Arguments]     ${cachePrefix}

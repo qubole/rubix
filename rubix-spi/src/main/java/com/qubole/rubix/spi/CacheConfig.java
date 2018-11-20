@@ -85,7 +85,7 @@ public class CacheConfig
   private static final String KEY_ENABLE_FILE_STALESSNESS_CHECK = "rubix.enable.file.staleness-check";
   private static final String KEY_STALE_FILEINFO_EXPIRY_PERIOD = "rubix.stale.fileinfo.expiry.period";
   private static final String KEY_CLEANUP_FILES_DURING_START = "rubix.cleanup.files.during.start";
-  private static final String KEY_MAX_CACHE_SIZE = "hadoop.cache.data.fullness.size";
+  private static final String KEY_MAX_CACHE_SIZE = "rubix.cache.fullness.size";
 
   // default values
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB

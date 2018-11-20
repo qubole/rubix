@@ -1,10 +1,18 @@
 *** Settings ***
-Documentation   Rubix Integration Test PoC
-Resource        bks.robot
+Documentation       Rubix Cache Eviction Integration Tests
+Resource            bks.robot
+Suite Setup         Create Cache Parent Directories     ${CACHE_DIR_PFX}    ${CACHE_NUM_DISKS}
+Suite Teardown      Remove Cache Parent Directories     ${CACHE_DIR_PFX}    ${CACHE_NUM_DISKS}
 
 *** Variables ***
 ${WORKINGDIR}       ${TEMPDIR}${/}CacheEviction
 ${DATADIR}          ${WORKINGDIR}${/}data
+
+${CACHE_DIR_PFX}    ${WORKINGDIR}${/}
+${CACHE_DIR_SFX}    /fcache/
+${CACHE_NUM_DISKS}  1
+${CACHE_MAX_SIZE}   2   # MB
+
 ${METRIC_EVICTION}  rubix.bookkeeper.count.cache_eviction
 
 ${REMOTE_PATH}      ${DATADIR}${/}rubixIntegrationTestFile
@@ -13,11 +21,6 @@ ${LAST_MODIFIED}    1514764800
 ${START_BLOCK}      0
 ${END_BLOCK}        1048576
 ${CLUSTER_TYPE}     3   # TEST_CLUSTER_MANAGER
-
-${CACHE_DIR_PFX}    ${WORKINGDIR}${/}
-${CACHE_DIR_SFX}    /fcache/
-${CACHE_NUM_DISKS}  1
-${CACHE_MAX_SIZE}   2   # MB
 
 ${NUM_TEST_FILES}           5
 ${NUM_EXPECTED_EVICTIONS}   3
@@ -54,7 +57,7 @@ Test cache eviction when data read
 
     @{testFiles} =      Generate test files   ${NUM_TEST_FILES}   ${FILE_LENGTH}
     :FOR    ${file}     IN      @{testFiles}
-    \    Read test file data using FS   ${file}     ${START_BLOCK}   ${END_BLOCK}
+    \    Read test file data   ${file}     ${START_BLOCK}   ${END_BLOCK}
 
     Verify metric value            ${METRIC_EVICTION}   ${NUM_EXPECTED_EVICTIONS}
     Verify cache directory size    ${CACHE_DIR_PFX}     ${CACHE_DIR_SFX}    ${CACHE_NUM_DISKS}    ${CACHE_MAX_SIZE}
@@ -63,11 +66,10 @@ Test cache eviction when data read
 Cache test setup
     [Arguments]                         &{options}
     Set Test Variable                   &{bksOptions}   &{options}
-    Create Cache Parent Directories     ${CACHE_DIR_PFX}    ${CACHE_NUM_DISKS}
     Create Directory                    ${DATADIR}
     Start BKS                           &{bksOptions}
     Initialize Library Configuration    &{bksOptions}
 
 Cache test teardown
     Stop BKS                            &{bksOptions}
-    Remove Cache Parent Directories     ${CACHE_DIR_PFX}    ${CACHE_NUM_DISKS}
+    Remove Directory                    ${DATADIR}      recursive=${True}
