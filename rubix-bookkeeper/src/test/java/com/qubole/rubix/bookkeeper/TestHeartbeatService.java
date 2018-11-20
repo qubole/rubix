@@ -88,6 +88,7 @@ public class TestHeartbeatService
 
     TestUtil.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
+
   /**
    * Verify that the heartbeat service correctly makes a connection using a BookKeeper client.
    *
