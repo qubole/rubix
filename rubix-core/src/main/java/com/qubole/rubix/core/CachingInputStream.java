@@ -135,6 +135,7 @@ public class CachingInputStream extends FSInputStream
     this.strictMode = CacheConfig.isStrictMode(conf);
     try {
       this.bookKeeperClient = bookKeeperFactory.createBookKeeperClient(conf);
+      this.localPath = CacheUtil.getLocalPath(backendPath, conf);
     }
     catch (Exception e) {
       if (strictMode) {
@@ -144,7 +145,6 @@ public class CachingInputStream extends FSInputStream
       bookKeeperClient = null;
     }
     this.blockSize = CacheConfig.getBlockSize(conf);
-    this.localPath = CacheUtil.getLocalPath(backendPath, conf);
     this.diskReadBufferSize = CacheConfig.getDiskReadBufferSize(conf);
   }
 
@@ -200,7 +200,7 @@ public class CachingInputStream extends FSInputStream
       throw Throwables.propagate(e);
     }
     catch (Exception e) {
-      log.error(String.format("Failed to read from rubix for file %s position %d length %d. Falling back to remote", localPath, nextReadPosition, length), e);
+      log.error(String.format("Failed to read from rubix for file %s position %d length %d. Falling back to remote", remotePath, nextReadPosition, length), e);
       getParentDataInputStream().seek(nextReadPosition);
       int read = readFullyDirect(buffer, offset, length);
       if (read > 0) {
