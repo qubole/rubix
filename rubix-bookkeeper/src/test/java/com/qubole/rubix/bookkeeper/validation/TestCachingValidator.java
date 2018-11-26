@@ -37,6 +37,7 @@ import org.testng.annotations.Test;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.Executors;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -195,7 +196,7 @@ public class TestCachingValidator
             new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf)),
             CacheConfig.getMaxRetries(conf)));
 
-    CachingValidator validator = new CachingValidator(conf, bookKeeper);
+    CachingValidator validator = new CachingValidator(conf, bookKeeper, Executors.newSingleThreadScheduledExecutor());
     assertEquals(validator.validateCachingBehavior(), expectedResult);
   }
 }
