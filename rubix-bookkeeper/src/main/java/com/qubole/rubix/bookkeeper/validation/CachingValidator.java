@@ -30,6 +30,7 @@ import org.apache.thrift.shaded.TException;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -52,14 +53,22 @@ public class CachingValidator extends AbstractScheduledService
   private static final int VALIDATOR_CLUSTER_TYPE = ClusterType.TEST_CLUSTER_MANAGER.ordinal();
 
   private final BookKeeper bookKeeper;
+  private final ScheduledExecutorService validationExecutor;
   private final int cachingValidationInterval;
 
   private AtomicBoolean validationSuccess = new AtomicBoolean(true);
 
-  public CachingValidator(Configuration conf, BookKeeper bookKeeper)
+  public CachingValidator(Configuration conf, BookKeeper bookKeeper, ScheduledExecutorService validationExecutor)
   {
     this.bookKeeper = bookKeeper;
+    this.validationExecutor = validationExecutor;
     this.cachingValidationInterval = CacheConfig.getCachingValidationInterval(conf);
+  }
+
+  @Override
+  protected ScheduledExecutorService executor()
+  {
+    return validationExecutor;
   }
 
   @Override
