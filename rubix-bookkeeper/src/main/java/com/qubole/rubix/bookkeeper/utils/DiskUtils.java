@@ -95,9 +95,9 @@ public class DiskUtils
   {
     String cmd = "du -s " + dirname.toString();
     StringBuffer output = new StringBuffer();
-    Process p;
-    long dirSize;
+
     try {
+      Process p;
       p = Runtime.getRuntime().exec(cmd);
       p.waitFor();
       BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
@@ -109,7 +109,7 @@ public class DiskUtils
     catch (Exception e) {
       log.error("Exception while calculating the size of the folder " + dirname.toString());
     }
-    dirSize = Long.parseLong(output.toString().split("\\s+")[0]) / 1024;
+    long dirSize = Long.parseLong(output.toString().split("\\s+")[0]) / 1024;
     return dirSize;
   }
 
