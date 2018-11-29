@@ -14,13 +14,14 @@ package com.qubole.rubix.bookkeeper.utils;
 
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.Map;
 
 /**
@@ -79,10 +80,37 @@ public class DiskUtils
 
     long cacheSize = 0;
     for (int disk = 0; disk < diskMap.size(); disk++) {
-      long cacheDirSize = FileUtils.sizeOfDirectory(new File(diskMap.get(disk) + cacheDirSuffix));
+      long cacheDirSize = getDirSizeMB(new File(diskMap.get(disk) + cacheDirSuffix));
       cacheSize += cacheDirSize;
     }
-    return (int) DiskUtils.bytesToMB(cacheSize);
+    return (int) cacheSize;
+  }
+
+  /**
+   * Gets the actual size occupied on the disk, for the given directory using du command.
+   *
+   * @return The size of the cache in MB.
+   */
+  public static long getDirSizeMB(File dirname)
+  {
+    String cmd = "du -s " + dirname.toString();
+    StringBuffer output = new StringBuffer();
+    Process p;
+    long dirSize;
+    try {
+      p = Runtime.getRuntime().exec(cmd);
+      p.waitFor();
+      BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
+      String line = "";
+      while ((line = reader.readLine()) != null) {
+        output.append(line + "\n");
+      }
+    }
+    catch (Exception e) {
+      log.error("Exception while calculating the size of the folder " + dirname.toString());
+    }
+    dirSize = Long.parseLong(output.toString().split("\\s+")[0]) / 1024;
+    return dirSize;
   }
 
   public static int getUsedSpaceMB(Configuration conf)
