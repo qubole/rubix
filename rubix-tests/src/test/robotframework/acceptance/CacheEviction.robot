@@ -30,14 +30,15 @@ Test cache eviction when data downloaded
     [Documentation]     Using the BKS Thrift API, verify that files are properly evicted once the cache reaches its maximum size.
     [Tags]              eviction
     [Setup]             Cache test setup
+    ...                 ${DATADIR}
     ...                 rubix.cluster.on-master=true
     ...                 hadoop.cache.data.dirprefix.list=${CACHE_DIR_PFX}
     ...                 hadoop.cache.data.dirsuffix=${CACHE_DIR_SFX}
     ...                 hadoop.cache.data.max.disks=${CACHE_NUM_DISKS}
     ...                 rubix.cache.fullness.size=${CACHE_MAX_SIZE}
-    [Teardown]          Cache test teardown
+    [Teardown]          Cache test teardown     ${DATADIR}
 
-    @{testFiles} =      Generate test files   ${NUM_TEST_FILES}   ${FILE_LENGTH}
+    @{testFiles} =      Generate test files   ${REMOTE_PATH}    ${NUM_TEST_FILES}   ${FILE_LENGTH}
     :FOR    ${file}     IN      @{testFiles}
     \    Download test file data to cache    ${file}     ${START_BLOCK}   ${END_BLOCK}   ${FILE_LENGTH}   ${LAST_MODIFIED}   ${CLUSTER_TYPE}
 
@@ -48,28 +49,17 @@ Test cache eviction when data read
     [Documentation]     Using a caching FS, verify that files are properly evicted once the cache reaches its maximum size.
     [Tags]              eviction
     [Setup]             Cache test setup
+    ...                 ${DATADIR}
     ...                 rubix.cluster.on-master=true
     ...                 hadoop.cache.data.dirprefix.list=${CACHE_DIR_PFX}
     ...                 hadoop.cache.data.dirsuffix=${CACHE_DIR_SFX}
     ...                 hadoop.cache.data.max.disks=${CACHE_NUM_DISKS}
     ...                 rubix.cache.fullness.size=${CACHE_MAX_SIZE}
-    [Teardown]          Cache test teardown
+    [Teardown]          Cache test teardown     ${DATADIR}
 
-    @{testFiles} =      Generate test files   ${NUM_TEST_FILES}   ${FILE_LENGTH}
+    @{testFiles} =      Generate test files   ${REMOTE_PATH}    ${NUM_TEST_FILES}   ${FILE_LENGTH}
     :FOR    ${file}     IN      @{testFiles}
     \    Read test file data   ${file}     ${START_BLOCK}   ${END_BLOCK}
 
     Verify metric value            ${METRIC_EVICTION}   ${NUM_EXPECTED_EVICTIONS}
     Verify cache directory size    ${CACHE_DIR_PFX}     ${CACHE_DIR_SFX}    ${CACHE_NUM_DISKS}    ${CACHE_MAX_SIZE}
-
-*** Keywords ***
-Cache test setup
-    [Arguments]                         &{options}
-    Set Test Variable                   &{bksOptions}   &{options}
-    Create Directory                    ${DATADIR}
-    Start BKS                           &{bksOptions}
-    Initialize Library Configuration    &{bksOptions}
-
-Cache test teardown
-    Stop BKS                            &{bksOptions}
-    Remove Directory                    ${DATADIR}      recursive=${True}

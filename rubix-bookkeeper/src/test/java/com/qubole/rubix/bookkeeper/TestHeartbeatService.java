@@ -103,7 +103,7 @@ public class TestHeartbeatService
             new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf)),
             CacheConfig.getMaxRetries(conf)));
 
-    final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, new MetricRegistry());
+    final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, new TestUtil.NonReportingBookKeeperMetrics(conf, new MetricRegistry()));
     final HeartbeatService heartbeatService = new HeartbeatService(conf, new MetricRegistry(), bookKeeperFactory, bookKeeper);
   }
 
@@ -116,7 +116,7 @@ public class TestHeartbeatService
     BaseServerTest.stopBookKeeperServer();
     BaseServerTest.startCoordinatorBookKeeperServerWithDelay(conf, new MetricRegistry(), TEST_RETRY_INTERVAL * 2);
 
-    final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, new MetricRegistry());
+    final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, new TestUtil.NonReportingBookKeeperMetrics(conf, new MetricRegistry()));
     final HeartbeatService heartbeatService = new HeartbeatService(conf, new MetricRegistry(), new BookKeeperFactory(), bookKeeper);
   }
 
@@ -131,7 +131,7 @@ public class TestHeartbeatService
     final BookKeeperFactory bookKeeperFactory = mock(BookKeeperFactory.class);
     when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenThrow(TTransportException.class);
 
-    final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, new MetricRegistry());
+    final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, new TestUtil.NonReportingBookKeeperMetrics(conf, new MetricRegistry()));
     final HeartbeatService heartbeatService = new HeartbeatService(conf, new MetricRegistry(), bookKeeperFactory, bookKeeper);
   }
 
@@ -152,7 +152,7 @@ public class TestHeartbeatService
             CacheConfig.getMaxRetries(conf)));
 
     final MetricRegistry metrics = new MetricRegistry();
-    final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);
+    final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, new TestUtil.NonReportingBookKeeperMetrics(conf, metrics));
     final HeartbeatService heartbeatService = new HeartbeatService(conf, metrics, bookKeeperFactory, bookKeeper);
 
     assertNotNull(metrics.getGauges().get(BookKeeperMetrics.ValidationMetric.CACHING_VALIDATION_SUCCESS_GAUGE.getMetricName()), "Caching validation success metric should be registered!");
@@ -176,7 +176,7 @@ public class TestHeartbeatService
             CacheConfig.getMaxRetries(conf)));
 
     final MetricRegistry metrics = new MetricRegistry();
-    final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);
+    final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, new TestUtil.NonReportingBookKeeperMetrics(conf, metrics));
     final HeartbeatService heartbeatService = new HeartbeatService(conf, metrics, bookKeeperFactory, bookKeeper);
 
     assertNull(metrics.getGauges().get(BookKeeperMetrics.ValidationMetric.CACHING_VALIDATION_SUCCESS_GAUGE.getMetricName()), "Caching validation success metric should not be registered!");

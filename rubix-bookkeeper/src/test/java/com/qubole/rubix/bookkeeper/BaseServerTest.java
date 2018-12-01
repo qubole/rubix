@@ -560,9 +560,10 @@ public class BaseServerTest
     public void startServer(Configuration conf, MetricRegistry metricRegistry)
     {
       metrics = metricRegistry;
+      bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
       try {
         // Initializing this BookKeeper here allows it to register the live worker count metric for testing.
-        new CoordinatorBookKeeper(conf, metrics);
+        new CoordinatorBookKeeper(conf, bookKeeperMetrics);
       }
       catch (FileNotFoundException e) {
         log.error("Cache directories could not be created", e);
@@ -605,8 +606,9 @@ public class BaseServerTest
       }
 
       metrics = metricRegistry;
+      bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
       try {
-        new WorkerBookKeeper(conf, metrics, bookKeeperFactory);
+        new WorkerBookKeeper(conf, bookKeeperMetrics, bookKeeperFactory);
       }
       catch (FileNotFoundException e) {
         log.error("Cache directories could not be created", e);

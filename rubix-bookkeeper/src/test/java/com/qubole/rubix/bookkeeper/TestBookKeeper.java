@@ -78,7 +78,7 @@ public class TestBookKeeper
     TestUtil.createCacheParentDirectories(conf, TEST_MAX_DISKS);
 
     metrics = new MetricRegistry();
-    bookKeeper = new CoordinatorBookKeeper(conf, metrics);
+    bookKeeper = new CoordinatorBookKeeper(conf, new TestUtil.NonReportingBookKeeperMetrics(conf, metrics));
     bookKeeper.clusterManager = null;
   }
 
@@ -156,7 +156,7 @@ public class TestBookKeeper
 
     CacheConfig.setFileStalenessCheck(conf, true);
 
-    bookKeeper = new CoordinatorBookKeeper(conf, new MetricRegistry());
+    bookKeeper = new CoordinatorBookKeeper(conf, new TestUtil.NonReportingBookKeeperMetrics(conf, new MetricRegistry()));
     FileInfo info = bookKeeper.getFileInfo(backendFilePath.toString());
 
     assertTrue(info.getFileSize() == expectedFileSize, "FileSize was not equal to the expected value." +
@@ -181,7 +181,7 @@ public class TestBookKeeper
 
     CacheConfig.setFileStalenessCheck(conf, false);
 
-    bookKeeper = new CoordinatorBookKeeper(conf, new MetricRegistry());
+    bookKeeper = new CoordinatorBookKeeper(conf, new TestUtil.NonReportingBookKeeperMetrics(conf, new MetricRegistry()));
     FileInfo info = bookKeeper.getFileInfo(backendFilePath.toString());
 
     assertTrue(info.getFileSize() == expectedFileSize, "FileSize was not equal to the expected value." +
@@ -207,7 +207,7 @@ public class TestBookKeeper
 
     FakeTicker ticker = new FakeTicker();
 
-    bookKeeper = new CoordinatorBookKeeper(conf, new MetricRegistry(), ticker);
+    bookKeeper = new CoordinatorBookKeeper(conf, new TestUtil.NonReportingBookKeeperMetrics(conf, new MetricRegistry()), ticker);
     FileInfo info = bookKeeper.getFileInfo(backendFilePath.toString());
 
     assertTrue(info.getFileSize() == expectedFileSize, "FileSize was not equal to the expected value." +
@@ -345,16 +345,16 @@ public class TestBookKeeper
     final int readLength = 100;
 
     CacheConfig.setIsParallelWarmupEnabled(conf, false);
-    bookKeeper = new CoordinatorBookKeeper(conf, new MetricRegistry());
+    bookKeeper = new CoordinatorBookKeeper(conf, new TestUtil.NonReportingBookKeeperMetrics(conf, new MetricRegistry()));
 
     // Since the value returned from a gauge metric is an object rather than a primitive, boxing is required here to properly compare the values.
-    assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.CACHE_SIZE_GAUGE.getMetricName()).getValue(), 0);
+    assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.CACHE_SIZE_GAUGE.getMetricName()).getValue(), 0.0);
 
     DataGen.populateFile(TEST_REMOTE_PATH);
     bookKeeper.readData(remotePathWithScheme, readOffset, readLength, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
 
     final long mdSize = FileUtils.sizeOf(new File(CacheUtil.getMetadataFilePath(TEST_REMOTE_PATH, conf)));
-    final int totalCacheSize = (int) DiskUtils.bytesToMB(readLength + mdSize);
+    final double totalCacheSize = (double) DiskUtils.bytesToMB(readLength + mdSize);
     assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.CACHE_SIZE_GAUGE.getMetricName()).getValue(), totalCacheSize);
   }
 
@@ -370,7 +370,7 @@ public class TestBookKeeper
     final FakeTicker ticker = new FakeTicker();
     CacheConfig.setCacheDataExpirationAfterWrite(conf, 1000);
     metrics = new MetricRegistry();
-    bookKeeper = new CoordinatorBookKeeper(conf, metrics, ticker);
+    bookKeeper = new CoordinatorBookKeeper(conf, new TestUtil.NonReportingBookKeeperMetrics(conf, metrics), ticker);
 
     assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.CACHE_EXPIRY_COUNT.getMetricName()).getCount(), 0);
 

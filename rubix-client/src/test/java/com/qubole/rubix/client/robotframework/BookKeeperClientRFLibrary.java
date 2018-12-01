@@ -166,7 +166,7 @@ public class BookKeeperClientRFLibrary
   private FSDataInputStream createFSInputStream(String remotePath, int readLength) throws IOException
   {
     final MockCachingFileSystem mockFS = new MockCachingFileSystem();
-    mockFS.initialize(URI.create("file://" + remotePath), conf);
+    mockFS.initialize(URI.create(remotePath), conf);
     return mockFS.open(new Path(remotePath), readLength);
   }
 }

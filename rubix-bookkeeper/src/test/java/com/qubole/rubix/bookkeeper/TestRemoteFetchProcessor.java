@@ -69,7 +69,7 @@ public class TestRemoteFetchProcessor
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     CacheConfig.setRemoteFetchProcessInterval(conf, TEST_REMOTE_FETCH_PROCESS_INTERVAL);
     metrics = new MetricRegistry();
-    bookKeeper = new CoordinatorBookKeeper(conf, metrics);
+    bookKeeper = new CoordinatorBookKeeper(conf, new TestUtil.NonReportingBookKeeperMetrics(conf, metrics));
     processor = bookKeeper.getRemoteFetchProcessorInstance();
   }
 
@@ -205,7 +205,7 @@ public class TestRemoteFetchProcessor
     processor.processRequest(System.currentTimeMillis() + TEST_REMOTE_FETCH_PROCESS_INTERVAL);
 
     assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.ASYNC_QUEUE_SIZE_GAUGE.getMetricName())
-        .getValue(), 0, "All the requests should have been processed and the queue size should be zero");
+        .getValue(), 0.0, "All the requests should have been processed and the queue size should be zero");
 
     final String downloadedFile = CacheUtil.getLocalPath(backendPath.toString(), conf);
     final String resultString = new String(DataGen.readBytesFromFile(downloadedFile, 0, 450));
@@ -239,7 +239,7 @@ public class TestRemoteFetchProcessor
     processor.processRequest(System.currentTimeMillis() + TEST_REMOTE_FETCH_PROCESS_INTERVAL);
 
     assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.ASYNC_QUEUE_SIZE_GAUGE.getMetricName())
-        .getValue(), 0, "All the requests should have been processed and the queue size should be zero");
+        .getValue(), 0.0, "All the requests should have been processed and the queue size should be zero");
 
     assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.PROCESSED_ASYNC_REQUEST_COUNT.getMetricName())
         .getCount() == (maxOffset / offsetStep), "Not all the requests are processed");

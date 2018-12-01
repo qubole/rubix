@@ -12,7 +12,9 @@
  */
 package com.qubole.rubix.common;
 
+import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Joiner;
+import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.core.utils.DeleteFileVisitor;
 import com.qubole.rubix.spi.CacheConfig;
 import org.apache.commons.logging.Log;
@@ -74,6 +76,20 @@ public class TestUtil
   {
     for (int i = 0; i < maxDisks; i++) {
       Files.walkFileTree(Paths.get(CacheConfig.getCacheDirPrefixList(conf) + i), new DeleteFileVisitor());
+    }
+  }
+
+  public static class NonReportingBookKeeperMetrics extends BookKeeperMetrics
+  {
+    public NonReportingBookKeeperMetrics(Configuration conf, MetricRegistry metrics)
+    {
+      super(conf, metrics);
+    }
+
+    @Override
+    public void initializeReporters()
+    {
+      // Don't initialize
     }
   }
 }

@@ -71,12 +71,12 @@ public class RemoteFetchProcessor extends AbstractScheduledService
   {
     totalDownloadRequests = metrics.counter(BookKeeperMetrics.CacheMetric.TOTAL_ASYNC_REQUEST_COUNT.getMetricName());
     processedRequests = metrics.counter(BookKeeperMetrics.CacheMetric.PROCESSED_ASYNC_REQUEST_COUNT.getMetricName());
-    metrics.register(BookKeeperMetrics.CacheMetric.ASYNC_QUEUE_SIZE_GAUGE.getMetricName(), new Gauge<Integer>()
+    metrics.register(BookKeeperMetrics.CacheMetric.ASYNC_QUEUE_SIZE_GAUGE.getMetricName(), new Gauge<Double>()
     {
       @Override
-      public Integer getValue()
+      public Double getValue()
       {
-        return processQueue.size();
+        return (double) processQueue.size();
       }
     });
   }

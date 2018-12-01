@@ -8,6 +8,18 @@ Library     com.qubole.rubix.client.robotframework.BookKeeperClientRFLibrary
 
 ## Test Setup ##
 
+Cache test setup
+    [Arguments]                         ${dataDir}      &{options}
+    Set Test Variable                   &{bksOptions}   &{options}
+    Create Directory                    ${dataDir}
+    Start BKS                           &{bksOptions}
+    Initialize Library Configuration    &{bksOptions}
+
+Cache test teardown
+    [Arguments]                         ${dataDir}
+    Stop BKS                            &{bksOptions}
+    Remove Directory                    ${dataDir}      recursive=${True}
+
 Start BKS
     [Arguments]         &{options}
     ${optionArgs} =     Get options argument    &{options}
@@ -43,11 +55,12 @@ Remove cache parent directories
 ## Execution ##
 
 Generate test files
-    [Arguments]     ${numFiles}
+    [Arguments]     ${fileName}
+    ...             ${numFiles}
     ...             ${fileLength}
     @{testFileList} =   Create List
     :FOR    ${index}    IN RANGE    ${numFiles}
-    \   ${testFile} =        Set variable  ${REMOTE_PATH}${index}
+    \   ${testFile} =        Set variable  ${fileName}${index}
     \   Generate test file   ${testFile}   ${fileLength}
     \   Append To List       ${testFileList}    ${testFile}
     [Return]        @{testFileList}
@@ -66,7 +79,7 @@ Download test file data to cache
 Read test file data
     [Arguments]     ${fileName}  ${startBlock}  ${endBlock}
     ${didRead} =    Read data
-    ...             ${fileName}
+    ...             file://${fileName}
     ...             ${startBlock}
     ...             ${endBlock}
     Should be true  ${didRead}
@@ -84,5 +97,6 @@ Verify cache directory size
 Verify metric value
     [Arguments]                 ${metricName}   ${expectedValue}
     &{metrics} =                Get cache metrics
+    Log Many                    &{metrics}
     Should not be empty         ${metrics}
     Should be equal as numbers  &{metrics}[${metricName}]   ${expectedValue}

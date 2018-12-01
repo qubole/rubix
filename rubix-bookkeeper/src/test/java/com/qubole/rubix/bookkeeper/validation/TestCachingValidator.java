@@ -87,7 +87,7 @@ public class TestCachingValidator
   @Test
   public void testValidateCachingBehavior() throws TException, FileNotFoundException
   {
-    checkValidator(new CoordinatorBookKeeper(conf, new MetricRegistry()), true);
+    checkValidator(new CoordinatorBookKeeper(conf, new TestUtil.NonReportingBookKeeperMetrics(conf, new MetricRegistry())), true);
   }
 
   /**
@@ -172,7 +172,7 @@ public class TestCachingValidator
   public void testValidateCachingBehavior_verifyOtherMetricsUnaffected() throws TException, FileNotFoundException
   {
     final MetricRegistry metrics = new MetricRegistry();
-    final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);
+    final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, new TestUtil.NonReportingBookKeeperMetrics(conf, metrics));
 
     assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.TOTAL_REQUEST_COUNT.getMetricName()).getCount(), 0);
 

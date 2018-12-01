@@ -79,7 +79,7 @@ public class TestWorkerBookKeeper
   @Test(expectedExceptions = UnsupportedOperationException.class)
   public void testHandleHeartbeat_shouldNotBeHandled() throws FileNotFoundException
   {
-    final WorkerBookKeeper workerBookKeeper = new WorkerBookKeeper(conf, new MetricRegistry());
+    final WorkerBookKeeper workerBookKeeper = new WorkerBookKeeper(conf, new TestUtil.NonReportingBookKeeperMetrics(conf, new MetricRegistry()));
     workerBookKeeper.handleHeartbeat("", new HeartbeatStatus());
   }
 }
