@@ -23,5 +23,5 @@ mvn clean install
 if [[ $? -ne 0 ]]; then
     exit 1
 fi
-mvn cobertura:cobertura
+mvn cobertura:cobertura-integration-test
 bash <(curl -s https://codecov.io/bash)
