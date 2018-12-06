@@ -13,12 +13,9 @@ Metrics relating to daemon & service health.
 | Metric                                           | Description                                | Abnormalities                           |
 +==================================================+============================================+=========================================+
 | rubix.bookkeeper.gauge.live_workers              | The number of workers currently reporting  | Mismatch with number reported by engine |
-|                                                  | to the master node.                        | (Presto, Hive, etc.)                    |
+|                                                  | to the master node.                        | (Presto, Spark, etc.)                   |
 +--------------------------------------------------+--------------------------------------------+-----------------------------------------+
 | rubix.bookkeeper.gauge.caching_validated_workers | The number of workers reporting caching    | Mismatch with live worker count         |
-|                                                  | validation success.                        | (one or more workers failed validation) |
-+--------------------------------------------------+--------------------------------------------+-----------------------------------------+
-| rubix.bookkeeper.gauge.file_validated_workers    | The number of workers reporting file       | Mismatch with live worker count         |
 |                                                  | validation success.                        | (one or more workers failed validation) |
 +--------------------------------------------------+--------------------------------------------+-----------------------------------------+
 
@@ -30,13 +27,14 @@ Metrics relating to cache interactions.
 +------------------------------------------------+--------------------------------------------+--------------------------------+
 | Metric                                         | Description                                | Abnormalities                  |
 +================================================+============================================+================================+
-| rubix.bookkeeper.count.cache_eviction          | The number of entries removed from the     | High number of cache evictions |
-|                                                | local cache due to size constraints.       |                                |
+| rubix.bookkeeper.count.cache_eviction          | The number of files removed from the       | No cache evictions & cache has |
+|                                                | local cache due to size constraints.       | exceeded configured capacity   |
 +------------------------------------------------+--------------------------------------------+--------------------------------+
-| rubix.bookkeeper.count.cache_invalidation      | The number of entries evicted from the     |                                |
-|                                                | local cache explicitly.                    |                                |
+| rubix.bookkeeper.count.cache_invalidation      | The number of files invalidated from the   |                                |
+|                                                | local cache when the source file has been  |                                |
+|                                                | modified.                                  |                                |
 +------------------------------------------------+--------------------------------------------+--------------------------------+
-| rubix.bookkeeper.count.cache_expiry            | The number of entries evicted from the     |                                |
+| rubix.bookkeeper.count.cache_expiry            | The number of files removed from the       |                                |
 |                                                | local cache once expired.                  |                                |
 +------------------------------------------------+--------------------------------------------+--------------------------------+
 | rubix.bookkeeper.gauge.cache_hit_rate          | The percentage of cache hits for the       | Cache hit rate near 0%         |
@@ -45,32 +43,34 @@ Metrics relating to cache interactions.
 | rubix.bookkeeper.gauge.cache_miss_rate         | The percentage of cache misses for the     | Cache miss rate near 100%      |
 |                                                | local cache.                               |                                |
 +------------------------------------------------+--------------------------------------------+--------------------------------+
-| rubix.bookkeeper.gauge.cache_size_mb           | The current size of the local cache in MB. |                                |
-|                                                |                                            |                                |
+| rubix.bookkeeper.gauge.cache_size_mb           | The current size of the local cache in MB. | Cache size is bigger than      |
+|                                                |                                            | configured capacity            |
 +------------------------------------------------+--------------------------------------------+--------------------------------+
-| rubix.bookkeeper.count.total_request           | The total number of requests made for data |                                |
+| rubix.bookkeeper.count.total_request           | The total number of requests made          |                                |
+|                                                | to read data.                              |                                |
++------------------------------------------------+--------------------------------------------+--------------------------------+
+| rubix.bookkeeper.count.cache_request           | The number of requests made to read data   | No cache requests made         |
 |                                                | cached locally.                            |                                |
 +------------------------------------------------+--------------------------------------------+--------------------------------+
-| rubix.bookkeeper.count.cache_request           | The number of requests made for data       | No cache requests made         |
-|                                                | cached locally.                            |                                |
+| rubix.bookkeeper.count.nonlocal_request        | The number of requests made to read data   | No non-local requests made     |
+|                                                | from another node.                         |                                |
 +------------------------------------------------+--------------------------------------------+--------------------------------+
-| rubix.bookkeeper.count.nonlocal_request        | The number of requests made for data       | No non-local requests made     |
-|                                                | cached on another node.                    |                                |
+| rubix.bookkeeper.count.remote_request          | The number of requests made to download    | No remote requests made        |
+|                                                | data from the data store.                  |                                |
 +------------------------------------------------+--------------------------------------------+--------------------------------+
-| rubix.bookkeeper.count.remote_request          | The number of requests made for data not   | No remote requests made        |
-|                                                | currently cached.                          |                                |
+| rubix.bookkeeper.count.total_async_request     | The total number of requests made to       |                                |
+|                                                | download data asynchronously.              |                                |
 +------------------------------------------------+--------------------------------------------+--------------------------------+
-| rubix.bookkeeper.count.total_async_request     | The total number of requests made for      |                                |
-|                                                | asynchronously fetching data.              |                                |
-+------------------------------------------------+--------------------------------------------+--------------------------------+
-| rubix.bookkeeper.count.processed_async_request | The total number of asynchronous requests  |                                |
-|                                                | that have already been processed.          |                                |
+| rubix.bookkeeper.count.processed_async_request | The total number of asynchronous download  |                                |
+|                                                | requests that have already been processed. |                                |
 +------------------------------------------------+--------------------------------------------+--------------------------------+
 | rubix.bookkeeper.gauge.async_queue_size        | The current number of queued               | High queue size                |
-|                                                | asynchronous requests.                     | (requests not being processed) |
+|                                                | asynchronous download requests.            | (requests not being processed) |
 +------------------------------------------------+--------------------------------------------+--------------------------------+
 | rubix.bookkeeper.count.async_downloaded_mb     | The amount of data asynchronously          |                                |
-|                                                | downloaded, in MB                          |                                |
+|                                                | downloaded, in MB.                         |                                |
+|                                                | (If there are no cache evictions, this     |                                |
+|                                                | should match ``cache_size_mb``.)           |                                |
 +------------------------------------------------+--------------------------------------------+--------------------------------+
 
 JVM
@@ -90,18 +90,3 @@ Metrics relating to JVM statistics, supplied by the Dropwizard Metrics ``metrics
 | rubix.bookkeeper.jvm.threads.* | Metrics relating to thread states      |               |
 | rubix.ldts.jvm.threads.*       | (CachedThreadStatesGaugeSet)           |               |
 +--------------------------------+----------------------------------------+---------------+
-
-Validation
-----------
-
-Metrics relating to validation.
-
-+---------------------------------------------------+------------------------------------------+----------------------------+
-| Metric                                            | Description                              | Abnormalities              |
-+===================================================+==========================================+============================+
-| rubix.bookkeeper.gauge.caching_validation_success | Indicates the success/failure of caching | Caching validation failure |
-|                                                   | validation for the node.                 | (reporting 0)              |
-+---------------------------------------------------+------------------------------------------+----------------------------+
-| rubix.bookkeeper.gauge.file_validation_success    | Indicates the success/failure of file    | File validation failure    |
-|                                                   | validation for the node.                 | (reporting 0)              |
-+---------------------------------------------------+------------------------------------------+----------------------------+
