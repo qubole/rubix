@@ -243,8 +243,7 @@ public class BookKeeperMetrics implements AutoCloseable
   public enum HealthMetric
   {
     LIVE_WORKER_GAUGE("rubix.bookkeeper.gauge.live_workers"),
-    CACHING_VALIDATED_WORKER_GAUGE("rubix.bookkeeper.gauge.caching_validated_workers"),
-    FILE_VALIDATED_WORKER_GAUGE("rubix.bookkeeper.gauge.file_validated_workers");
+    CACHING_VALIDATED_WORKER_GAUGE("rubix.bookkeeper.gauge.caching_validated_workers");
 
     private final String metricName;
 

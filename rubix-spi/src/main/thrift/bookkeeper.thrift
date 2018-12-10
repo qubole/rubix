@@ -20,8 +20,7 @@ struct FileInfo {
 }
 
 struct HeartbeatStatus {
-    1: required bool fileValidationSucceeded;
-    2: required bool cachingValidationSucceeded;
+    1: required bool cachingValidationSucceeded;
 }
 
 struct CacheStatusRequest {

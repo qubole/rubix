@@ -148,7 +148,7 @@ public class HeartbeatService extends AbstractScheduledService
   {
     try {
       HeartbeatStatus status = CacheConfig.isValidationEnabled(conf)
-          ? new HeartbeatStatus(fileValidator.didValidationSucceed(), cachingValidator.didValidationSucceed())
+          ? new HeartbeatStatus(cachingValidator.didValidationSucceed())
           : new HeartbeatStatus();
 
       log.debug(String.format("Sending heartbeat to %s", masterHostname));

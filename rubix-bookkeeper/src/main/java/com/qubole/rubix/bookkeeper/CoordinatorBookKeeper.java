@@ -39,9 +39,6 @@ public class CoordinatorBookKeeper extends BookKeeper
   // Cache to store hostnames of caching-validated worker nodes.
   protected Cache<String, Boolean> cachingValidatedWorkerCache;
 
-  // Cache to store hostnames of file-validated worker nodes.
-  protected Cache<String, Boolean> fileValidatedWorkerCache;
-
   private final boolean isValidationEnabled;
 
   public CoordinatorBookKeeper(Configuration conf, MetricRegistry metrics) throws FileNotFoundException
@@ -56,7 +53,6 @@ public class CoordinatorBookKeeper extends BookKeeper
     this.isValidationEnabled = CacheConfig.isValidationEnabled(conf);
     this.liveWorkerCache = createHealthCache(conf, ticker);
     this.cachingValidatedWorkerCache = createHealthCache(conf, ticker);
-    this.fileValidatedWorkerCache = createHealthCache(conf, ticker);
 
     registerMetrics();
   }
@@ -73,13 +69,6 @@ public class CoordinatorBookKeeper extends BookKeeper
       }
       else {
         log.error(String.format("Caching validation failed for worker node (hostname: %s)", workerHostname));
-      }
-
-      if (heartbeatStatus.fileValidationSucceeded) {
-        fileValidatedWorkerCache.put(workerHostname, true);
-      }
-      else {
-        log.error(String.format("File validation failed for worker node (hostname: %s)", workerHostname));
       }
     }
   }
@@ -111,17 +100,6 @@ public class CoordinatorBookKeeper extends BookKeeper
           cachingValidatedWorkerCache.cleanUp();
           log.debug(String.format("Caching validation passed for %d workers", cachingValidatedWorkerCache.size()));
           return cachingValidatedWorkerCache.size();
-        }
-      });
-      metrics.register(BookKeeperMetrics.HealthMetric.FILE_VALIDATED_WORKER_GAUGE.getMetricName(), new Gauge<Long>()
-      {
-        @Override
-        public Long getValue()
-        {
-          // Clean up cache to ensure accurate size is reported.
-          fileValidatedWorkerCache.cleanUp();
-          log.debug(String.format("File validation passed for %d workers", fileValidatedWorkerCache.size()));
-          return fileValidatedWorkerCache.size();
         }
       });
     }

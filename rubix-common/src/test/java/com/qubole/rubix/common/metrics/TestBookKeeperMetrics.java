@@ -166,8 +166,7 @@ public class TestBookKeeperMetrics
   {
     Set<String> healthMetricsNames = Sets.newHashSet(
         BookKeeperMetrics.HealthMetric.LIVE_WORKER_GAUGE.getMetricName(),
-        BookKeeperMetrics.HealthMetric.CACHING_VALIDATED_WORKER_GAUGE.getMetricName(),
-        BookKeeperMetrics.HealthMetric.FILE_VALIDATED_WORKER_GAUGE.getMetricName());
+        BookKeeperMetrics.HealthMetric.CACHING_VALIDATED_WORKER_GAUGE.getMetricName());
 
     assertEquals(healthMetricsNames, BookKeeperMetrics.HealthMetric.getAllNames());
   }
