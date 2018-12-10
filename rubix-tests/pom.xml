@@ -112,7 +112,7 @@
                 </executions>
                 <configuration>
                     <extraPathDirectories>
-                        <extraPathDirectory>src/test/resources/robotframework/libraries/rubix-client-${project.version}-tests.jar</extraPathDirectory>
+                        <extraPathDirectory>../rubix-client/target/rubix-client-${project.version}-tests.jar</extraPathDirectory>
                     </extraPathDirectories>
                 </configuration>
             </plugin>
