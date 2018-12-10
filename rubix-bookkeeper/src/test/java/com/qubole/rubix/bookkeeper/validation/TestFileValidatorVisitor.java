@@ -152,27 +152,8 @@ public class TestFileValidatorVisitor
   @Test
   public void testValidatorFileVisitor_allValidCachedFiles() throws TException, IOException
   {
-    String filePath = CacheUtil.getLocalPath(TEST_REMOTE_PATH_ONE, conf);
-    Files.createFile(Paths.get(filePath));
-
-    filePath = CacheUtil.getLocalPath(TEST_REMOTE_PATH_TWO, conf);
-    Files.createFile(Paths.get(filePath));
-
-    CacheStatusRequest request = new CacheStatusRequest(TEST_REMOTE_PATH_ONE, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
-        TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
-    bookKeeper.getCacheStatus(request);
-
-    UpdateCacheRequest updateRequest = new UpdateCacheRequest(TEST_REMOTE_PATH_ONE, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
-        TEST_START_BLOCK, TEST_END_BLOCK, 300);
-    bookKeeper.setAllCached(updateRequest);
-
-    request = new CacheStatusRequest(TEST_REMOTE_PATH_TWO, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
-        TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
-    bookKeeper.getCacheStatus(request);
-
-    updateRequest = new UpdateCacheRequest(TEST_REMOTE_PATH_TWO, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
-        TEST_START_BLOCK, TEST_END_BLOCK, 300);
-    bookKeeper.setAllCached(updateRequest);
+    setupData(TEST_REMOTE_PATH_ONE, 300);
+    setupData(TEST_REMOTE_PATH_TWO, 300);
 
     FileValidatorResult result = validate();
 
@@ -184,29 +165,8 @@ public class TestFileValidatorVisitor
   @Test
   public void testValidatorFileVisitor_allCorruptedFiles() throws TException, IOException
   {
-    String filePath = CacheUtil.getLocalPath(TEST_REMOTE_PATH_ONE, conf);
-    Files.createFile(Paths.get(filePath));
-    log.info("FilePath " + filePath);
-
-    filePath = CacheUtil.getLocalPath(TEST_REMOTE_PATH_TWO, conf);
-    Files.createFile(Paths.get(filePath));
-    log.info("FilePath " + filePath);
-
-    CacheStatusRequest request = new CacheStatusRequest(TEST_REMOTE_PATH_ONE, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
-        TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
-    bookKeeper.getCacheStatus(request);
-
-    UpdateCacheRequest updateRequest = new UpdateCacheRequest(TEST_REMOTE_PATH_ONE, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
-        TEST_START_BLOCK, TEST_END_BLOCK, 200);
-    bookKeeper.setAllCached(updateRequest);
-
-    request = new CacheStatusRequest(TEST_REMOTE_PATH_TWO, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
-        TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
-    bookKeeper.getCacheStatus(request);
-
-    updateRequest = new UpdateCacheRequest(TEST_REMOTE_PATH_TWO, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
-        TEST_START_BLOCK, TEST_END_BLOCK, 100);
-    bookKeeper.setAllCached(updateRequest);
+    setupData(TEST_REMOTE_PATH_ONE, 200);
+    setupData(TEST_REMOTE_PATH_TWO, 100);
 
     FileValidatorResult result = validate();
 
@@ -218,35 +178,28 @@ public class TestFileValidatorVisitor
   @Test
   public void testValidatorFileVisitor_someCorruptedFiles() throws TException, IOException
   {
-    String filePath = CacheUtil.getLocalPath(TEST_REMOTE_PATH_ONE, conf);
-    Files.createFile(Paths.get(filePath));
-    log.info("FilePath " + filePath);
-
-    filePath = CacheUtil.getLocalPath(TEST_REMOTE_PATH_TWO, conf);
-    Files.createFile(Paths.get(filePath));
-    log.info("FilePath " + filePath);
-
-    CacheStatusRequest request = new CacheStatusRequest(TEST_REMOTE_PATH_ONE, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
-        TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
-    bookKeeper.getCacheStatus(request);
-
-    UpdateCacheRequest updateRequest = new UpdateCacheRequest(TEST_REMOTE_PATH_ONE, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
-        TEST_START_BLOCK, TEST_END_BLOCK, 300);
-    bookKeeper.setAllCached(updateRequest);
-
-    request = new CacheStatusRequest(TEST_REMOTE_PATH_TWO, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
-        TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
-    bookKeeper.getCacheStatus(request);
-
-    updateRequest = new UpdateCacheRequest(TEST_REMOTE_PATH_TWO, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
-        TEST_START_BLOCK, TEST_END_BLOCK, 100);
-    bookKeeper.setAllCached(updateRequest);
+    setupData(TEST_REMOTE_PATH_ONE, 300);
+    setupData(TEST_REMOTE_PATH_TWO, 100);
 
     FileValidatorResult result = validate();
 
     assertTrue(result.getTotalFiles() == 2, "Total file count didn't match");
     assertTrue(result.getCorruptedCachedFiles().size() == 1, "One çached file should be in corrupted state");
     assertTrue(result.getSuccessCount() == 1, "One cached file should be in consistent state");
+  }
+
+  private void setupData(String fileName, int downloadedDataSize) throws TException, IOException
+  {
+    String filePath = CacheUtil.getLocalPath(fileName, conf);
+    Files.createFile(Paths.get(filePath));
+
+    CacheStatusRequest request = new CacheStatusRequest(fileName, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
+        TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+    bookKeeper.getCacheStatus(request);
+
+    UpdateCacheRequest updateRequest = new UpdateCacheRequest(fileName, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
+        TEST_START_BLOCK, TEST_END_BLOCK, downloadedDataSize);
+    bookKeeper.setAllCached(updateRequest);
   }
 
   /**
