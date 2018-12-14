@@ -15,10 +15,10 @@ package com.qubole.rubix.spi;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.BookKeeperService;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.thrift.TException;
 import org.apache.thrift.transport.TTransport;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
@@ -28,7 +28,7 @@ import java.util.List;
  */
 public class LocalBookKeeperClient extends RetryingBookkeeperClient
 {
-  private static final Logger log = LoggerFactory.getLogger(RetryingBookkeeperClient.class);
+  private static final Log log = LogFactory.getLog(RetryingBookkeeperClient.class);
   BookKeeperService.Iface bookKeeper;
 
   public LocalBookKeeperClient(TTransport transport, BookKeeperService.Iface bookKeeper)

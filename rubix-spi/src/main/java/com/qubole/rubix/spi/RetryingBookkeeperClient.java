@@ -20,11 +20,11 @@ import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.BookKeeperService;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.HeartbeatStatus;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.transport.TTransport;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -33,7 +33,7 @@ import java.util.concurrent.Callable;
 
 public class RetryingBookkeeperClient extends BookKeeperService.Client implements Closeable
 {
-  private static final Logger LOG = LoggerFactory.getLogger(RetryingBookkeeperClient.class);
+  private static final Log log = LogFactory.getLog(RetryingBookkeeperClient.class);
   private int maxRetries;
   private long retryInterval;
   TTransport transport;
@@ -144,7 +144,7 @@ public class RetryingBookkeeperClient extends BookKeeperService.Client implement
           return callable.call();
         }
         catch (Exception e) {
-          LOG.info("Error while connecting : ", e);
+          log.debug(String.format("Error while contacting BookKeeper. Tried [%d/%d attempts] ", errors + 1, maxRetries));
           errors++;
         }
         if (transport.isOpen()) {
@@ -158,6 +158,7 @@ public class RetryingBookkeeperClient extends BookKeeperService.Client implement
           Thread.currentThread().interrupt();
         }
       }
+      log.error(String.format("Exhausted all of %d attempts to contact BookKeeper", maxRetries));
     }
 
     finally {
