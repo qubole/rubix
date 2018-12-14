@@ -101,7 +101,7 @@ public class RetryingBookkeeperClient extends BookKeeperService.Client implement
         return callable.call();
       }
       catch (Exception e) {
-        LOG.info("Error while connecting : ", e);
+        log.info("Error while connecting : ", e);
         errors++;
       }
       if (transport.isOpen()) {
