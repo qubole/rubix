@@ -137,7 +137,7 @@ public class TestWorkerBookKeeper
     TSocket socket = new TSocket("localhost", 1234, CacheConfig.getClientTimeout(conf));
     socket.open();
 
-    doReturn(new RetryingBookkeeperClient(socket, CacheConfig.getMaxRetries(conf), 0))
+    doReturn(new RetryingBookkeeperClient(socket, CacheConfig.getMaxRetries(conf)))
         .when(bookKeeperFactory).createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any());
 
     FakeTicker ticker = new FakeTicker();

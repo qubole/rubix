@@ -39,14 +39,9 @@ public class BookKeeperFactory
 
   public RetryingBookkeeperClient createBookKeeperClient(String host, Configuration conf) throws TTransportException
   {
-    return createBookKeeperClient(host, conf, CacheConfig.getMaxRetries(conf), 0);
-  }
-
-  public RetryingBookkeeperClient createBookKeeperClient(String host, Configuration conf,
-                                                         int maxRetries, long retryInterval) throws TTransportException
-  {
     TTransport transport = new TSocket(host, CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf));
-    RetryingBookkeeperClient retryingBookkeeperClient = new RetryingBookkeeperClient(transport, maxRetries, retryInterval);
+    transport.open();
+    RetryingBookkeeperClient retryingBookkeeperClient = new RetryingBookkeeperClient(transport, CacheConfig.getMaxRetries(conf));
     return retryingBookkeeperClient;
   }
 

@@ -598,7 +598,7 @@ public class BaseServerTest
         when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
             new RetryingBookkeeperClient(
                 new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf)),
-                CacheConfig.getMaxRetries(conf), 0));
+                CacheConfig.getMaxRetries(conf)));
       }
       catch (TTransportException e) {
         log.error("Error starting MockWorkerBookKeeperServer for test", e);

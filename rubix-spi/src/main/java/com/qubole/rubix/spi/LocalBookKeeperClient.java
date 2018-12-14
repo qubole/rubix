@@ -33,7 +33,7 @@ public class LocalBookKeeperClient extends RetryingBookkeeperClient
 
   public LocalBookKeeperClient(TTransport transport, BookKeeperService.Iface bookKeeper)
   {
-    super(transport, 1, 0);
+    super(transport, 1);
     this.bookKeeper = bookKeeper;
   }
 
