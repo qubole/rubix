@@ -84,9 +84,11 @@ public class TestHeartbeatService
   public void tearDownForClass() throws IOException
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
+    CacheConfig.setMaxDisks(conf, TEST_MAX_DISKS);
 
     TestUtil.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
+
   /**
    * Verify that the heartbeat service correctly makes a connection using a BookKeeper client.
    *
