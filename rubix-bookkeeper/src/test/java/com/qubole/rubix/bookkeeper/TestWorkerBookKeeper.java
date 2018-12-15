@@ -14,6 +14,7 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.base.Ticker;
 import com.google.common.testing.FakeTicker;
 import com.qubole.rubix.common.TestUtil;
 import com.qubole.rubix.spi.BookKeeperFactory;
@@ -42,8 +43,10 @@ import java.util.concurrent.TimeUnit;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
 
+import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
 public class TestWorkerBookKeeper
@@ -108,7 +111,6 @@ public class TestWorkerBookKeeper
     final MetricRegistry metricRegistry = new MetricRegistry();
     final CoordinatorBookKeeper spyCoordinator = spy(new CoordinatorBookKeeper(conf, metricRegistry));
     final BookKeeperServer bookKeeperServer = new BookKeeperServer();
-    log.info("testGetClusterNodeHostNameFromCoordinatorAndThenWorkerCache -- Staring bookkeeper on 1234");
 
     CacheConfig.setServerPort(conf, 1234);
     final Thread thread = new Thread()
@@ -161,6 +163,33 @@ public class TestWorkerBookKeeper
     assertTrue(hostName.equals(changedTestLocalhost), "HostName is not refreshed from Coordinator");
 
     bookKeeperServer.stopServer();
+  }
+
+  @Test
+  public void testGetClusterNodeHostNameWhenCoordinatorIsDown() throws FileNotFoundException, TTransportException
+  {
+    CacheConfig.setServiceMaxRetries(conf, 1);
+    CacheConfig.setServiceRetryInterval(conf, 1);
+    BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
+    final BookKeeperFactory spyBookKeeperFactory = spy(bookKeeperFactory);
+    doThrow(TTransportException.class).when(spyBookKeeperFactory).createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any());
+    FakeTicker ticker = new FakeTicker();
+    final WorkerBookKeeper workerBookKeeper = new MockWorkerBookKeeper(conf, new MetricRegistry(), ticker, spyBookKeeperFactory);
+    String hostName = workerBookKeeper.getClusterNodeHostName("remotePath", ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+    assertNull(hostName, "HostName should be null as Cooordinator is down");
+  }
+
+  private class MockWorkerBookKeeper extends WorkerBookKeeper
+  {
+    public MockWorkerBookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker, BookKeeperFactory factory) throws FileNotFoundException
+    {
+      super(conf, metrics, ticker, factory);
+    }
+    @Override
+    void startHeartbeatService(Configuration conf, MetricRegistry metrics, BookKeeperFactory factory)
+    {
+      return;
+    }
   }
 
   @Test(expectedExceptions = UnsupportedOperationException.class)

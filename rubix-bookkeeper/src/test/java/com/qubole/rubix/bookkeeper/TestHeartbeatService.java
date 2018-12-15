@@ -34,7 +34,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
@@ -126,11 +128,14 @@ public class TestHeartbeatService
   @Test(expectedExceptions = RuntimeException.class)
   public void testHeartbeatRetryLogic_outOfRetries() throws TTransportException, FileNotFoundException
   {
-    final BookKeeperFactory bookKeeperFactory = mock(BookKeeperFactory.class);
-    when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenThrow(TTransportException.class);
+    CacheConfig.setServiceMaxRetries(conf, 5);
+    BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
+    final BookKeeperFactory spyBookKeeperFactory = spy(bookKeeperFactory);
+
+    doThrow(TTransportException.class).when(spyBookKeeperFactory).createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any());
 
     final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, new MetricRegistry());
-    final HeartbeatService heartbeatService = new HeartbeatService(conf, new MetricRegistry(), bookKeeperFactory, bookKeeper);
+    final HeartbeatService heartbeatService = new HeartbeatService(conf, new MetricRegistry(), spyBookKeeperFactory, bookKeeper);
   }
 
   /**

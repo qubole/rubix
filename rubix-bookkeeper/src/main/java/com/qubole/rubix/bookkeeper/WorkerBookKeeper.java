@@ -28,7 +28,6 @@ import com.qubole.rubix.spi.thrift.HeartbeatStatus;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.thrift.shaded.transport.TTransportException;
 
 import java.io.FileNotFoundException;
 import java.util.List;
@@ -75,6 +74,11 @@ public class WorkerBookKeeper extends BookKeeper
             if (client == null) {
               client = initializeClientWithRetry(bookKeeperFactory, conf, masterHostname);
             }
+            if (client == null) {
+              log.error("Not able to initialize bookkeeper client.");
+              throw new Exception("Not able to initialize bookkeeper client");
+            }
+
             log.info("Fetching list of nodes for cluster type " + s.intValue() + " from master : " + masterHostname + " Client " + client);
             return client.getNodeHostNames(s.intValue());
           }
@@ -127,7 +131,7 @@ public class WorkerBookKeeper extends BookKeeper
   /**
    * Start the {@link HeartbeatService} for this worker node.
    */
-  private void startHeartbeatService(Configuration conf, MetricRegistry metrics, BookKeeperFactory factory)
+  void startHeartbeatService(Configuration conf, MetricRegistry metrics, BookKeeperFactory factory)
   {
     this.heartbeatService = new HeartbeatService(conf, metrics, factory, this);
     heartbeatService.startAsync();
@@ -145,28 +149,6 @@ public class WorkerBookKeeper extends BookKeeper
     final int retryInterval = CacheConfig.getServiceRetryInterval(conf);
     final int maxRetries = CacheConfig.getServiceMaxRetries(conf);
 
-    for (int failedStarts = 0; failedStarts < maxRetries; ) {
-      try {
-        return bookKeeperFactory.createBookKeeperClient(hostName, conf);
-      }
-      catch (TTransportException e) {
-        log.warn(String.format("Could not create bookkeeper client to fetch list of nodes from master [%d/%d attempts]", failedStarts, maxRetries));
-      }
-
-      failedStarts++;
-      if (failedStarts == maxRetries) {
-        break;
-      }
-
-      try {
-        Thread.sleep(retryInterval);
-      }
-      catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-      }
-    }
-
-    log.fatal("Ran out of retries to create bookkeeper client to fetch list of nodes from master.");
-    throw new RuntimeException("Could not create bookkeeper client");
+    return bookKeeperFactory.createBookKeeperClient(hostName, conf, maxRetries, retryInterval, false);
   }
 }

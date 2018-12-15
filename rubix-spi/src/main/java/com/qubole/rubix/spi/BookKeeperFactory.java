@@ -45,6 +45,32 @@ public class BookKeeperFactory
     return retryingBookkeeperClient;
   }
 
+  public RetryingBookkeeperClient createBookKeeperClient(String host, Configuration conf, int maxRetries,
+                                                         long retryInterval, boolean throwException)
+  {
+    for (int failedStarts = 1; failedStarts <= maxRetries; failedStarts++) {
+      try {
+        return this.createBookKeeperClient(host, conf);
+      }
+      catch (TTransportException e) {
+        log.warn(String.format("Could not create bookkeeper client [%d/%d attempts]", failedStarts, maxRetries));
+      }
+      try {
+        Thread.sleep(retryInterval);
+      }
+      catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+    }
+
+    log.fatal("Ran out of retries to create bookkeeper client.");
+    if (throwException) {
+      throw new RuntimeException("Could not create bookkeeper client");
+    }
+
+    return null;
+  }
+
   public RetryingBookkeeperClient createBookKeeperClient(Configuration conf) throws TTransportException
   {
     if (bookKeeper == null) {
