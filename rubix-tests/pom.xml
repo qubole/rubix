@@ -98,6 +98,24 @@
                     </systemPropertyVariables>
                 </configuration>
             </plugin>
+
+            <plugin>
+                <groupId>org.robotframework</groupId>
+                <artifactId>robotframework-maven-plugin</artifactId>
+                <version>1.4.7</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <extraPathDirectories>
+                        <extraPathDirectory>../rubix-client/target/rubix-client-${project.version}-tests.jar</extraPathDirectory>
+                    </extraPathDirectories>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 

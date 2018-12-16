@@ -88,6 +88,7 @@ public class CacheConfig
   private static final String KEY_WORKER_NODEINFO_EXPIRY_PERIOD = "rubix.worker.nodeinfo.expiry.period";
   private static final String KEY_CLEANUP_FILES_DURING_START = "rubix.cleanup.files.during.start";
   private static final String KEY_CLUSTER_NODE_REFRESH_TIME = "rubix.cluster.node.refresh.time";
+  private static final String KEY_MAX_CACHE_SIZE = "rubix.cache.fullness.size";
 
   // default values
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
@@ -149,6 +150,7 @@ public class CacheConfig
   private static final int DEFAULT_WORKER_NODEINFO_EXPIRY_PERIOD = 300; // seconds
   private static final boolean DEFAULT_CLEANUP_FILES_DURING_START = true;
   private static final int DEFAULT_CLUSTER_NODE_REFRESH_TIME = 120; //seconds
+  private static final long DEFAULT_MAX_CACHE_SIZE = 0;
 
   private CacheConfig()
   {
@@ -182,6 +184,11 @@ public class CacheConfig
   public static int getCacheDataFullnessPercentage(Configuration conf)
   {
     return conf.getInt(KEY_DATA_CACHE_FULLNESS, DEFAULT_DATA_CACHE_FULLNESS);
+  }
+
+  public static long getCacheDataFullnessMaxSize(Configuration conf)
+  {
+    return conf.getLong(KEY_MAX_CACHE_SIZE, DEFAULT_MAX_CACHE_SIZE);
   }
 
   public static String getCacheDataLocationBlacklist(Configuration conf)

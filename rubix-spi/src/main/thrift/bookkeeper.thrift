@@ -41,7 +41,7 @@ service BookKeeperService
 
     oneway void setAllCached(1:string remotePath, 2:long fileLength, 3:long lastModified, 4:long startBlock, 5:long endBlock)
 
-    map<string,double> getCacheStats()
+    map<string,double> getCacheMetrics()
 
     bool readData(1:string path, 2:long readStart, 3:int length, 4:long fileSize, 5:long lastModified, 6:int clusterType)
 

@@ -25,6 +25,7 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.cache.Weigher;
+import com.google.common.collect.ImmutableMap;
 import com.qubole.rubix.bookkeeper.utils.DiskUtils;
 import com.qubole.rubix.bookkeeper.validation.CachingValidator;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
@@ -389,20 +390,25 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   }
 
   @Override
-  public Map getCacheStats()
+  public Map<String, Double> getCacheMetrics()
   {
     final long cachedRequests = cacheRequestCount.getCount();
     final long remoteRequests = remoteRequestCount.getCount();
     final long nonLocalRequests = nonlocalRequestCount.getCount();
     final long totalRequests = totalRequestCount.getCount();
 
-    Map<String, Double> stats = new HashMap<String, Double>();
-    stats.put("Cache Hit Rate", ((double) cachedRequests / (cachedRequests + remoteRequests)));
-    stats.put("Cache Miss Rate", ((double) (remoteRequests) / (cachedRequests + remoteRequests)));
-    stats.put("Cache Reads", ((double) cachedRequests));
-    stats.put("Remote Reads", ((double) remoteRequests));
-    stats.put("Non-Local Reads", ((double) nonLocalRequests));
-    return stats;
+    ImmutableMap.Builder<String, Double> cacheMetrics = ImmutableMap.builder();
+    cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_HIT_RATE_GAUGE.getMetricName(), ((double) cachedRequests / (cachedRequests + remoteRequests)));
+    cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_MISS_RATE_GAUGE.getMetricName(), ((double) (remoteRequests) / (cachedRequests + remoteRequests)));
+    cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_REQUEST_COUNT.getMetricName(), ((double) cachedRequests));
+    cacheMetrics.put(BookKeeperMetrics.CacheMetric.REMOTE_REQUEST_COUNT.getMetricName(), ((double) remoteRequests));
+    cacheMetrics.put(BookKeeperMetrics.CacheMetric.NONLOCAL_REQUEST_COUNT.getMetricName(), ((double) nonLocalRequests));
+    cacheMetrics.put(BookKeeperMetrics.CacheMetric.TOTAL_REQUEST_COUNT.getMetricName(), ((double) totalRequests));
+    cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_EVICTION_COUNT.getMetricName(), (double) cacheEvictionCount.getCount());
+    cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_INVALIDATION_COUNT.getMetricName(), (double) cacheInvalidationCount.getCount());
+    cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_EXPIRY_COUNT.getMetricName(), (double) cacheExpiryCount.getCount());
+    cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_SIZE_GAUGE.getMetricName(), (double) DiskUtils.getCacheSizeMB(conf));
+    return cacheMetrics.build();
   }
 
   //This method is to ensure that data required by another node is cached before it is read by that node
@@ -554,6 +560,11 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     // To minimize those cases, consider available space lower than actual
     final long total = (long) (0.95 * avail);
 
+    final long cacheMaxSize = CacheConfig.getCacheDataFullnessMaxSize(conf);
+    final long maxWeight = (cacheMaxSize == 0)
+        ? (long) (total * 1.0 * CacheConfig.getCacheDataFullnessPercentage(conf) / 100.0)
+        : cacheMaxSize;
+
     initializeFileInfoCache(conf, ticker);
 
     fileMetadataCache = CacheBuilder.newBuilder()
@@ -566,7 +577,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
             return md.getWeight(conf);
           }
         })
-        .maximumWeight((long) (total * 1.0 * CacheConfig.getCacheDataFullnessPercentage(conf) / 100.0))
+        .maximumWeight(maxWeight)
         .expireAfterWrite(CacheConfig.getCacheDataExpirationAfterWrite(conf), TimeUnit.MILLISECONDS)
         .removalListener(new CacheRemovalListener())
         .build();
