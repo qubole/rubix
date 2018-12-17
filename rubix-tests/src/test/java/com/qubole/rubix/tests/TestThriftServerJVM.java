@@ -181,7 +181,7 @@ public class TestThriftServerJVM extends Configured
   }
 
   @Test(enabled = true)
-  public void testCallBookKeeper() throws IOException, InterruptedException, TTransportException, TException
+  public void testBookKeeperHealth() throws IOException, InterruptedException, TTransportException, TException
   {
     String host = "localhost";
 
@@ -190,5 +190,19 @@ public class TestThriftServerJVM extends Configured
 
     boolean isBookKeeperAlive = client.isBookKeeperWorking();
     assertTrue(isBookKeeperAlive == true, "BookKeeper is not Alive");
+  }
+
+  @Test(enabled = true, expectedExceptions = org.apache.thrift.shaded.transport.TTransportException.class)
+  public void testBookKeeperHealthAtWrongPort() throws IOException, InterruptedException, TTransportException, TException
+  {
+    String host = "localhost";
+
+    //1234 is a random port to test if BookKeeperHealth is detecting that bookkeeper is down or not
+    CacheConfig.setServerPort(conf, 1234);
+    RetryingBookkeeperClient client;
+    client = bookKeeperFactory.createBookKeeperClient(host, conf);
+
+    boolean isBookKeeperAlive = client.isBookKeeperWorking();
+    assertTrue(isBookKeeperAlive == false, "Showing BookKeeper Alive, It shouldn't be up at this port");
   }
 }

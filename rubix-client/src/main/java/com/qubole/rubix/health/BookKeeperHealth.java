@@ -63,4 +63,3 @@ public class BookKeeperHealth extends Configured
     return false;
   }
 }
-
