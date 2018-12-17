@@ -62,6 +62,12 @@ public class CoordinatorBookKeeper extends BookKeeper
   }
 
   @Override
+  public boolean isBookKeeperWorking()
+  {
+    return true;
+  }
+
+  @Override
   public void handleHeartbeat(String workerHostname, HeartbeatStatus heartbeatStatus)
   {
     liveWorkerCache.put(workerHostname, true);

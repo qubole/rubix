@@ -179,4 +179,16 @@ public class TestThriftServerJVM extends Configured
     String host = "localhost";
     bookKeeperFactory.createBookKeeperClient(host, conf);
   }
+
+  @Test(enabled = true)
+  public void testCallBookKeeper() throws IOException, InterruptedException, TTransportException, TException
+  {
+    String host = "localhost";
+
+    RetryingBookkeeperClient client;
+    client = bookKeeperFactory.createBookKeeperClient(host, conf);
+
+    boolean isBookKeeperAlive = client.isBookKeeperWorking();
+    assertTrue(isBookKeeperAlive == true, "BookKeeper is not Alive");
+  }
 }

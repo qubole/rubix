@@ -39,6 +39,12 @@ public class WorkerBookKeeper extends BookKeeper
   }
 
   @Override
+  public boolean isBookKeeperWorking()
+  {
+    return true;
+  }
+
+  @Override
   public void handleHeartbeat(String workerHostname, HeartbeatStatus request)
   {
     throw new UnsupportedOperationException("Worker node should not handle heartbeat");
