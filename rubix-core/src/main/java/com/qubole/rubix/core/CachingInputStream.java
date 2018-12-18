@@ -372,7 +372,7 @@ public class CachingInputStream extends FSInputStream
             directReadBuffer = bufferPool.getBuffer(diskReadBufferSize);
           }
           if (cachedReadRequestChain == null) {
-            cachedReadRequestChain = new CachedReadRequestChain(localPath, directReadBuffer, statistics);
+            cachedReadRequestChain = new CachedReadRequestChain(remoteFileSystem, localPath, directReadBuffer, statistics, conf);
           }
           cachedReadRequestChain.addReadRequest(readRequest);
         }

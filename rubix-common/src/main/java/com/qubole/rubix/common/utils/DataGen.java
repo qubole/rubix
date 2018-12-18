@@ -10,7 +10,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-package com.qubole.rubix.core.utils;
+package com.qubole.rubix.common.utils;
 
 import org.apache.hadoop.util.DirectBufferPool;
 
