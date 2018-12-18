@@ -70,16 +70,8 @@
                     <execution>
                         <goals>
                             <goal>jar</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>copy-for-rf</id>
-                        <goals>
                             <goal>test-jar</goal>
                         </goals>
-                        <configuration>
-                            <outputDirectory>../rubix-tests/src/test/resources/robotframework/libraries</outputDirectory>
-                        </configuration>
                     </execution>
                 </executions>
             </plugin>
