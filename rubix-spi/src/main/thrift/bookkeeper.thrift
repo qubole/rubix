@@ -48,5 +48,5 @@ service BookKeeperService
 
     FileInfo getFileInfo(1: string remotePath)
 
-    bool isBookKeeperWorking()
+    bool isBookKeeperAlive()
 }

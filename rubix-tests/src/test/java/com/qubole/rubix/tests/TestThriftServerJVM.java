@@ -180,7 +180,6 @@ public class TestThriftServerJVM extends Configured
     bookKeeperFactory.createBookKeeperClient(host, conf);
   }
 
-  @Test(enabled = true)
   public void testBookKeeperHealth() throws IOException, InterruptedException, TTransportException, TException
   {
     String host = "localhost";
@@ -188,7 +187,7 @@ public class TestThriftServerJVM extends Configured
     RetryingBookkeeperClient client;
     client = bookKeeperFactory.createBookKeeperClient(host, conf);
 
-    boolean isBookKeeperAlive = client.isBookKeeperWorking();
+    boolean isBookKeeperAlive = client.isBookKeeperAlive();
     assertTrue(isBookKeeperAlive == true, "BookKeeper is not Alive");
   }
 
@@ -202,7 +201,6 @@ public class TestThriftServerJVM extends Configured
     RetryingBookkeeperClient client;
     client = bookKeeperFactory.createBookKeeperClient(host, conf);
 
-    boolean isBookKeeperAlive = client.isBookKeeperWorking();
-    assertTrue(isBookKeeperAlive == false, "Showing BookKeeper Alive, It shouldn't be up at this port");
+    boolean isBookKeeperAlive = client.isBookKeeperAlive();
   }
 }

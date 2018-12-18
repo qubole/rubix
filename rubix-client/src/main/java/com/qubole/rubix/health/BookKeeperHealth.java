@@ -39,8 +39,8 @@ public class BookKeeperHealth extends Configured
 
   public static void main(String[]args)
   {
-    BookKeeperHealth obj = new BookKeeperHealth(conf);
-    boolean isBookKeeperAlive = obj.run();
+    BookKeeperHealth bookkeeperhealth = new BookKeeperHealth(conf);
+    boolean isBookKeeperAlive = bookkeeperhealth.run();
     if (isBookKeeperAlive == false) {
       Runtime.getRuntime().exit(1);
     }
@@ -52,10 +52,9 @@ public class BookKeeperHealth extends Configured
 
   public boolean run()
   {
-    String host = "localhost";
     try {
-      client = factory.createBookKeeperClient(host, conf);
-      return client.isBookKeeperWorking();
+      client = factory.createBookKeeperClient(conf);
+      return client.isBookKeeperAlive();
     }
     catch (Exception e) {
       log.error("Failed to create BookKeeper client", e);
