@@ -157,9 +157,16 @@ public class TestWorkerBookKeeper
     hostName = workerBookKeeper.getClusterNodeHostName("remotepath", ClusterType.TEST_CLUSTER_MANAGER.ordinal());
 
     assertTrue(hostName.equals(testLocalhost), "HostName is not correct from the cache");
-    ticker.advance(200, TimeUnit.SECONDS);
+    ticker.advance(500, TimeUnit.SECONDS);
+
+    // This call is to trigger refreshing of NodesCache list in the workerbookkeeper.
+    // Until the value is refreshed, the cache is going to return the older value.
+    // Adding a thread.sleep to make sure the loading is complete. The next call is going to fetch the actual data.
 
     hostName = workerBookKeeper.getClusterNodeHostName("remotepath", ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+    Thread.sleep(1000);
+    hostName = workerBookKeeper.getClusterNodeHostName("remotepath", ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+
     assertTrue(hostName.equals(changedTestLocalhost), "HostName is not refreshed from Coordinator");
 
     bookKeeperServer.stopServer();
