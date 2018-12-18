@@ -118,6 +118,7 @@ public class CachedReadRequestChain extends ReadRequestChain
                 readRequest.getDestBufferOffset()));
 
         if (nread != readRequest.getActualReadLength()) {
+          log.error("Cached read length didn't match with requested read length. Falling back reading from object store.");
           directDataRead = readFromRemoteFileSystem(readRequests.indexOf(readRequest));
           return (read + directDataRead);
         }
@@ -130,7 +131,7 @@ public class CachedReadRequestChain extends ReadRequestChain
     }
     catch (Exception ex) {
       directDataRead = readFromRemoteFileSystem(readRequestIndex);
-      return directDataRead;
+      return (read + directDataRead);
     }
     finally {
       if (fis != null) {

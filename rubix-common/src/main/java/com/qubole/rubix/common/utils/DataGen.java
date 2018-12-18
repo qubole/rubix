@@ -17,6 +17,7 @@ import org.apache.hadoop.util.DirectBufferPool;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -81,6 +82,16 @@ public class DataGen
       raf.writeBytes(s);
     }
     raf.close();
+  }
+
+  public static void truncateFile(String fileName, int newSize)
+  {
+    try (FileChannel fileChannel = new FileOutputStream(fileName, true).getChannel()) {
+      fileChannel.truncate(newSize);
+    }
+    catch (IOException e) {
+      //Ignore
+    }
   }
 
   public static byte[] readBytesFromFile(String path, int offset, int length) throws IOException

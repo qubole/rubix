@@ -49,9 +49,6 @@ public class TestCachedReadRequestChain
   @BeforeClass
   public void setUpForClass() throws IOException
   {
-    log.info("TEST_BACKEND_FILE " + TEST_BACKEND_FILE);
-    log.info("backendFilePath " + backendFilePath.toString());
-
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     CacheConfig.setMaxDisks(conf, TEST_MAX_DISKS);
     TestUtil.createCacheParentDirectories(conf, TEST_MAX_DISKS);
@@ -92,65 +89,31 @@ public class TestCachedReadRequestChain
   }
 
   @Test
-  public void testCachedRead_WithFileCached()
-      throws IOException
+  public void testCachedRead_WithFileCached() throws IOException
   {
     byte[] buffer = new byte[1000];
-    ReadRequest[] readRequests = {
-        new ReadRequest(0, 100, 0, 100, buffer, 0, backendFile.length()),
-        new ReadRequest(200, 300, 200, 300, buffer, 100, backendFile.length()),
-        new ReadRequest(400, 500, 400, 500, buffer, 200, backendFile.length()),
-        new ReadRequest(600, 700, 600, 700, buffer, 300, backendFile.length()),
-        new ReadRequest(800, 900, 800, 900, buffer, 400, backendFile.length()),
-        new ReadRequest(1000, 1100, 1000, 1100, buffer, 500, backendFile.length()),
-        new ReadRequest(1200, 1300, 1200, 1300, buffer, 600, backendFile.length()),
-        new ReadRequest(1400, 1500, 1400, 1500, buffer, 700, backendFile.length()),
-        new ReadRequest(1600, 1700, 1600, 1700, buffer, 800, backendFile.length()),
-        new ReadRequest(1800, 1900, 1800, 1900, buffer, 900, backendFile.length())
-    };
+    CachedReadRequestChain cachedReadRequestChain = getCachedReadRequestChain(buffer);
 
-    MockCachingFileSystem fs = new MockCachingFileSystem();
-    fs.initialize(backendFilePath.toUri(), conf);
-    String localCachedFile = CacheUtil.getLocalPath(backendFilePath.toString(), conf);
-
-    CachedReadRequestChain cachedReadRequestChain = new CachedReadRequestChain(fs, localCachedFile, conf);
-    for (ReadRequest rr : readRequests) {
-      cachedReadRequestChain.addReadRequest(rr);
-    }
     cachedReadRequestChain.lock();
     int readSize = cachedReadRequestChain.call();
+
+    ReadRequestChainStats stats = cachedReadRequestChain.getStats();
 
     assertTrue(readSize == 1000, "Wrong amount of data read " + readSize);
     String output = new String(buffer, Charset.defaultCharset());
     String expectedOutput = DataGen.getExpectedOutput(readSize);
     assertTrue(expectedOutput.equals(output), "Wrong data read, expected\n" + expectedOutput + "\nBut got\n" + output);
+    assertTrue(stats.getCachedDataRead() == readSize, "All data should be read from cache");
+    assertTrue(stats.getDirectDataRead() == 0, "No data should be read from object store");
   }
 
   @Test
   public void testCachedRead_WithNoLocalCachedFile() throws IOException
   {
     byte[] buffer = new byte[1000];
-    ReadRequest[] readRequests = {
-        new ReadRequest(0, 100, 0, 100, buffer, 0, backendFile.length()),
-        new ReadRequest(200, 300, 200, 300, buffer, 100, backendFile.length()),
-        new ReadRequest(400, 500, 400, 500, buffer, 200, backendFile.length()),
-        new ReadRequest(600, 700, 600, 700, buffer, 300, backendFile.length()),
-        new ReadRequest(800, 900, 800, 900, buffer, 400, backendFile.length()),
-        new ReadRequest(1000, 1100, 1000, 1100, buffer, 500, backendFile.length()),
-        new ReadRequest(1200, 1300, 1200, 1300, buffer, 600, backendFile.length()),
-        new ReadRequest(1400, 1500, 1400, 1500, buffer, 700, backendFile.length()),
-        new ReadRequest(1600, 1700, 1600, 1700, buffer, 800, backendFile.length()),
-        new ReadRequest(1800, 1900, 1800, 1900, buffer, 900, backendFile.length())
-    };
-
-    MockCachingFileSystem fs = new MockCachingFileSystem();
-    fs.initialize(backendFilePath.toUri(), conf);
     String localCachedFile = CacheUtil.getLocalPath(backendFilePath.toString(), conf);
 
-    CachedReadRequestChain cachedReadRequestChain = new CachedReadRequestChain(fs, localCachedFile, conf);
-    for (ReadRequest rr : readRequests) {
-      cachedReadRequestChain.addReadRequest(rr);
-    }
+    CachedReadRequestChain cachedReadRequestChain = getCachedReadRequestChain(buffer);
 
     File localFile = new File(localCachedFile);
     localFile.delete();
@@ -158,9 +121,90 @@ public class TestCachedReadRequestChain
     cachedReadRequestChain.lock();
     int readSize = cachedReadRequestChain.call();
 
+    ReadRequestChainStats stats = cachedReadRequestChain.getStats();
+
     assertTrue(readSize == 1000, "Wrong amount of data read " + readSize);
     String output = new String(buffer, Charset.defaultCharset());
     String expectedOutput = DataGen.getExpectedOutput(readSize);
     assertTrue(expectedOutput.equals(output), "Wrong data read, expected\n" + expectedOutput + "\nBut got\n" + output);
+    assertTrue(stats.getCachedDataRead() == 0, "No data should be read from cache");
+    assertTrue(stats.getDirectDataRead() == readSize, "All data should be read from object store");
+  }
+
+  @Test
+  public void testCachedRead_WithCorruptedLocalCachedFile_1() throws IOException
+  {
+    byte[] buffer = new byte[1000];
+    String localCachedFile = CacheUtil.getLocalPath(backendFilePath.toString(), conf);
+
+    CachedReadRequestChain cachedReadRequestChain = getCachedReadRequestChain(buffer);
+
+    DataGen.truncateFile(localCachedFile, 1000);
+
+    cachedReadRequestChain.lock();
+    int readSize = cachedReadRequestChain.call();
+
+    ReadRequestChainStats stats = cachedReadRequestChain.getStats();
+
+    assertTrue(readSize == 1000, "Wrong amount of data read " + readSize);
+    String output = new String(buffer, Charset.defaultCharset());
+    String expectedOutput = DataGen.getExpectedOutput(readSize);
+    assertTrue(expectedOutput.equals(output), "Wrong data read, expected\n" + expectedOutput + "\nBut got\n" + output);
+    assertTrue(stats.getCachedDataRead() == 500, "Data read from cache didn't match");
+    assertTrue(stats.getDirectDataRead() == 500, "Data read from object store didn't match");
+  }
+
+  @Test
+  public void testCachedRead_WithCorruptedLocalCachedFile_2() throws IOException
+  {
+    byte[] buffer = new byte[1000];
+    String localCachedFile = CacheUtil.getLocalPath(backendFilePath.toString(), conf);
+
+    CachedReadRequestChain cachedReadRequestChain = getCachedReadRequestChain(buffer);
+
+    DataGen.truncateFile(localCachedFile, 1800);
+
+    cachedReadRequestChain.lock();
+    int readSize = cachedReadRequestChain.call();
+
+    ReadRequestChainStats stats = cachedReadRequestChain.getStats();
+
+    assertTrue(readSize == 1000, "Wrong amount of data read " + readSize);
+    String output = new String(buffer, Charset.defaultCharset());
+    String expectedOutput = DataGen.getExpectedOutput(readSize);
+    assertTrue(expectedOutput.equals(output), "Wrong data read, expected\n" + expectedOutput + "\nBut got\n" + output);
+    assertTrue(stats.getCachedDataRead() == 900, "Data read from cache didn't match");
+    assertTrue(stats.getDirectDataRead() == 100, "Data read from object store didn't match");
+  }
+
+  private CachedReadRequestChain getCachedReadRequestChain(byte[] buffer) throws IOException
+  {
+    MockCachingFileSystem fs = new MockCachingFileSystem();
+    fs.initialize(backendFilePath.toUri(), conf);
+
+    String localCachedFile = CacheUtil.getLocalPath(backendFilePath.toString(), conf);
+    ReadRequest[] readRequests = getReadRequests(buffer);
+
+    CachedReadRequestChain cachedReadRequestChain = new CachedReadRequestChain(fs, localCachedFile, conf);
+    for (ReadRequest rr : readRequests) {
+      cachedReadRequestChain.addReadRequest(rr);
+    }
+    return cachedReadRequestChain;
+  }
+
+  private ReadRequest[] getReadRequests(byte[] buffer)
+  {
+    return new ReadRequest[]{
+        new ReadRequest(0, 100, 0, 100, buffer, 0, backendFile.length()),
+        new ReadRequest(200, 300, 200, 300, buffer, 100, backendFile.length()),
+        new ReadRequest(400, 500, 400, 500, buffer, 200, backendFile.length()),
+        new ReadRequest(600, 700, 600, 700, buffer, 300, backendFile.length()),
+        new ReadRequest(800, 900, 800, 900, buffer, 400, backendFile.length()),
+        new ReadRequest(1000, 1100, 1000, 1100, buffer, 500, backendFile.length()),
+        new ReadRequest(1200, 1300, 1200, 1300, buffer, 600, backendFile.length()),
+        new ReadRequest(1400, 1500, 1400, 1500, buffer, 700, backendFile.length()),
+        new ReadRequest(1600, 1700, 1600, 1700, buffer, 800, backendFile.length()),
+        new ReadRequest(1800, 1900, 1800, 1900, buffer, 900, backendFile.length())
+    };
   }
 }
