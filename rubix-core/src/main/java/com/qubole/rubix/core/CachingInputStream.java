@@ -81,6 +81,7 @@ public class CachingInputStream extends FSInputStream
   private byte[] affixBuffer;
   private int diskReadBufferSize;
   private int bufferSize;
+  private BookKeeperFactory bookKeeperFactory;
 
   public CachingInputStream(FileSystem parentFs, Path backendPath, Configuration conf,
                             CachingFileSystemStats statsMbean, ClusterType clusterType,
@@ -88,6 +89,7 @@ public class CachingInputStream extends FSInputStream
                             int bufferSize, FileSystem.Statistics statistics) throws IOException
   {
     initialize(backendPath.toString(), conf, bookKeeperFactory);
+    this.bookKeeperFactory = bookKeeperFactory;
     this.remotePath = backendPath.toString();
     this.remoteFileSystem = remoteFileSystem;
 
@@ -372,7 +374,8 @@ public class CachingInputStream extends FSInputStream
             directReadBuffer = bufferPool.getBuffer(diskReadBufferSize);
           }
           if (cachedReadRequestChain == null) {
-            cachedReadRequestChain = new CachedReadRequestChain(remoteFileSystem, localPath, directReadBuffer, statistics, conf);
+            cachedReadRequestChain = new CachedReadRequestChain(remoteFileSystem, localPath, directReadBuffer,
+                    statistics, conf, bookKeeperFactory);
           }
           cachedReadRequestChain.addReadRequest(readRequest);
         }

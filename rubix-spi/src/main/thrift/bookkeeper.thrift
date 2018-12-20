@@ -47,4 +47,6 @@ service BookKeeperService
     oneway void handleHeartbeat(1:string workerHostname, 2:HeartbeatStatus heartbeatStatus)
 
     FileInfo getFileInfo(1: string remotePath)
+
+    oneway void invalidateFileMetadata(1:string remotePath)
 }

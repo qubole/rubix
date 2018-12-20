@@ -683,8 +683,8 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   }
 
   // This method is to invalidate FileMetadata from guava cache.
-  // deleteCachedFile determines whether to delete the actual file from the local filesystem or not
-  public static void invalidateFileMetadata(String key)
+  @Override
+  public void invalidateFileMetadata(String key)
   {
     // We might come in here with cache not initialized e.g. fs.create
     if (fileMetadataCache != null) {

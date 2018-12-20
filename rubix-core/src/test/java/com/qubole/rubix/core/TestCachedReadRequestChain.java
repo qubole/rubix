@@ -14,6 +14,7 @@ package com.qubole.rubix.core;
 
 import com.qubole.rubix.common.utils.DataGen;
 import com.qubole.rubix.common.utils.TestUtil;
+import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
 import org.apache.commons.logging.Log;
@@ -45,6 +46,7 @@ public class TestCachedReadRequestChain
   Path backendFilePath = new Path("file:///" + TEST_BACKEND_FILE.substring(1));
   File backendFile;
   final Configuration conf = new Configuration();
+  BookKeeperFactory factory;
 
   @BeforeClass
   public void setUpForClass() throws IOException
@@ -75,6 +77,8 @@ public class TestCachedReadRequestChain
     // Populate Cached File
     String cachedLocalFile = CacheUtil.getLocalPath(backendFilePath.toString(), conf);
     DataGen.populateFile(cachedLocalFile);
+
+    factory = new BookKeeperFactory();
   }
 
   @AfterMethod
@@ -185,7 +189,7 @@ public class TestCachedReadRequestChain
     String localCachedFile = CacheUtil.getLocalPath(backendFilePath.toString(), conf);
     ReadRequest[] readRequests = getReadRequests(buffer);
 
-    CachedReadRequestChain cachedReadRequestChain = new CachedReadRequestChain(fs, localCachedFile, conf);
+    CachedReadRequestChain cachedReadRequestChain = new CachedReadRequestChain(fs, localCachedFile, conf, factory);
     for (ReadRequest rr : readRequests) {
       cachedReadRequestChain.addReadRequest(rr);
     }

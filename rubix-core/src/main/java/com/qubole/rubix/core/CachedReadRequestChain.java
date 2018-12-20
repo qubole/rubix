@@ -13,7 +13,10 @@
 package com.qubole.rubix.core;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Throwables;
+import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheUtil;
+import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -41,13 +44,14 @@ public class CachedReadRequestChain extends ReadRequestChain
   private DirectReadRequestChain directReadChain;
   private Configuration conf;
   private int directDataRead;
+  private BookKeeperFactory factory;
 
   private ByteBuffer directBuffer;
 
   private static final Log log = LogFactory.getLog(CachedReadRequestChain.class);
 
   public CachedReadRequestChain(FileSystem remoteFileSystem, String localCachedFile, ByteBuffer buffer,
-                                FileSystem.Statistics statistics, Configuration conf)
+                                FileSystem.Statistics statistics, Configuration conf, BookKeeperFactory factory)
       throws IOException
   {
     this.conf = conf;
@@ -55,13 +59,14 @@ public class CachedReadRequestChain extends ReadRequestChain
     this.remoteFileSystem = remoteFileSystem;
     directBuffer = buffer;
     this.statistics = statistics;
+    this.factory = factory;
   }
 
   @VisibleForTesting
-  public CachedReadRequestChain(FileSystem remoteFileSystem, String localCachedFile, Configuration conf)
+  public CachedReadRequestChain(FileSystem remoteFileSystem, String localCachedFile, Configuration conf, BookKeeperFactory factory)
       throws IOException
   {
-    this(remoteFileSystem, localCachedFile, ByteBuffer.allocate(1024), null, conf);
+    this(remoteFileSystem, localCachedFile, ByteBuffer.allocate(1024), null, conf, factory);
   }
 
   @VisibleForTesting
@@ -86,6 +91,7 @@ public class CachedReadRequestChain extends ReadRequestChain
     FileInputStream fis = null;
     FileChannel fileChannel = null;
     int readRequestIndex = 0;
+    boolean needsInvalidation = false;
 
     try {
       raf = new RandomAccessFile(localCachedFile, "r");
@@ -118,6 +124,7 @@ public class CachedReadRequestChain extends ReadRequestChain
                 readRequest.getDestBufferOffset()));
 
         if (nread != readRequest.getActualReadLength()) {
+          needsInvalidation = true;
           log.error("Cached read length didn't match with requested read length. Falling back reading from object store.");
           directDataRead = readFromRemoteFileSystem(readRequests.indexOf(readRequest));
           return (read + directDataRead);
@@ -130,6 +137,7 @@ public class CachedReadRequestChain extends ReadRequestChain
       log.info(String.format("Read %d bytes from cached file", read));
     }
     catch (Exception ex) {
+      needsInvalidation = true;
       directDataRead = readFromRemoteFileSystem(readRequestIndex);
       return (read + directDataRead);
     }
@@ -144,6 +152,12 @@ public class CachedReadRequestChain extends ReadRequestChain
       if (raf != null) {
         raf.close();
       }
+
+      // We are calling invalidateMetadata from finally block to make sure fileChannel is closed before we delete the file
+      if (needsInvalidation) {
+        invalidateMetadata();
+      }
+
       if (statistics != null) {
         statistics.incrementBytesRead(read);
       }
@@ -157,6 +171,30 @@ public class CachedReadRequestChain extends ReadRequestChain
     super.cancel();
     if (directReadChain != null) {
       directReadChain.cancel();
+    }
+  }
+
+  private void invalidateMetadata()
+  {
+    RetryingBookkeeperClient client = null;
+    String remotePath = CacheUtil.getRemotePath(localCachedFile, conf);
+    try {
+      client = factory.createBookKeeperClient(conf);
+      client.invalidateFileMetadata(remotePath);
+    }
+    catch (Exception e) {
+      log.info("Could not Invalidate Corrupted File " + remotePath + " Error : " + Throwables.getStackTraceAsString(e));
+    }
+    finally {
+      try {
+        if (client != null) {
+          client.close();
+          client = null;
+        }
+      }
+      catch (IOException ex) {
+        log.error("Could not close bookkeeper client. Exception: " + ex.toString());
+      }
     }
   }
 

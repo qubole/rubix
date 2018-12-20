@@ -146,7 +146,7 @@ public class CachingValidator extends AbstractScheduledService
     }
     finally {
       // Clean cache after validation
-      BookKeeper.invalidateFileMetadata(VALIDATOR_TEST_FILE_PATH_WITH_SCHEME);
+      bookKeeper.invalidateFileMetadata(VALIDATOR_TEST_FILE_PATH_WITH_SCHEME);
       tempFile.delete();
     }
   }
