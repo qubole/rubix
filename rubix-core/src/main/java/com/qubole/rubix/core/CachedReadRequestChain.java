@@ -125,7 +125,8 @@ public class CachedReadRequestChain extends ReadRequestChain
 
         if (nread != readRequest.getActualReadLength()) {
           needsInvalidation = true;
-          log.error("Cached read length didn't match with requested read length. Falling back reading from object store.");
+          log.error(String.format("Cached read length didn't match with requested read length for file %s. " +
+                  " Falling back reading from object store.", localCachedFile));
           directDataRead = readFromRemoteFileSystem(readRequests.indexOf(readRequest));
           return (read + directDataRead);
         }
@@ -137,6 +138,7 @@ public class CachedReadRequestChain extends ReadRequestChain
       log.info(String.format("Read %d bytes from cached file", read));
     }
     catch (Exception ex) {
+      log.error(String.format("Could not read data from cached file %s. Falling back reading from object store.", localCachedFile));
       needsInvalidation = true;
       directDataRead = readFromRemoteFileSystem(readRequestIndex);
       return (read + directDataRead);
@@ -183,7 +185,7 @@ public class CachedReadRequestChain extends ReadRequestChain
       client.invalidateFileMetadata(remotePath);
     }
     catch (Exception e) {
-      log.info("Could not Invalidate Corrupted File " + remotePath + " Error : " + Throwables.getStackTraceAsString(e));
+      log.error("Could not Invalidate Corrupted File " + remotePath + " Error : " + Throwables.getStackTraceAsString(e));
     }
     finally {
       try {

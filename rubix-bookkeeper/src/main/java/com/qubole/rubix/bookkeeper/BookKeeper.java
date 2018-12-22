@@ -378,6 +378,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     //md will be null when 2 users try to update the file in parallel and both their entries are invalidated.
     // TODO: find a way to optimize this so that the file doesn't have to be read again in next request (new data is stored instead of invalidation)
     if (md == null) {
+      log.info(String.format("Could not update the metadata for file %s", remotePath));
       return;
     }
     if (isInvalidationRequired(md.getLastModified(), lastModified)) {
