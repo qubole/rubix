@@ -81,6 +81,12 @@ public class CachingFileSystemStats
     return stats.getWarmupPenalty() / 1000000000;
   }
 
+  @Managed(description = "Gets the total number corrupted files that have been invalidated")
+  public int getCorruptedFileCount()
+  {
+    return stats.getCorruptedFileCount();
+  }
+
   @Managed
   public double getHitRate()
   {

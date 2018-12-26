@@ -47,6 +47,7 @@ public class CachedReadRequestChain extends ReadRequestChain
   private BookKeeperFactory factory;
 
   private ByteBuffer directBuffer;
+  private int corruptedFileCount;
 
   private static final Log log = LogFactory.getLog(CachedReadRequestChain.class);
 
@@ -127,8 +128,8 @@ public class CachedReadRequestChain extends ReadRequestChain
           needsInvalidation = true;
           log.error(String.format("Cached read length didn't match with requested read length for file %s. " +
                   " Falling back reading from object store.", localCachedFile));
-          directDataRead = readFromRemoteFileSystem(readRequests.indexOf(readRequest));
-          return (read + directDataRead);
+          directDataRead = readFromRemoteFileSystem();
+          return directDataRead;
         }
         else {
           read += nread;
@@ -140,8 +141,8 @@ public class CachedReadRequestChain extends ReadRequestChain
     catch (Exception ex) {
       log.error(String.format("Could not read data from cached file %s. Falling back reading from object store.", localCachedFile));
       needsInvalidation = true;
-      directDataRead = readFromRemoteFileSystem(readRequestIndex);
-      return (read + directDataRead);
+      directDataRead = readFromRemoteFileSystem();
+      return directDataRead;
     }
     finally {
       if (fis != null) {
@@ -157,6 +158,7 @@ public class CachedReadRequestChain extends ReadRequestChain
 
       // We are calling invalidateMetadata from finally block to make sure fileChannel is closed before we delete the file
       if (needsInvalidation) {
+        corruptedFileCount++;
         invalidateMetadata();
       }
 
@@ -200,12 +202,15 @@ public class CachedReadRequestChain extends ReadRequestChain
     }
   }
 
-  private int readFromRemoteFileSystem(int index) throws IOException
+  private int readFromRemoteFileSystem() throws IOException
   {
+    // Setting the cached read data to zero as we are reading the whole request from remote object store
+    read = 0;
+
     String remotePath = CacheUtil.getRemotePath(localCachedFile, conf);
     FSDataInputStream inputStream = remoteFileSystem.open(new Path(remotePath));
     directReadChain = new DirectReadRequestChain(inputStream);
-    for (ReadRequest readRequest : readRequests.subList(index, readRequests.size())) {
+    for (ReadRequest readRequest : readRequests) {
       directReadChain.addReadRequest(readRequest);
     }
     directReadChain.lock();
@@ -221,6 +226,7 @@ public class CachedReadRequestChain extends ReadRequestChain
     return new ReadRequestChainStats()
         .setDirectDataRead(directDataRead)
         .setCachedDataRead(read)
-        .setCachedReads(requests);
+        .setCachedReads(requests)
+        .setCorruptedFileCount(corruptedFileCount);
   }
 }

@@ -34,6 +34,8 @@ public class ReadRequestChainStats
 
   private long directDataRead;
 
+  private int corruptedFileCount;
+
   public long getPrefixRead()
   {
     return prefixRead;
@@ -154,6 +156,17 @@ public class ReadRequestChainStats
     return this;
   }
 
+  public int getCorruptedFileCount()
+  {
+    return this.corruptedFileCount;
+  }
+
+  public ReadRequestChainStats setCorruptedFileCount(int corruptedFileCount)
+  {
+    this.corruptedFileCount = corruptedFileCount;
+    return this;
+  }
+
   public ReadRequestChainStats add(ReadRequestChainStats other)
   {
     return new ReadRequestChainStats()
@@ -166,6 +179,7 @@ public class ReadRequestChainStats
         .setCachedReads(cachedReads + other.getCachedReads())
         .setNonLocalReads(nonLocalReads + other.getNonLocalReads())
         .setNonLocalDataRead(nonLocalDataRead + other.getNonLocalDataRead())
-        .setDirectDataRead(directDataRead + other.getDirectDataRead());
+        .setDirectDataRead(directDataRead + other.getDirectDataRead())
+        .setCorruptedFileCount(corruptedFileCount + other.getCorruptedFileCount());
   }
 }
