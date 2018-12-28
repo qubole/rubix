@@ -189,7 +189,7 @@ public class TestCachedReadRequestChain
     String localCachedFile = CacheUtil.getLocalPath(backendFilePath.toString(), conf);
     ReadRequest[] readRequests = getReadRequests(buffer);
 
-    CachedReadRequestChain cachedReadRequestChain = new CachedReadRequestChain(fs, localCachedFile, conf, factory);
+    CachedReadRequestChain cachedReadRequestChain = new CachedReadRequestChain(fs, backendFilePath.toString(), conf, factory);
     for (ReadRequest rr : readRequests) {
       cachedReadRequestChain.addReadRequest(rr);
     }

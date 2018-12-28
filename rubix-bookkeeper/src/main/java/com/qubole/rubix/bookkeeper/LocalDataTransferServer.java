@@ -251,8 +251,13 @@ public class LocalDataTransferServer extends Configured implements Tool
         int maxCount = CacheConfig.getLocalTransferBufferSize(conf);
         int lengthRemaining = readLength;
         long position = offset;
+
+        // This situation should not arise as ActualReadLength cannot be greater than the file size.
+        // This seems to case of corrupted file. We should invalidate the file in this case.
         if (fc.size() < readLength) {
           fc.close();
+          log.error("File size is smaller than requested read. Invalidating corrupted cached file");
+          bookKeeperClient.invalidateFileMetadata(remotePath);
           throw new Exception("File size is smaller than requested read");
         }
 

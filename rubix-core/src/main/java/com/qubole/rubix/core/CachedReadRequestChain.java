@@ -37,7 +37,7 @@ import static com.google.common.base.Preconditions.checkState;
  */
 public class CachedReadRequestChain extends ReadRequestChain
 {
-  private String localCachedFile;
+  private String remotePath;
   private int read; // data read
   private FileSystem.Statistics statistics;
   private FileSystem remoteFileSystem;
@@ -51,12 +51,12 @@ public class CachedReadRequestChain extends ReadRequestChain
 
   private static final Log log = LogFactory.getLog(CachedReadRequestChain.class);
 
-  public CachedReadRequestChain(FileSystem remoteFileSystem, String localCachedFile, ByteBuffer buffer,
+  public CachedReadRequestChain(FileSystem remoteFileSystem, String remotePath, ByteBuffer buffer,
                                 FileSystem.Statistics statistics, Configuration conf, BookKeeperFactory factory)
       throws IOException
   {
     this.conf = conf;
-    this.localCachedFile = localCachedFile;
+    this.remotePath = remotePath;
     this.remoteFileSystem = remoteFileSystem;
     directBuffer = buffer;
     this.statistics = statistics;
@@ -64,10 +64,10 @@ public class CachedReadRequestChain extends ReadRequestChain
   }
 
   @VisibleForTesting
-  public CachedReadRequestChain(FileSystem remoteFileSystem, String localCachedFile, Configuration conf, BookKeeperFactory factory)
+  public CachedReadRequestChain(FileSystem remoteFileSystem, String remotePath, Configuration conf, BookKeeperFactory factory)
       throws IOException
   {
-    this(remoteFileSystem, localCachedFile, ByteBuffer.allocate(1024), null, conf, factory);
+    this(remoteFileSystem, remotePath, ByteBuffer.allocate(1024), null, conf, factory);
   }
 
   @VisibleForTesting
@@ -93,6 +93,7 @@ public class CachedReadRequestChain extends ReadRequestChain
     FileChannel fileChannel = null;
     int readRequestIndex = 0;
     boolean needsInvalidation = false;
+    String localCachedFile = CacheUtil.getLocalPath(remotePath, conf);
 
     try {
       raf = new RandomAccessFile(localCachedFile, "r");
@@ -181,7 +182,6 @@ public class CachedReadRequestChain extends ReadRequestChain
   private void invalidateMetadata()
   {
     RetryingBookkeeperClient client = null;
-    String remotePath = CacheUtil.getRemotePath(localCachedFile, conf);
     try {
       client = factory.createBookKeeperClient(conf);
       client.invalidateFileMetadata(remotePath);
@@ -207,7 +207,6 @@ public class CachedReadRequestChain extends ReadRequestChain
     // Setting the cached read data to zero as we are reading the whole request from remote object store
     read = 0;
 
-    String remotePath = CacheUtil.getRemotePath(localCachedFile, conf);
     FSDataInputStream inputStream = remoteFileSystem.open(new Path(remotePath));
     directReadChain = new DirectReadRequestChain(inputStream);
     for (ReadRequest readRequest : readRequests) {
