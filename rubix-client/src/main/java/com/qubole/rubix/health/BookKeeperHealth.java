@@ -40,7 +40,7 @@ public class BookKeeperHealth extends Configured
   public static void main(String[]args)
   {
     BookKeeperHealth bookkeeperhealth = new BookKeeperHealth(conf);
-    boolean isBookKeeperAlive = bookkeeperhealth.run();
+    boolean isBookKeeperAlive = bookkeeperhealth.CallCreateBookKeeperClient();
     if (isBookKeeperAlive == false) {
       Runtime.getRuntime().exit(1);
     }
@@ -50,7 +50,7 @@ public class BookKeeperHealth extends Configured
     return;
   }
 
-  public boolean run()
+  public boolean CallCreateBookKeeperClient()
   {
     try {
       client = factory.createBookKeeperClient(conf);

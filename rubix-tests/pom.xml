@@ -34,6 +34,11 @@
             <artifactId>rubix-bookkeeper</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.qubole.rubix</groupId>
+            <artifactId>rubix-client</artifactId>
+            <scope>test</scope>
+        </dependency>
 
         <dependency>
             <groupId>io.dropwizard.metrics</groupId>
