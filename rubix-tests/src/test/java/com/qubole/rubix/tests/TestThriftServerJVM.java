@@ -14,7 +14,6 @@ package com.qubole.rubix.tests;
 
 import com.qubole.rubix.core.utils.DataGen;
 import com.qubole.rubix.core.utils.DeleteFileVisitor;
-import com.qubole.rubix.health.BookKeeperHealth;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
