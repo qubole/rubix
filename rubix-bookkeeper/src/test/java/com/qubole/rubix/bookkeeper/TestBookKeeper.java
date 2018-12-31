@@ -410,4 +410,11 @@ public class TestBookKeeper
     assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.CACHE_HIT_RATE_GAUGE.getMetricName()).getValue(), 0.5);
     assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.CACHE_MISS_RATE_GAUGE.getMetricName()).getValue(), 0.5);
   }
+
+  @Test
+  public void testisBookKeeperAlive()
+  {
+    Boolean returnVal = bookKeeper.isBookKeeperAlive();
+    assertTrue(returnVal == true, "isBookkeeperAlive() function has returned false");
+  }
 }
