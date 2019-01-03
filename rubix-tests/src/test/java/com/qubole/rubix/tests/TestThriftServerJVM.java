@@ -185,17 +185,6 @@ public class TestThriftServerJVM extends Configured
     bookKeeperFactory.createBookKeeperClient(host, conf);
   }
 
-  public void testBookKeeperHealth() throws IOException, InterruptedException, TTransportException, TException
-  {
-    String host = "localhost";
-
-    RetryingBookkeeperClient client;
-    client = bookKeeperFactory.createBookKeeperClient(host, conf);
-
-    boolean isBookKeeperAlive = client.isBookKeeperAlive();
-    assertTrue(isBookKeeperAlive == true, "BookKeeper is not Alive");
-  }
-
   @Test(enabled = true, expectedExceptions = org.apache.thrift.shaded.transport.TTransportException.class)
   public void testBookKeeperHealthAtWrongPort() throws IOException, InterruptedException, TTransportException, TException
   {

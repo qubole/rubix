@@ -19,6 +19,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.thrift.shaded.transport.TTransportException;
 
 /**
 * Created by kvankayala on 16 Dec 2018.
@@ -26,21 +27,32 @@ import org.apache.hadoop.conf.Configured;
 
 public class BookKeeperHealth extends Configured
 {
-  RetryingBookkeeperClient client;
   private static Configuration conf = new Configuration();
   private static final Log log = LogFactory.getLog(BookKeeperHealth.class);
-  private BookKeeperFactory factory;
+  private static BookKeeperFactory factory;
+
+  public BookKeeperHealth(Configuration conf, BookKeeperFactory factory)
+  {
+    this.conf = conf;
+    this.factory = factory;
+  }
 
   public BookKeeperHealth(Configuration conf)
   {
-    this.conf = conf;
-    factory = new BookKeeperFactory();
+    this(conf, new BookKeeperFactory());
   }
 
   public static void main(String[]args)
   {
     BookKeeperHealth bookkeeperhealth = new BookKeeperHealth(conf);
-    boolean isBookKeeperAlive = bookkeeperhealth.CallCreateBookKeeperClient();
+    boolean isBookKeeperAlive = false;
+    try {
+      RetryingBookkeeperClient client = factory.createBookKeeperClient(conf);
+      isBookKeeperAlive = bookkeeperhealth.checkIfBookKeeperAlive(client);
+    }
+    catch (TTransportException e) {
+      log.error("Failed to create BookKeeper client", e);
+    }
     if (isBookKeeperAlive == false) {
       Runtime.getRuntime().exit(1);
     }
@@ -50,15 +62,14 @@ public class BookKeeperHealth extends Configured
     return;
   }
 
-  public boolean CallCreateBookKeeperClient()
+  public boolean checkIfBookKeeperAlive(RetryingBookkeeperClient rclient)
   {
     try {
-      client = factory.createBookKeeperClient(conf);
-      return client.isBookKeeperAlive();
+      return rclient.isBookKeeperAlive();
     }
     catch (Exception e) {
-      log.error("Failed to create BookKeeper client", e);
+      log.error("Bookkeeper is not responding", e);
+      return false;
     }
-    return false;
   }
 }

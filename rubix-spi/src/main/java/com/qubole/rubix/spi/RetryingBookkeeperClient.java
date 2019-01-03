@@ -91,14 +91,7 @@ public class RetryingBookkeeperClient extends BookKeeperService.Client implement
   @Override
   public boolean isBookKeeperAlive() throws TException
   {
-    return retryConnection(new Callable<Boolean>()
-    {
-      @Override
-      public Boolean call() throws Exception
-      {
-        return RetryingBookkeeperClient.super.isBookKeeperAlive();
-      }
-    });
+    return RetryingBookkeeperClient.super.isBookKeeperAlive();
   }
 
   private <V> V retryConnection(Callable<V> callable)
