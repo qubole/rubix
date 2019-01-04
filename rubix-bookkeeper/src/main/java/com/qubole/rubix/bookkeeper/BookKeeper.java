@@ -697,13 +697,13 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     }
   }
 
-  private static void replaceFileMetadata(String key, long curretFileSize, Configuration conf) throws IOException
+  public void replaceFileMetadata(String key, long currentFileSize, Configuration conf) throws IOException
   {
     if (fileMetadataCache != null) {
       FileMetadata metadata = fileMetadataCache.getIfPresent(key);
       if (metadata != null) {
         FileMetadata newMetaData = new FileMetadata(key, metadata.getFileSize(), metadata.getLastModified(),
-            curretFileSize, conf);
+            currentFileSize, conf);
         fileMetadataCache.put(key, newMetaData);
       }
     }
