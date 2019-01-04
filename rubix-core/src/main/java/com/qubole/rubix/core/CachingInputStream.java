@@ -231,7 +231,7 @@ public class CachingInputStream extends FSInputStream
       throws IOException, InterruptedException, ExecutionException
 
   {
-    log.debug(String.format("Got Read, currentPos: %d currentBlock: %d bufferOffset: %d length: %d", nextReadPosition, nextReadBlock, offset, length));
+    log.info(String.format("Got Read, currentPos: %d currentBlock: %d bufferOffset: %d length: %d", nextReadPosition, nextReadBlock, offset, length));
 
     if (nextReadPosition >= fileSize) {
       log.debug("Already at eof, returning");

@@ -91,7 +91,6 @@ public class CachedReadRequestChain extends ReadRequestChain
     RandomAccessFile raf = null;
     FileInputStream fis = null;
     FileChannel fileChannel = null;
-    int readRequestIndex = 0;
     boolean needsInvalidation = false;
     String localCachedFile = CacheUtil.getLocalPath(remotePath, conf);
 
@@ -135,7 +134,6 @@ public class CachedReadRequestChain extends ReadRequestChain
         else {
           read += nread;
         }
-        readRequestIndex++;
       }
       log.info(String.format("Read %d bytes from cached file", read));
     }
@@ -149,7 +147,6 @@ public class CachedReadRequestChain extends ReadRequestChain
       if (fis != null) {
         fis.close();
       }
-
       if (fileChannel != null) {
         fileChannel.close();
       }

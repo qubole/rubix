@@ -101,6 +101,7 @@ public class FileDownloadRequestChain extends ReadRequestChain
       file.createNewFile();
       file.setWritable(true, false);
       file.setReadable(true, false);
+      bookKeeper.invalidateFileMetadata(remotePath);
     }
 
     FSDataInputStream inputStream = null;

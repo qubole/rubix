@@ -689,8 +689,11 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   {
     // We might come in here with cache not initialized e.g. fs.create
     if (fileMetadataCache != null) {
-      log.info("Invalidating file " + key + " from metadata cache");
-      fileMetadataCache.invalidate(key);
+      FileMetadata metadata = fileMetadataCache.getIfPresent(key);
+      if (metadata != null) {
+        log.info("Invalidating file " + key + " from metadata cache");
+        fileMetadataCache.invalidate(key);
+      }
     }
   }
 
