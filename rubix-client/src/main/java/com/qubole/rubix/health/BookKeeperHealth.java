@@ -68,7 +68,7 @@ public class BookKeeperHealth extends Configured
     }
     finally {
       try {
-        if (rclient == null) {
+        if (rclient != null) {
           rclient.close();
         }
       }
