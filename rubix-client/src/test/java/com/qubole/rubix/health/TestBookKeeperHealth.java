@@ -36,14 +36,16 @@ public class TestBookKeeperHealth extends Configured
   private final Configuration conf = new Configuration();
 
   @Test
-  public void testcheckIfBookKeeperAlive() throws TException
+  public void testcheckIfBookKeeperAliveSpy() throws TException
   {
-    final BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
-    final BookKeeperHealth bookKeeperHealth = new BookKeeperHealth(conf, bookKeeperFactory);
+    final BookKeeperFactory spyBookKeeperFactory = mock(BookKeeperFactory.class);
+    final BookKeeperHealth bookKeeperHealth = new BookKeeperHealth(conf, spyBookKeeperFactory);
     final RetryingBookkeeperClient rclient = mock(RetryingBookkeeperClient.class);
 
+    when(spyBookKeeperFactory.createBookKeeperClient(conf)).thenReturn(rclient);
     when(rclient.isBookKeeperAlive()).thenThrow(TTransportException.class);
-    boolean ifBookKeeperResponding = bookKeeperHealth.checkIfBookKeeperAlive(rclient);
+
+    boolean ifBookKeeperResponding = bookKeeperHealth.checkIfBookKeeperAlive(spyBookKeeperFactory);
     assertEquals(ifBookKeeperResponding, false, "Bookkeeper is responding true even it is down");
   }
 }

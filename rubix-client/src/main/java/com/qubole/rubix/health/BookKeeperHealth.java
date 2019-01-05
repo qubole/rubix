@@ -19,7 +19,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.thrift.shaded.transport.TTransportException;
+
+import java.io.IOException;
 
 /**
 * Created by kvankayala on 16 Dec 2018.
@@ -45,31 +46,36 @@ public class BookKeeperHealth extends Configured
   public static void main(String[]args)
   {
     BookKeeperHealth bookkeeperhealth = new BookKeeperHealth(conf);
-    boolean isBookKeeperAlive = false;
-    try {
-      RetryingBookkeeperClient client = factory.createBookKeeperClient(conf);
-      isBookKeeperAlive = bookkeeperhealth.checkIfBookKeeperAlive(client);
-    }
-    catch (TTransportException e) {
-      log.error("Failed to create BookKeeper client", e);
-    }
+    boolean isBookKeeperAlive = bookkeeperhealth.checkIfBookKeeperAlive(factory);
     if (isBookKeeperAlive == false) {
       Runtime.getRuntime().exit(1);
     }
     else {
       Runtime.getRuntime().exit(0);
     }
-    return;
   }
 
-  public boolean checkIfBookKeeperAlive(RetryingBookkeeperClient rclient)
+  public boolean checkIfBookKeeperAlive(BookKeeperFactory factory)
   {
+    RetryingBookkeeperClient rclient = null;
+    boolean isBksAlive = false;
     try {
-      return rclient.isBookKeeperAlive();
+      rclient = factory.createBookKeeperClient(conf);
+      isBksAlive = rclient.isBookKeeperAlive();
     }
     catch (Exception e) {
       log.error("Bookkeeper is not responding", e);
-      return false;
     }
+    finally {
+      try {
+        if (rclient == null) {
+          rclient.close();
+        }
+      }
+      catch (IOException e) {
+        log.error("Exception Thrown while closing thrift connection", e);
+      }
+    }
+    return isBksAlive;
   }
 }

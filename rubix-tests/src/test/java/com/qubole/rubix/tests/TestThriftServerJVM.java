@@ -185,7 +185,7 @@ public class TestThriftServerJVM extends Configured
     bookKeeperFactory.createBookKeeperClient(host, conf);
   }
 
-  @Test(enabled = true)
+  @Test
   public void testBookKeeperHealthMain() throws IOException, InterruptedException, TTransportException, TException
   {
     String healthCheckCmd = hadoopDirectory + " jar " + rubixclientJarPath + BookKeeperHealthClass;
@@ -193,16 +193,5 @@ public class TestThriftServerJVM extends Configured
     Process p = Runtime.getRuntime().exec(healthCheckCmd);
     exitval = p.waitFor();
     assertTrue(exitval == 0, "Main Function returning 1 eventhough bookkeeper is present at default port");
-  }
-
-  @Test(enabled = true)
-  public void testBookKeeperHealthMainFalse() throws IOException, InterruptedException, TTransportException, TException
-  {
-    String confgiurePort = "-Dhadoop.cache.data.bookkeeper.port=1234";
-    String healthCheckCmd = hadoopDirectory + " jar " + rubixclientJarPath + BookKeeperHealthClass + confgiurePort;
-    int exitval;
-    Process p = Runtime.getRuntime().exec(healthCheckCmd);
-    exitval = p.waitFor();
-    assertTrue(exitval == 1, "Main Function returning 0 eventhough bookkeeper is not present at 1234 port");
   }
 }

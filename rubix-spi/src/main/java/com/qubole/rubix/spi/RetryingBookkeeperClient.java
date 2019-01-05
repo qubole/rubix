@@ -88,12 +88,6 @@ public class RetryingBookkeeperClient extends BookKeeperService.Client implement
     });
   }
 
-  @Override
-  public boolean isBookKeeperAlive() throws TException
-  {
-    return RetryingBookkeeperClient.super.isBookKeeperAlive();
-  }
-
   private <V> V retryConnection(Callable<V> callable)
       throws TException
   {
