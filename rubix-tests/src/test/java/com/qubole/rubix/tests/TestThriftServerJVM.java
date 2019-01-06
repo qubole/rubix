@@ -60,11 +60,13 @@ public class TestThriftServerJVM extends Configured
   private static final String hadoopDirectory = "/usr/lib/hadoop2/bin/hadoop";
   private static final String bookKeeperClass = "com.qubole.rubix.bookkeeper.BookKeeperServer";
   private static final String localDataTransferServerClass = "com.qubole.rubix.bookkeeper.LocalDataTransferServer";
+  private static final String BookKeeperHealthClass = " com.qubole.rubix.health.BookKeeperHealth";
   private static final String setDataBlockSize = "-Dhadoop.cache.data.block-size=200";
   private static final String setCacheMaxDisks = "-Dhadoop.cache.data.max.disks=1";
   private static final String setCacheDirectory = "-Dhadoop.cache.data.dirprefix.list=" + testDirectoryPrefix + "dir";
   private static final String setmasterbookkeeper = "-Drubix.cluster.on-master=true";
   private static final String disableParallelWarmup = "-Drubix.parallel.warmup=false";
+  private static String rubixclientJarPath;
 
   public BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
 
@@ -85,6 +87,9 @@ public class TestThriftServerJVM extends Configured
     File[] listOfFiles = folder.listFiles();
     String bookKeeperJarPath = null;
     for (int i = 0; i < listOfFiles.length; i++) {
+      if (listOfFiles[i].isFile() && listOfFiles[i].toString().contains("client")) {
+        rubixclientJarPath = listOfFiles[i].toString();
+      }
       if (listOfFiles[i].isFile() && listOfFiles[i].toString().contains("bookkeeper")) {
         bookKeeperJarPath = listOfFiles[i].toString();
       }
@@ -178,5 +183,15 @@ public class TestThriftServerJVM extends Configured
     CacheConfig.setServerPort(conf, 1234);
     String host = "localhost";
     bookKeeperFactory.createBookKeeperClient(host, conf);
+  }
+
+  @Test
+  public void testBookKeeperHealthMain() throws IOException, InterruptedException, TTransportException, TException
+  {
+    String healthCheckCmd = hadoopDirectory + " jar " + rubixclientJarPath + BookKeeperHealthClass;
+    int exitval;
+    Process p = Runtime.getRuntime().exec(healthCheckCmd);
+    exitval = p.waitFor();
+    assertTrue(exitval == 0, "Main Function returning 1 eventhough bookkeeper is present at default port");
   }
 }

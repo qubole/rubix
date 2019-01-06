@@ -111,6 +111,12 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     this(conf, metrics, Ticker.systemTicker());
   }
 
+  @Override
+  public boolean isBookKeeperAlive()
+  {
+    return true;
+  }
+
   @VisibleForTesting
   BookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker) throws FileNotFoundException
   {
