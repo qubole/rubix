@@ -36,16 +36,30 @@ public class TestBookKeeperHealth extends Configured
   private final Configuration conf = new Configuration();
 
   @Test
-  public void testcheckIfBookKeeperAliveSpy() throws TException
+  public void testCheckIfBookKeeperAlive_Postive() throws TException
   {
-    final BookKeeperFactory spyBookKeeperFactory = mock(BookKeeperFactory.class);
-    final BookKeeperHealth bookKeeperHealth = new BookKeeperHealth(conf, spyBookKeeperFactory);
-    final RetryingBookkeeperClient rclient = mock(RetryingBookkeeperClient.class);
+    final BookKeeperFactory mockBookKeeperFactory = mock(BookKeeperFactory.class);
+    final BookKeeperHealth bookKeeperHealth = new BookKeeperHealth(conf, mockBookKeeperFactory);
+    final RetryingBookkeeperClient client = mock(RetryingBookkeeperClient.class);
 
-    when(spyBookKeeperFactory.createBookKeeperClient(conf)).thenReturn(rclient);
-    when(rclient.isBookKeeperAlive()).thenThrow(TTransportException.class);
+    when(mockBookKeeperFactory.createBookKeeperClient(conf)).thenReturn(client);
+    when(client.isBookKeeperAlive()).thenReturn(true);
 
-    boolean ifBookKeeperResponding = bookKeeperHealth.checkIfBookKeeperAlive(spyBookKeeperFactory);
-    assertEquals(ifBookKeeperResponding, false, "Bookkeeper is responding true even it is down");
+    boolean ifBookKeeperResponding = bookKeeperHealth.checkIfBookKeeperAlive();
+    assertEquals(ifBookKeeperResponding, true, "Bookkeeper health check should return true");
+  }
+
+  @Test
+  public void testCheckIfBookKeeperAlive_Negative() throws TException
+  {
+    final BookKeeperFactory mockBookKeeperFactory = mock(BookKeeperFactory.class);
+    final BookKeeperHealth bookKeeperHealth = new BookKeeperHealth(conf, mockBookKeeperFactory);
+    final RetryingBookkeeperClient client = mock(RetryingBookkeeperClient.class);
+
+    when(mockBookKeeperFactory.createBookKeeperClient(conf)).thenReturn(client);
+    when(client.isBookKeeperAlive()).thenThrow(TTransportException.class);
+
+    boolean ifBookKeeperResponding = bookKeeperHealth.checkIfBookKeeperAlive();
+    assertEquals(ifBookKeeperResponding, false, "Bookkeeper health check should return false");
   }
 }

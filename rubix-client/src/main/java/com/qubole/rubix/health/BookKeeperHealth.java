@@ -46,7 +46,7 @@ public class BookKeeperHealth extends Configured
   public static void main(String[]args)
   {
     BookKeeperHealth bookkeeperhealth = new BookKeeperHealth(conf);
-    boolean isBookKeeperAlive = bookkeeperhealth.checkIfBookKeeperAlive(factory);
+    boolean isBookKeeperAlive = bookkeeperhealth.checkIfBookKeeperAlive();
     if (isBookKeeperAlive == false) {
       Runtime.getRuntime().exit(1);
     }
@@ -55,12 +55,12 @@ public class BookKeeperHealth extends Configured
     }
   }
 
-  public boolean checkIfBookKeeperAlive(BookKeeperFactory factory)
+  public boolean checkIfBookKeeperAlive()
   {
     RetryingBookkeeperClient rclient = null;
     boolean isBksAlive = false;
     try {
-      rclient = factory.createBookKeeperClient(conf);
+      rclient = this.factory.createBookKeeperClient(conf);
       isBksAlive = rclient.isBookKeeperAlive();
     }
     catch (Exception e) {
