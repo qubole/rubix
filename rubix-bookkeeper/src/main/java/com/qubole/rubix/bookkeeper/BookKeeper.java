@@ -384,6 +384,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     //md will be null when 2 users try to update the file in parallel and both their entries are invalidated.
     // TODO: find a way to optimize this so that the file doesn't have to be read again in next request (new data is stored instead of invalidation)
     if (md == null) {
+      log.info(String.format("Could not update the metadata for file %s", remotePath));
       return;
     }
     if (isInvalidationRequired(md.getLastModified(), lastModified)) {
@@ -689,22 +690,26 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   }
 
   // This method is to invalidate FileMetadata from guava cache.
-  // deleteCachedFile determines whether to delete the actual file from the local filesystem or not
-  public static void invalidateFileMetadata(String key)
+  @Override
+  public void invalidateFileMetadata(String key)
   {
     // We might come in here with cache not initialized e.g. fs.create
     if (fileMetadataCache != null) {
-      fileMetadataCache.invalidate(key);
+      FileMetadata metadata = fileMetadataCache.getIfPresent(key);
+      if (metadata != null) {
+        log.info("Invalidating file " + key + " from metadata cache");
+        fileMetadataCache.invalidate(key);
+      }
     }
   }
 
-  private static void replaceFileMetadata(String key, long curretFileSize, Configuration conf) throws IOException
+  private void replaceFileMetadata(String key, long currentFileSize, Configuration conf) throws IOException
   {
     if (fileMetadataCache != null) {
       FileMetadata metadata = fileMetadataCache.getIfPresent(key);
       if (metadata != null) {
         FileMetadata newMetaData = new FileMetadata(key, metadata.getFileSize(), metadata.getLastModified(),
-            curretFileSize, conf);
+            currentFileSize, conf);
         fileMetadataCache.put(key, newMetaData);
       }
     }

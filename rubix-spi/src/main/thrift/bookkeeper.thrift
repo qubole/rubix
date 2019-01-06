@@ -49,4 +49,6 @@ service BookKeeperService
     FileInfo getFileInfo(1: string remotePath)
 
     bool isBookKeeperAlive()
+
+    oneway void invalidateFileMetadata(1:string remotePath)
 }

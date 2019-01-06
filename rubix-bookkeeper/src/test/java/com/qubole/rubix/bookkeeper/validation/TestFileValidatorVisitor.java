@@ -12,7 +12,7 @@
  */
 package com.qubole.rubix.bookkeeper.validation;
 
-import com.qubole.rubix.common.TestUtil;
+import com.qubole.rubix.common.utils.TestUtil;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
 import org.apache.commons.logging.Log;
