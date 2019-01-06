@@ -13,9 +13,16 @@
 package com.qubole.rubix.core;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Throwables;
+import com.qubole.rubix.spi.BookKeeperFactory;
+import com.qubole.rubix.spi.CacheUtil;
+import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -30,30 +37,37 @@ import static com.google.common.base.Preconditions.checkState;
  */
 public class CachedReadRequestChain extends ReadRequestChain
 {
-  private FileChannel fileChannel;
-  private RandomAccessFile raf;
+  private String remotePath;
   private int read; // data read
   private FileSystem.Statistics statistics;
+  private FileSystem remoteFileSystem;
+  private DirectReadRequestChain directReadChain;
+  private Configuration conf;
+  private int directDataRead;
+  private BookKeeperFactory factory;
 
   private ByteBuffer directBuffer;
+  private int corruptedFileCount;
 
   private static final Log log = LogFactory.getLog(CachedReadRequestChain.class);
 
-  public CachedReadRequestChain(String fileToRead, ByteBuffer buffer, FileSystem.Statistics statistics)
+  public CachedReadRequestChain(FileSystem remoteFileSystem, String remotePath, ByteBuffer buffer,
+                                FileSystem.Statistics statistics, Configuration conf, BookKeeperFactory factory)
       throws IOException
   {
-    this.raf = new RandomAccessFile(fileToRead, "r");
-    FileInputStream fis = new FileInputStream(raf.getFD());
-    fileChannel = fis.getChannel();
+    this.conf = conf;
+    this.remotePath = remotePath;
+    this.remoteFileSystem = remoteFileSystem;
     directBuffer = buffer;
     this.statistics = statistics;
+    this.factory = factory;
   }
 
   @VisibleForTesting
-  public CachedReadRequestChain(String fileToRead)
+  public CachedReadRequestChain(FileSystem remoteFileSystem, String remotePath, Configuration conf, BookKeeperFactory factory)
       throws IOException
   {
-    this(fileToRead, ByteBuffer.allocate(1024), null);
+    this(remoteFileSystem, remotePath, ByteBuffer.allocate(1024), null, conf, factory);
   }
 
   @VisibleForTesting
@@ -62,8 +76,7 @@ public class CachedReadRequestChain extends ReadRequestChain
     //Dummy constructor for testing #testConsequtiveRequest method.
   }
 
-  public Integer call()
-      throws IOException
+  public Integer call() throws IOException
   {
     // TODO: any exception here should not cause workload to fail
     // rather should be retried and eventually read from backend
@@ -74,45 +87,142 @@ public class CachedReadRequestChain extends ReadRequestChain
     }
 
     checkState(isLocked, "Trying to execute Chain without locking");
-    for (ReadRequest readRequest : readRequests) {
-      if (cancelled) {
-        propagateCancel(this.getClass().getName());
-      }
-      int nread = 0;
-      int leftToRead = readRequest.getActualReadLength();
-      log.debug(String.format("Processing readrequest %d-%d, length %d", readRequest.actualReadStart, readRequest.actualReadEnd, leftToRead));
-      while (nread < readRequest.getActualReadLength()) {
-        int readInThisCycle = Math.min(leftToRead, directBuffer.capacity());
-        directBuffer.clear();
-        int nbytes = fileChannel.read(directBuffer, readRequest.getActualReadStart() + nread);
-        if (nbytes <= 0) {
-          break;
+
+    RandomAccessFile raf = null;
+    FileInputStream fis = null;
+    FileChannel fileChannel = null;
+    boolean needsInvalidation = false;
+    String localCachedFile = CacheUtil.getLocalPath(remotePath, conf);
+
+    try {
+      raf = new RandomAccessFile(localCachedFile, "r");
+      fis = new FileInputStream(raf.getFD());
+      fileChannel = fis.getChannel();
+
+      for (ReadRequest readRequest : readRequests) {
+        if (cancelled) {
+          propagateCancel(this.getClass().getName());
         }
-        directBuffer.flip();
-        int transferBytes = Math.min(readInThisCycle, nbytes);
-        directBuffer.get(readRequest.getDestBuffer(), readRequest.getDestBufferOffset() + nread, transferBytes);
-        leftToRead -= transferBytes;
-        nread += transferBytes;
+        int nread = 0;
+        int leftToRead = readRequest.getActualReadLength();
+        log.debug(String.format("Processing readrequest %d-%d, length %d", readRequest.actualReadStart, readRequest.actualReadEnd, leftToRead));
+        while (nread < readRequest.getActualReadLength()) {
+          int readInThisCycle = Math.min(leftToRead, directBuffer.capacity());
+          directBuffer.clear();
+          int nbytes = fileChannel.read(directBuffer, readRequest.getActualReadStart() + nread);
+          if (nbytes <= 0) {
+            break;
+          }
+          directBuffer.flip();
+          int transferBytes = Math.min(readInThisCycle, nbytes);
+          directBuffer.get(readRequest.getDestBuffer(), readRequest.getDestBufferOffset() + nread, transferBytes);
+          leftToRead -= transferBytes;
+          nread += transferBytes;
+        }
+        log.debug(String.format("CachedFileRead copied data [%d - %d] at buffer offset %d",
+                readRequest.getActualReadStart(),
+                readRequest.getActualReadStart() + nread,
+                readRequest.getDestBufferOffset()));
+
+        if (nread != readRequest.getActualReadLength()) {
+          needsInvalidation = true;
+          log.error(String.format("Cached read length didn't match with requested read length for file %s. " +
+                  " Falling back reading from object store.", localCachedFile));
+          directDataRead = readFromRemoteFileSystem();
+          return directDataRead;
+        }
+        else {
+          read += nread;
+        }
       }
-      log.debug(String.format("CachedFileRead copied data [%d - %d] at buffer offset %d",
-          readRequest.getActualReadStart(),
-          readRequest.getActualReadStart() + nread,
-          readRequest.getDestBufferOffset()));
-      read += nread;
+      log.info(String.format("Read %d bytes from cached file", read));
     }
-    log.info(String.format("Read %d bytes from cached file", read));
-    fileChannel.close();
-    raf.close();
-    if (statistics != null) {
-      statistics.incrementBytesRead(read);
+    catch (Exception ex) {
+      log.error(String.format("Could not read data from cached file %s. Falling back reading from object store.", localCachedFile));
+      needsInvalidation = true;
+      directDataRead = readFromRemoteFileSystem();
+      return directDataRead;
+    }
+    finally {
+      if (fis != null) {
+        fis.close();
+      }
+      if (fileChannel != null) {
+        fileChannel.close();
+      }
+      if (raf != null) {
+        raf.close();
+      }
+
+      // We are calling invalidateMetadata from finally block to make sure fileChannel is closed before we delete the file
+      if (needsInvalidation) {
+        corruptedFileCount++;
+        invalidateMetadata();
+      }
+
+      if (statistics != null) {
+        statistics.incrementBytesRead(read);
+      }
     }
     return read;
+  }
+
+  @Override
+  public void cancel()
+  {
+    super.cancel();
+    if (directReadChain != null) {
+      directReadChain.cancel();
+    }
+  }
+
+  private void invalidateMetadata()
+  {
+    RetryingBookkeeperClient client = null;
+    try {
+      client = factory.createBookKeeperClient(conf);
+      client.invalidateFileMetadata(remotePath);
+    }
+    catch (Exception e) {
+      log.error("Could not Invalidate Corrupted File " + remotePath + " Error : " + Throwables.getStackTraceAsString(e));
+    }
+    finally {
+      try {
+        if (client != null) {
+          client.close();
+          client = null;
+        }
+      }
+      catch (IOException ex) {
+        log.error("Could not close bookkeeper client. Exception: " + ex.toString());
+      }
+    }
+  }
+
+  private int readFromRemoteFileSystem() throws IOException
+  {
+    // Setting the cached read data to zero as we are reading the whole request from remote object store
+    read = 0;
+
+    FSDataInputStream inputStream = remoteFileSystem.open(new Path(remotePath));
+    directReadChain = new DirectReadRequestChain(inputStream);
+    for (ReadRequest readRequest : readRequests) {
+      directReadChain.addReadRequest(readRequest);
+    }
+    directReadChain.lock();
+    int directRead = directReadChain.call();
+    inputStream.close();
+    directReadChain = null;
+
+    return directRead;
   }
 
   public ReadRequestChainStats getStats()
   {
     return new ReadRequestChainStats()
+        .setDirectDataRead(directDataRead)
         .setCachedDataRead(read)
-        .setCachedReads(requests);
+        .setCachedReads(requests)
+        .setCorruptedFileCount(corruptedFileCount);
   }
 }

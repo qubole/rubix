@@ -16,6 +16,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 
+import java.io.IOException;
+
 import static com.google.common.base.Preconditions.checkState;
 
 /**
@@ -44,8 +46,7 @@ public class DirectReadRequestChain extends ReadRequestChain
   }
 
   @Override
-  public Integer call()
-      throws Exception
+  public Integer call() throws IOException
   {
     Thread.currentThread().setName(threadName);
     long startTime = System.currentTimeMillis();
