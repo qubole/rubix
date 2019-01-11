@@ -16,7 +16,7 @@ import com.google.common.base.Joiner;
 import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import com.qubole.rubix.bookkeeper.BookKeeper;
-import com.qubole.rubix.core.utils.DataGen;
+import com.qubole.rubix.common.utils.DataGen;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.thrift.BlockLocation;
@@ -30,6 +30,7 @@ import org.apache.thrift.shaded.TException;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -52,14 +53,22 @@ public class CachingValidator extends AbstractScheduledService
   private static final int VALIDATOR_CLUSTER_TYPE = ClusterType.TEST_CLUSTER_MANAGER.ordinal();
 
   private final BookKeeper bookKeeper;
+  private final ScheduledExecutorService validationExecutor;
   private final int cachingValidationInterval;
 
   private AtomicBoolean validationSuccess = new AtomicBoolean(true);
 
-  public CachingValidator(Configuration conf, BookKeeper bookKeeper)
+  public CachingValidator(Configuration conf, BookKeeper bookKeeper, ScheduledExecutorService validationExecutor)
   {
     this.bookKeeper = bookKeeper;
+    this.validationExecutor = validationExecutor;
     this.cachingValidationInterval = CacheConfig.getCachingValidationInterval(conf);
+  }
+
+  @Override
+  protected ScheduledExecutorService executor()
+  {
+    return validationExecutor;
   }
 
   @Override
@@ -137,7 +146,7 @@ public class CachingValidator extends AbstractScheduledService
     }
     finally {
       // Clean cache after validation
-      BookKeeper.invalidateFileMetadata(VALIDATOR_TEST_FILE_PATH_WITH_SCHEME);
+      bookKeeper.invalidateFileMetadata(VALIDATOR_TEST_FILE_PATH_WITH_SCHEME);
       tempFile.delete();
     }
   }

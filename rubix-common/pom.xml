@@ -4,7 +4,7 @@
     <parent>
         <groupId>com.qubole.rubix</groupId>
         <artifactId>rubix-root</artifactId>
-        <version>0.3.4-SNAPSHOT</version>
+        <version>0.3.4</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -21,10 +21,6 @@
         <dependency>
             <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-spi</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.qubole.rubix</groupId>
-            <artifactId>rubix-core</artifactId>
         </dependency>
 
         <dependency>

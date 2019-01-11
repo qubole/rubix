@@ -5,7 +5,7 @@
     <groupId>com.qubole.rubix</groupId>
     <artifactId>rubix-root</artifactId>
     <packaging>pom</packaging>
-    <version>0.3.4-SNAPSHOT</version>
+    <version>0.3.4</version>
     <name>rubix</name>
     <url>http://github.com/qubole/rubix</url>
     <description>Caching Framework for Big Data Engines</description>
@@ -59,6 +59,7 @@
     <modules>
         <module>rubix-spi</module>
         <module>rubix-core</module>
+        <module>rubix-client</module>
         <module>rubix-common</module>
         <module>rubix-presto</module>
         <module>rubix-hadoop2</module>
@@ -104,6 +105,12 @@
             <dependency>
                 <groupId>com.qubole.rubix</groupId>
                 <artifactId>rubix-spi</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.qubole.rubix</groupId>
+                <artifactId>rubix-client</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

@@ -13,8 +13,8 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
-import com.qubole.rubix.common.TestUtil;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
+import com.qubole.rubix.common.utils.TestUtil;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
@@ -84,9 +84,11 @@ public class TestHeartbeatService
   public void tearDownForClass() throws IOException
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
+    CacheConfig.setMaxDisks(conf, TEST_MAX_DISKS);
 
     TestUtil.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
   }
+
   /**
    * Verify that the heartbeat service correctly makes a connection using a BookKeeper client.
    *

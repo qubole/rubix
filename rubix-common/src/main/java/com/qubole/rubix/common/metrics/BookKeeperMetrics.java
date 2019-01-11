@@ -17,7 +17,7 @@ import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.ganglia.GangliaReporter;
 import com.google.common.base.Splitter;
-import com.qubole.rubix.core.utils.ClusterUtil;
+import com.qubole.rubix.common.utils.ClusterUtil;
 import com.qubole.rubix.spi.CacheConfig;
 import com.readytalk.metrics.StatsDReporter;
 import info.ganglia.gmetric4j.gmetric.GMetric;

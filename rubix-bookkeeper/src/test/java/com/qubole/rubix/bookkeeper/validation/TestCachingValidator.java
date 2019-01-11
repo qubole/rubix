@@ -16,8 +16,8 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.Lists;
 import com.qubole.rubix.bookkeeper.BookKeeper;
 import com.qubole.rubix.bookkeeper.CoordinatorBookKeeper;
-import com.qubole.rubix.common.TestUtil;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
+import com.qubole.rubix.common.utils.TestUtil;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
@@ -37,6 +37,7 @@ import org.testng.annotations.Test;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.Executors;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -195,7 +196,7 @@ public class TestCachingValidator
             new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf)),
             CacheConfig.getMaxRetries(conf)));
 
-    CachingValidator validator = new CachingValidator(conf, bookKeeper);
+    CachingValidator validator = new CachingValidator(conf, bookKeeper, Executors.newSingleThreadScheduledExecutor());
     assertEquals(validator.validateCachingBehavior(), expectedResult);
   }
 }

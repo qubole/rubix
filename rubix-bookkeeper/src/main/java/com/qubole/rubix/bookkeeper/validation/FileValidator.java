@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class FileValidator extends AbstractScheduledService
@@ -30,14 +31,22 @@ public class FileValidator extends AbstractScheduledService
   private static final Log log = LogFactory.getLog(FileValidator.class);
 
   private final Configuration conf;
+  private final ScheduledExecutorService validationExecutor;
   private final int validationInterval;
 
   private FileValidatorResult validatorResult = new FileValidatorResult();
 
-  public FileValidator(Configuration conf)
+  public FileValidator(Configuration conf, ScheduledExecutorService validationExecutor)
   {
     this.conf = conf;
+    this.validationExecutor = validationExecutor;
     this.validationInterval = CacheConfig.getCachingValidationInterval(conf);
+  }
+
+  @Override
+  protected ScheduledExecutorService executor()
+  {
+    return validationExecutor;
   }
 
   @Override

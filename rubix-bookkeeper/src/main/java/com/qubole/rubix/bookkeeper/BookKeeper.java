@@ -25,6 +25,7 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.cache.Weigher;
+import com.google.common.collect.ImmutableMap;
 import com.qubole.rubix.bookkeeper.utils.DiskUtils;
 import com.qubole.rubix.bookkeeper.validation.CachingValidator;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
@@ -108,6 +109,12 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   public BookKeeper(Configuration conf, MetricRegistry metrics) throws FileNotFoundException
   {
     this(conf, metrics, Ticker.systemTicker());
+  }
+
+  @Override
+  public boolean isBookKeeperAlive()
+  {
+    return true;
   }
 
   @VisibleForTesting
@@ -377,6 +384,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     //md will be null when 2 users try to update the file in parallel and both their entries are invalidated.
     // TODO: find a way to optimize this so that the file doesn't have to be read again in next request (new data is stored instead of invalidation)
     if (md == null) {
+      log.info(String.format("Could not update the metadata for file %s", remotePath));
       return;
     }
     if (isInvalidationRequired(md.getLastModified(), lastModified)) {
@@ -397,20 +405,25 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   }
 
   @Override
-  public Map getCacheStats()
+  public Map<String, Double> getCacheMetrics()
   {
     final long cachedRequests = cacheRequestCount.getCount();
     final long remoteRequests = remoteRequestCount.getCount();
     final long nonLocalRequests = nonlocalRequestCount.getCount();
     final long totalRequests = totalRequestCount.getCount();
 
-    Map<String, Double> stats = new HashMap<String, Double>();
-    stats.put("Cache Hit Rate", ((double) cachedRequests / (cachedRequests + remoteRequests)));
-    stats.put("Cache Miss Rate", ((double) (remoteRequests) / (cachedRequests + remoteRequests)));
-    stats.put("Cache Reads", ((double) cachedRequests));
-    stats.put("Remote Reads", ((double) remoteRequests));
-    stats.put("Non-Local Reads", ((double) nonLocalRequests));
-    return stats;
+    ImmutableMap.Builder<String, Double> cacheMetrics = ImmutableMap.builder();
+    cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_HIT_RATE_GAUGE.getMetricName(), ((double) cachedRequests / (cachedRequests + remoteRequests)));
+    cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_MISS_RATE_GAUGE.getMetricName(), ((double) (remoteRequests) / (cachedRequests + remoteRequests)));
+    cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_REQUEST_COUNT.getMetricName(), ((double) cachedRequests));
+    cacheMetrics.put(BookKeeperMetrics.CacheMetric.REMOTE_REQUEST_COUNT.getMetricName(), ((double) remoteRequests));
+    cacheMetrics.put(BookKeeperMetrics.CacheMetric.NONLOCAL_REQUEST_COUNT.getMetricName(), ((double) nonLocalRequests));
+    cacheMetrics.put(BookKeeperMetrics.CacheMetric.TOTAL_REQUEST_COUNT.getMetricName(), ((double) totalRequests));
+    cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_EVICTION_COUNT.getMetricName(), (double) cacheEvictionCount.getCount());
+    cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_INVALIDATION_COUNT.getMetricName(), (double) cacheInvalidationCount.getCount());
+    cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_EXPIRY_COUNT.getMetricName(), (double) cacheExpiryCount.getCount());
+    cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_SIZE_GAUGE.getMetricName(), (double) DiskUtils.getCacheSizeMB(conf));
+    return cacheMetrics.build();
   }
 
   //This method is to ensure that data required by another node is cached before it is read by that node
@@ -562,6 +575,11 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     // To minimize those cases, consider available space lower than actual
     final long total = (long) (0.95 * avail);
 
+    final long cacheMaxSize = CacheConfig.getCacheDataFullnessMaxSize(conf);
+    final long maxWeight = (cacheMaxSize == 0)
+        ? (long) (total * 1.0 * CacheConfig.getCacheDataFullnessPercentage(conf) / 100.0)
+        : cacheMaxSize;
+
     initializeFileInfoCache(conf, ticker);
 
     fileMetadataCache = CacheBuilder.newBuilder()
@@ -574,7 +592,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
             return md.getWeight(conf);
           }
         })
-        .maximumWeight((long) (total * 1.0 * CacheConfig.getCacheDataFullnessPercentage(conf) / 100.0))
+        .maximumWeight(maxWeight)
         .expireAfterWrite(CacheConfig.getCacheDataExpirationAfterWrite(conf), TimeUnit.MILLISECONDS)
         .removalListener(new CacheRemovalListener())
         .build();
@@ -672,22 +690,26 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   }
 
   // This method is to invalidate FileMetadata from guava cache.
-  // deleteCachedFile determines whether to delete the actual file from the local filesystem or not
-  public static void invalidateFileMetadata(String key)
+  @Override
+  public void invalidateFileMetadata(String key)
   {
     // We might come in here with cache not initialized e.g. fs.create
     if (fileMetadataCache != null) {
-      fileMetadataCache.invalidate(key);
+      FileMetadata metadata = fileMetadataCache.getIfPresent(key);
+      if (metadata != null) {
+        log.info("Invalidating file " + key + " from metadata cache");
+        fileMetadataCache.invalidate(key);
+      }
     }
   }
 
-  private static void replaceFileMetadata(String key, long curretFileSize, Configuration conf) throws IOException
+  private void replaceFileMetadata(String key, long currentFileSize, Configuration conf) throws IOException
   {
     if (fileMetadataCache != null) {
       FileMetadata metadata = fileMetadataCache.getIfPresent(key);
       if (metadata != null) {
         FileMetadata newMetaData = new FileMetadata(key, metadata.getFileSize(), metadata.getLastModified(),
-            curretFileSize, conf);
+            currentFileSize, conf);
         fileMetadataCache.put(key, newMetaData);
       }
     }

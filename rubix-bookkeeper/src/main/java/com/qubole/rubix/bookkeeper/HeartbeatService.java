@@ -15,11 +15,12 @@ package com.qubole.rubix.bookkeeper;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.util.concurrent.AbstractScheduledService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.Service;
 import com.qubole.rubix.bookkeeper.validation.CachingValidator;
 import com.qubole.rubix.bookkeeper.validation.FileValidator;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
-import com.qubole.rubix.core.utils.ClusterUtil;
+import com.qubole.rubix.common.utils.ClusterUtil;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
@@ -32,8 +33,8 @@ import org.apache.thrift.shaded.transport.TTransportException;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class HeartbeatService extends AbstractScheduledService
@@ -41,7 +42,7 @@ public class HeartbeatService extends AbstractScheduledService
   private Log log = LogFactory.getLog(HeartbeatService.class.getName());
 
   // The executor used for running listener callbacks.
-  private final Executor executor = Executors.newSingleThreadExecutor();
+  private final ScheduledExecutorService validatorExecutor = Executors.newSingleThreadScheduledExecutor();
 
   // The client for interacting with the master BookKeeper.
   private final RetryingBookkeeperClient bookkeeperClient;
@@ -74,7 +75,7 @@ public class HeartbeatService extends AbstractScheduledService
     this.bookkeeperClient = initializeClientWithRetry(bookKeeperFactory);
 
     if (CacheConfig.isValidationEnabled(conf)) {
-      this.cachingValidator = new CachingValidator(conf, bookKeeper);
+      this.cachingValidator = new CachingValidator(conf, bookKeeper, validatorExecutor);
       this.cachingValidator.startAsync();
       metrics.register(BookKeeperMetrics.ValidationMetric.CACHING_VALIDATION_SUCCESS_GAUGE.getMetricName(), new Gauge<Integer>()
       {
@@ -85,7 +86,7 @@ public class HeartbeatService extends AbstractScheduledService
         }
       });
 
-      this.fileValidator = new FileValidator(conf);
+      this.fileValidator = new FileValidator(conf, validatorExecutor);
       this.fileValidator.startAsync();
       metrics.register(BookKeeperMetrics.ValidationMetric.FILE_VALIDATION_SUCCESS_GAUGE.getMetricName(), new Gauge<Integer>()
       {
@@ -139,7 +140,7 @@ public class HeartbeatService extends AbstractScheduledService
   protected void startUp()
   {
     log.info(String.format("Starting service %s in thread %d", serviceName(), Thread.currentThread().getId()));
-    addListener(new HeartbeatService.FailureListener(), executor);
+    addListener(new HeartbeatService.FailureListener(), MoreExecutors.directExecutor());
   }
 
   @Override

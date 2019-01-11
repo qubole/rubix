@@ -3,7 +3,7 @@
     <parent>
         <groupId>com.qubole.rubix</groupId>
         <artifactId>rubix-root</artifactId>
-        <version>0.3.4-SNAPSHOT</version>
+        <version>0.3.4</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -20,14 +20,14 @@
             <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-core</artifactId>
             <scope>test</scope>
-            <version>0.3.4-SNAPSHOT</version>
+            <version>0.3.4</version>
         </dependency>
         <dependency>
             <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-core</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
-            <version>0.3.4-SNAPSHOT</version>
+            <version>0.3.4</version>
         </dependency>
         <dependency>
             <groupId>com.qubole.rubix</groupId>
@@ -96,6 +96,24 @@
                     <systemPropertyVariables>
                         <log4j.configuration>file:${project.build.testOutputDirectory}/log4j-surefire.properties</log4j.configuration>
                     </systemPropertyVariables>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.robotframework</groupId>
+                <artifactId>robotframework-maven-plugin</artifactId>
+                <version>1.4.7</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <extraPathDirectories>
+                        <extraPathDirectory>../rubix-client/target/rubix-client-${project.version}-tests.jar</extraPathDirectory>
+                    </extraPathDirectories>
                 </configuration>
             </plugin>
         </plugins>
