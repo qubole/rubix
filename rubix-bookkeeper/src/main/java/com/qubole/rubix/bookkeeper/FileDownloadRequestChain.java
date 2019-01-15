@@ -18,6 +18,7 @@ import com.qubole.rubix.core.ReadRequestChain;
 import com.qubole.rubix.core.ReadRequestChainStats;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.CacheUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -98,6 +99,12 @@ public class FileDownloadRequestChain extends ReadRequestChain
     File file = new File(localFile);
     if (!file.exists()) {
       log.info("Creating localfile : " + localFile);
+      String metadataFilePath = CacheUtil.getMetadataFilePath(remotePath, conf);
+      File mdFile = new File(metadataFilePath);
+      if (mdFile.exists() && mdFile.length() > 0) {
+        // Making sure when a new file gets created, we invalidate the existing metadata file
+        bookKeeper.invalidateFileMetadata(remotePath);
+      }
       file.createNewFile();
       file.setWritable(true, false);
       file.setReadable(true, false);
