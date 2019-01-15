@@ -11,28 +11,34 @@ Cache
 | Option                                   | Description                                                            | Type              | Default          | Client/       |
 |                                          |                                                                        |                   |                  | Server        |
 +==========================================+========================================================================+===================+==================+===============+
-| hadoop.cache.data.block.size             | The block size used for splitting files.                               | integer           | 1048576 (1MB)    | C & S         |
+| hadoop.cache.data.block.size             | The amount of data downloaded per block requested for caching.         | integer (bytes)   | 1048576 (1MB)    | C & S         |
+|                                          | (if block size = 10MB, request for 45MB of data will download          |                   |                  |               |
+|                                          | 5 blocks of 10MB)                                                      |                   |                  |               |
 +------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+
 | hadoop.cache.data.dirprefix.list         | The list of directories to be used as parents for storing cache files. | list              | /media/ephemeral | C & S         |
-|                                          |                                                                        | (comma-separated) |                  |               |
+|                                          | Example: **/media/ephemeral**\ 0/fcache/                               | (comma-separated) |                  |               |
++------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+
+| hadoop.cache.data.max.disks              | The number of (zero-indexed) disks within the parent directory to be   | integer           | 5                | C & S         |
+|                                          | used for storing cached files.                                         |                   |                  |               |
+|                                          | Example: /media/ephemeral\ **0** to /media/ephemeral\ **4**            |                   |                  |               |
 +------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+
 | hadoop.cache.data.dirsuffix              | The name of the subdirectory to be used for storing cache files.       | string            | /fcache/         | C & S         |
+|                                          | Example: /media/ephemeral0\ **/fcache/**                               |                   |                  |               |
 +------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+
-| hadoop.cache.data.expiration.after-write | The amount of time files will be valid in cache.                       | integer           | MAX_VALUE        | S             |
+| hadoop.cache.data.expiration.after-write | The time files will be kept in cache prior to eviction.                | integer (ms)      | MAX_VALUE        | S             |
 +------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+
-| hadoop.cache.data.fullness.percentage    | The percentage of the disk that should be filled with cached data.     | integer (%)       | 80               | S             |
+| hadoop.cache.data.fullness.percentage    | The percentage of the disk space that will be filled with cached data  | integer (%)       | 80               | S             |
+|                                          | before cached files will start being evicted.                          |                   |                  |               |
 +------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+
-| hadoop.cache.data.max.disks              | The maximum number of disks used for storing cached data               | integer           | 5                | C & S         |
+| hadoop.cache.data.strict.mode            | Propagate exceptions if there is an error while caching data if true;  | boolean           | false            | C             |
+|                                          | otherwise fall back on reading data directly from remote file system   |                   |                  |               |
 +------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+
-| hadoop.cache.data.strict.mode            | True if an exception should be thrown if data cannot be cached;        | boolean           | false            | C             |
-|                                          | false if Rubix should fall back on reading data directly               |                   |                  |               |
+| rubix.enable.file.staleness-check        | Check file metadata for updates from remote filesystem when true.      | boolean           | true             | S             |
 +------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+
-| rubix.enable.file.staleness-check        | True if the BookKeeper should check the staleness of cached files;     | boolean           | true             | S             |
-|                                          | false if this should be ignored                                        |                   |                  |               |
+| rubix.stale.fileinfo.expiry.period       | (**rubix.enable.file.staleness-check** must be enabled)                |                   |                  |               |
+|                                          | The time file metadata will be cached before expiring.                 | integer (s)       | 36000            | S             |
 +------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+
-| rubix.stale.fileinfo.expiry.period       | The amount of time file info should be cached.                         | integer (s)       | 36000            | S             |
-+------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+
-| rubix.parallel.warmup                    | True if read requests should be handled asynchronously.                | boolean           | false            | C & S         |
+| rubix.parallel.warmup                    | Warmup data asynchronously when true.                                  | boolean           | false            | C & S         |
 +------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+
 
 Network
@@ -41,21 +47,15 @@ Network
 +------------------------------------------+-------------------------------------------------------------------------------+-------------------+------------------+---------------+
 | Option                                   | Description                                                                   | Type              | Default          | Client/Server |
 +==========================================+===============================================================================+===================+==================+===============+
-| hadoop.cache.data.bookkeeper.port        | The port used for connecting to the BookKeeper server.                        | integer           | 8899             | C & S         |
+| hadoop.cache.data.bookkeeper.port        | The port on which the BookKeeper server is listening.                         | integer           | 8899             | C & S         |
 +------------------------------------------+-------------------------------------------------------------------------------+-------------------+------------------+---------------+
-| hadoop.cache.data.local.server.port      | The port used for connecting to the Local Data Transfer server.               | integer           | 8898             | C             |
+| hadoop.cache.data.local.server.port      | The port on which the Local Data Transfer server is listening.                | integer           | 8898             | C             |
 +------------------------------------------+-------------------------------------------------------------------------------+-------------------+------------------+---------------+
-| hadoop.cache.data.client.num-retries     | The maximum number of retry attempts for connecting to the BookKeeper server. | integer           | 3                | C & S         |
+| hadoop.cache.data.client.num-retries     | The maximum number of retry attempts to connect to the BookKeeper server.     | integer           | 3                | C & S         |
 +------------------------------------------+-------------------------------------------------------------------------------+-------------------+------------------+---------------+
 | hadoop.cache.data.client.timeout         | The maximum time to wait for a connection to the BookKeeper server.           | integer (ms)      | 10000            | C & S         |
 +------------------------------------------+-------------------------------------------------------------------------------+-------------------+------------------+---------------+
-| hadoop.cache.network.socket.read.timeout | The timeout used for connections to the Local Data Transfer server.           | integer (ms)      | 30000            | C             |
-+------------------------------------------+-------------------------------------------------------------------------------+-------------------+------------------+---------------+
-| rubix.monitor.health.status.expiry       | The amount of time for which a healthy status should last.                    | integer (ms)      | 60000            | S             |
-+------------------------------------------+-------------------------------------------------------------------------------+-------------------+------------------+---------------+
-| rubix.monitor.heartbeat.initial.delay    | The initial delay before reporting a heartbeat.                               | integer (ms)      | 30000            | S             |
-+------------------------------------------+-------------------------------------------------------------------------------+-------------------+------------------+---------------+
-| rubix.monitor.heartbeat.interval         | The interval after which a heartbeat should be reported.                      | integer (ms)      | 30000            | S             |
+| hadoop.cache.network.socket.read.timeout | The maximum time to wait when reading data from another node.                 | integer (ms)      | 30000            | C             |
 +------------------------------------------+-------------------------------------------------------------------------------+-------------------+------------------+---------------+
 
 Cluster
@@ -75,31 +75,18 @@ Metrics
 +------------------------------------------+--------------------------------------------------------------------------------+-------------------+------------------------------------------------+-----------------+
 | Option                                   | Description                                                                    | Type              | Default                                        | Client / Server |
 +==========================================+================================================================================+===================+================================================+=================+
-| rubix.metrics.cache.enabled              | True if cache metrics should be enabled, false if not                          | boolean           | true                                           | S               |
+| rubix.metrics.cache.enabled              | Collect cache-level metrics if true.                                           | boolean           | true                                           | S               |
 +------------------------------------------+--------------------------------------------------------------------------------+-------------------+------------------------------------------------+-----------------+
-| rubix.metrics.health.enabled             | True if health metrics should be enabled, false if not                         | boolean           | true                                           | S               |
+| rubix.metrics.health.enabled             | Collect heartbeat metrics if true.                                             | boolean           | true                                           | S               |
 +------------------------------------------+--------------------------------------------------------------------------------+-------------------+------------------------------------------------+-----------------+
-| rubix.metrics.jvm.enabled                | True if JVM metrics should be enabled, false if not                            | boolean           | false                                          | S               |
+| rubix.metrics.jvm.enabled                | Collect JVM-level metrics if true.                                             | boolean           | false                                          | S               |
 +------------------------------------------+--------------------------------------------------------------------------------+-------------------+------------------------------------------------+-----------------+
-| rubix.metrics.reporters                  | The reporters to be used for reporting metrics.                                | list              | JMX,GANGLIA                                    | S               |
+| rubix.metrics.reporters                  | The reporters to be used for collecting metrics.                               | list              | JMX,GANGLIA                                    | S               |
 |                                          | Options: JMX, GANGLIA                                                          | (comma-separated) |                                                |                 |
 +------------------------------------------+--------------------------------------------------------------------------------+-------------------+------------------------------------------------+-----------------+
-| rubix.metrics.reporting.interval         | The interval after which all registered reporters should report their metrics. | integer (ms)      | 10000                                          | S               |
+| rubix.metrics.reporting.interval         | The interval at which all registered reporters will report their metrics.      | integer (ms)      | 10000                                          | S               |
 +------------------------------------------+--------------------------------------------------------------------------------+-------------------+------------------------------------------------+-----------------+
-| rubix.metrics.ganglia.host               | The hostname to connect to for reporting Ganglia metrics                       | string            | 127.0.0.1 (localhost)                          | S               |
+| rubix.metrics.ganglia.host               | The host at which the Ganglia server (gmond) is running.                       | string            | 127.0.0.1 (localhost)                          | S               |
 +------------------------------------------+--------------------------------------------------------------------------------+-------------------+------------------------------------------------+-----------------+
-| rubix.metrics.ganglia.port               | The port to connect to for reporting Ganglia metrics.                          | integer           | 8649                                           | S               |
-+------------------------------------------+--------------------------------------------------------------------------------+-------------------+------------------------------------------------+-----------------+
-
-Validation
-----------
-
-+------------------------------------------+--------------------------------------------------------------------------------+-------------------+------------------------------------------------+-----------------+
-| Option                                   | Description                                                                    | Type              | Default                                        | Client / Server |
-+==========================================+================================================================================+===================+================================================+=================+
-| rubix.validation.enabled                 | True if validations should run.                                                | boolean           | false                                          | S               |
-+------------------------------------------+--------------------------------------------------------------------------------+-------------------+------------------------------------------------+-----------------+
-| rubix.validation.caching.interval        | The interval for validating caching behavior.                                  | integer (ms)      | 1800000 (30min)                                | S               |
-+------------------------------------------+--------------------------------------------------------------------------------+-------------------+------------------------------------------------+-----------------+
-| rubix.validation.file.interval           | The interval for validating files in cache.                                    | integer (ms)      | 1800000 (30min)                                | S               |
+| rubix.metrics.ganglia.port               | The port on which the Ganglia server (gmond) is listening.                     | integer           | 8649                                           | S               |
 +------------------------------------------+--------------------------------------------------------------------------------+-------------------+------------------------------------------------+-----------------+
