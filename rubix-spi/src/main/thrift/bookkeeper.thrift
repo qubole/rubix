@@ -52,4 +52,8 @@ service BookKeeperService
     list<string> getNodeHostNames(1:int clusterType)
 
     string getClusterNodeHostName(1:string remotePath, 2:int clusterType)
+
+    bool isBookKeeperAlive()
+
+    oneway void invalidateFileMetadata(1:string remotePath)
 }

@@ -20,7 +20,7 @@ import com.google.common.util.concurrent.Service;
 import com.qubole.rubix.bookkeeper.validation.CachingValidator;
 import com.qubole.rubix.bookkeeper.validation.FileValidator;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
-import com.qubole.rubix.core.utils.ClusterUtil;
+import com.qubole.rubix.common.utils.ClusterUtil;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;

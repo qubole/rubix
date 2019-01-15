@@ -16,7 +16,7 @@ package com.qubole.rubix.bookkeeper;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Ticker;
 import com.google.common.testing.FakeTicker;
-import com.qubole.rubix.common.TestUtil;
+import com.qubole.rubix.common.utils.TestUtil;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterType;

@@ -178,10 +178,45 @@ public class TestCacheUtil
   }
 
   @Test
-  public void testGetMetadataFilePath()
+  public void testGetMetadataFilePathForS3() throws IOException
   {
     String localRelPath = "testbucket/123/456/789";
     String remotePath = "s3://" + localRelPath;
+    CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
+    CacheConfig.setCacheDataDirSuffix(conf, "/fcache/");
+    CacheConfig.setMaxDisks(conf, 1);
+
+    createCacheDirectoriesForTest(conf);
+
+    String localPath = CacheUtil.getMetadataFilePath(remotePath, conf);
+    assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + localRelPath + "_mdfile", "Paths not equal!");
+
+    localRelPath = "tesbucket/123";
+    remotePath = "s3://" + localRelPath;
+    localPath = CacheUtil.getMetadataFilePath(remotePath, conf);
+    assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + localRelPath + "_mdfile", "Paths not equal!");
+  }
+
+  @Test
+  public void testGetMetadataFilePathForLocalFileSystem() throws IOException
+  {
+    String localRelPath = "testbucket/123/456/789";
+    String remotePath = "file:///" + localRelPath;
+    CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
+    CacheConfig.setCacheDataDirSuffix(conf, "/fcache/");
+    CacheConfig.setMaxDisks(conf, 1);
+
+    createCacheDirectoriesForTest(conf);
+
+    String localPath = CacheUtil.getMetadataFilePath(remotePath, conf);
+    assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + localRelPath + "_mdfile", "Paths not equal!");
+  }
+
+  @Test
+  public void testGetMetadataFilePathForWasb() throws IOException
+  {
+    String localRelPath = "testbucket/123/456/789";
+    String remotePath = "wasb://" + localRelPath;
     CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
     CacheConfig.setCacheDataDirSuffix(conf, "/fcache/");
     CacheConfig.setMaxDisks(conf, 1);

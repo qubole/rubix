@@ -11,7 +11,7 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-package com.qubole.rubix.core.utils;
+package com.qubole.rubix.common.utils;
 
 import java.io.IOException;
 import java.nio.file.FileVisitResult;

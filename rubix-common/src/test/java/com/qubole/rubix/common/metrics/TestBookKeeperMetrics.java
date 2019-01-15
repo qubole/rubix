@@ -17,7 +17,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.ganglia.GangliaReporter;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Sets;
-import com.qubole.rubix.common.TestUtil;
+import com.qubole.rubix.common.utils.TestUtil;
 import com.qubole.rubix.spi.CacheConfig;
 import com.readytalk.metrics.StatsDReporter;
 import org.apache.commons.logging.Log;
