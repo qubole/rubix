@@ -33,41 +33,45 @@ Cache
 | hadoop.cache.data.strict.mode            | Propagate exceptions if there is an error while caching data if true;  | boolean           | false            | C             |
 |                                          | otherwise fall back on reading data directly from remote file system   |                   |                  |               |
 +------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+
-| rubix.enable.file.staleness-check        | Check file metadata for updates from remote filesystem when true.      | boolean           | true             | S             |
+| rubix.enable.file.staleness-check        | When true, always check for updates to file metadata from remote       | boolean           | true             | S             |
+|                                          | filesystem. When false, file metadata will be cached for a period of   |                   |                  |               |
+|                                          | time before being fetched again.                                       |                   |                  |               |
 +------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+
-| rubix.stale.fileinfo.expiry.period       | (**rubix.enable.file.staleness-check** must be enabled)                |                   |                  |               |
-|                                          | The time file metadata will be cached before expiring.                 | integer (s)       | 36000            | S             |
+| rubix.stale.fileinfo.expiry.period       | (**rubix.enable.file.staleness-check** must be false)                  | integer (s)       | 36000            | S             |
+|                                          | The time file metadata will be cached before it will be fetched again  |                   |                  |               |
+|                                          | from the remote filesystem.                                            |                   |                  |               |
 +------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+
-| rubix.parallel.warmup                    | Warmup data asynchronously when true.                                  | boolean           | false            | C & S         |
+| rubix.parallel.warmup                    | When true, cache will be warmed up asynchronously while not affecting  | boolean           | false            | C & S         |
+|                                          | the current job.                                                       |                   |                  |               |
 +------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+
 
 Network
 -------
 
-+------------------------------------------+-------------------------------------------------------------------------------+-------------------+------------------+---------------+
-| Option                                   | Description                                                                   | Type              | Default          | Client/Server |
-+==========================================+===============================================================================+===================+==================+===============+
-| hadoop.cache.data.bookkeeper.port        | The port on which the BookKeeper server is listening.                         | integer           | 8899             | C & S         |
-+------------------------------------------+-------------------------------------------------------------------------------+-------------------+------------------+---------------+
-| hadoop.cache.data.local.server.port      | The port on which the Local Data Transfer server is listening.                | integer           | 8898             | C             |
-+------------------------------------------+-------------------------------------------------------------------------------+-------------------+------------------+---------------+
-| hadoop.cache.data.client.num-retries     | The maximum number of retry attempts to connect to the BookKeeper server.     | integer           | 3                | C & S         |
-+------------------------------------------+-------------------------------------------------------------------------------+-------------------+------------------+---------------+
-| hadoop.cache.data.client.timeout         | The maximum time to wait for a connection to the BookKeeper server.           | integer (ms)      | 10000            | C & S         |
-+------------------------------------------+-------------------------------------------------------------------------------+-------------------+------------------+---------------+
-| hadoop.cache.network.socket.read.timeout | The maximum time to wait when reading data from another node.                 | integer (ms)      | 30000            | C             |
-+------------------------------------------+-------------------------------------------------------------------------------+-------------------+------------------+---------------+
++------------------------------------------+------------------------------------------------------------------------------------+-------------------+------------------+---------------+
+| Option                                   | Description                                                                        | Type              | Default          | Client/Server |
++==========================================+====================================================================================+===================+==================+===============+
+| hadoop.cache.data.bookkeeper.port        | The port on which the BookKeeper server is listening.                              | integer           | 8899             | C & S         |
++------------------------------------------+------------------------------------------------------------------------------------+-------------------+------------------+---------------+
+| hadoop.cache.data.local.server.port      | The port on which the Local Data Transfer server is listening.                     | integer           | 8898             | C             |
++------------------------------------------+------------------------------------------------------------------------------------+-------------------+------------------+---------------+
+| hadoop.cache.data.client.num-retries     | The maximum number of retry attempts for executing calls to the BookKeeper server. | integer           | 3                | C & S         |
++------------------------------------------+------------------------------------------------------------------------------------+-------------------+------------------+---------------+
+| hadoop.cache.data.client.timeout         | The maximum time to wait for a connection to the BookKeeper server.                | integer (ms)      | 10000            | C & S         |
++------------------------------------------+------------------------------------------------------------------------------------+-------------------+------------------+---------------+
+| hadoop.cache.network.socket.read.timeout | The maximum time to wait when reading data from another node.                      | integer (ms)      | 30000            | C             |
++------------------------------------------+------------------------------------------------------------------------------------+-------------------+------------------+---------------+
 
 Cluster
 -------
 
-+------------------------------------------+-------------------------------------------------------------------------------+-------------------+-------------------------------------------------+-----------------+
-| Option                                   | Description                                                                   | Type              | Default                                         | Client / Server |
-+==========================================+===============================================================================+===================+=================================================+=================+
-| rubix.hadoop.clustermanager.class        | The class to use for managing Hadoop clusters.                                | string            | com.qubole.rubix.hadoop2. Hadoop2ClusterManager | S               |
-+------------------------------------------+-------------------------------------------------------------------------------+-------------------+-------------------------------------------------+-----------------+
-| rubix.presto.clustermanager.class        | The class to use for managing Presto clusters.                                | string            | com.qubole.rubix.presto. PrestoClusterManager   | S               |
-+------------------------------------------+-------------------------------------------------------------------------------+-------------------+-------------------------------------------------+-----------------+
++------------------------------------------+------------------------------------------------------------------------------------------------+-------------------+-------------------------------------------------+-----------------+
+| Option                                   | Description                                                                                    | Type              | Default                                         | Client / Server |
++==========================================+================================================================================================+===================+=================================================+=================+
+| rubix.hadoop.clustermanager.class        | The ``ClusterManager`` class to use for fetching node-related information for Hadoop clusters. | string            | com.qubole.rubix.hadoop2. Hadoop2ClusterManager | S               |
++------------------------------------------+------------------------------------------------------------------------------------------------+-------------------+-------------------------------------------------+-----------------+
+| rubix.presto.clustermanager.class        | The ``ClusterManager`` class to use for fetching node-related information for Presto clusters. | string            | com.qubole.rubix.presto. PrestoClusterManager   | S               |
++------------------------------------------+------------------------------------------------------------------------------------------------+-------------------+-------------------------------------------------+-----------------+
 
 Metrics
 -------
