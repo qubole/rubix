@@ -98,7 +98,8 @@ public class DiskUtils
 
     try {
       Process p;
-      p = Runtime.getRuntime().exec(cmd);
+      String[] env = new String[] {"BLOCKSIZE=1024"};
+      p = Runtime.getRuntime().exec(cmd, env);
       p.waitFor();
       BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
       String line = "";
@@ -109,8 +110,7 @@ public class DiskUtils
     catch (Exception e) {
       log.error("Exception while calculating the size of the folder " + dirname.toString());
     }
-    long dirSize = Long.parseLong(output.toString().split("\\s+")[0]) / 1024;
-    return dirSize;
+    return Long.parseLong(output.toString().split("\\s+")[0]) / 1024;
   }
 
   public static int getUsedSpaceMB(Configuration conf)
