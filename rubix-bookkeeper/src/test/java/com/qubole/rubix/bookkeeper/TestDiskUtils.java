@@ -70,13 +70,13 @@ public class TestDiskUtils
     File dirName = new File(testDirectory);
     RandomAccessFile rafile = new RandomAccessFile(fileName, "rw");
     rafile.seek(20000000);
-    for (int i = 0; i < 1150000; i++) {
+    for (int i = 0; i < 1100000; i++) {
       rafile.writeChar('a' + i % 10);
     }
     rafile.close();
     File file = new File(fileName);
     long dsize = DiskUtils.getDirSizeMB(dirName);
-    assertTrue(dsize == 3, "DiskSize is reported :" + dsize + " but expected : 2");
+    assertTrue(dsize == 2, "DiskSize is reported :" + dsize + " but expected : 2");
     file.deleteOnExit();
   }
 }
