@@ -51,6 +51,7 @@ class FileDownloader
   int diskReadBufferSize;
   private MetricRegistry metrics;
   private Counter totalMBDownloaded;
+  private Counter totalTimeToDownload;
   BookKeeper bookKeeper;
 
   private static final Log log = LogFactory.getLog(FileDownloader.class);
@@ -73,6 +74,7 @@ class FileDownloader
   private void initializeMetrics()
   {
     totalMBDownloaded = metrics.counter(BookKeeperMetrics.CacheMetric.ASYNC_DOWNLOADED_MB_COUNT.getMetricName());
+    totalTimeToDownload = metrics.counter(BookKeeperMetrics.CacheMetric.ASYNC_DOWNLOAD_TIME_COUNT.getMetricName());
   }
 
   protected List<FileDownloadRequestChain> getFileDownloadRequestChains(ConcurrentMap<String, DownloadRequestContext> contextMap)
@@ -141,6 +143,7 @@ class FileDownloader
           requestChain.updateCacheStatus(requestChain.getRemotePath(), requestChain.getFileSize(),
               requestChain.getLastModified(), CacheConfig.getBlockSize(conf), conf);
           sizeRead += read;
+          this.totalTimeToDownload.inc(requestChain.getTimeSpentOnDownload());
         }
         else {
           log.error("ReadData didn't match with requested value. RequestedData: " + totalBytesToBeDownloaded +
