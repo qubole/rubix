@@ -16,6 +16,7 @@ The instructions require `RubiX Admin <https://github.com/qubole/rubix-admin>`_
    :maxdepth: 1
    :titlesonly:
 
+   getting_started_emr.md
    cluster.md
    rubix_admin.md
    presto.md
