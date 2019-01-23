@@ -89,6 +89,7 @@ public class CacheConfig
   private static final String KEY_CLEANUP_FILES_DURING_START = "rubix.cleanup.files.during.start";
   private static final String KEY_CLUSTER_NODE_REFRESH_TIME = "rubix.cluster.node.refresh.time";
   private static final String KEY_MAX_CACHE_SIZE = "rubix.cache.fullness.size";
+  private static final String KEY_RUBIX_CLUSTER_TYPE = "rubix.cluster.type";
 
   // default values
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
@@ -151,6 +152,7 @@ public class CacheConfig
   private static final boolean DEFAULT_CLEANUP_FILES_DURING_START = true;
   private static final int DEFAULT_CLUSTER_NODE_REFRESH_TIME = 120; //seconds
   private static final long DEFAULT_MAX_CACHE_SIZE = 0;
+  private static final int DEFAULT_RUBIX_CLUSTER_TYPE = ClusterType.TEST_CLUSTER_MANAGER.ordinal();
 
   private CacheConfig()
   {
@@ -466,6 +468,11 @@ public class CacheConfig
     return conf.getInt(KEY_CLUSTER_NODE_REFRESH_TIME, DEFAULT_CLUSTER_NODE_REFRESH_TIME);
   }
 
+  public static int getClusterType(Configuration conf)
+  {
+    return conf.getInt(KEY_RUBIX_CLUSTER_TYPE, DEFAULT_RUBIX_CLUSTER_TYPE);
+  }
+
   public static void setBlockSize(Configuration conf, int blockSize)
   {
     conf.setInt(KEY_BLOCK_SIZE, blockSize);
@@ -689,5 +696,12 @@ public class CacheConfig
   public static void setClusterNodeRefreshTime(Configuration conf, int refreshTime)
   {
     conf.setInt(KEY_CLUSTER_NODE_REFRESH_TIME, refreshTime);
+  }
+
+  public static void setRubixClusterType(Configuration conf, int clusterType)
+  {
+    if (ClusterType.findByValue(clusterType) != null) {
+      conf.setInt(KEY_RUBIX_CLUSTER_TYPE, clusterType);
+    }
   }
 }

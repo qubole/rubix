@@ -29,14 +29,11 @@ import com.google.common.collect.ImmutableMap;
 import com.qubole.rubix.bookkeeper.utils.DiskUtils;
 import com.qubole.rubix.bookkeeper.validation.CachingValidator;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
-import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.core.ReadRequest;
 import com.qubole.rubix.core.RemoteReadRequestChain;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
-import com.qubole.rubix.spi.ClusterManager;
-import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.BookKeeperService;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
@@ -54,10 +51,6 @@ import org.apache.thrift.shaded.TException;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -70,9 +63,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
-import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER_MULTINODE;
-
 /**
  * Created by stagra on 12/2/16.
  */
@@ -82,12 +72,9 @@ public abstract class BookKeeper implements BookKeeperService.Iface
 
   protected static Cache<String, FileMetadata> fileMetadataCache;
   private static LoadingCache<String, FileInfo> fileInfoCache;
-  ClusterManager clusterManager;
   String nodeName;
-  String nodeHostName;
-  String nodeHostAddress;
-  private final Configuration conf;
-  private static Integer lock = 1;
+  protected final Configuration conf;
+
   static long splitSize;
   private final RemoteFetchProcessor fetchProcessor;
   private final Ticker ticker;
@@ -116,7 +103,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   }
 
   @VisibleForTesting
-  BookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker) throws FileNotFoundException
+  BookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker)
   {
     this.conf = conf;
     this.metrics = metrics;
@@ -200,15 +187,6 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   @Override
   public List<BlockLocation> getCacheStatus(CacheStatusRequest request) throws TException
   {
-    try {
-      initializeClusterManager(request.getClusterType());
-    }
-    catch (ClusterManagerInitilizationException ex) {
-      log.error("Not able to initialize ClusterManager for cluster type : " + ClusterType.findByValue(request.getClusterType()) +
-          " with Exception : " + ex);
-      throw new TException(ex);
-    }
-
     Map<Long, String> blockSplits = new HashMap<>();
     long blockNumber = 0;
 
@@ -288,82 +266,6 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     }
 
     return blockLocations;
-  }
-
-  void initializeClusterManager(int clusterType) throws ClusterManagerInitilizationException
-  {
-    if (this.clusterManager == null) {
-      ClusterManager manager = null;
-      synchronized (lock) {
-        if (this.clusterManager == null) {
-          try {
-            nodeHostName = InetAddress.getLocalHost().getCanonicalHostName();
-            nodeHostAddress = InetAddress.getLocalHost().getHostAddress();
-            log.info(" HostName : " + nodeHostName + " HostAddress : " + nodeHostAddress);
-          }
-          catch (UnknownHostException e) {
-            String errorMessage = "Could not get nodeName";
-            log.warn(errorMessage, e);
-            throw new ClusterManagerInitilizationException(errorMessage, e);
-          }
-
-          manager = getClusterManagerInstance(ClusterType.findByValue(clusterType), conf);
-          manager.initialize(conf);
-          this.clusterManager = manager;
-          splitSize = clusterManager.getSplitSize();
-
-          setCurrentNodeNameAndIndex(manager, clusterType);
-        }
-      }
-    }
-  }
-
-  void setCurrentNodeNameAndIndex(ClusterManager manager, int clusterType)
-      throws ClusterManagerInitilizationException
-  {
-    List<String> nodes = clusterManager.getNodes();
-    if (clusterType == TEST_CLUSTER_MANAGER.ordinal() || clusterType == TEST_CLUSTER_MANAGER_MULTINODE.ordinal()) {
-      nodeName = nodes.get(0);
-      return;
-    }
-    if (nodes != null && nodes.size() > 0) {
-      if (nodes.indexOf(nodeHostName) >= 0) {
-        nodeName = nodeHostName;
-      }
-      else if (nodes.indexOf(nodeHostAddress) >= 0) {
-        nodeName = nodeHostAddress;
-      }
-    }
-    else {
-      String errorMessage = String.format("Could not initialize cluster nodes=%s nodeHostName=%s nodeHostAddress=%s ",
-          nodes, nodeHostName, nodeHostAddress);
-      log.error(errorMessage);
-      throw new ClusterManagerInitilizationException(errorMessage);
-    }
-  }
-
-  @VisibleForTesting
-  public ClusterManager getClusterManagerInstance(ClusterType clusterType, Configuration config)
-      throws ClusterManagerInitilizationException
-  {
-    String clusterManagerClassName = CacheConfig.getClusterManagerClass(conf, clusterType);
-    log.info("Initializing cluster manager : " + clusterManagerClassName + " for cluster type " + clusterType);
-    ClusterManager manager = null;
-
-    try {
-      Class clusterManagerClass = conf.getClassByName(clusterManagerClassName);
-      Constructor constructor = clusterManagerClass.getConstructor();
-      manager = (ClusterManager) constructor.newInstance();
-    }
-    catch (ClassNotFoundException | NoSuchMethodException | InstantiationException |
-        IllegalAccessException | InvocationTargetException ex) {
-      String errorMessage = String.format("Not able to initialize ClusterManager class : {0} ",
-          clusterManagerClassName);
-      log.error(errorMessage);
-      throw new ClusterManagerInitilizationException(errorMessage, ex);
-    }
-
-    return manager;
   }
 
   @Override
@@ -552,10 +454,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   }
 
   private static synchronized void initializeCache(final Configuration conf, final Ticker ticker)
-      throws FileNotFoundException
   {
-    CacheUtil.createCacheDirectories(conf);
-
     long avail = 0;
     for (int d = 0; d < CacheUtil.getCacheDiskCount(conf); d++) {
       avail += new File(CacheUtil.getDirPath(d, conf)).getUsableSpace();

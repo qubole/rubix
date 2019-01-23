@@ -13,6 +13,8 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
+import com.qubole.rubix.bookkeeper.exception.ClusterManagerInitilizationException;
+import com.qubole.rubix.bookkeeper.exception.WorkerInitializationException;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.common.metrics.MetricsReporter;
 import com.qubole.rubix.spi.BookKeeperFactory;
@@ -28,7 +30,6 @@ import org.mockito.ArgumentMatchers;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 
-import java.io.FileNotFoundException;
 import java.lang.management.ManagementFactory;
 import java.util.HashSet;
 import java.util.Set;
@@ -564,7 +565,7 @@ public class BaseServerTest
         // Initializing this BookKeeper here allows it to register the live worker count metric for testing.
         new CoordinatorBookKeeper(conf, metrics);
       }
-      catch (FileNotFoundException e) {
+      catch (ClusterManagerInitilizationException e) {
         log.error("Cache directories could not be created", e);
         return;
       }
@@ -608,7 +609,7 @@ public class BaseServerTest
       try {
         new WorkerBookKeeper(conf, metrics, bookKeeperFactory);
       }
-      catch (FileNotFoundException e) {
+      catch (WorkerInitializationException e) {
         log.error("Cache directories could not be created", e);
         return;
       }

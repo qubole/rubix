@@ -18,6 +18,7 @@ import com.codahale.metrics.jvm.GarbageCollectorMetricSet;
 import com.codahale.metrics.jvm.MemoryUsageGaugeSet;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
+import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.thrift.BookKeeperService;
@@ -33,7 +34,6 @@ import org.apache.thrift.shaded.transport.TServerSocket;
 import org.apache.thrift.shaded.transport.TServerTransport;
 import org.apache.thrift.shaded.transport.TTransportException;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
@@ -92,8 +92,8 @@ public class BookKeeperServer extends Configured implements Tool
         localBookKeeper = new WorkerBookKeeper(conf, metricsRegistry);
       }
     }
-    catch (FileNotFoundException e) {
-      log.error("Cache directories could not be created", e);
+    catch (BookKeeperInitializationException e) {
+      log.error("Could not start BookKeeper daemon. Exception: ", e);
       return;
     }
 

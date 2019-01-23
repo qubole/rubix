@@ -16,6 +16,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.Lists;
 import com.qubole.rubix.bookkeeper.BookKeeper;
 import com.qubole.rubix.bookkeeper.CoordinatorBookKeeper;
+import com.qubole.rubix.bookkeeper.exception.ClusterManagerInitilizationException;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.common.utils.TestUtil;
 import com.qubole.rubix.spi.BookKeeperFactory;
@@ -34,7 +35,6 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -85,7 +85,7 @@ public class TestCachingValidator
    * @throws FileNotFoundException when cache directories cannot be created.
    */
   @Test
-  public void testValidateCachingBehavior() throws TException, FileNotFoundException
+  public void testValidateCachingBehavior() throws TException, ClusterManagerInitilizationException
   {
     checkValidator(new CoordinatorBookKeeper(conf, new MetricRegistry()), true);
   }
@@ -169,7 +169,7 @@ public class TestCachingValidator
    * @throws FileNotFoundException when cache directories cannot be created.
    */
   @Test
-  public void testValidateCachingBehavior_verifyOtherMetricsUnaffected() throws TException, FileNotFoundException
+  public void testValidateCachingBehavior_verifyOtherMetricsUnaffected() throws TException, ClusterManagerInitilizationException
   {
     final MetricRegistry metrics = new MetricRegistry();
     final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);

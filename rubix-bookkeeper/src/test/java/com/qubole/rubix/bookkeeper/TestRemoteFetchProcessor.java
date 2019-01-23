@@ -30,7 +30,6 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.concurrent.ConcurrentMap;
 
 import static org.testng.Assert.assertEquals;
@@ -64,7 +63,7 @@ public class TestRemoteFetchProcessor
   }
 
   @BeforeMethod
-  public void setUp() throws IOException
+  public void setUp() throws Exception
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     CacheConfig.setRemoteFetchProcessInterval(conf, TEST_REMOTE_FETCH_PROCESS_INTERVAL);

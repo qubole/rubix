@@ -49,7 +49,7 @@ service BookKeeperService
 
     FileInfo getFileInfo(1:string remotePath)
 
-    list<string> getNodeHostNames(1:int clusterType)
+    list<string> getNodeHostNames()
 
     string getClusterNodeHostName(1:string remotePath, 2:int clusterType)
 

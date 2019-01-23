@@ -19,16 +19,18 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ticker;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.qubole.rubix.bookkeeper.exception.ClusterManagerInitilizationException;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
-import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.thrift.HeartbeatStatus;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
-import java.io.FileNotFoundException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -46,22 +48,69 @@ public class CoordinatorBookKeeper extends BookKeeper
   protected Cache<String, Boolean> fileValidatedWorkerCache;
 
   private final boolean isValidationEnabled;
+  private static Integer lock = 1;
+  private ClusterManager clusterManager;
+  int clusterType;
 
-  public CoordinatorBookKeeper(Configuration conf, MetricRegistry metrics) throws FileNotFoundException
+  public CoordinatorBookKeeper(Configuration conf, MetricRegistry metrics) throws ClusterManagerInitilizationException
   {
     this(conf, metrics, Ticker.systemTicker());
   }
 
   @VisibleForTesting
-  public CoordinatorBookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker) throws FileNotFoundException
+  public CoordinatorBookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker) throws ClusterManagerInitilizationException
   {
     super(conf, metrics, ticker);
     this.isValidationEnabled = CacheConfig.isValidationEnabled(conf);
     this.liveWorkerCache = createHealthCache(conf, ticker);
     this.cachingValidatedWorkerCache = createHealthCache(conf, ticker);
     this.fileValidatedWorkerCache = createHealthCache(conf, ticker);
+    this.clusterType = CacheConfig.getClusterType(conf);
 
+    initializeClusterManager();
     registerMetrics();
+  }
+
+  void initializeClusterManager() throws ClusterManagerInitilizationException
+  {
+    if (this.clusterManager == null) {
+      ClusterManager manager = null;
+      synchronized (lock) {
+        if (this.clusterManager == null) {
+          // TODO throw exception when clustertype is different than the supported one
+          manager = getClusterManagerInstance(ClusterType.findByValue(clusterType), conf);
+          manager.initialize(conf);
+          this.clusterManager = manager;
+          splitSize = clusterManager.getSplitSize();
+
+          //setCurrentNodeNameAndIndex(manager, clusterType);
+        }
+      }
+    }
+  }
+
+  @VisibleForTesting
+  public ClusterManager getClusterManagerInstance(ClusterType clusterType, Configuration config)
+          throws ClusterManagerInitilizationException
+  {
+    String clusterManagerClassName = CacheConfig.getClusterManagerClass(conf, clusterType);
+    log.info("Initializing cluster manager : " + clusterManagerClassName + " for cluster type " + clusterType);
+    ClusterManager manager = null;
+
+    try {
+      Class clusterManagerClass = conf.getClassByName(clusterManagerClassName);
+      Constructor constructor = clusterManagerClass.getConstructor();
+      manager = (ClusterManager) constructor.newInstance();
+    }
+    catch (ClassNotFoundException | NoSuchMethodException | InstantiationException |
+            IllegalAccessException | InvocationTargetException ex) {
+      String errorMessage = String.format("Not able to initialize ClusterManager class : {0} ",
+              clusterManagerClassName);
+      log.error(errorMessage);
+      throw new ClusterManagerInitilizationException(errorMessage, ex);
+    }
+
+    return manager;
   }
 
   @Override
@@ -88,38 +137,15 @@ public class CoordinatorBookKeeper extends BookKeeper
   }
 
   @Override
-  public List<String> getNodeHostNames(int clusterType)
+  public List<String> getNodeHostNames()
   {
-    try {
-      initializeClusterManager(clusterType);
-    }
-    catch (ClusterManagerInitilizationException ex) {
-      log.error("Not able to initialize ClusterManager for cluster type : " + ClusterType.findByValue(clusterType) +
-          " with Exception : " + ex);
-      return null;
-    }
-
-    log.debug("Fetching nodes from the cluster manager");
-    List<String> nodes = clusterManager.getNodes();
-
-    return nodes;
+    return clusterManager.getNodes();
   }
 
   @Override
   public String getClusterNodeHostName(String remotePath, int clusterType)
   {
-    try {
-      initializeClusterManager(clusterType);
-    }
-    catch (ClusterManagerInitilizationException ex) {
-      log.error("Not able to initialize ClusterManager for cluster type : " + ClusterType.findByValue(clusterType) +
-          " with Exception : " + ex);
-      return null;
-    }
-
-    List<String> nodes = getNodeHostNames(clusterType);
-    int nodeIndex = clusterManager.getNodeIndex(nodes.size(), remotePath);
-    String hostName = nodes.get(nodeIndex);
+    String hostName = clusterManager.getNodeHostName(remotePath);
 
     return hostName;
   }
