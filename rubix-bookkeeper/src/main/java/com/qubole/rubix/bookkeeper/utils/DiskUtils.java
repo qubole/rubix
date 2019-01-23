@@ -14,6 +14,7 @@ package com.qubole.rubix.bookkeeper.utils;
 
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
+import org.apache.commons.lang.math.NumberUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -110,7 +111,7 @@ public class DiskUtils
     catch (Exception e) {
       log.error("Exception while calculating the size of the folder " + dirname.toString());
     }
-    return Long.parseLong(output.toString().split("\\s+")[0]) / 1024;
+    return NumberUtils.toLong(output.toString().split("\\s+")[0]) / 1024;
   }
 
   public static int getUsedSpaceMB(Configuration conf)
