@@ -6,8 +6,8 @@ PRESTO_HOME_DIR=/usr/lib/presto
 HADOOP_HOME_DIR=/usr/lib/hadoop
 
 # Configure BookKeeper server for PrestoClusterManager
-HADOOP_CORE_SITE=${HADOOP_HOME_DIR}/etc/hadoop/core-site.xml
-sed -i '$ i <property>\n<name>caching.fs.presto-server-port</name>\n<value>8889</value>\n</property>' ${HADOOP_CORE_SITE}
+RUBIX_SITE=/etc/rubix/rubix-site.xml
+sed -i '$ i <property>\n<name>caching.fs.presto-server-port</name>\n<value>8889</value>\n</property>' ${RUBIX_SITE}
 
 # Configure Presto as RubiX client
 RUBIX_PRESTO_CLIENT_CONFIG="/etc/rubix/presto-config.xml"

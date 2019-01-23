@@ -21,8 +21,17 @@ do
 done
 
 # Configure BookKeeper server.
-HADOOP_CORE_SITE="/usr/lib/hadoop/etc/hadoop/core-site.xml"
-sed -i "$ i <property>\n<name>hadoop.cache.data.dirprefix.list</name>\n<value>${RUBIX_CACHE_DIR}/data</value>\n</property>" ${HADOOP_CORE_SITE}
+RUBIX_SITE="/etc/rubix/rubix-site.xml"
+(cat <<CLIENT
+<?xml version="1.0"?>
+<configuration>
+    <property>
+        <name>hadoop.cache.data.dirprefix.list</name>
+        <value>${RUBIX_CACHE_DIR}/data</value>
+    </property>
+</configuration>
+CLIENT
+) > ${RUBIX_SITE}
 
 MASTER_HOSTNAME=$(grep --no-group-separator -a2 "yarn.resourcemanager.hostname" /usr/lib/hadoop/etc/hadoop/yarn-site.xml | sed  "s/yarn.resourcemanager.hostname/master.hostname/g" | tr -d ' ' | tr -d '\n')
-sed -i '$i'${MASTER_HOSTNAME}'' ${HADOOP_CORE_SITE}
+sed -i '$i'${MASTER_HOSTNAME}'' ${RUBIX_SITE}
