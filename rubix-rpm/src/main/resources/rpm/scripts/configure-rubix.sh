@@ -29,6 +29,24 @@ RUBIX_SITE="/etc/rubix/rubix-site.xml"
         <name>hadoop.cache.data.dirprefix.list</name>
         <value>${RUBIX_CACHE_DIR}/data</value>
     </property>
+
+    <!-- Disable internal caching for FileSystem objects -->
+    <property>
+        <name>fs.s3.impl.disable.cache</name>
+        <value>true</value>
+    </property>
+    <property>
+        <name>fs.s3a.impl.disable.cache</name>
+        <value>true</value>
+    </property>
+    <property>
+        <name>fs.s3n.impl.disable.cache</name>
+        <value>true</value>
+    </property>
+    <property>
+        <name>fs.wasb.impl.disable.cache</name>
+        <value>true</value>
+    </property>
 </configuration>
 CLIENT
 ) > ${RUBIX_SITE}

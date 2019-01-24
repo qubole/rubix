@@ -23,6 +23,10 @@ RUBIX_PRESTO_CLIENT_CONFIG="/etc/rubix/presto-config.xml"
         <value>com.qubole.rubix.presto.CachingPrestoS3FileSystem</value>
     </property>
     <property>
+        <name>fs.wasb.impl</name>
+        <value>com.qubole.rubix.presto.CachingPrestoNativeAzureFileSystem</value>
+    </property>
+    <property>
         <name>caching.fs.presto-server-port</name>
         <value>8889</value>
     </property>
