@@ -27,6 +27,11 @@
 
         <dependency>
             <groupId>com.qubole.rubix</groupId>
+            <artifactId>rubix-common</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-core</artifactId>
         </dependency>
 
@@ -78,6 +83,7 @@
                                             <include>com.qubole.rubix:rubix-spi</include>
                                             <include>com.qubole.rubix:rubix-presto</include>
                                             <include>com.qubole.rubix:rubix-core</include>
+                                            <include>com.qubole.rubix:rubix-common</include>
                                         </includes>
                                     </dependency>
                                     <artifact />
@@ -90,7 +96,13 @@
                                             <location>src/main/resources/rpm/init.d/rubix.service</location>
                                         </source>
                                         <source>
-                                            <location>src/main/resources/rpm/scripts/configure.sh</location>
+                                            <location>src/main/resources/rpm/scripts/configure-rubix.sh</location>
+                                        </source>
+                                        <source>
+                                            <location>src/main/resources/rpm/scripts/configure-presto.sh</location>
+                                        </source>
+                                        <source>
+                                            <location>src/main/resources/rpm/scripts/configure-spark.sh</location>
                                         </source>
                                     </sources>
                                 </mapping>
