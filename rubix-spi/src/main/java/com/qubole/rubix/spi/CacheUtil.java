@@ -21,9 +21,11 @@ import com.google.common.hash.Hashing;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -136,6 +138,14 @@ public class CacheUtil
     return absLocation + "/" + getName(remotePath);
   }
 
+  public static String getRemotePath(String localPath, Configuration conf)
+  {
+    String cacheSuffix = CacheConfig.getCacheDataDirSuffix(conf);
+    int index = localPath.indexOf(cacheSuffix);
+    String remotePath = localPath.substring(index + cacheSuffix.length() - 1);
+    return remotePath;
+  }
+
   /**
    * Determine the metadata file path for a given remote path.
    *
@@ -222,9 +232,20 @@ public class CacheUtil
   private static String getDirectory(String remotePath, Configuration conf)
   {
     final String parentPath = getParent(remotePath);
-    final String relLocation = parentPath.contains(":") ? parentPath.substring(parentPath.indexOf(':') + 3) : parentPath;
-    final String absLocation = getLocalDirFor(remotePath, conf) + relLocation;
+    String relLocation = parentPath;
 
+    if (parentPath.contains(":")) {
+      URI parentUri = new Path(parentPath).toUri();
+      StringBuilder sb = new StringBuilder();
+      sb.append(parentUri.getAuthority() != null ? parentUri.getAuthority() : "");
+      sb.append(parentUri.getPath() != null ? parentUri.getPath() : "");
+      relLocation = sb.toString();
+      if (relLocation.startsWith("/")) {
+        relLocation = relLocation.substring(1);
+      }
+    }
+
+    final String absLocation = getLocalDirFor(remotePath, conf) + relLocation;
     createCacheDirectory(absLocation);
 
     return absLocation;
