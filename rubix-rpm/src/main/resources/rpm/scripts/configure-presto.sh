@@ -2,8 +2,6 @@
 
 RUBIX_HOME_DIR=/usr/lib/rubix
 RUBIX_CACHE_DIR=/var/lib/rubix/cache
-PRESTO_HOME_DIR=/usr/lib/presto
-HADOOP_HOME_DIR=/usr/lib/hadoop
 
 # Configure BookKeeper server for PrestoClusterManager
 RUBIX_SITE=/etc/rubix/rubix-site.xml
@@ -34,15 +32,15 @@ RUBIX_PRESTO_CLIENT_CONFIG="/etc/rubix/presto-config.xml"
 CLIENT
 ) > ${RUBIX_PRESTO_CLIENT_CONFIG}
 
-grep --no-group-separator -a2 "yarn.resourcemanager.address" ${HADOOP_HOME_DIR}/etc/hadoop/yarn-site.xml >> ${RUBIX_PRESTO_CLIENT_CONFIG}
+grep --no-group-separator -a2 "yarn.resourcemanager.address" ${HADOOP_HOME}/etc/hadoop/yarn-site.xml >> ${RUBIX_PRESTO_CLIENT_CONFIG}
 echo "</configuration>" >> ${RUBIX_PRESTO_CLIENT_CONFIG}
 
 # Configure Presto Server to include RubiX client configuration as resource
-PRESTO_HIVE_CONFIG=/etc/presto/conf/catalog/hive.properties
+PRESTO_HIVE_CONFIG=${PRESTO_HOME}/etc/catalog/hive.properties
 HIVE_RESOURCES="hive\.config\.resources"
 sed -i "/^${HIVE_RESOURCES}/ s|$|,${RUBIX_PRESTO_CLIENT_CONFIG}|" ${PRESTO_HIVE_CONFIG}
 
 # Copy RubiX JARs to Presto plugin directory
-cp -a ${RUBIX_HOME_DIR}/lib/* ${PRESTO_HOME_DIR}/plugin/hive-hadoop2/
+cp -a ${RUBIX_HOME_DIR}/lib/* ${PRESTO_HOME}/plugin/hive-hadoop2/
 
 restart presto-server

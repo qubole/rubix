@@ -4,7 +4,7 @@ RUBIX_HOME_DIR=/usr/lib/rubix
 RUBIX_CACHE_DIR=/var/lib/rubix/cache
 RUBIX_MOUNT_DIR=/mnt/rubix
 
-cp -a ${RUBIX_HOME_DIR}/lib/* /usr/lib/hadoop/lib/
+cp -a ${RUBIX_HOME_DIR}/lib/* ${HADOOP_HOME}/share/hadoop/tools/lib
 
 # Create & link cache directories
 mkdir -p ${RUBIX_MOUNT_DIR}
@@ -51,5 +51,5 @@ RUBIX_SITE="/etc/rubix/rubix-site.xml"
 CLIENT
 ) > ${RUBIX_SITE}
 
-MASTER_HOSTNAME=$(grep --no-group-separator -a2 "yarn.resourcemanager.hostname" /usr/lib/hadoop/etc/hadoop/yarn-site.xml | sed  "s/yarn.resourcemanager.hostname/master.hostname/g" | tr -d ' ' | tr -d '\n')
+MASTER_HOSTNAME=$(grep --no-group-separator -a2 "yarn.resourcemanager.hostname" ${HADOOP_HOME}/etc/hadoop/yarn-site.xml | sed  "s/yarn.resourcemanager.hostname/master.hostname/g" | tr -d ' ' | tr -d '\n')
 sed -i '$i'${MASTER_HOSTNAME}'' ${RUBIX_SITE}
