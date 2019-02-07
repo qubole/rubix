@@ -201,6 +201,7 @@ public class BookKeeperMetrics implements AutoCloseable
     CACHE_HIT_RATE_GAUGE("rubix.bookkeeper.gauge.cache_hit_rate"),
     CACHE_MISS_RATE_GAUGE("rubix.bookkeeper.gauge.cache_miss_rate"),
     CACHE_SIZE_GAUGE("rubix.bookkeeper.gauge.cache_size_mb"),
+    CACHE_AVAILABLE_SIZE("rubix.bookkeeper.gauge.available_cache_size_mb"),
     TOTAL_REQUEST_COUNT("rubix.bookkeeper.count.total_request"),
     CACHE_REQUEST_COUNT("rubix.bookkeeper.count.cache_request"),
     NONLOCAL_REQUEST_COUNT("rubix.bookkeeper.count.nonlocal_request"),
@@ -210,7 +211,6 @@ public class BookKeeperMetrics implements AutoCloseable
     ASYNC_QUEUE_SIZE_GAUGE("rubix.bookkeeper.gauge.async_queue_size"),
     ASYNC_DOWNLOADED_MB_COUNT("rubix.bookkeeper.count.async_downloaded_mb"),
     ASYNC_DOWNLOAD_TIME_COUNT("rubix.bookkeeper.count.async_download_time");
-
 
     private final String metricName;
 

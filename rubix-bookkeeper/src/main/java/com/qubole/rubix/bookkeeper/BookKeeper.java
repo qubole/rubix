@@ -93,6 +93,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   static long splitSize;
   private final RemoteFetchProcessor fetchProcessor;
   private final Ticker ticker;
+  private static long totalAvailableForCache;
 
   // Registry for gathering & storing necessary metrics
   protected final MetricRegistry metrics;
@@ -195,6 +196,14 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       public Integer getValue()
       {
         return DiskUtils.getCacheSizeMB(conf);
+      }
+    });
+    metrics.register(BookKeeperMetrics.CacheMetric.CACHE_AVAILABLE_SIZE.getMetricName(), new Gauge<Long>()
+    {
+      @Override
+      public Long getValue()
+      {
+        return totalAvailableForCache;
       }
     });
   }
@@ -423,6 +432,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_INVALIDATION_COUNT.getMetricName(), (double) cacheInvalidationCount.getCount());
     cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_EXPIRY_COUNT.getMetricName(), (double) cacheExpiryCount.getCount());
     cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_SIZE_GAUGE.getMetricName(), (double) DiskUtils.getCacheSizeMB(conf));
+    cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_AVAILABLE_SIZE.getMetricName(), (double) totalAvailableForCache);
     return cacheMetrics.build();
   }
 
@@ -576,7 +586,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     final long total = (long) (0.95 * avail);
 
     final long cacheMaxSize = CacheConfig.getCacheDataFullnessMaxSize(conf);
-    final long maxWeight = (cacheMaxSize == 0)
+    totalAvailableForCache = (cacheMaxSize == 0)
         ? (long) (total * 1.0 * CacheConfig.getCacheDataFullnessPercentage(conf) / 100.0)
         : cacheMaxSize;
 
@@ -592,7 +602,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
             return md.getWeight(conf);
           }
         })
-        .maximumWeight(maxWeight)
+        .maximumWeight(totalAvailableForCache)
         .expireAfterWrite(CacheConfig.getCacheDataExpirationAfterWrite(conf), TimeUnit.MILLISECONDS)
         .removalListener(new CacheRemovalListener())
         .build();
