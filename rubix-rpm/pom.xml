@@ -68,7 +68,7 @@
                             </execution>
                         </executions>
                         <configuration>
-                            <name>qubole-rubix-noname</name>
+                            <name>qubole-rubix</name>
                             <copyright>2015, Qubole</copyright>
                             <architecture>x86_64</architecture>
                             <group>Applications/Databases</group>
