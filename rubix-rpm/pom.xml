@@ -107,6 +107,10 @@
                                     </sources>
                                 </mapping>
                                 <mapping>
+                                    <directory>${app.home}/etc</directory>
+                                    <filemode>755</filemode>
+                                </mapping>
+                                <mapping>
                                     <directory>/etc/rubix/</directory>
                                     <configuration>true</configuration>
                                     <sources>
