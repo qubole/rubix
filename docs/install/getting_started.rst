@@ -117,3 +117,20 @@ Once you have properly configured your data engine, RubiX will now cache data wh
 
 You can verify this in the logs for your data engine, which should show usage of a Caching...S3FileSystem,
 as well as in the BookKeeper logs at ``/var/log/rubix/bks.log``.
+
+Troubleshooting
+===============
+
+ClassNotFoundException: org.apache.hadoop.fs.s3native.NativeS3FileSystem
+------------------------------------------------------------------------
+Hadoop requires the ``hadoop-aws`` JAR in order to access files stored on S3. If Hadoop is unable to find
+the ``NativeS3FileSystem`` class, make sure this JAR is included in your Hadoop classpath. This JAR should
+be provided as part of your Hadoop installation.
+
+Check `Hadoop's S3 documentation <https://wiki.apache.org/hadoop/AmazonS3>`_ for more details.
+
+ClassNotFoundException: org.jets3t.service.ServiceException
+-----------------------------------------------------------
+Spark requires JetS3t in order to execute applications using S3. If Spark is unable to find this class,
+make sure ``jets3t-x.x.x.jar`` is included in ``spark.driver.extraClassPath`` and ``spark.executor.extraClassPath``
+in your Spark configuration. This JAR should be provided as part of your Hadoop installation.

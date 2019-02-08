@@ -68,7 +68,7 @@
                             </execution>
                         </executions>
                         <configuration>
-                            <name>qubole-rubix</name>
+                            <name>qubole-rubix-noname</name>
                             <copyright>2015, Qubole</copyright>
                             <architecture>x86_64</architecture>
                             <group>Applications/Databases</group>
@@ -121,14 +121,10 @@
                                 <mapping>
                                     <directory>/var/log/rubix/</directory>
                                     <filemode>755</filemode>
-                                    <username>ec2-user</username>
-                                    <groupname>ec2-user</groupname>
                                 </mapping>
                                 <mapping>
                                     <directory>/var/run/rubix/</directory>
                                     <filemode>755</filemode>
-                                    <username>ec2-user</username>
-                                    <groupname>ec2-user</groupname>
                                 </mapping>
                             </mappings>
                             <postinstallScriptlet>
