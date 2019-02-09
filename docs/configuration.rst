@@ -41,8 +41,7 @@ Cache
 |                                          | The time file metadata will be cached before it will be fetched again  |                   |                  |               |
 |                                          | from the remote filesystem.                                            |                   |                  |               |
 +------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+
-| rubix.parallel.warmup                    | When true, cache will be warmed up asynchronously while not affecting  | boolean           | false            | C & S         |
-|                                          | the current job.                                                       |                   |                  |               |
+| rubix.parallel.warmup                    | When true, cache will be warmed up asynchronously.                     | boolean           | false            | C & S         |
 +------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+
 
 Network
