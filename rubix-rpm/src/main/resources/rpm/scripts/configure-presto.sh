@@ -36,6 +36,12 @@ grep --no-group-separator -a2 "yarn.resourcemanager.address" ${HADOOP_HOME}/etc/
 echo "</configuration>" >> ${RUBIX_PRESTO_CLIENT_CONFIG}
 
 # Configure Presto Server to include RubiX client configuration as resource
+if [[ -d ${PRESTO_HOME}/etc ]]; then
+    # Symlink directory from expected location
+    set +e
+    ln -s /etc/presto/conf/catalog ${PRESTO_HOME}/etc
+    set -e
+fi
 PRESTO_HIVE_CONFIG=${PRESTO_HOME}/etc/catalog/hive.properties
 HIVE_RESOURCES="hive\.config\.resources"
 sed -i "/^${HIVE_RESOURCES}/ s|$|,${RUBIX_PRESTO_CLIENT_CONFIG}|" ${PRESTO_HIVE_CONFIG}
