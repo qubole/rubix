@@ -4,18 +4,12 @@ d=`dirname $0`
 d=`cd "$d"; pwd`
 
 RUN_DIR=/var/run/rubix
-PID_FILE=${RUN_DIR}/bks.pid
-PID_FILE_2=${RUN_DIR}/lts.pid
-MONITRC_FILE=/etc/monit.d/bks.cfg
-LOG4J_FILE=/etc/rubix/log4j.properties
-LOG4J_FILE_LDS=/etc/rubix/log4j_lds.properties
+PID_FILE_BKS=${RUN_DIR}/bks.pid
+PID_FILE_LDS=${RUN_DIR}/lts.pid
 
 LOG_DIR=/var/logs/rubix
-LOG_FILE=${LOG_DIR}/bks.log
-LOG_FILE_LDS=${LOG_DIR}/lds.log
-
-PRESTO_HOME=/usr/lib/presto
-HADOOP_HOME=/usr/lib/hadoop
+LOG4J_PROPS_BKS=/etc/rubix/log4j.properties
+LOG4J_PROPS_LDS=/etc/rubix/log4j_lds.properties
 
 #Getting the flag for Master or Worker
 is_master="$2" 
@@ -31,7 +25,10 @@ usage() {
 }
 
 start() {
-  export HADOOP_OPTS="-Dlog4j.configuration=file://${LOG4J_FILE}"
+  export HADOOP_CLASSPATH="$HADOOP_CLASSPATH:/usr/lib/rubix/lib/*"
+
+  # Start BookKeeper Server
+  export HADOOP_OPTS="-Dlog4j.configuration=file://${LOG4J_PROPS_BKS}"
   ulimit -n 100000
   if [[ $is_master == True ]]; then
         nohup $HADOOP_HOME/bin/hadoop jar /usr/lib/rubix/lib/rubix-bookkeeper-*.jar com.qubole.rubix.bookkeeper.BookKeeperServer \
@@ -41,23 +38,25 @@ start() {
         nohup $HADOOP_HOME/bin/hadoop jar /usr/lib/rubix/lib/rubix-bookkeeper-*.jar com.qubole.rubix.bookkeeper.BookKeeperServer \
             -conf /etc/rubix/rubix-site.xml &
   fi
-  PID=$!
-  echo $PID > ${PID_FILE}
+  PID_BKS=$!
+  echo ${PID_BKS} > ${PID_FILE_BKS}
+  echo "Starting Cache BookKeeper server with pid ${PID_BKS}"
 
-  echo "Starting Cache BookKeeper server with pid `cat ${PID_FILE}`"
-  export HADOOP_OPTS="-Dlog4j.configuration=file://${LOG4J_FILE_LDS}"
-  nohup $HADOOP_HOME/bin/hadoop jar /usr/lib/rubix/lib/rubix-bookkeeper-*.jar com.qubole.rubix.bookkeeper.LocalDataTransferServer &
-  PIDL=$!
-  echo $PIDL > ${PID_FILE_2}
-  echo "Starting Local Transfer server with pid $PIDL"
+  # Start LocalDataTransferServer
+  export HADOOP_OPTS="-Dlog4j.configuration=file://${LOG4J_PROPS_LDS}"
+  nohup $HADOOP_HOME/bin/hadoop jar /usr/lib/rubix/lib/rubix-bookkeeper-*.jar com.qubole.rubix.bookkeeper.LocalDataTransferServer \
+            -conf /etc/rubix/rubix-site.xml &
+  PID_LDS=$!
+  echo ${PID_LDS} > ${PID_FILE_LDS}
+  echo "Starting Local Transfer server with pid ${PID_LDS}"
   sleep 1
 }
 
 stop() {
-  kill -9 `cat ${PID_FILE}`
-  kill -9 `cat ${PID_FILE_2}`
-  rm -f ${PID_FILE}
-  rm -f ${PID_FILE_2}
+  kill -9 `cat ${PID_FILE_BKS}`
+  kill -9 `cat ${PID_FILE_LDS}`
+  rm -f ${PID_FILE_BKS}
+  rm -f ${PID_FILE_LDS}
 }
 
 restart() {

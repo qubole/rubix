@@ -107,6 +107,10 @@
                                     </sources>
                                 </mapping>
                                 <mapping>
+                                    <directory>${app.home}/etc</directory>
+                                    <filemode>755</filemode>
+                                </mapping>
+                                <mapping>
                                     <directory>/etc/rubix/</directory>
                                     <configuration>true</configuration>
                                     <sources>
@@ -121,14 +125,10 @@
                                 <mapping>
                                     <directory>/var/log/rubix/</directory>
                                     <filemode>755</filemode>
-                                    <username>ec2-user</username>
-                                    <groupname>ec2-user</groupname>
                                 </mapping>
                                 <mapping>
                                     <directory>/var/run/rubix/</directory>
                                     <filemode>755</filemode>
-                                    <username>ec2-user</username>
-                                    <groupname>ec2-user</groupname>
                                 </mapping>
                             </mappings>
                             <postinstallScriptlet>
