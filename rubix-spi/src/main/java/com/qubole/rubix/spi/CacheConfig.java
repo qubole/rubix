@@ -34,7 +34,6 @@ public class CacheConfig
   private static final String KEY_CACHE_ENABLED = "hadoop.cache.data.enabled";
   private static final String KEY_CACHE_METADATA_FILE_SUFFIX = "rubix.cache.metadata.file.suffix";
   private static final String KEY_SERVER_CONNECT_TIMEOUT = "rubix.server.connect.timeout";
-  private static final String KEY_DATA_CACHE_EXPIRY = "hadoop.cache.data.expiration";
   private static final String KEY_DATA_CACHE_EXPIRY_AFTER_WRITE = "hadoop.cache.data.expiration.after-write";
   private static final String KEY_DATA_CACHE_DIR_PREFIX = "hadoop.cache.data.dirprefix.list";
   private static final String KEY_DATA_CACHE_DIR_SUFFIX = "hadoop.cache.data.dirsuffix";
@@ -48,7 +47,6 @@ public class CacheConfig
   private static final String KEY_DATA_CACHE_TABLE_MIN_COLS = "hadoop.cache.data.table.columns.min";
   private static final String KEY_DATA_CACHE_TABLE_WHITELIST = "hadoop.cache.data.table.whitelist";
   private static final String KEY_DATA_MAX_HEADER_SIZE = "hadoop.cache.data.transfer.header.size";
-  private static final String KEY_DISK_MONITOR_INTERVAL = "hadoop.cache.disk.monitor.interval";
   private static final String KEY_DISK_READ_BUFFER_SIZE = "hadoop.cache.data.disk.read.buffer.size";
   private static final String KEY_HEARTBEAT_INITIAL_DELAY = "rubix.monitor.heartbeat.initial.delay";
   private static final String KEY_HEARTBEAT_INTERVAL = "rubix.monitor.heartbeat.interval";
@@ -89,13 +87,12 @@ public class CacheConfig
 
   // default values
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
-  private static final int DEFAULT_CLIENT_TIMEOUT = 1000; // ms
+  private static final int DEFAULT_SERVER_CONNECT_TIMEOUT = 1000; // ms
   private static final String DEFAULT_CACHE_METADATA_FILE_SUFFIX = "_mdfile";
   private static final String DEFAULT_DATA_CACHE_DIR_PREFIX = "/media/ephemeral";
   private static final String DEFAULT_DATA_CACHE_DIR_SUFFIX = "/fcache/";
   private static final boolean DEFAULT_DATA_CACHE_ENABLED = true;
   private static final int DEFAULT_DATA_CACHE_EXPIRY_AFTER_WRITE = Integer.MAX_VALUE; // ms; infinite by default
-  private static final int DEFAULT_DATA_CACHE_EXPIRY = Integer.MAX_VALUE;
   private static final int DEFAULT_DATA_CACHE_FULLNESS = 80; // percent
   private static final String DEFAULT_DATA_CACHE_LOCATION_BLACKLIST = ""; // regex
   private static final String DEFAULT_DATA_CACHE_LOCATION_WHITELIST = ".*"; // regex
@@ -106,7 +103,6 @@ public class CacheConfig
   private static final int DEFAULT_DATA_CACHE_TABLE_COLS_CHOSEN = 0;
   // Keeping this low to workaround the Guava Cache static weighing limitation
   private static final String DEFAULT_DATA_CACHE_TABLE_WHITELIST = ".*"; // regex
-  private static final int DEFAULT_DISK_MONITOR_INTERVAL = 10000; // ms
   private static final int DEFAULT_DISK_READ_BUFFER_SIZE = 1024;
   private static final int DEFAULT_HEARTBEAT_INITIAL_DELAY = 30000; // ms
   private static final int DEFAULT_HEARTBEAT_INTERVAL = 30000; // ms
@@ -133,7 +129,7 @@ public class CacheConfig
   private static final int DEFAULT_SERVER_PORT = 8899;
   private static final int DEFAULT_SERVICE_RETRY_INTERVAL = 30000; // ms
   private static final int DEFAULT_SERVICE_MAX_RETRIES = 100;
-  private static final int DEFAULT_SOCKET_READ_TIMEOUT = 5000; // ms
+  private static final int DEFAULT_CLIENT_READ_TIMEOUT = 5000; // ms
   private static final int DEFAULT_HEALTH_STATUS_EXPIRY = 60000; // ms
   private static final boolean DEFAULT_VALIDATION_ENABLED = false;
   private static final int DEFAULT_CACHING_VALIDATION_INTERVAL = 1800000; // ms (30min)
@@ -163,11 +159,6 @@ public class CacheConfig
   public static String getCacheDataDirSuffix(Configuration conf)
   {
     return conf.get(KEY_DATA_CACHE_DIR_SUFFIX, DEFAULT_DATA_CACHE_DIR_SUFFIX);
-  }
-
-  public static int getCacheDataExpiration(Configuration conf)
-  {
-    return conf.getInt(KEY_DATA_CACHE_EXPIRY, DEFAULT_DATA_CACHE_EXPIRY);
   }
 
   public static int getCacheDataExpirationAfterWrite(Configuration conf)
@@ -237,12 +228,7 @@ public class CacheConfig
 
   public static int getClientTimeout(Configuration conf)
   {
-    return conf.getInt(KEY_SERVER_CONNECT_TIMEOUT, DEFAULT_CLIENT_TIMEOUT);
-  }
-
-  public static int getDiskMonitorInterval(Configuration conf)
-  {
-    return conf.getInt(KEY_DISK_MONITOR_INTERVAL, DEFAULT_DISK_MONITOR_INTERVAL);
+    return conf.getInt(KEY_SERVER_CONNECT_TIMEOUT, DEFAULT_SERVER_CONNECT_TIMEOUT);
   }
 
   public static int getDiskReadBufferSize(Configuration conf)
@@ -327,7 +313,7 @@ public class CacheConfig
 
   public static int getSocketReadTimeOut(Configuration conf)
   {
-    return conf.getInt(KEY_CLIENT_READ_TIMEOUT, DEFAULT_SOCKET_READ_TIMEOUT);
+    return conf.getInt(KEY_CLIENT_READ_TIMEOUT, DEFAULT_CLIENT_READ_TIMEOUT);
   }
 
   public static String getStatsDMetricsHost(Configuration conf)
