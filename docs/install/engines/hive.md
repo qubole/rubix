@@ -1,4 +1,4 @@
-# Apache Hive
+# Hive
 
 ## Add RubiX jars to Hadoop ClassPath
 
