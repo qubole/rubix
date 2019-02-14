@@ -226,7 +226,7 @@ public class CacheConfig
     return conf.getInt(KEY_FILE_VALIDATION_INTERVAL, DEFAULT_FILE_VALIDATION_INTERVAL);
   }
 
-  public static int getClientTimeout(Configuration conf)
+  public static int getServerConnectTimeout(Configuration conf)
   {
     return conf.getInt(KEY_SERVER_CONNECT_TIMEOUT, DEFAULT_SERVER_CONNECT_TIMEOUT);
   }
@@ -311,7 +311,7 @@ public class CacheConfig
     return conf.getInt(KEY_SERVICE_RETRY_INTERVAL, DEFAULT_SERVICE_RETRY_INTERVAL);
   }
 
-  public static int getSocketReadTimeOut(Configuration conf)
+  public static int getClientReadTimeOut(Configuration conf)
   {
     return conf.getInt(KEY_CLIENT_READ_TIMEOUT, DEFAULT_CLIENT_READ_TIMEOUT);
   }
