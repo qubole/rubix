@@ -81,6 +81,7 @@ public class CachingInputStream extends FSInputStream
   private byte[] affixBuffer;
   private int diskReadBufferSize;
   private int bufferSize;
+  private BookKeeperFactory bookKeeperFactory;
 
   public CachingInputStream(FileSystem parentFs, Path backendPath, Configuration conf,
                             CachingFileSystemStats statsMbean, ClusterType clusterType,
@@ -88,6 +89,7 @@ public class CachingInputStream extends FSInputStream
                             int bufferSize, FileSystem.Statistics statistics) throws IOException
   {
     initialize(backendPath.toString(), conf, bookKeeperFactory);
+    this.bookKeeperFactory = bookKeeperFactory;
     this.remotePath = backendPath.toString();
     this.remoteFileSystem = remoteFileSystem;
 
@@ -229,7 +231,7 @@ public class CachingInputStream extends FSInputStream
       throws IOException, InterruptedException, ExecutionException
 
   {
-    log.debug(String.format("Got Read, currentPos: %d currentBlock: %d bufferOffset: %d length: %d", nextReadPosition, nextReadBlock, offset, length));
+    log.info(String.format("Got Read, currentPos: %d currentBlock: %d bufferOffset: %d length: %d", nextReadPosition, nextReadBlock, offset, length));
 
     if (nextReadPosition >= fileSize) {
       log.debug("Already at eof, returning");
@@ -372,7 +374,8 @@ public class CachingInputStream extends FSInputStream
             directReadBuffer = bufferPool.getBuffer(diskReadBufferSize);
           }
           if (cachedReadRequestChain == null) {
-            cachedReadRequestChain = new CachedReadRequestChain(localPath, directReadBuffer, statistics);
+            cachedReadRequestChain = new CachedReadRequestChain(remoteFileSystem, remotePath, directReadBuffer,
+                    statistics, conf, bookKeeperFactory);
           }
           cachedReadRequestChain.addReadRequest(readRequest);
         }

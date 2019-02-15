@@ -15,9 +15,9 @@ package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
 import com.qubole.rubix.bookkeeper.utils.DiskUtils;
-import com.qubole.rubix.common.TestUtil;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
-import com.qubole.rubix.core.utils.DataGen;
+import com.qubole.rubix.common.utils.DataGen;
+import com.qubole.rubix.common.utils.TestUtil;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.ClusterType;

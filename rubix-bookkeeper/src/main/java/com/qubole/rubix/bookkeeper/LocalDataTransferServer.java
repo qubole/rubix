@@ -34,8 +34,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.thrift.shaded.TException;
 
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -246,28 +248,11 @@ public class LocalDataTransferServer extends Configured implements Tool
           }
         }
 
-        String filename = CacheUtil.getLocalPath(remotePath, conf);
-        FileChannel fc = new FileInputStream(filename).getChannel();
-        int maxCount = CacheConfig.getLocalTransferBufferSize(conf);
-        int lengthRemaining = readLength;
-        long position = offset;
-        if (fc.size() < readLength) {
-          fc.close();
-          throw new Exception("File size is smaller than requested read");
-        }
+        int nread = readDataFromCachedFile(remotePath, offset, readLength);
 
-        int nread = 0;
-        while (nread < readLength) {
-          if (maxCount > lengthRemaining) {
-            maxCount = lengthRemaining;
-          }
-          nread += fc.transferTo(position + nread, maxCount, localDataTransferClient);
-          lengthRemaining = readLength - nread;
-        }
         if (bookKeeperClient != null) {
           bookKeeperClient.close();
         }
-        fc.close();
         log.debug(String.format("Done reading %d from %s at offset %d and length %d for client %s", nread, remotePath, offset, readLength, localDataTransferClient.getRemoteAddress()));
       }
       catch (Exception e) {
@@ -287,6 +272,48 @@ public class LocalDataTransferServer extends Configured implements Tool
           log.info("Error in Local Data Transfer Server: ", e);
         }
       }
+    }
+
+    private int readDataFromCachedFile(String remotePath, long offset, int readLength) throws IOException, TException
+    {
+      FileChannel fc = null;
+      int nread = 0;
+      String filename = CacheUtil.getLocalPath(remotePath, conf);
+
+      try {
+        fc = new FileInputStream(filename).getChannel();
+        int maxCount = CacheConfig.getLocalTransferBufferSize(conf);
+        int lengthRemaining = readLength;
+        long position = offset;
+
+        // This situation should not arise as ActualReadLength cannot be greater than the file size.
+        // This seems to case of corrupted file. We should invalidate the file in this case.
+        if (fc.size() < readLength) {
+          log.error(String.format("File size is smaller than requested read. Invalidating corrupted cached file %s", remotePath));
+          bookKeeperClient.invalidateFileMetadata(remotePath);
+          throw new IOException("File size is smaller than requested read");
+        }
+
+        while (nread < readLength) {
+          if (maxCount > lengthRemaining) {
+            maxCount = lengthRemaining;
+          }
+          nread += fc.transferTo(position + nread, maxCount, localDataTransferClient);
+          lengthRemaining = readLength - nread;
+        }
+      }
+      catch (FileNotFoundException ex) {
+        log.error(String.format("Could not create file channel for %s. Invalidating missing remote file %s", filename, remotePath));
+        bookKeeperClient.invalidateFileMetadata(remotePath);
+        throw new IOException(String.format("File not found %s ", filename));
+      }
+      finally {
+        if (fc != null) {
+          fc.close();
+        }
+      }
+
+      return nread;
     }
   }
 }

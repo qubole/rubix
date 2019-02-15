@@ -16,7 +16,7 @@ import com.google.common.base.Joiner;
 import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import com.qubole.rubix.bookkeeper.BookKeeper;
-import com.qubole.rubix.core.utils.DataGen;
+import com.qubole.rubix.common.utils.DataGen;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.thrift.BlockLocation;
@@ -146,7 +146,7 @@ public class CachingValidator extends AbstractScheduledService
     }
     finally {
       // Clean cache after validation
-      BookKeeper.invalidateFileMetadata(VALIDATOR_TEST_FILE_PATH_WITH_SCHEME);
+      bookKeeper.invalidateFileMetadata(VALIDATOR_TEST_FILE_PATH_WITH_SCHEME);
       tempFile.delete();
     }
   }

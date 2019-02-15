@@ -16,6 +16,7 @@ Using the same plugins, RubiX can also be extended to be used with any cloud sto
 
    intro.md
    install/index.rst
+   configuration.rst
    metrics.rst
    contrib/index.rst
 
