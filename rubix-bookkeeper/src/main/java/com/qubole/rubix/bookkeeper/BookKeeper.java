@@ -108,6 +108,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     this.conf = conf;
     this.metrics = metrics;
     this.ticker = ticker;
+    this.splitSize = CacheConfig.getCacheFileSplitSize(conf);
     initializeMetrics();
     initializeCache(conf, ticker);
     cleanupOldCacheFiles(conf);
@@ -203,7 +204,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         end = fileLength;
       }
       String key = remotePath + i + end;
-      String hostName = getClusterNodeHostName(key, request.getClusterType());
+      String hostName = getClusterNodeHostName(key);
       blockSplits.put(blockNumber, hostName);
       blockNumber++;
     }
@@ -236,7 +237,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
 
         long split = (blockNum * blockSize) / splitSize;
         if (blockSplits.get(split) == null) {
-          blockLocations.add(new BlockLocation(Location.UNKNOWN, blockSplits.get(split)));
+          blockLocations.add(new BlockLocation(Location.UNKNOWN, ""));
         }
         else if (!blockSplits.get(split).equalsIgnoreCase(nodeName)) {
           blockLocations.add(new BlockLocation(Location.NON_LOCAL, blockSplits.get(split)));

@@ -235,6 +235,10 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
   @Override
   public BlockLocation[] getFileBlockLocations(FileStatus file, long start, long len) throws IOException
   {
+    if (cacheSkipped) {
+      return fs.getFileBlockLocations(file, start, len);
+    }
+
     Configuration conf = getConf();
     long splitSize = CacheConfig.getCacheFileSplitSize(conf);
 
@@ -260,7 +264,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
               end = file.getLen();
             }
             String key = file.getPath().toString() + i + end;
-            String hostName = client.getClusterNodeHostName(key, clusterType.ordinal());
+            String hostName = client.getClusterNodeHostName(key);
 
             if (hostName == null) {
               return fs.getFileBlockLocations(file, start, len);
@@ -269,7 +273,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
             String[] name = new String[]{hostName};
             String[] host = new String[]{hostName};
             blockLocations[blockNumber++] = new BlockLocation(name, host, i, end - i);
-            log.info(String.format("BlockLocation %s %d %d %s ", file.getPath().toString(), i, end - i, host[0]));
+            log.debug(String.format("BlockLocation %s %d %d %s ", file.getPath().toString(), i, end - i, host[0]));
           }
 
           return blockLocations;

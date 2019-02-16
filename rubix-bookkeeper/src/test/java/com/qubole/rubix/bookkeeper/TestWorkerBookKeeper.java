@@ -20,7 +20,6 @@ import com.qubole.rubix.bookkeeper.exception.WorkerInitializationException;
 import com.qubole.rubix.common.utils.TestUtil;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
-import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.thrift.HeartbeatStatus;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -176,7 +175,7 @@ public class TestWorkerBookKeeper
     doThrow(TTransportException.class).when(spyBookKeeperFactory).createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any());
     FakeTicker ticker = new FakeTicker();
     final WorkerBookKeeper workerBookKeeper = new MockWorkerBookKeeper(conf, new MetricRegistry(), ticker, spyBookKeeperFactory);
-    String hostName = workerBookKeeper.getClusterNodeHostName("remotePath", ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+    String hostName = workerBookKeeper.getClusterNodeHostName("remotePath");
     assertNull(hostName, "HostName should be null as Cooordinator is down");
   }
 

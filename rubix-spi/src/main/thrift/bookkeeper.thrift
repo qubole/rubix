@@ -51,7 +51,7 @@ service BookKeeperService
 
     list<string> getNodeHostNames()
 
-    string getClusterNodeHostName(1:string remotePath, 2:int clusterType)
+    string getClusterNodeHostName(1:string remotePath)
 
     bool isBookKeeperAlive()
 

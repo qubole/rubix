@@ -143,10 +143,18 @@ public class CoordinatorBookKeeper extends BookKeeper
   }
 
   @Override
-  public String getClusterNodeHostName(String remotePath, int clusterType)
+  public String getClusterNodeHostName(String remotePath)
   {
+    log.info("Fetching Node Host Name for path : " + remotePath);
+    //TODO REMOVE THIS AFTER EXPERIMENT
+    if (remotePath == null) {
+      log.error("Logging remotepath is null");
+      for (StackTraceElement ste : Thread.currentThread().getStackTrace()) {
+        log.error(ste);
+      }
+      return null;
+    }
     String hostName = clusterManager.getNodeHostName(remotePath);
-
     return hostName;
   }
 
