@@ -16,6 +16,8 @@ import com.google.common.base.Charsets;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
 import java.util.List;
@@ -30,6 +32,7 @@ import java.util.List;
  */
 public abstract class ClusterManager
 {
+  private static Log log = LogFactory.getLog(ClusterManager.class.getName());
   private long splitSize = 256 * 1024 * 1024; // 256MB
 
   private int nodeRefreshTime;

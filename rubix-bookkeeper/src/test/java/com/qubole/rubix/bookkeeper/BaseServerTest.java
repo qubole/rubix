@@ -13,19 +13,18 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
-import com.qubole.rubix.bookkeeper.exception.ClusterManagerInitilizationException;
-import com.qubole.rubix.bookkeeper.exception.WorkerInitializationException;
+import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.common.metrics.MetricsReporter;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
-import com.qubole.rubix.spi.RetryingBookkeeperClient;
+//import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.thrift.shaded.transport.TSocket;
-import org.apache.thrift.shaded.transport.TTransportException;
-import org.mockito.ArgumentMatchers;
+//import org.apache.thrift.shaded.transport.TSocket;
+//import org.apache.thrift.shaded.transport.TTransportException;
+//import org.mockito.ArgumentMatchers;
 
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
@@ -34,9 +33,10 @@ import java.lang.management.ManagementFactory;
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+//import static org.mockito.ArgumentMatchers.anyString;
+//import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+//import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
@@ -455,7 +455,7 @@ public class BaseServerTest
    * @param metrics The current metrics registry.
    * @throws InterruptedException if the current thread is interrupted while sleeping.
    */
-  private void startServer(ServerType serverType, Configuration conf, MetricRegistry metrics) throws InterruptedException
+  protected void startServer(ServerType serverType, Configuration conf, MetricRegistry metrics) throws InterruptedException
   {
     switch (serverType) {
       case COORDINATOR_BOOKKEEPER:
@@ -565,8 +565,8 @@ public class BaseServerTest
         // Initializing this BookKeeper here allows it to register the live worker count metric for testing.
         new CoordinatorBookKeeper(conf, metrics);
       }
-      catch (ClusterManagerInitilizationException e) {
-        log.error("Cache directories could not be created", e);
+      catch (BookKeeperInitializationException e) {
+        log.error("Could not instantiate Coordinator", e);
         return;
       }
       registerMetrics(conf);
@@ -594,23 +594,24 @@ public class BaseServerTest
 
     public void startServer(Configuration conf, MetricRegistry metricRegistry)
     {
-      final BookKeeperFactory bookKeeperFactory = mock(BookKeeperFactory.class);
+      final BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
+      /*final BookKeeperFactory spyBookKeeperFactory = spy(bookKeeperFactory);
       try {
-        when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
+        when(spyBookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
             new RetryingBookkeeperClient(
                 new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf)),
                 CacheConfig.getMaxRetries(conf)));
       }
       catch (TTransportException e) {
         log.error("Error starting MockWorkerBookKeeperServer for test", e);
-      }
+      }*/
 
       metrics = metricRegistry;
       try {
         new WorkerBookKeeper(conf, metrics, bookKeeperFactory);
       }
-      catch (WorkerInitializationException e) {
-        log.error("Cache directories could not be created", e);
+      catch (BookKeeperInitializationException e) {
+        log.error("Could not instantiate Worker", e);
         return;
       }
       registerMetrics(conf);

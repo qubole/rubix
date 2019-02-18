@@ -16,7 +16,7 @@ package com.qubole.rubix.bookkeeper;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.testing.FakeTicker;
-import com.qubole.rubix.bookkeeper.exception.ClusterManagerInitilizationException;
+import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.common.utils.TestUtil;
 import com.qubole.rubix.spi.CacheConfig;
@@ -85,7 +85,7 @@ public class TestCoordinatorBookKeeper
    * Verify that the health metrics are correctly registered.
    */
   @Test
-  public void testWorkerHealthMetrics() throws ClusterManagerInitilizationException
+  public void testWorkerHealthMetrics() throws BookKeeperInitializationException
   {
     CacheConfig.setValidationEnabled(conf, true);
 
@@ -106,7 +106,7 @@ public class TestCoordinatorBookKeeper
    * Verify that the worker health status properly expires.
    */
   @Test
-  public void testWorkerHealthMetrics_healthStatusExpired() throws ClusterManagerInitilizationException
+  public void testWorkerHealthMetrics_healthStatusExpired() throws BookKeeperInitializationException
   {
     final FakeTicker ticker = new FakeTicker();
     final int healthStatusExpiry = 1000; // ms
@@ -143,7 +143,7 @@ public class TestCoordinatorBookKeeper
    * Verify that the validated workers metrics are correctly registered when validation is enabled.
    */
   @Test
-  public void testWorkerHealthMetrics_validatedWorkersMetricsRegisteredWhenValidationEnabled() throws ClusterManagerInitilizationException
+  public void testWorkerHealthMetrics_validatedWorkersMetricsRegisteredWhenValidationEnabled() throws BookKeeperInitializationException
   {
     CacheConfig.setValidationEnabled(conf, true);
     final CoordinatorBookKeeper coordinatorBookKeeper = new CoordinatorBookKeeper(conf, metrics);
@@ -156,7 +156,7 @@ public class TestCoordinatorBookKeeper
    * Verify that the validated workers metrics are not registered when validation is disabled.
    */
   @Test
-  public void testWorkerHealthMetrics_validatedWorkersMetricsNotRegisteredWhenValidationDisabled() throws ClusterManagerInitilizationException
+  public void testWorkerHealthMetrics_validatedWorkersMetricsNotRegisteredWhenValidationDisabled() throws BookKeeperInitializationException
   {
     CacheConfig.setValidationEnabled(conf, false);
     final CoordinatorBookKeeper coordinatorBookKeeper = new CoordinatorBookKeeper(conf, metrics);
@@ -197,7 +197,7 @@ public class TestCoordinatorBookKeeper
             }
           });
     }
-    catch (ClusterManagerInitilizationException ex) {
+    catch (CoordinatorInitializationException ex) {
       fail("Not able to initialize Cluster Manager");
     }
 

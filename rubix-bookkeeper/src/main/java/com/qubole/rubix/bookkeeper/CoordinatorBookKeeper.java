@@ -19,8 +19,10 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ticker;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import com.qubole.rubix.bookkeeper.exception.ClusterManagerInitilizationException;
+import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
+import com.qubole.rubix.bookkeeper.exception.CoordinatorInitializationException;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
+import com.qubole.rubix.common.utils.ClusterUtil;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
@@ -31,6 +33,8 @@ import org.apache.hadoop.conf.Configuration;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -52,13 +56,13 @@ public class CoordinatorBookKeeper extends BookKeeper
   private ClusterManager clusterManager;
   int clusterType;
 
-  public CoordinatorBookKeeper(Configuration conf, MetricRegistry metrics) throws ClusterManagerInitilizationException
+  public CoordinatorBookKeeper(Configuration conf, MetricRegistry metrics) throws BookKeeperInitializationException
   {
     this(conf, metrics, Ticker.systemTicker());
   }
 
   @VisibleForTesting
-  public CoordinatorBookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker) throws ClusterManagerInitilizationException
+  public CoordinatorBookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker) throws BookKeeperInitializationException
   {
     super(conf, metrics, ticker);
     this.isValidationEnabled = CacheConfig.isValidationEnabled(conf);
@@ -67,11 +71,17 @@ public class CoordinatorBookKeeper extends BookKeeper
     this.fileValidatedWorkerCache = createHealthCache(conf, ticker);
     this.clusterType = CacheConfig.getClusterType(conf);
 
+    initializeCoordinator();
+  }
+
+  private void initializeCoordinator() throws CoordinatorInitializationException
+  {
     initializeClusterManager();
+    setCurrentNodeName();
     registerMetrics();
   }
 
-  void initializeClusterManager() throws ClusterManagerInitilizationException
+  void initializeClusterManager() throws CoordinatorInitializationException
   {
     if (this.clusterManager == null) {
       ClusterManager manager = null;
@@ -82,16 +92,25 @@ public class CoordinatorBookKeeper extends BookKeeper
           manager.initialize(conf);
           this.clusterManager = manager;
           splitSize = clusterManager.getSplitSize();
-
-          //setCurrentNodeNameAndIndex(manager, clusterType);
         }
       }
     }
   }
 
+  private void setCurrentNodeName()
+  {
+    try {
+      nodeName = InetAddress.getLocalHost().getHostAddress();
+    }
+    catch (UnknownHostException e) {
+      log.warn("Could not get Host Address", e);
+      nodeName = ClusterUtil.getMasterHostname(conf);
+    }
+  }
+
   @VisibleForTesting
   public ClusterManager getClusterManagerInstance(ClusterType clusterType, Configuration config)
-          throws ClusterManagerInitilizationException
+          throws CoordinatorInitializationException
   {
     String clusterManagerClassName = CacheConfig.getClusterManagerClass(conf, clusterType);
     log.info("Initializing cluster manager : " + clusterManagerClassName + " for cluster type " + clusterType);
@@ -107,7 +126,7 @@ public class CoordinatorBookKeeper extends BookKeeper
       String errorMessage = String.format("Not able to initialize ClusterManager class : {0} ",
               clusterManagerClassName);
       log.error(errorMessage);
-      throw new ClusterManagerInitilizationException(errorMessage, ex);
+      throw new CoordinatorInitializationException(errorMessage, ex);
     }
 
     return manager;
@@ -146,14 +165,6 @@ public class CoordinatorBookKeeper extends BookKeeper
   public String getClusterNodeHostName(String remotePath)
   {
     log.info("Fetching Node Host Name for path : " + remotePath);
-    //TODO REMOVE THIS AFTER EXPERIMENT
-    if (remotePath == null) {
-      log.error("Logging remotepath is null");
-      for (StackTraceElement ste : Thread.currentThread().getStackTrace()) {
-        log.error(ste);
-      }
-      return null;
-    }
     String hostName = clusterManager.getNodeHostName(remotePath);
     return hostName;
   }

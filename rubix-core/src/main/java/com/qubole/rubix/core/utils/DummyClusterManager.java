@@ -32,7 +32,7 @@ public class DummyClusterManager extends ClusterManager
     List<String> list = new ArrayList<String>();
     String hostName = "";
     try {
-      hostName = InetAddress.getLocalHost().getCanonicalHostName();
+      hostName = InetAddress.getLocalHost().getHostAddress();
     }
     catch (UnknownHostException e) {
       hostName = "localhost";

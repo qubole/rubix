@@ -139,9 +139,12 @@ public class TestBookKeeperServer extends BaseServerTest
    * Verify that validation metrics are registered when configured to.
    */
   @Test
-  public void testValidationMetricsEnabled() throws InterruptedException, MalformedObjectNameException
+  public void testValidationMetricsEnabled() throws Exception
   {
+    CacheConfig.setMetricsReporters(conf, "");
+    startServer(ServerType.COORDINATOR_BOOKKEEPER, conf, new MetricRegistry());
     super.testValidationMetrics(ServerType.MOCK_WORKER_BOOKKEEPER, conf, metrics, true);
+    stopBookKeeperServer();
   }
 
   /**
@@ -150,7 +153,10 @@ public class TestBookKeeperServer extends BaseServerTest
   @Test
   public void testValidationMetricsNotEnabled() throws InterruptedException, MalformedObjectNameException
   {
+    CacheConfig.setMetricsReporters(conf, "");
+    startServer(ServerType.COORDINATOR_BOOKKEEPER, conf, new MetricRegistry());
     super.testValidationMetrics(ServerType.MOCK_WORKER_BOOKKEEPER, conf, metrics, false);
+    stopBookKeeperServer();
   }
 
   /**

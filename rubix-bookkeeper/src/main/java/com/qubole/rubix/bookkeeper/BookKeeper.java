@@ -26,6 +26,7 @@ import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.cache.Weigher;
 import com.google.common.collect.ImmutableMap;
+import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
 import com.qubole.rubix.bookkeeper.utils.DiskUtils;
 import com.qubole.rubix.bookkeeper.validation.CachingValidator;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
@@ -91,7 +92,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   private Counter cacheRequestCount;
   private Counter nonlocalRequestCount;
 
-  public BookKeeper(Configuration conf, MetricRegistry metrics) throws FileNotFoundException
+  public BookKeeper(Configuration conf, MetricRegistry metrics) throws BookKeeperInitializationException
   {
     this(conf, metrics, Ticker.systemTicker());
   }
@@ -103,15 +104,23 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   }
 
   @VisibleForTesting
-  BookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker)
+  BookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker) throws BookKeeperInitializationException
   {
     this.conf = conf;
     this.metrics = metrics;
     this.ticker = ticker;
     this.splitSize = CacheConfig.getCacheFileSplitSize(conf);
+    cleanupOldCacheFiles(conf);
+
+    try {
+      CacheUtil.createCacheDirectories(conf);
+    }
+    catch (FileNotFoundException ex) {
+      throw new BookKeeperInitializationException(ex.toString(), ex);
+    }
+
     initializeMetrics();
     initializeCache(conf, ticker);
-    cleanupOldCacheFiles(conf);
     fetchProcessor = new RemoteFetchProcessor(this, metrics, conf);
     fetchProcessor.startAsync();
   }

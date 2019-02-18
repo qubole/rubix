@@ -88,32 +88,6 @@ public class RetryingBookkeeperClient extends BookKeeperService.Client implement
     });
   }
 
-  @Override
-  public List<String> getNodeHostNames() throws TException
-  {
-    return retryConnection(new Callable<List<String>>()
-    {
-      @Override
-      public List<String> call() throws Exception
-      {
-        return RetryingBookkeeperClient.super.getNodeHostNames();
-      }
-    });
-  }
-
-  @Override
-  public String getClusterNodeHostName(final String remotePath) throws TException
-  {
-    return retryConnection(new Callable<String>()
-    {
-      @Override
-      public String call() throws Exception
-      {
-        return RetryingBookkeeperClient.super.getClusterNodeHostName(remotePath);
-      }
-    });
-  }
-
   private <V> V retryConnection(Callable<V> callable)
       throws TException
   {

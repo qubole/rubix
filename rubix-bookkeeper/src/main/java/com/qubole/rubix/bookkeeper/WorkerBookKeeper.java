@@ -18,19 +18,19 @@ import com.google.common.base.Ticker;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
 import com.qubole.rubix.bookkeeper.exception.WorkerInitializationException;
 import com.qubole.rubix.common.utils.ClusterUtil;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
-import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import com.qubole.rubix.spi.thrift.HeartbeatStatus;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.shaded.TException;
+import org.apache.thrift.shaded.transport.TTransportException;
 
-import java.io.FileNotFoundException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.List;
@@ -47,43 +47,37 @@ public class WorkerBookKeeper extends BookKeeper
   private HeartbeatService heartbeatService;
   private BookKeeperFactory bookKeeperFactory;
   private RetryingBookkeeperClient coordinatorClient;
+  private ThreadLocal<RetryingBookkeeperClient> threadLocalConnections;
   // The hostname of the master node.
   private String masterHostname;
   private int clusterType;
   String nodeHostName;
   String nodeHostAddress;
 
-  public WorkerBookKeeper(Configuration conf, MetricRegistry metrics) throws WorkerInitializationException
+  public WorkerBookKeeper(Configuration conf, MetricRegistry metrics) throws BookKeeperInitializationException
   {
     this(conf, metrics, Ticker.systemTicker(), new BookKeeperFactory());
   }
 
-  public WorkerBookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker, BookKeeperFactory factory) throws WorkerInitializationException
+  public WorkerBookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker, BookKeeperFactory factory) throws BookKeeperInitializationException
   {
     super(conf, metrics, Ticker.systemTicker());
+    this.bookKeeperFactory = factory;
+    this.masterHostname = ClusterUtil.getMasterHostname(conf);
+    this.clusterType = CacheConfig.getClusterType(conf);
+    this.threadLocalConnections = new ThreadLocal<>();
 
-    try {
-      CacheUtil.createCacheDirectories(conf);
-      this.bookKeeperFactory = factory;
-      this.masterHostname = ClusterUtil.getMasterHostname(conf);
-      this.clusterType = CacheConfig.getClusterType(conf);
-
-      initializeWorker();
-      startHeartbeatService(conf, metrics, factory);
-      initializeFileNodeCache(conf, ticker);
-    }
-    catch (FileNotFoundException ex) {
-      throw new WorkerInitializationException(ex.toString(), ex);
-    }
+    initializeWorker(conf, metrics, ticker, factory);
   }
 
-  private void initializeWorker() throws WorkerInitializationException
+  private void initializeWorker(Configuration conf, MetricRegistry metrics, Ticker ticker, BookKeeperFactory factory) throws WorkerInitializationException
   {
-    initializeCoordinatorClient();
-    setCurrentNodeNameAndIndex();
+    setCurrentNodeName();
+    startHeartbeatService(conf, metrics, factory);
+    initializeFileNodeCache(conf, ticker);
   }
 
-  void setCurrentNodeNameAndIndex() throws WorkerInitializationException
+  void setCurrentNodeName() throws WorkerInitializationException
   {
     try {
       nodeHostName = InetAddress.getLocalHost().getCanonicalHostName();
@@ -122,17 +116,6 @@ public class WorkerBookKeeper extends BookKeeper
     }
   }
 
-  private void initializeCoordinatorClient() throws WorkerInitializationException
-  {
-    if (coordinatorClient == null) {
-      coordinatorClient = initializeClientWithRetry(bookKeeperFactory, conf, masterHostname);
-    }
-
-    if (coordinatorClient == null) {
-      throw new WorkerInitializationException("Not able to open connection to master bookkeeper");
-    }
-  }
-
   private void initializeFileNodeCache(final Configuration conf, final Ticker ticker)
   {
     int expiryPeriod = CacheConfig.getWorkerNodeInfoExpiryPeriod(conf);
@@ -145,13 +128,17 @@ public class WorkerBookKeeper extends BookKeeper
           public String load(String s) throws Exception
           {
             log.info("Fetching host name for " + s);
-            RetryingBookkeeperClient client = bookKeeperFactory.createBookKeeperClient(masterHostname, conf);
+            RetryingBookkeeperClient client = threadLocalConnections.get();
+            if (client == null) {
+              client = bookKeeperFactory.createBookKeeperClient(masterHostname, conf);
+              threadLocalConnections.set(client);
+            }
             return client.getClusterNodeHostName(s);
           }
         });
   }
 
-  public WorkerBookKeeper(Configuration conf, MetricRegistry metrics, BookKeeperFactory factory) throws WorkerInitializationException
+  public WorkerBookKeeper(Configuration conf, MetricRegistry metrics, BookKeeperFactory factory) throws BookKeeperInitializationException
   {
     this(conf, metrics, Ticker.systemTicker(), factory);
   }
@@ -165,7 +152,20 @@ public class WorkerBookKeeper extends BookKeeper
   @Override
   public List<String> getNodeHostNames() throws TException
   {
-    return coordinatorClient.getNodeHostNames();
+    RetryingBookkeeperClient client = threadLocalConnections.get();
+    try {
+      if (client == null) {
+        client = bookKeeperFactory.createBookKeeperClient(masterHostname, conf);
+        threadLocalConnections.set(client);
+      }
+
+      return client.getNodeHostNames();
+    }
+    catch (TTransportException ex) {
+      log.error("Not able to create client to fetch Node Names. Exception: " + ex);
+    }
+
+    return null;
   }
 
   @Override
@@ -175,8 +175,6 @@ public class WorkerBookKeeper extends BookKeeper
       log.info("Size of cache " + fileNodeMapCache.size());
       log.info("Getting host name for path: " + remotePath);
       String hostName = fileNodeMapCache.get(remotePath);
-      //RetryingBookkeeperClient client = bookKeeperFactory.createBookKeeperClient(masterHostname, conf);
-      //String hostName = client.getClusterNodeHostName(remotePath);
       log.info("Got Host name for " + remotePath + " : " + hostName);
       return hostName;
     }

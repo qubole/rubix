@@ -13,7 +13,7 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
-import com.qubole.rubix.bookkeeper.exception.ClusterManagerInitilizationException;
+import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.common.utils.TestUtil;
 import com.qubole.rubix.spi.BookKeeperFactory;
@@ -97,7 +97,7 @@ public class TestHeartbeatService
    * @throws TTransportException if the BookKeeper client cannot be created.
    */
   @Test
-  public void testHeartbeatRetryLogic_noRetriesNeeded() throws TTransportException, ClusterManagerInitilizationException
+  public void testHeartbeatRetryLogic_noRetriesNeeded() throws TTransportException, BookKeeperInitializationException
   {
     final BookKeeperFactory bookKeeperFactory = mock(BookKeeperFactory.class);
     when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
@@ -113,7 +113,7 @@ public class TestHeartbeatService
    * Verify that the heartbeat service correctly makes a connection using a BookKeeper client after a number of retries.
    */
   @Test
-  public void testHeartbeatRetryLogic_connectAfterRetries() throws ClusterManagerInitilizationException
+  public void testHeartbeatRetryLogic_connectAfterRetries() throws BookKeeperInitializationException
   {
     BaseServerTest.stopBookKeeperServer();
     BaseServerTest.startCoordinatorBookKeeperServerWithDelay(conf, new MetricRegistry(), TEST_RETRY_INTERVAL * 2);
@@ -128,7 +128,7 @@ public class TestHeartbeatService
    * @throws TTransportException if the BookKeeper client cannot be created.
    */
   @Test(expectedExceptions = RuntimeException.class)
-  public void testHeartbeatRetryLogic_outOfRetries() throws TTransportException, ClusterManagerInitilizationException
+  public void testHeartbeatRetryLogic_outOfRetries() throws TTransportException, BookKeeperInitializationException
   {
     CacheConfig.setServiceMaxRetries(conf, 5);
     BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
@@ -146,7 +146,7 @@ public class TestHeartbeatService
    * @throws TTransportException if the BookKeeper client cannot be created.
    */
   @Test
-  public void verifyValidationMetricsAreCorrectlyRegistered_validationEnabled() throws ClusterManagerInitilizationException, TTransportException
+  public void verifyValidationMetricsAreCorrectlyRegistered_validationEnabled() throws BookKeeperInitializationException, TTransportException
   {
     CacheConfig.setValidationEnabled(conf, true);
 
@@ -170,7 +170,7 @@ public class TestHeartbeatService
    * @throws TTransportException if the BookKeeper client cannot be created.
    */
   @Test
-  public void verifyValidationMetricsAreCorrectlyRegistered_validationDisabled() throws ClusterManagerInitilizationException, TTransportException
+  public void verifyValidationMetricsAreCorrectlyRegistered_validationDisabled() throws BookKeeperInitializationException, TTransportException
   {
     CacheConfig.setValidationEnabled(conf, false);
 

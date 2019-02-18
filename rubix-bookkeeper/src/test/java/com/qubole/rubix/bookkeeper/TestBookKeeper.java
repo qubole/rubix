@@ -14,7 +14,7 @@ package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.testing.FakeTicker;
-import com.qubole.rubix.bookkeeper.exception.ClusterManagerInitilizationException;
+import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
 import com.qubole.rubix.bookkeeper.utils.DiskUtils;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.common.utils.DataGen;
@@ -65,7 +65,7 @@ public class TestBookKeeper
   private BookKeeper bookKeeper;
 
   @BeforeMethod
-  public void setUp() throws IOException, ClusterManagerInitilizationException
+  public void setUp() throws IOException, BookKeeperInitializationException
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     CacheConfig.setBlockSize(conf, TEST_BLOCK_SIZE);
@@ -97,7 +97,7 @@ public class TestBookKeeper
         " Expected : " + DummyClusterManager.class + " Got : " + manager.getClass());
   }
 
-  @Test(expectedExceptions = ClusterManagerInitilizationException.class)
+  @Test(expectedExceptions = CoordinatorInitializationException.class)
   public void testGetDummyClusterManagerInValidInstance() throws Exception
   {
     ClusterType type = ClusterType.TEST_CLUSTER_MANAGER;
@@ -116,7 +116,7 @@ public class TestBookKeeper
         " Expected : " + Hadoop2ClusterManager.class + " Got : " + manager.getClass());
   }
 
-  @Test(expectedExceptions = ClusterManagerInitilizationException.class)
+  @Test(expectedExceptions = CoordinatorInitializationException.class)
   public void testGetHadoop2ClusterManagerInValidInstance() throws Exception
   {
     ClusterType type = ClusterType.HADOOP2_CLUSTER_MANAGER;
@@ -135,7 +135,7 @@ public class TestBookKeeper
         " Expected : " + PrestoClusterManager.class + " Got : " + manager.getClass());
   }
 
-  @Test(expectedExceptions = ClusterManagerInitilizationException.class)
+  @Test(expectedExceptions = CoordinatorInitializationException.class)
   public void testGetPrestoClusterManagerInValidInstance() throws Exception
   {
     ClusterType type = ClusterType.PRESTO_CLUSTER_MANAGER;
@@ -357,7 +357,7 @@ public class TestBookKeeper
             }
           });
     }
-    catch (ClusterManagerInitilizationException ex) {
+    catch (CoordinatorInitializationException ex) {
       fail("Not able to initialize Cluster Manager");
     }
 
@@ -377,7 +377,7 @@ public class TestBookKeeper
    * @throws IOException if an I/O error occurs when interacting with the cache.
    */
   @Test
-  public void verifyCacheSizeMetricIsReported() throws IOException, TException, ClusterManagerInitilizationException
+  public void verifyCacheSizeMetricIsReported() throws IOException, TException, BookKeeperInitializationException
   {
     final String remotePathWithScheme = "file://" + TEST_REMOTE_PATH;
     final int readOffset = 0;
@@ -404,7 +404,7 @@ public class TestBookKeeper
    * @throws FileNotFoundException when cache directories cannot be created.
    */
   @Test
-  public void verifyCacheEvictionMetricIsReported() throws TException, ClusterManagerInitilizationException
+  public void verifyCacheEvictionMetricIsReported() throws TException, BookKeeperInitializationException
   {
     final FakeTicker ticker = new FakeTicker();
     CacheConfig.setCacheDataExpirationAfterWrite(conf, 1000);
