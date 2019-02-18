@@ -587,16 +587,6 @@ public class BaseServerTest
     public void startServer(Configuration conf, MetricRegistry metricRegistry)
     {
       final BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
-      /*final BookKeeperFactory spyBookKeeperFactory = spy(bookKeeperFactory);
-      try {
-        when(spyBookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
-            new RetryingBookkeeperClient(
-                new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf)),
-                CacheConfig.getMaxRetries(conf)));
-      }
-      catch (TTransportException e) {
-        log.error("Error starting MockWorkerBookKeeperServer for test", e);
-      }*/
 
       metrics = metricRegistry;
       try {

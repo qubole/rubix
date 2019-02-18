@@ -126,7 +126,6 @@ public class WorkerBookKeeper extends BookKeeper
           @Override
           public String load(String s) throws Exception
           {
-            log.info("Fetching host name for " + s);
             RetryingBookkeeperClient client = threadLocalConnections.get();
             if (client == null) {
               client = bookKeeperFactory.createBookKeeperClient(masterHostname, conf);

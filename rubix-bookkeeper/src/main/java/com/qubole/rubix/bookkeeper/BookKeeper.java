@@ -112,17 +112,21 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     this.splitSize = CacheConfig.getCacheFileSplitSize(conf);
     cleanupOldCacheFiles(conf);
 
+    setupCacheDirectory(conf);
+    initializeMetrics();
+    initializeCache(conf, ticker);
+    fetchProcessor = new RemoteFetchProcessor(this, metrics, conf);
+    fetchProcessor.startAsync();
+  }
+
+  private void setupCacheDirectory(Configuration conf) throws BookKeeperInitializationException
+  {
     try {
       CacheUtil.createCacheDirectories(conf);
     }
     catch (FileNotFoundException ex) {
       throw new BookKeeperInitializationException(ex.toString(), ex);
     }
-
-    initializeMetrics();
-    initializeCache(conf, ticker);
-    fetchProcessor = new RemoteFetchProcessor(this, metrics, conf);
-    fetchProcessor.startAsync();
   }
 
   RemoteFetchProcessor getRemoteFetchProcessorInstance()
