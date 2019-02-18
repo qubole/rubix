@@ -15,12 +15,14 @@ package com.qubole.rubix.bookkeeper;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.testing.FakeTicker;
 import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
+import com.qubole.rubix.bookkeeper.exception.CoordinatorInitializationException;
 import com.qubole.rubix.bookkeeper.utils.DiskUtils;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.common.utils.DataGen;
 import com.qubole.rubix.common.utils.TestUtil;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
+import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.FileInfo;
@@ -30,16 +32,22 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.thrift.shaded.TException;
+import org.mockito.Mockito;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 
 /**
  * Created by Abhishek on 6/15/18.
@@ -74,7 +82,6 @@ public class TestBookKeeper
 
     metrics = new MetricRegistry();
     bookKeeper = new CoordinatorBookKeeper(conf, metrics);
-    //bookKeeper.clusterManager = null;
   }
 
   @AfterMethod
@@ -312,25 +319,26 @@ public class TestBookKeeper
    *
    * @throws TException when file metadata cannot be fetched or refreshed.
    */
-  /*
   @Test
-  public void verifyNonlocalRequestMetricIsReported() throws TException
+  public void verifyNonlocalRequestMetricIsReported() throws TException, BookKeeperInitializationException
   {
     final long totalRequests = TEST_END_BLOCK - TEST_START_BLOCK;
+
+    metrics = new MetricRegistry();
+    CoordinatorBookKeeper coordinatorBookKeeper = new MockCoordinatorBookkeeper(conf, metrics);
+    final CoordinatorBookKeeper spyBookKeeper = Mockito.spy(coordinatorBookKeeper);
 
     assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.NONLOCAL_REQUEST_COUNT.getMetricName()).getCount(), 0);
     assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.CACHE_REQUEST_COUNT.getMetricName()).getCount(), 0);
 
-    BookKeeper spyBookKeeper = Mockito.spy(bookKeeper);
-
     try {
-      Mockito.when(spyBookKeeper.getClusterManagerInstance(ClusterType.TEST_CLUSTER_MANAGER_MULTINODE, conf)).thenReturn(
+      Mockito.when(spyBookKeeper.getClusterManagerInstance(ClusterType.TEST_CLUSTER_MANAGER, conf)).thenReturn(
           new ClusterManager()
           {
             @Override
             public List<String> getNodes()
             {
-              List<String> list = new ArrayList<String>();
+              List<String> list = new ArrayList<>();
               String hostName = "";
               try {
                 hostName = InetAddress.getLocalHost().getCanonicalHostName();
@@ -339,8 +347,8 @@ public class TestBookKeeper
                 hostName = "localhost";
               }
 
-              list.add(hostName);
-              list.add(hostName + "_copy");
+              list.add(hostName + "_copy1");
+              list.add(hostName + "_copy2");
               return list;
             }
 
@@ -369,7 +377,35 @@ public class TestBookKeeper
     assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.NONLOCAL_REQUEST_COUNT.getMetricName()).getCount(), totalRequests);
     assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.CACHE_REQUEST_COUNT.getMetricName()).getCount(), 0);
   }
-  */
+
+  private class MockCoordinatorBookkeeper extends CoordinatorBookKeeper
+  {
+    public MockCoordinatorBookkeeper(Configuration conf, MetricRegistry metrics) throws BookKeeperInitializationException
+    {
+      super(conf, metrics);
+    }
+
+    @Override
+    protected ClusterManager getClusterManager()
+    {
+      try {
+        initializeClusterManager();
+      }
+      catch (CoordinatorInitializationException ex) {
+      }
+
+      return this.clusterManager;
+    }
+
+    @Override
+    protected void initializeClusterManager() throws CoordinatorInitializationException
+    {
+      ClusterManager manager = getClusterManagerInstance(ClusterType.TEST_CLUSTER_MANAGER, conf);
+      manager.initialize(conf);
+      this.clusterManager = manager;
+      splitSize = clusterManager.getSplitSize();
+    }
+  }
 
   /**
    * Verify that the metric representing the current cache size is correctly registered & reports expected values.
@@ -401,7 +437,7 @@ public class TestBookKeeper
    * Verify that the metric representing total cache evictions is correctly registered & incremented.
    *
    * @throws TException when file metadata cannot be fetched or refreshed.
-   * @throws FileNotFoundException when cache directories cannot be created.
+   * @throws BookKeeperInitializationException when cache directories cannot be created.
    */
   @Test
   public void verifyCacheEvictionMetricIsReported() throws TException, BookKeeperInitializationException

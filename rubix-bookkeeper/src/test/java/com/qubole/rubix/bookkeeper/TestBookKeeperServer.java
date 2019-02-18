@@ -139,7 +139,7 @@ public class TestBookKeeperServer extends BaseServerTest
    * Verify that validation metrics are registered when configured to.
    */
   @Test
-  public void testValidationMetricsEnabled() throws Exception
+  public void testValidationMetricsEnabled() throws InterruptedException, MalformedObjectNameException
   {
     CacheConfig.setMetricsReporters(conf, "");
     startServer(ServerType.COORDINATOR_BOOKKEEPER, conf, new MetricRegistry());
@@ -389,31 +389,6 @@ public class TestBookKeeperServer extends BaseServerTest
 
     return true;
   }
-//
-//  /**
-//   * Class to mock the behaviour of {@link BookKeeperServer} for testing registering & reporting metrics.
-//   */
-//  private static class MockBookKeeperServer extends BookKeeperServer
-//  {
-//    public void startServer(Configuration conf, MetricRegistry metricRegistry)
-//    {
-//      try {
-//        new CoordinatorBookKeeper(conf, metricRegistry);
-//      }
-//      catch (FileNotFoundException e) {
-//        log.error("Cache directories could not be created", e);
-//        return;
-//      }
-//
-//      metrics = metricRegistry;
-//      registerMetrics(conf);
-//    }
-//
-//    public void stopServer()
-//    {
-//      removeMetrics();
-//    }
-//  }
 
   /**
    * Thread to capture UDP requests from StatsDReporter intended for StatsD.

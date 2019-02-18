@@ -49,9 +49,9 @@ service BookKeeperService
 
     FileInfo getFileInfo(1:string remotePath)
 
-    list<string> getNodeHostNames()
+    list<string> getClusterNodes()
 
-    string getClusterNodeHostName(1:string remotePath)
+    string getOwnerNodeForPath(1:string remotePathKey)
 
     bool isBookKeeperAlive()
 

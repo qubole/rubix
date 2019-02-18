@@ -13,7 +13,6 @@
 package com.qubole.rubix.bookkeeper.utils;
 
 import com.google.common.io.ByteStreams;
-//import io.airlift.log.Logger;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

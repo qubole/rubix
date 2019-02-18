@@ -51,10 +51,10 @@ public abstract class ClusterManager
     nodeRefreshTime = CacheConfig.getClusterNodeRefreshTime(conf);
   }
 
-  public String getNodeHostName(String remotePath)
+  public String getNodeHostName(String remotePathKey)
   {
     List<String> nodes = getNodes();
-    int nodeIndex = getNodeIndex(nodes.size(), remotePath);
+    int nodeIndex = getNodeIndex(nodes.size(), remotePathKey);
     return nodes.get(nodeIndex);
   }
 

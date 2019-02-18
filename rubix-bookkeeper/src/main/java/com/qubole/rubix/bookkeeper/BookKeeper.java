@@ -213,7 +213,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         end = fileLength;
       }
       String key = remotePath + i + end;
-      String hostName = getClusterNodeHostName(key);
+      String hostName = getOwnerNodeForPath(key);
       blockSplits.put(blockNumber, hostName);
       blockNumber++;
     }

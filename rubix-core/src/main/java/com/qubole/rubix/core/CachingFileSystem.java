@@ -264,7 +264,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
               end = file.getLen();
             }
             String key = file.getPath().toString() + i + end;
-            String hostName = client.getClusterNodeHostName(key);
+            String hostName = client.getOwnerNodeForPath(key);
 
             if (hostName == null) {
               return fs.getFileBlockLocations(file, start, len);

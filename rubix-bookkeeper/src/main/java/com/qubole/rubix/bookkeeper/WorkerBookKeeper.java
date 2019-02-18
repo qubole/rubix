@@ -72,8 +72,8 @@ public class WorkerBookKeeper extends BookKeeper
 
   private void initializeWorker(Configuration conf, MetricRegistry metrics, Ticker ticker, BookKeeperFactory factory) throws WorkerInitializationException
   {
-    setCurrentNodeName();
     startHeartbeatService(conf, metrics, factory);
+    setCurrentNodeName();
     initializeFileNodeCache(conf, ticker);
   }
 
@@ -90,7 +90,7 @@ public class WorkerBookKeeper extends BookKeeper
     }
 
     try {
-      List<String> nodes = getNodeHostNames();
+      List<String> nodes = getClusterNodes();
       if (clusterType == TEST_CLUSTER_MANAGER.ordinal() || clusterType == TEST_CLUSTER_MANAGER_MULTINODE.ordinal()) {
         nodeName = nodes.get(0);
         return;
@@ -119,7 +119,6 @@ public class WorkerBookKeeper extends BookKeeper
   private void initializeFileNodeCache(final Configuration conf, final Ticker ticker)
   {
     int expiryPeriod = CacheConfig.getWorkerNodeInfoExpiryPeriod(conf);
-    //ExecutorService executor = Executors.newSingleThreadExecutor();
     fileNodeMapCache = CacheBuilder.newBuilder()
         .ticker(ticker)
         .refreshAfterWrite(expiryPeriod, TimeUnit.SECONDS)
@@ -133,7 +132,7 @@ public class WorkerBookKeeper extends BookKeeper
               client = bookKeeperFactory.createBookKeeperClient(masterHostname, conf);
               threadLocalConnections.set(client);
             }
-            return client.getClusterNodeHostName(s);
+            return client.getOwnerNodeForPath(s);
           }
         });
   }
@@ -150,16 +149,16 @@ public class WorkerBookKeeper extends BookKeeper
   }
 
   @Override
-  public List<String> getNodeHostNames() throws TException
+  public List<String> getClusterNodes() throws TException
   {
     RetryingBookkeeperClient client = threadLocalConnections.get();
     try {
       if (client == null) {
-        client = bookKeeperFactory.createBookKeeperClient(masterHostname, conf);
+        client = createBookKeeperClientWithRetry(bookKeeperFactory, masterHostname, conf);
         threadLocalConnections.set(client);
       }
 
-      return client.getNodeHostNames();
+      return client.getClusterNodes();
     }
     catch (TTransportException ex) {
       log.error("Not able to create client to fetch Node Names. Exception: " + ex);
@@ -169,13 +168,10 @@ public class WorkerBookKeeper extends BookKeeper
   }
 
   @Override
-  public String getClusterNodeHostName(String remotePath)
+  public String getOwnerNodeForPath(String remotePathKey)
   {
     try {
-      log.info("Size of cache " + fileNodeMapCache.size());
-      log.info("Getting host name for path: " + remotePath);
-      String hostName = fileNodeMapCache.get(remotePath);
-      log.info("Got Host name for " + remotePath + " : " + hostName);
+      String hostName = fileNodeMapCache.get(remotePathKey);
       return hostName;
     }
     catch (ExecutionException e) {
@@ -200,8 +196,8 @@ public class WorkerBookKeeper extends BookKeeper
    * @param bookKeeperFactory   The factory to use for creating a BookKeeper client.
    * @return The client used for communication with the master node.
    */
-  private static RetryingBookkeeperClient initializeClientWithRetry(BookKeeperFactory bookKeeperFactory, Configuration conf,
-                                                             String hostName)
+  private static RetryingBookkeeperClient createBookKeeperClientWithRetry(BookKeeperFactory bookKeeperFactory,
+                                                                          String hostName, Configuration conf)
   {
     final int retryInterval = CacheConfig.getServiceRetryInterval(conf);
     final int maxRetries = CacheConfig.getServiceMaxRetries(conf);

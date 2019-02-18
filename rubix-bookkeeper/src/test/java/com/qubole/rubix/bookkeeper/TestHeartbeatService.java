@@ -130,7 +130,7 @@ public class TestHeartbeatService
   @Test(expectedExceptions = RuntimeException.class)
   public void testHeartbeatRetryLogic_outOfRetries() throws TTransportException, BookKeeperInitializationException
   {
-    CacheConfig.setServiceMaxRetries(conf, 5);
+    CacheConfig.setServiceMaxRetries(conf, 3);
     BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
     final BookKeeperFactory spyBookKeeperFactory = spy(bookKeeperFactory);
 

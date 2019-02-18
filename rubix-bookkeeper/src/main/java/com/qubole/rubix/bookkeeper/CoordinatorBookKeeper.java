@@ -53,7 +53,7 @@ public class CoordinatorBookKeeper extends BookKeeper
 
   private final boolean isValidationEnabled;
   private static Integer lock = 1;
-  private ClusterManager clusterManager;
+  protected ClusterManager clusterManager;
   int clusterType;
 
   public CoordinatorBookKeeper(Configuration conf, MetricRegistry metrics) throws BookKeeperInitializationException
@@ -81,7 +81,8 @@ public class CoordinatorBookKeeper extends BookKeeper
     registerMetrics();
   }
 
-  void initializeClusterManager() throws CoordinatorInitializationException
+  @VisibleForTesting
+  protected void initializeClusterManager() throws CoordinatorInitializationException
   {
     if (this.clusterManager == null) {
       ClusterManager manager = null;
@@ -97,6 +98,11 @@ public class CoordinatorBookKeeper extends BookKeeper
     }
   }
 
+  protected ClusterManager getClusterManager()
+  {
+    return this.clusterManager;
+  }
+
   private void setCurrentNodeName()
   {
     try {
@@ -109,7 +115,7 @@ public class CoordinatorBookKeeper extends BookKeeper
   }
 
   @VisibleForTesting
-  public ClusterManager getClusterManagerInstance(ClusterType clusterType, Configuration config)
+  protected ClusterManager getClusterManagerInstance(ClusterType clusterType, Configuration config)
           throws CoordinatorInitializationException
   {
     String clusterManagerClassName = CacheConfig.getClusterManagerClass(conf, clusterType);
@@ -156,16 +162,15 @@ public class CoordinatorBookKeeper extends BookKeeper
   }
 
   @Override
-  public List<String> getNodeHostNames()
+  public List<String> getClusterNodes()
   {
-    return clusterManager.getNodes();
+    return getClusterManager().getNodes();
   }
 
   @Override
-  public String getClusterNodeHostName(String remotePath)
+  public String getOwnerNodeForPath(String remotePathKey)
   {
-    log.info("Fetching Node Host Name for path : " + remotePath);
-    String hostName = clusterManager.getNodeHostName(remotePath);
+    String hostName = getClusterManager().getNodeHostName(remotePathKey);
     return hostName;
   }
 

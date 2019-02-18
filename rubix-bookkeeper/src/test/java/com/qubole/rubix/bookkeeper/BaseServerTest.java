@@ -18,13 +18,9 @@ import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.common.metrics.MetricsReporter;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
-//import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-//import org.apache.thrift.shaded.transport.TSocket;
-//import org.apache.thrift.shaded.transport.TTransportException;
-//import org.mockito.ArgumentMatchers;
 
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
@@ -33,10 +29,6 @@ import java.lang.management.ManagementFactory;
 import java.util.HashSet;
 import java.util.Set;
 
-//import static org.mockito.ArgumentMatchers.anyString;
-//import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-//import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 

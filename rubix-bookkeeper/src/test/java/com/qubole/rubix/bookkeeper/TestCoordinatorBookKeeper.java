@@ -17,13 +17,17 @@ import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.testing.FakeTicker;
 import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
+import com.qubole.rubix.bookkeeper.exception.CoordinatorInitializationException;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.common.utils.TestUtil;
 import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.ClusterManager;
+import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.thrift.HeartbeatStatus;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.mockito.Mockito;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
@@ -31,11 +35,15 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
+import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 
 public class TestCoordinatorBookKeeper
 {
@@ -165,11 +173,10 @@ public class TestCoordinatorBookKeeper
     assertNull(metrics.getGauges().get(BookKeeperMetrics.HealthMetric.FILE_VALIDATED_WORKER_GAUGE.getMetricName()), "File-validated workers metric should not be registered!");
   }
 
-  /*
   @Test
-  public void testGetNodeHostNames() throws FileNotFoundException
+  public void testGetNodeHostNames() throws BookKeeperInitializationException
   {
-    CoordinatorBookKeeper coordinator = Mockito.spy(new CoordinatorBookKeeper(conf, metrics));
+    CoordinatorBookKeeper coordinator = Mockito.spy(new MockCoordinatorBookkeeper(conf, metrics));
     try {
       Mockito.when(coordinator.getClusterManagerInstance(ClusterType.TEST_CLUSTER_MANAGER, conf)).thenReturn(
           new ClusterManager()
@@ -177,7 +184,7 @@ public class TestCoordinatorBookKeeper
             @Override
             public List<String> getNodes()
             {
-              List<String> nodes = new ArrayList<String>();
+              List<String> nodes = new ArrayList<>();
               nodes.add("node1");
               nodes.add("node2");
 
@@ -201,10 +208,38 @@ public class TestCoordinatorBookKeeper
       fail("Not able to initialize Cluster Manager");
     }
 
-    List<String> hostNames = coordinator.getNodeHostNames(ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+    List<String> hostNames = coordinator.getClusterNodes();
     log.debug("HostNames : " + hostNames);
     assertTrue(hostNames.size() == 2, "Number of hosts does not match");
     assertTrue(hostNames.get(0).equals("node1") && hostNames.get(1).equals("node2"), "HostNames don't match");
   }
-  */
+
+  private class MockCoordinatorBookkeeper extends CoordinatorBookKeeper
+  {
+    public MockCoordinatorBookkeeper(Configuration conf, MetricRegistry metrics) throws BookKeeperInitializationException
+    {
+      super(conf, metrics);
+    }
+
+    @Override
+    protected ClusterManager getClusterManager()
+    {
+      try {
+        initializeClusterManager();
+      }
+      catch (CoordinatorInitializationException ex) {
+      }
+
+      return this.clusterManager;
+    }
+
+    @Override
+    protected void initializeClusterManager() throws CoordinatorInitializationException
+    {
+      ClusterManager manager = getClusterManagerInstance(ClusterType.TEST_CLUSTER_MANAGER, conf);
+      manager.initialize(conf);
+      this.clusterManager = manager;
+      splitSize = clusterManager.getSplitSize();
+    }
+  }
 }
