@@ -92,7 +92,6 @@ public class CoordinatorBookKeeper extends BookKeeper
           manager = getClusterManagerInstance(ClusterType.findByValue(clusterType), conf);
           manager.initialize(conf);
           this.clusterManager = manager;
-          splitSize = clusterManager.getSplitSize();
         }
       }
     }

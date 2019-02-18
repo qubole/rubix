@@ -403,7 +403,6 @@ public class TestBookKeeper
       ClusterManager manager = getClusterManagerInstance(ClusterType.TEST_CLUSTER_MANAGER, conf);
       manager.initialize(conf);
       this.clusterManager = manager;
-      splitSize = clusterManager.getSplitSize();
     }
   }
 

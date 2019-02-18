@@ -37,8 +37,6 @@ public abstract class ClusterManager
 
   private int nodeRefreshTime;
 
-  public static String splitSizeConf = "caching.fs.split-size";
-
   public ClusterType getClusterType()
   {
     return null;
@@ -47,7 +45,6 @@ public abstract class ClusterManager
   public void initialize(Configuration conf)
 
   {
-    splitSize = conf.getLong(splitSizeConf, splitSize);
     nodeRefreshTime = CacheConfig.getClusterNodeRefreshTime(conf);
   }
 
@@ -72,12 +69,6 @@ public abstract class ClusterManager
     }
 
     return finalNodeIndex;
-  }
-
-  // This is the size in which the file will be logically divided into splits
-  public long getSplitSize()
-  {
-    return splitSize;
   }
 
   public int getNodeRefreshTime()
