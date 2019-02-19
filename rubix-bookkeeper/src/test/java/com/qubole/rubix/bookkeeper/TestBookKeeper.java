@@ -92,66 +92,6 @@ public class TestBookKeeper
     conf.clear();
   }
 
-  /*
-
-  @Test
-  public void testGetDummyClusterManagerValidInstance() throws Exception
-  {
-    ClusterType type = ClusterType.TEST_CLUSTER_MANAGER;
-    ClusterManager manager = bookKeeper.getClusterManagerInstance(type, conf);
-
-    assertTrue(manager instanceof DummyClusterManager, " Didn't initialize the correct cluster manager class." +
-        " Expected : " + DummyClusterManager.class + " Got : " + manager.getClass());
-  }
-
-  @Test(expectedExceptions = CoordinatorInitializationException.class)
-  public void testGetDummyClusterManagerInValidInstance() throws Exception
-  {
-    ClusterType type = ClusterType.TEST_CLUSTER_MANAGER;
-    CacheConfig.setDummyClusterManager(conf, TEST_DNE_CLUSTER_MANAGER);
-
-    ClusterManager manager = bookKeeper.getClusterManagerInstance(type, conf);
-  }
-
-  @Test
-  public void testGetHadoop2ClusterManagerValidInstance() throws Exception
-  {
-    ClusterType type = ClusterType.HADOOP2_CLUSTER_MANAGER;
-    ClusterManager manager = bookKeeper.getClusterManagerInstance(type, conf);
-
-    assertTrue(manager instanceof Hadoop2ClusterManager, " Didn't initialize the correct cluster manager class." +
-        " Expected : " + Hadoop2ClusterManager.class + " Got : " + manager.getClass());
-  }
-
-  @Test(expectedExceptions = CoordinatorInitializationException.class)
-  public void testGetHadoop2ClusterManagerInValidInstance() throws Exception
-  {
-    ClusterType type = ClusterType.HADOOP2_CLUSTER_MANAGER;
-    CacheConfig.setHadoopClusterManager(conf, TEST_DNE_CLUSTER_MANAGER);
-
-    ClusterManager manager = bookKeeper.getClusterManagerInstance(type, conf);
-  }
-
-  @Test
-  public void testGetPrestoClusterManagerValidInstance() throws Exception
-  {
-    ClusterType type = ClusterType.PRESTO_CLUSTER_MANAGER;
-    ClusterManager manager = bookKeeper.getClusterManagerInstance(type, conf);
-
-    assertTrue(manager instanceof PrestoClusterManager, " Didn't initialize the correct cluster manager class." +
-        " Expected : " + PrestoClusterManager.class + " Got : " + manager.getClass());
-  }
-
-  @Test(expectedExceptions = CoordinatorInitializationException.class)
-  public void testGetPrestoClusterManagerInValidInstance() throws Exception
-  {
-    ClusterType type = ClusterType.PRESTO_CLUSTER_MANAGER;
-    CacheConfig.setPrestoClusterManager(conf, TEST_DNE_CLUSTER_MANAGER);
-
-    ClusterManager manager = bookKeeper.getClusterManagerInstance(type, conf);
-  }
-  */
-
   @Test
   public void testGetFileInfoWithInvalidationEnabled() throws Exception
   {

@@ -128,7 +128,7 @@ public class CoordinatorBookKeeper extends BookKeeper
     }
     catch (ClassNotFoundException | NoSuchMethodException | InstantiationException |
             IllegalAccessException | InvocationTargetException ex) {
-      String errorMessage = String.format("Not able to initialize ClusterManager class : {0} ",
+      String errorMessage = String.format("Not able to initialize ClusterManager class : %s ",
               clusterManagerClassName);
       log.error(errorMessage);
       throw new CoordinatorInitializationException(errorMessage, ex);
