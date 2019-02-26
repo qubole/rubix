@@ -52,24 +52,61 @@ Generate test files
     \   Append To List       ${testFileList}    ${testFile}
     [Return]        @{testFileList}
 
-Download test file data to cache
-    [Arguments]     ${fileName}  ${startBlock}  ${endBlock}  ${fileLength}  ${lastModified}  ${clusterType}
-    ${didRead} =    Download data to cache
-    ...             file://${fileName}
+Make read request
+    [Arguments]     ${file}
     ...             ${startBlock}
     ...             ${endBlock}
     ...             ${fileLength}
     ...             ${lastModified}
     ...             ${clusterType}
-    Should be true  ${didRead}
-
-Read test file data
-    [Arguments]     ${fileName}  ${startBlock}  ${endBlock}
-    ${didRead} =    Read data
-    ...             ${fileName}
+    ${request} =    Create test client read request
+    ...             file://${file}
     ...             ${startBlock}
     ...             ${endBlock}
+    ...             ${fileLength}
+    ...             ${lastModified}
+    ...             ${clusterType}
+    [Return]        ${request}
+
+Make read requests
+    [Arguments]         ${startBlock}
+    ...                 ${endBlock}
+    ...                 ${fileLength}
+    ...                 ${lastModified}
+    ...                 ${clusterType}
+    ...                 @{files}
+    @{requests} =       Create List
+    Log         Size of incoming files is ${files}
+    :FOR    ${file}     IN      @{files}
+    \   ${request} =    Create test client read request
+    ...                 file://${file}
+    ...                 ${startBlock}
+    ...                 ${endBlock}
+    ...                 ${fileLength}
+    ...                 ${lastModified}
+    ...                 ${clusterType}
+    \   Append To List  ${requests}    ${request}
+    [Return]            @{requests}
+
+Download test file data to cache
+    [Arguments]     ${readRequest}
+    ${didRead} =    Download data to cache    ${readRequest}
     Should be true  ${didRead}
+
+Multi download test file data to cache
+    [Arguments]         ${numThreads}   ${readRequests}
+    ${didReadAll} =     Multi download data to cache    ${numThreads}   ${readRequests}
+    Should be true      ${didReadAll}
+
+Read test file data
+    [Arguments]     ${readRequest}
+    ${didRead} =    Read data   ${readRequest}
+    Should be true  ${didRead}
+
+Multi read test file data
+    [Arguments]       ${numThreads}   ${readRequests}
+    ${didReadAll} =   Multi read data     ${numThreads}   ${readRequests}
+    Should be true    ${didReadAll}
 
 ## Verification ##
 

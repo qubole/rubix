@@ -22,12 +22,15 @@ ${START_BLOCK}      0
 ${END_BLOCK}        1048576
 ${CLUSTER_TYPE}     3   # TEST_CLUSTER_MANAGER
 
+${NUM_CONCURRENT_THREADS}   3
+
 ${NUM_TEST_FILES}           5
 ${NUM_EXPECTED_EVICTIONS}   3
 
 *** Test Cases ***
 Test cache eviction when data downloaded
-    [Documentation]     Using the BKS Thrift API, verify that files are properly evicted once the cache reaches its maximum size.
+    [Documentation]     Using the BKS Thrift API, verify that
+    ...                 files are properly evicted once the cache reaches its maximum size.
     [Tags]              eviction
     [Setup]             Cache test setup
     ...                 rubix.cluster.on-master=true
@@ -39,13 +42,46 @@ Test cache eviction when data downloaded
 
     @{testFiles} =      Generate test files   ${NUM_TEST_FILES}   ${FILE_LENGTH}
     :FOR    ${file}     IN      @{testFiles}
-    \    Download test file data to cache    ${file}     ${START_BLOCK}   ${END_BLOCK}   ${FILE_LENGTH}   ${LAST_MODIFIED}   ${CLUSTER_TYPE}
+    \    ${readRequest} =   Make read request
+    ...                     ${file}
+    ...                     ${START_BLOCK}
+    ...                     ${END_BLOCK}
+    ...                     ${FILE_LENGTH}
+    ...                     ${LAST_MODIFIED}
+    ...                     ${CLUSTER_TYPE}
+    \    Download test file data to cache    ${readRequest}
+
+    Verify metric value            ${METRIC_EVICTION}  ${NUM_EXPECTED_EVICTIONS}
+    Verify cache directory size    ${CACHE_DIR_PFX}    ${CACHE_DIR_SFX}    ${CACHE_NUM_DISKS}    ${CACHE_MAX_SIZE}
+
+Test cache eviction when data downloaded using multiple concurrent clients
+    [Documentation]     Using multiple concurrent connections to the BKS Thrift API, verify that
+    ...                 files are properly evicted once the cache reaches its maximum size.
+    [Tags]              eviction
+    [Setup]             Cache test setup
+    ...                 rubix.cluster.on-master=true
+    ...                 hadoop.cache.data.dirprefix.list=${CACHE_DIR_PFX}
+    ...                 hadoop.cache.data.dirsuffix=${CACHE_DIR_SFX}
+    ...                 hadoop.cache.data.max.disks=${CACHE_NUM_DISKS}
+    ...                 rubix.cache.fullness.size=${CACHE_MAX_SIZE}
+    [Teardown]          Cache test teardown
+
+    @{testFiles} =      Generate test files   ${NUM_TEST_FILES}   ${FILE_LENGTH}
+    @{testRequests} =   Make read requests
+    ...                 ${START_BLOCK}
+    ...                 ${END_BLOCK}
+    ...                 ${FILE_LENGTH}
+    ...                 ${LAST_MODIFIED}
+    ...                 ${CLUSTER_TYPE}
+    ...                 @{testFiles}
+    Multi download data to cache    ${NUM_CONCURRENT_THREADS}   ${testRequests}
 
     Verify metric value            ${METRIC_EVICTION}  ${NUM_EXPECTED_EVICTIONS}
     Verify cache directory size    ${CACHE_DIR_PFX}    ${CACHE_DIR_SFX}    ${CACHE_NUM_DISKS}    ${CACHE_MAX_SIZE}
 
 Test cache eviction when data read
-    [Documentation]     Using a caching FS, verify that files are properly evicted once the cache reaches its maximum size.
+    [Documentation]     Using a CachingFileSystem, verify that
+    ...                 files are properly evicted once the cache reaches its maximum size.
     [Tags]              eviction
     [Setup]             Cache test setup
     ...                 rubix.cluster.on-master=true
@@ -57,7 +93,40 @@ Test cache eviction when data read
 
     @{testFiles} =      Generate test files   ${NUM_TEST_FILES}   ${FILE_LENGTH}
     :FOR    ${file}     IN      @{testFiles}
-    \    Read test file data   ${file}     ${START_BLOCK}   ${END_BLOCK}
+    \    ${readRequest} =   Make read request
+    ...                     ${file}
+    ...                     ${START_BLOCK}
+    ...                     ${END_BLOCK}
+    ...                     ${FILE_LENGTH}
+    ...                     ${LAST_MODIFIED}
+    ...                     ${CLUSTER_TYPE}
+    \    Read test file data   ${readRequest}
+
+    Verify metric value            ${METRIC_EVICTION}   ${NUM_EXPECTED_EVICTIONS}
+    Verify cache directory size    ${CACHE_DIR_PFX}     ${CACHE_DIR_SFX}    ${CACHE_NUM_DISKS}    ${CACHE_MAX_SIZE}
+
+Test cache eviction when data read using multiple concurrent clients
+    [Documentation]     Using multiple concurrent CachingFileSystems, verify that
+    ...                 files are properly evicted once the cache reaches its maximum size.
+    [Tags]              eviction
+    [Setup]             Cache test setup
+    ...                 rubix.cluster.on-master=true
+    ...                 hadoop.cache.data.dirprefix.list=${CACHE_DIR_PFX}
+    ...                 hadoop.cache.data.dirsuffix=${CACHE_DIR_SFX}
+    ...                 hadoop.cache.data.max.disks=${CACHE_NUM_DISKS}
+    ...                 rubix.cache.fullness.size=${CACHE_MAX_SIZE}
+    [Teardown]          Cache test teardown
+
+    @{testFiles} =      Generate test files   ${NUM_TEST_FILES}   ${FILE_LENGTH}
+
+    @{testRequests} =   Make read requests
+    ...                 ${START_BLOCK}
+    ...                 ${END_BLOCK}
+    ...                 ${FILE_LENGTH}
+    ...                 ${LAST_MODIFIED}
+    ...                 ${CLUSTER_TYPE}
+    ...                 @{testFiles}
+    Multi read data     ${NUM_CONCURRENT_THREADS}   ${testRequests}
 
     Verify metric value            ${METRIC_EVICTION}   ${NUM_EXPECTED_EVICTIONS}
     Verify cache directory size    ${CACHE_DIR_PFX}     ${CACHE_DIR_SFX}    ${CACHE_NUM_DISKS}    ${CACHE_MAX_SIZE}

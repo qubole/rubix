@@ -28,8 +28,15 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class BookKeeperClientRFLibrary
 {
@@ -39,35 +46,93 @@ public class BookKeeperClientRFLibrary
   /**
    * Read data from a given file into the BookKeeper cache using the BookKeeper Thrift API.
    *
-   * @param remotePath    The remote path location.
-   * @param readStart     The block to start reading from.
-   * @param readLength    The amount of data to read.
-   * @param fileLength    The length of the file.
-   * @param lastModified  The time at which the file was last modified.
-   * @param clusterType   The type id of cluster being used.
+   * @param readRequest The read request to execute.
    * @return True if the data was read into the cache correctly, false otherwise.
    */
-  public boolean downloadDataToCache(String remotePath, long readStart, int readLength, long fileLength, long lastModified, int clusterType) throws IOException, TException
+  public boolean downloadDataToCache(TestClientReadRequest readRequest) throws IOException, TException
   {
     try (RetryingBookkeeperClient client = createBookKeeperClient()) {
-      return client.readData(remotePath, readStart, readLength, fileLength, lastModified, clusterType);
+      return client.readData(
+          readRequest.getRemotePath(),
+          readRequest.getReadStart(),
+          readRequest.getReadLength(),
+          readRequest.getFileLength(),
+          readRequest.getLastModified(),
+          readRequest.getClusterType());
     }
+  }
+
+  /**
+   * Read data into the BookKeeper cache from multiple concurrent clients using the BookKeeper Thrift API.
+   *
+   * @param numThreads    The number of threads to use for concurrent execution.
+   * @param readRequests  The read requests to concurrently execute.
+   * @return True if all read requests succeeded, false otherwise.
+   */
+  public boolean multiDownloadDataToCache(int numThreads,
+                                          List<TestClientReadRequest> readRequests) throws TException, InterruptedException, ExecutionException
+  {
+    final List<Callable<Boolean>> tasks = new ArrayList<>();
+    for (final TestClientReadRequest request : readRequests) {
+      final Callable<Boolean> callable = new Callable<Boolean>()
+      {
+        @Override
+        public Boolean call() throws Exception
+        {
+          return downloadDataToCache(request);
+        }
+      };
+      tasks.add(callable);
+    }
+
+    final List<Future<Boolean>> results = executeMultipleTasks(numThreads, tasks);
+    final boolean didAllSucceed = verifyReadRequests(results);
+    return didAllSucceed;
   }
 
   /**
    * Read data from a given file into the BookKeeper cache using a client caching file system.
    *
-   * @param remotePath    The remote path location.
-   * @param readStart     The block to start reading from.
-   * @param readLength    The amount of data to read.
+   * @param readRequest The read request to execute.
    * @return True if the data was read into the cache correctly, false otherwise.
    */
-  public boolean readData(String remotePath, long readStart, int readLength) throws IOException, TException, URISyntaxException
+  public boolean readData(TestClientReadRequest readRequest) throws IOException, TException, URISyntaxException
   {
-    try (FSDataInputStream inputStream = createFSInputStream(remotePath, readLength)) {
-      final int readSize = inputStream.read(new byte[readLength], (int) readStart, readLength);
-      return readSize == readLength;
+    try (FSDataInputStream inputStream = createFSInputStream(readRequest.getRemotePath(), readRequest.getReadLength())) {
+      final int readSize = inputStream.read(
+          new byte[readRequest.getReadLength()],
+          (int) readRequest.getReadStart(),
+          readRequest.getReadLength());
+      return readSize == readRequest.getReadLength();
     }
+  }
+
+  /**
+   * Read data into the BookKeeper cache from multiple concurrent clients using a client caching file system.
+   *
+   * @param numThreads    The number of threads to use for concurrent execution.
+   * @param readRequests  The read requests to concurrently execute.
+   * @return True if all read requests succeeded, false otherwise.
+   */
+  public boolean multiReadData(int numThreads,
+                               List<TestClientReadRequest> readRequests) throws TException, InterruptedException, ExecutionException
+  {
+    final List<Callable<Boolean>> tasks = new ArrayList<>();
+    for (final TestClientReadRequest request : readRequests) {
+      final Callable<Boolean> callable = new Callable<Boolean>()
+      {
+        @Override
+        public Boolean call() throws Exception
+        {
+          return readData(request);
+        }
+      };
+      tasks.add(callable);
+    }
+
+    final List<Future<Boolean>> results = executeMultipleTasks(numThreads, tasks);
+    final boolean didAllSucceed = verifyReadRequests(results);
+    return didAllSucceed;
   }
 
   /**
@@ -112,6 +177,27 @@ public class BookKeeperClientRFLibrary
   {
     String content = generateContent(size);
     Files.write(Paths.get(filename), content.getBytes());
+  }
+
+  /**
+   * Create a read request to be executed by the BookKeeper server.
+   *
+   * @param remotePath    The remote path location.
+   * @param readStart     The block to start reading from.
+   * @param readLength    The amount of data to read.
+   * @param fileLength    The length of the file.
+   * @param lastModified  The time at which the file was last modified.
+   * @param clusterType   The type id of cluster being used.
+   * @return The read request.
+   */
+  public TestClientReadRequest createTestClientReadRequest(String remotePath,
+                                                           long readStart,
+                                                           int readLength,
+                                                           long fileLength,
+                                                           long lastModified,
+                                                           int clusterType)
+  {
+    return new TestClientReadRequest(remotePath, readStart, readLength, fileLength, lastModified, clusterType);
   }
 
   /**
@@ -166,7 +252,38 @@ public class BookKeeperClientRFLibrary
   private FSDataInputStream createFSInputStream(String remotePath, int readLength) throws IOException
   {
     final MockCachingFileSystem mockFS = new MockCachingFileSystem();
-    mockFS.initialize(URI.create("file://" + remotePath), conf);
+    mockFS.initialize(URI.create(remotePath), conf);
     return mockFS.open(new Path(remotePath), readLength);
+  }
+
+  /**
+   * Execute multiple tasks concurrently.
+   *
+   * @param numThreads  The number of available threads for concurrent execution.
+   * @param tasks       The tasks to execute.
+   * @param <T>         The return type of the task.
+   * @return A list of results for each task executed.
+   * @throws InterruptedException if task execution is interrupted.
+   */
+  private <T> List<Future<T>> executeMultipleTasks(int numThreads, List<Callable<T>> tasks) throws InterruptedException
+  {
+    final ExecutorService service = Executors.newFixedThreadPool(numThreads);
+    return service.invokeAll(tasks);
+  }
+
+  /**
+   * Verify the results of read requests executed concurrently.
+   *
+   * @param readRequestResults   The results to verify.
+   * @return True if all read requests succeeded, false otherwise.
+   */
+  private boolean verifyReadRequests(List<Future<Boolean>> readRequestResults) throws ExecutionException, InterruptedException
+  {
+    boolean didAllSucceed = true;
+    for (final Future<Boolean> downloadDataResult : readRequestResults) {
+      final Boolean result = downloadDataResult.get();
+      didAllSucceed &= result;
+    }
+    return didAllSucceed;
   }
 }
