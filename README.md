@@ -24,6 +24,7 @@ Check the [User and Developer manual](http://rubix.readthedocs.io/en/latest/inde
 
 ## Resources
 [Documentation](http://rubix.readthedocs.io/en/latest/index.html)  
+[Getting Started Guide](http://rubix.readthedocs.io/en/latest/install/getting_started.html)  
 [User Group (Google)](https://groups.google.com/forum/#!forum/rubix-users)
 
 ### Talks

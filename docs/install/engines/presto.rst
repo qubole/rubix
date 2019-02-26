@@ -13,7 +13,7 @@ Start Hive with the following command. This will restart the metastore server,
 allowing the `rubix://` scheme to be recognized::
 
     hive --hiveconf hive.metastore.uris="" \
-         --hiveconf fs.rubix.impl=com.qubole.rubix.hadoop2.CachingNativeS3FileSystem
+         --hiveconf fs.rubix.impl=com.qubole.rubix.presto.CachingPrestoS3FileSystem
 
 You will also need to set your AWS access & secret keys for authenticating with S3::
 

@@ -17,4 +17,3 @@ These instructions require `RubiX Admin <https://github.com/qubole/rubix-admin>`
 
    getting_started.rst
    engines/index.rst
-   query.md
