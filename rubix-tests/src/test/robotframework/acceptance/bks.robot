@@ -69,12 +69,12 @@ Make read request
     [Return]        ${request}
 
 Make read requests
-    [Arguments]         ${startBlock}
+    [Arguments]         ${files}
+    ...                 ${startBlock}
     ...                 ${endBlock}
     ...                 ${fileLength}
     ...                 ${lastModified}
     ...                 ${clusterType}
-    ...                 @{files}
     @{requests} =       Create List
     Log         Size of incoming files is ${files}
     :FOR    ${file}     IN      @{files}
@@ -89,22 +89,72 @@ Make read requests
     [Return]            @{requests}
 
 Download test file data to cache
-    [Arguments]     ${readRequest}
-    ${didRead} =    Download data to cache    ${readRequest}
+    [Arguments]         ${file}
+    ...                 ${startBlock}
+    ...                 ${endBlock}
+    ...                 ${fileLength}
+    ...                 ${lastModified}
+    ...                 ${clusterType}
+    ${readRequest} =    Make read request
+    ...                 ${file}
+    ...                 ${startBlock}
+    ...                 ${endBlock}
+    ...                 ${fileLength}
+    ...                 ${lastModified}
+    ...                 ${clusterType}
+    ${didRead} =        Download data to cache    ${readRequest}
     Should be true  ${didRead}
 
 Multi download test file data to cache
-    [Arguments]         ${numThreads}   ${readRequests}
+    [Arguments]         ${numThreads}
+    ...                 ${testFiles}
+    ...                 ${START_BLOCK}
+    ...                 ${END_BLOCK}
+    ...                 ${FILE_LENGTH}
+    ...                 ${LAST_MODIFIED}
+    ...                 ${CLUSTER_TYPE}
+    ${readRequests} =   Make read requests
+    ...                 ${testFiles}
+    ...                 ${START_BLOCK}
+    ...                 ${END_BLOCK}
+    ...                 ${FILE_LENGTH}
+    ...                 ${LAST_MODIFIED}
+    ...                 ${CLUSTER_TYPE}
     ${didReadAll} =     Multi download data to cache    ${numThreads}   ${readRequests}
     Should be true      ${didReadAll}
 
 Read test file data
-    [Arguments]     ${readRequest}
+    [Arguments]         ${file}
+    ...                 ${startBlock}
+    ...                 ${endBlock}
+    ...                 ${fileLength}
+    ...                 ${lastModified}
+    ...                 ${clusterType}
+    ${readRequest} =    Make read request
+    ...                 ${file}
+    ...                 ${startBlock}
+    ...                 ${endBlock}
+    ...                 ${fileLength}
+    ...                 ${lastModified}
+    ...                 ${clusterType}
     ${didRead} =    Read data   ${readRequest}
     Should be true  ${didRead}
 
 Multi read test file data
-    [Arguments]       ${numThreads}   ${readRequests}
+    [Arguments]         ${numThreads}
+    ...                 ${testFiles}
+    ...                 ${START_BLOCK}
+    ...                 ${END_BLOCK}
+    ...                 ${FILE_LENGTH}
+    ...                 ${LAST_MODIFIED}
+    ...                 ${CLUSTER_TYPE}
+    ${readRequests} =   Make read requests
+    ...                 ${testFiles}
+    ...                 ${START_BLOCK}
+    ...                 ${END_BLOCK}
+    ...                 ${FILE_LENGTH}
+    ...                 ${LAST_MODIFIED}
+    ...                 ${CLUSTER_TYPE}
     ${didReadAll} =   Multi read data     ${numThreads}   ${readRequests}
     Should be true    ${didReadAll}
 

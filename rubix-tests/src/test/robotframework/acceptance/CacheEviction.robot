@@ -42,14 +42,13 @@ Test cache eviction when data downloaded
 
     @{testFiles} =      Generate test files   ${NUM_TEST_FILES}   ${FILE_LENGTH}
     :FOR    ${file}     IN      @{testFiles}
-    \    ${readRequest} =   Make read request
-    ...                     ${file}
-    ...                     ${START_BLOCK}
-    ...                     ${END_BLOCK}
-    ...                     ${FILE_LENGTH}
-    ...                     ${LAST_MODIFIED}
-    ...                     ${CLUSTER_TYPE}
-    \    Download test file data to cache    ${readRequest}
+    \    Download test file data to cache
+    ...  ${file}
+    ...  ${START_BLOCK}
+    ...  ${END_BLOCK}
+    ...  ${FILE_LENGTH}
+    ...  ${LAST_MODIFIED}
+    ...  ${CLUSTER_TYPE}
 
     Verify metric value            ${METRIC_EVICTION}  ${NUM_EXPECTED_EVICTIONS}
     Verify cache directory size    ${CACHE_DIR_PFX}    ${CACHE_DIR_SFX}    ${CACHE_NUM_DISKS}    ${CACHE_MAX_SIZE}
@@ -67,14 +66,14 @@ Test cache eviction when data downloaded using multiple concurrent clients
     [Teardown]          Cache test teardown
 
     @{testFiles} =      Generate test files   ${NUM_TEST_FILES}   ${FILE_LENGTH}
-    @{testRequests} =   Make read requests
-    ...                 ${START_BLOCK}
-    ...                 ${END_BLOCK}
-    ...                 ${FILE_LENGTH}
-    ...                 ${LAST_MODIFIED}
-    ...                 ${CLUSTER_TYPE}
-    ...                 @{testFiles}
-    Multi download data to cache    ${NUM_CONCURRENT_THREADS}   ${testRequests}
+    Multi download test file data to cache
+    ...     ${NUM_CONCURRENT_THREADS}
+    ...     ${testFiles}
+    ...     ${START_BLOCK}
+    ...     ${END_BLOCK}
+    ...     ${FILE_LENGTH}
+    ...     ${LAST_MODIFIED}
+    ...     ${CLUSTER_TYPE}
 
     Verify metric value            ${METRIC_EVICTION}  ${NUM_EXPECTED_EVICTIONS}
     Verify cache directory size    ${CACHE_DIR_PFX}    ${CACHE_DIR_SFX}    ${CACHE_NUM_DISKS}    ${CACHE_MAX_SIZE}
@@ -93,14 +92,13 @@ Test cache eviction when data read
 
     @{testFiles} =      Generate test files   ${NUM_TEST_FILES}   ${FILE_LENGTH}
     :FOR    ${file}     IN      @{testFiles}
-    \    ${readRequest} =   Make read request
-    ...                     ${file}
-    ...                     ${START_BLOCK}
-    ...                     ${END_BLOCK}
-    ...                     ${FILE_LENGTH}
-    ...                     ${LAST_MODIFIED}
-    ...                     ${CLUSTER_TYPE}
-    \    Read test file data   ${readRequest}
+    \    Read test file data
+    ...  ${file}
+    ...  ${START_BLOCK}
+    ...  ${END_BLOCK}
+    ...  ${FILE_LENGTH}
+    ...  ${LAST_MODIFIED}
+    ...  ${CLUSTER_TYPE}
 
     Verify metric value            ${METRIC_EVICTION}   ${NUM_EXPECTED_EVICTIONS}
     Verify cache directory size    ${CACHE_DIR_PFX}     ${CACHE_DIR_SFX}    ${CACHE_NUM_DISKS}    ${CACHE_MAX_SIZE}
@@ -118,15 +116,14 @@ Test cache eviction when data read using multiple concurrent clients
     [Teardown]          Cache test teardown
 
     @{testFiles} =      Generate test files   ${NUM_TEST_FILES}   ${FILE_LENGTH}
-
-    @{testRequests} =   Make read requests
-    ...                 ${START_BLOCK}
-    ...                 ${END_BLOCK}
-    ...                 ${FILE_LENGTH}
-    ...                 ${LAST_MODIFIED}
-    ...                 ${CLUSTER_TYPE}
-    ...                 @{testFiles}
-    Multi read data     ${NUM_CONCURRENT_THREADS}   ${testRequests}
+    Multi read test file data
+    ...     ${NUM_CONCURRENT_THREADS}
+    ...     ${testFiles}
+    ...     ${START_BLOCK}
+    ...     ${END_BLOCK}
+    ...     ${FILE_LENGTH}
+    ...     ${LAST_MODIFIED}
+    ...     ${CLUSTER_TYPE}
 
     Verify metric value            ${METRIC_EVICTION}   ${NUM_EXPECTED_EVICTIONS}
     Verify cache directory size    ${CACHE_DIR_PFX}     ${CACHE_DIR_SFX}    ${CACHE_NUM_DISKS}    ${CACHE_MAX_SIZE}
