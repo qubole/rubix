@@ -12,7 +12,7 @@
  */
 package com.qubole.rubix.presto;
 
-import com.facebook.presto.hive.PrestoS3FileSystem;
+import com.facebook.presto.hive.s3.PrestoS3FileSystem;
 import com.qubole.rubix.core.CachingFileSystem;
 import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.spi.ClusterType;
