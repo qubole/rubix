@@ -13,6 +13,7 @@
 package com.qubole.rubix.bookkeeper;
 import com.qubole.rubix.bookkeeper.utils.DiskUtils;
 import com.qubole.rubix.common.utils.DeleteFileVisitor;
+import com.qubole.rubix.common.utils.TestUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.testng.annotations.AfterMethod;
@@ -35,23 +36,25 @@ import static org.testng.Assert.assertTrue;
 public class TestDiskUtils
 {
   private static Log log = LogFactory.getLog(TestDiskUtils.class);
-  private static final String testDirectory = System.getProperty("java.io.tmpdir") + "/TestDiskUtils/";
+  private static final String testDirectory = TestUtil.getTestCacheDirPrefix("TestDiskUtils");
 
   @BeforeMethod
-  public void setupMethod() throws IOException
+  public void setup() throws IOException
   {
     Files.createDirectories(Paths.get(testDirectory));
   }
+
   @AfterMethod
-  public void teadDownMethod() throws IOException
+  public void tearDown() throws IOException
   {
     Files.walkFileTree(Paths.get(testDirectory), new DeleteFileVisitor());
     Files.deleteIfExists(Paths.get(testDirectory));
   }
+
   @Test
   public void testGetCacheSizeMB() throws IOException
   {
-    File file = new File(testDirectory + "testfile");
+    File file = new File(testDirectory + "/testfile");
     log.info("Name of the File : " + file.toString());
     FileWriter fileWriter = new FileWriter(file.toString());
     for (int i = 0; i < 10000000; i++) {
@@ -66,7 +69,7 @@ public class TestDiskUtils
   @Test
   public void testGetCacheSizeMB_Rafile() throws IOException
   {
-    String fileName = testDirectory + "testfile";
+    String fileName = testDirectory + "/testfile";
     File dirName = new File(testDirectory);
     RandomAccessFile rafile = new RandomAccessFile(fileName, "rw");
     rafile.seek(20000000);
