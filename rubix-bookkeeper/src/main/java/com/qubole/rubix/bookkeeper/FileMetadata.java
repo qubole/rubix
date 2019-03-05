@@ -98,7 +98,6 @@ public class FileMetadata
       }
       catch (FileNotFoundException e) {
         File file = new File(mdFilePath);
-        log.info("value of mdFile : " + mdFilePath);
         file.createNewFile();
         file.setWritable(true, false);
         file.setReadable(true, false);

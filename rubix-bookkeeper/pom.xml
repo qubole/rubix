@@ -63,13 +63,6 @@
         </dependency>
         <dependency>
             <groupId>com.qubole.rubix</groupId>
-            <artifactId>rubix-core</artifactId>
-            <type>test-jar</type>
-            <scope>test</scope>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-hadoop2</artifactId>
         </dependency>
         <dependency>

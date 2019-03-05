@@ -61,7 +61,7 @@ public class TestDiskUtils
       fileWriter.write('a' + i % 10);
     }
     File dirName = new File(testDirectory);
-    long dsize = DiskUtils.getDirSizeMB(dirName);
+    long dsize = DiskUtils.getDirectorySizeInMB(dirName);
     assertTrue(dsize == 9, "DiskSize is reported :" + dsize + " but expected : 9");
     file.deleteOnExit();
   }
@@ -78,7 +78,7 @@ public class TestDiskUtils
     }
     rafile.close();
     File file = new File(fileName);
-    long dsize = DiskUtils.getDirSizeMB(dirName);
+    long dsize = DiskUtils.getDirectorySizeInMB(dirName);
     assertTrue(dsize == 2, "DiskSize is reported :" + dsize + " but expected : 2");
     file.deleteOnExit();
   }

@@ -478,7 +478,6 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   private boolean readDataInternal(String remotePath, long offset, int length, long fileSize,
                                    long lastModified, int clusterType) throws TException
   {
-    log.info("readDataInternal start");
     int blockSize = CacheConfig.getBlockSize(conf);
     byte[] buffer = new byte[blockSize];
     ByteBuffer byteBuffer = null;
@@ -517,8 +516,6 @@ public abstract class BookKeeper implements BookKeeperService.Iface
           remoteReadRequestChain.addReadRequest(new ReadRequest(readStart, readStart + blockSize, readStart, readStart + blockSize, buffer, 0, fileSize));
           remoteReadRequestChain.lock();
           Integer dataRead = remoteReadRequestChain.call();
-          log.info("here #########");
-
           // Making sure the data downloaded matches with the expected bytes. If not, there is some problem with
           // the download this time. So won't update the cache metadata and return false so that client can
           // fall back on the directread

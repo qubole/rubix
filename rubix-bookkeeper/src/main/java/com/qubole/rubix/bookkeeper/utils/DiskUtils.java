@@ -81,7 +81,7 @@ public class DiskUtils
 
     long cacheSize = 0;
     for (int disk = 0; disk < diskMap.size(); disk++) {
-      long cacheDirSize = getDirSizeMB(new File(diskMap.get(disk) + cacheDirSuffix));
+      long cacheDirSize = getDirectorySizeInMB(new File(diskMap.get(disk) + cacheDirSuffix));
       cacheSize += cacheDirSize;
     }
     return (int) cacheSize;
@@ -92,7 +92,7 @@ public class DiskUtils
    *
    * @return The size of the cache in MB.
    */
-  public static long getDirSizeMB(File dirname)
+  public static long getDirectorySizeInMB(File dirname)
   {
     String cmd = "du -s " + dirname.toString();
     StringBuffer output = new StringBuffer();
