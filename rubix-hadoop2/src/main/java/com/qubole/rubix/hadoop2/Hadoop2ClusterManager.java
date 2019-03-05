@@ -120,7 +120,7 @@ public class Hadoop2ClusterManager extends ClusterManager
       return nodesCache.get("nodeList");
     }
     catch (ExecutionException e) {
-      e.printStackTrace();
+      log.error(String.format(Throwables.getStackTraceAsString(e)));
     }
 
     return null;
