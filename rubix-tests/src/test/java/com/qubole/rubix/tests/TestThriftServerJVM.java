@@ -192,13 +192,7 @@ public class TestThriftServerJVM extends Configured
   {
     String healthCheckCmd = hadoopDirectory + " jar " + rubixclientJarPath + BookKeeperHealthClass;
     int exitval;
-    log.info("Running command " + healthCheckCmd);
-    Process p = Runtime.getRuntime().exec(healthCheckCmd, new String[]{"HADOOP_OPTS=\"-Dlog4j.configuration=file:///Users/jordanw/Desktop/log4j.properties\""});
-    BufferedReader in = new BufferedReader(new InputStreamReader(p.getErrorStream()));
-    String line;
-    while ((line = in.readLine()) != null) {
-      log.info("Process --- " + line);
-    }
+    Process p = Runtime.getRuntime().exec(healthCheckCmd);
     exitval = p.waitFor();
     assertTrue(exitval == 0, "Main Function returning 1 eventhough bookkeeper is present at default port");
   }
