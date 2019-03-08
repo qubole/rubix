@@ -34,8 +34,10 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -108,7 +110,7 @@ public class TestThriftServerJVM extends Configured
     bookKeeperJvm = pJVMBuilder.start();
     pJVMBuilder.command(localDataTransferStartCmd);
     localDataTransferJvm = pJVMBuilder.start();
-    Thread.sleep(3000);
+    Thread.sleep(10000);
   }
 
   @AfterClass
@@ -190,7 +192,13 @@ public class TestThriftServerJVM extends Configured
   {
     String healthCheckCmd = hadoopDirectory + " jar " + rubixclientJarPath + BookKeeperHealthClass;
     int exitval;
-    Process p = Runtime.getRuntime().exec(healthCheckCmd);
+    log.info("Running command " + healthCheckCmd);
+    Process p = Runtime.getRuntime().exec(healthCheckCmd, new String[]{"HADOOP_OPTS=\"-Dlog4j.configuration=file:///Users/jordanw/Desktop/log4j.properties\""});
+    BufferedReader in = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+    String line;
+    while ((line = in.readLine()) != null) {
+      log.info("Process --- " + line);
+    }
     exitval = p.waitFor();
     assertTrue(exitval == 0, "Main Function returning 1 eventhough bookkeeper is present at default port");
   }
