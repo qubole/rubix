@@ -34,10 +34,8 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -110,7 +108,7 @@ public class TestThriftServerJVM extends Configured
     bookKeeperJvm = pJVMBuilder.start();
     pJVMBuilder.command(localDataTransferStartCmd);
     localDataTransferJvm = pJVMBuilder.start();
-    Thread.sleep(10000);
+    Thread.sleep(3000);
   }
 
   @AfterClass
