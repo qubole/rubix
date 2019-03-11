@@ -24,7 +24,7 @@
     <licenses>
         <license>
             <name>Apache License, Version 2.0</name>
-            <url>https://github.com/qubole/rubix/blob/master/src/license/header.txt</url>
+            <url>https://github.com/qubole/rubix/blob/master/LICENSE.txt</url>
             <distribution>repo</distribution>
         </license>
     </licenses>
@@ -45,7 +45,7 @@
     <properties>
         <main.basedir>${project.basedir}</main.basedir>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <dep.presto.version>0.142</dep.presto.version>
+        <dep.presto.version>0.193</dep.presto.version>
         <dep.airlift.version>0.98</dep.airlift.version>
         <commons-httpclient.version>3.0.1</commons-httpclient.version>
         <dep.guava.version>18.0</dep.guava.version>
@@ -81,6 +81,12 @@
             <dependency>
                 <groupId>com.qubole.rubix</groupId>
                 <artifactId>rubix-bookkeeper</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.qubole.rubix</groupId>
+                <artifactId>rubix-common</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
@@ -230,7 +236,7 @@
             <artifactId>license-maven-plugin</artifactId>
             <version>2.3</version>
             <configuration>
-                <header>${main.basedir}/src/license/header.txt</header>
+                <header>${main.basedir}/src/checkstyle/header.txt</header>
                 <includes>
                     <include>**/*.java</include>
                 </includes>
