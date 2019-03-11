@@ -137,10 +137,10 @@ public class FileDownloadRequestChain extends ReadRequestChain
         totalRequestedRead += readBytes;
       }
       long endTime = System.currentTimeMillis();
-      timeSpentOnDownload = (endTime - startTime);
+      timeSpentOnDownload = (endTime - startTime) / 1000;
 
       log.info("Downloaded " + totalRequestedRead + " bytes of file " + remotePath);
-      log.debug("RemoteFetchRequest took : " + timeSpentOnDownload + " msecs ");
+      log.debug("RemoteFetchRequest took : " + timeSpentOnDownload + " secs ");
       return totalRequestedRead;
     }
     finally {

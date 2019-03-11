@@ -198,7 +198,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         return DiskUtils.getCacheSizeMB(conf);
       }
     });
-    metrics.register(BookKeeperMetrics.CacheMetric.CACHE_AVAILABLE_SIZE.getMetricName(), new Gauge<Long>()
+    metrics.register(BookKeeperMetrics.CacheMetric.CACHE_AVAILABLE_SIZE_GAUGE.getMetricName(), new Gauge<Long>()
     {
       @Override
       public Long getValue()
@@ -432,7 +432,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_INVALIDATION_COUNT.getMetricName(), (double) cacheInvalidationCount.getCount());
     cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_EXPIRY_COUNT.getMetricName(), (double) cacheExpiryCount.getCount());
     cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_SIZE_GAUGE.getMetricName(), (double) DiskUtils.getCacheSizeMB(conf));
-    cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_AVAILABLE_SIZE.getMetricName(), (double) totalAvailableForCache);
+    cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_AVAILABLE_SIZE_GAUGE.getMetricName(), (double) totalAvailableForCache);
     return cacheMetrics.build();
   }
 

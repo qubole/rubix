@@ -185,7 +185,7 @@ public class TestBookKeeperMetrics
         BookKeeperMetrics.CacheMetric.CACHE_HIT_RATE_GAUGE.getMetricName(),
         BookKeeperMetrics.CacheMetric.CACHE_MISS_RATE_GAUGE.getMetricName(),
         BookKeeperMetrics.CacheMetric.CACHE_SIZE_GAUGE.getMetricName(),
-        BookKeeperMetrics.CacheMetric.CACHE_AVAILABLE_SIZE.getMetricName(),
+        BookKeeperMetrics.CacheMetric.CACHE_AVAILABLE_SIZE_GAUGE.getMetricName(),
         BookKeeperMetrics.CacheMetric.TOTAL_REQUEST_COUNT.getMetricName(),
         BookKeeperMetrics.CacheMetric.CACHE_REQUEST_COUNT.getMetricName(),
         BookKeeperMetrics.CacheMetric.NONLOCAL_REQUEST_COUNT.getMetricName(),
