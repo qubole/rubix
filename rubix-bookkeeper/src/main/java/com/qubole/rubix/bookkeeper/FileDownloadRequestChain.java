@@ -105,9 +105,9 @@ public class FileDownloadRequestChain extends ReadRequestChain
         // Making sure when a new file gets created, we invalidate the existing metadata file
         bookKeeper.invalidateFileMetadata(remotePath);
       }
-      file.createNewFile();
       file.setWritable(true, false);
       file.setReadable(true, false);
+      file.createNewFile();
     }
 
     FSDataInputStream inputStream = null;
