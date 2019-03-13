@@ -542,7 +542,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
           fs.close();
         }
         catch (IOException e) {
-          log.error(String.format(Throwables.getStackTraceAsString(e)));
+          log.error(Throwables.getStackTraceAsString(e));
         }
       }
     }

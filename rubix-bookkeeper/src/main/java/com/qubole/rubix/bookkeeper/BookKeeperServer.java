@@ -112,7 +112,7 @@ public class BookKeeperServer extends Configured implements Tool
       server.serve();
     }
     catch (TTransportException e) {
-      log.error(String.format(Throwables.getStackTraceAsString(e)));
+      log.error(Throwables.getStackTraceAsString(e));
     }
   }
 

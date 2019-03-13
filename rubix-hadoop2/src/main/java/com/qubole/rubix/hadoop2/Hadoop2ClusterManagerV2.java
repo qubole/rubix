@@ -110,7 +110,7 @@ public class Hadoop2ClusterManagerV2 extends ClusterManager
       return new ArrayList<>(nodesCache.get("nodeList").keySet());
     }
     catch (ExecutionException e) {
-      log.error(String.format(Throwables.getStackTraceAsString(e)));
+      log.error(Throwables.getStackTraceAsString(e));
     }
 
     return null;
@@ -131,7 +131,7 @@ public class Hadoop2ClusterManagerV2 extends ClusterManager
       }
     }
     catch (ExecutionException e) {
-      log.error(String.format(Throwables.getStackTraceAsString(e)));
+      log.error(Throwables.getStackTraceAsString(e));
     }
 
     return null;
@@ -159,7 +159,7 @@ public class Hadoop2ClusterManagerV2 extends ClusterManager
       }
     }
     catch (ExecutionException e) {
-      log.error(String.format(Throwables.getStackTraceAsString(e)));
+      log.error(Throwables.getStackTraceAsString(e));
     }
 
     return null;
