@@ -31,10 +31,10 @@ Test cache eviction when data downloaded
     [Tags]              eviction
     [Setup]             Cache test setup
     ...                 rubix.cluster.on-master=true
-    ...                 hadoop.cache.data.dirprefix.list=${CACHE_DIR_PFX}
-    ...                 hadoop.cache.data.dirsuffix=${CACHE_DIR_SFX}
-    ...                 hadoop.cache.data.max.disks=${CACHE_NUM_DISKS}
-    ...                 rubix.cache.fullness.size=${CACHE_MAX_SIZE}
+    ...                 rubix.cache.dirprefix.list=${CACHE_DIR_PFX}
+    ...                 rubix.cache.dirsuffix=${CACHE_DIR_SFX}
+    ...                 rubix.cache.max.disks=${CACHE_NUM_DISKS}
+    ...                 rubix.cache.max.size=${CACHE_MAX_SIZE}
     [Teardown]          Cache test teardown
 
     @{testFiles} =      Generate test files   ${NUM_TEST_FILES}   ${FILE_LENGTH}
@@ -49,10 +49,10 @@ Test cache eviction when data read
     [Tags]              eviction
     [Setup]             Cache test setup
     ...                 rubix.cluster.on-master=true
-    ...                 hadoop.cache.data.dirprefix.list=${CACHE_DIR_PFX}
-    ...                 hadoop.cache.data.dirsuffix=${CACHE_DIR_SFX}
-    ...                 hadoop.cache.data.max.disks=${CACHE_NUM_DISKS}
-    ...                 rubix.cache.fullness.size=${CACHE_MAX_SIZE}
+    ...                 rubix.cache.dirprefix.list=${CACHE_DIR_PFX}
+    ...                 rubix.cache.dirsuffix=${CACHE_DIR_SFX}
+    ...                 rubix.cache..max.disks=${CACHE_NUM_DISKS}
+    ...                 rubix.cache.max.size=${CACHE_MAX_SIZE}
     [Teardown]          Cache test teardown
 
     @{testFiles} =      Generate test files   ${NUM_TEST_FILES}   ${FILE_LENGTH}

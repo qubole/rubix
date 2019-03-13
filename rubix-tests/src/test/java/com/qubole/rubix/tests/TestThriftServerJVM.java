@@ -61,9 +61,9 @@ public class TestThriftServerJVM extends Configured
   private static final String bookKeeperClass = "com.qubole.rubix.bookkeeper.BookKeeperServer";
   private static final String localDataTransferServerClass = "com.qubole.rubix.bookkeeper.LocalDataTransferServer";
   private static final String BookKeeperHealthClass = " com.qubole.rubix.health.BookKeeperHealth";
-  private static final String setDataBlockSize = "-Dhadoop.cache.data.block-size=200";
-  private static final String setCacheMaxDisks = "-Dhadoop.cache.data.max.disks=1";
-  private static final String setCacheDirectory = "-Dhadoop.cache.data.dirprefix.list=" + testDirectoryPrefix + "dir";
+  private static final String setDataBlockSize = "-Drubix.cache.block.size=200";
+  private static final String setCacheMaxDisks = "-Drubix.cache.max.disks=1";
+  private static final String setCacheDirectory = "-Drubix.cache.dirprefix.list=" + testDirectoryPrefix + "dir";
   private static final String setmasterbookkeeper = "-Drubix.cluster.on-master=true";
   private static final String disableParallelWarmup = "-Drubix.parallel.warmup=false";
   private static String rubixclientJarPath;
