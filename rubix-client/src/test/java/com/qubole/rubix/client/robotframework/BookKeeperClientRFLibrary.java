@@ -69,8 +69,8 @@ public class BookKeeperClientRFLibrary
    * @param readRequests  The read requests to concurrently execute.
    * @return True if all read requests succeeded, false otherwise.
    */
-  public boolean multiDownloadDataToCache(int numThreads,
-                                          List<TestClientReadRequest> readRequests) throws TException, InterruptedException, ExecutionException
+  public boolean concurrentDownloadDataToCache(int numThreads,
+                                               List<TestClientReadRequest> readRequests) throws TException, InterruptedException, ExecutionException
   {
     final List<Callable<Boolean>> tasks = new ArrayList<>();
     for (final TestClientReadRequest request : readRequests) {
@@ -85,8 +85,8 @@ public class BookKeeperClientRFLibrary
       tasks.add(callable);
     }
 
-    final List<Future<Boolean>> results = executeMultipleTasks(numThreads, tasks);
-    final boolean didAllSucceed = verifyReadRequests(results);
+    final List<Future<Boolean>> results = executeConcurrentTasks(numThreads, tasks);
+    final boolean didAllSucceed = didConcurrentDataDownloadSucceed(results);
     return didAllSucceed;
   }
 
@@ -114,8 +114,8 @@ public class BookKeeperClientRFLibrary
    * @param readRequests  The read requests to concurrently execute.
    * @return True if all read requests succeeded, false otherwise.
    */
-  public boolean multiReadData(int numThreads,
-                               List<TestClientReadRequest> readRequests) throws TException, InterruptedException, ExecutionException
+  public boolean concurrentReadData(int numThreads,
+                                    List<TestClientReadRequest> readRequests) throws TException, InterruptedException, ExecutionException
   {
     final List<Callable<Boolean>> tasks = new ArrayList<>();
     for (final TestClientReadRequest request : readRequests) {
@@ -130,8 +130,8 @@ public class BookKeeperClientRFLibrary
       tasks.add(callable);
     }
 
-    final List<Future<Boolean>> results = executeMultipleTasks(numThreads, tasks);
-    final boolean didAllSucceed = verifyReadRequests(results);
+    final List<Future<Boolean>> results = executeConcurrentTasks(numThreads, tasks);
+    final boolean didAllSucceed = didConcurrentDataDownloadSucceed(results);
     return didAllSucceed;
   }
 
@@ -265,7 +265,7 @@ public class BookKeeperClientRFLibrary
    * @return A list of results for each task executed.
    * @throws InterruptedException if task execution is interrupted.
    */
-  private <T> List<Future<T>> executeMultipleTasks(int numThreads, List<Callable<T>> tasks) throws InterruptedException
+  private <T> List<Future<T>> executeConcurrentTasks(int numThreads, List<Callable<T>> tasks) throws InterruptedException
   {
     final ExecutorService service = Executors.newFixedThreadPool(numThreads);
     return service.invokeAll(tasks);
@@ -277,12 +277,12 @@ public class BookKeeperClientRFLibrary
    * @param readRequestResults   The results to verify.
    * @return True if all read requests succeeded, false otherwise.
    */
-  private boolean verifyReadRequests(List<Future<Boolean>> readRequestResults) throws ExecutionException, InterruptedException
+  private boolean didConcurrentDataDownloadSucceed(List<Future<Boolean>> readRequestResults) throws ExecutionException, InterruptedException
   {
     boolean didAllSucceed = true;
-    for (final Future<Boolean> downloadDataResult : readRequestResults) {
-      final Boolean result = downloadDataResult.get();
-      didAllSucceed &= result;
+    for (final Future<Boolean> result : readRequestResults) {
+      final Boolean didRead = result.get();
+      didAllSucceed &= didRead;
     }
     return didAllSucceed;
   }

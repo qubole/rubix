@@ -7,110 +7,102 @@ Library     com.qubole.rubix.client.robotframework.BookKeeperClientRFLibrary
 ## Generation ##
 
 Generate single test file
-    [Arguments]         ${fileName}
-    ...                 ${fileLength}
-    Generate test file  ${fileName}   ${fileLength}
-    [Return]            ${fileName}
+    [Arguments]  ${fileName}  ${fileLength}
+    generate Test File  ${fileName}  ${fileLength}
+    [Return]  ${fileName}
 
 Generate test files
-    [Arguments]     ${fileName}
-    ...             ${fileLength}
-    ...             ${numFiles}
-    ...             ${offset}=0
-    @{testFileList} =   Create List
-    :FOR    ${index}    IN RANGE    ${offset}    ${numFiles}
-    \   ${testFile} =        Set variable  ${fileName}${index}
-    \   Generate test file   ${testFile}   ${fileLength}
-    \   Append To List       ${testFileList}    ${testFile}
-    [Return]        @{testFileList}
+    [Arguments]  ${fileName}
+    ...          ${fileLength}
+    ...          ${numFiles}
+    ...          ${offset}=0
+    @{testFileList} =  CREATE LIST
+    :FOR  ${index}  IN RANGE  ${offset}  ${numFiles}
+    \  ${testFile} =  SET VARIABLE  ${fileName}${index}
+    \  generate Test File  ${testFile}  ${fileLength}
+    \  APPEND TO LIST  ${testFileList}  ${testFile}
+    [Return]  @{testFileList}
 
 Make read request
-    [Arguments]     ${fileName}
-    ...             ${startBlock}
-    ...             ${endBlock}
-    ...             ${fileLength}
-    ...             ${lastModified}
-    ...             ${clusterType}
-    ${request} =    Create test client read request
-    ...             file://${fileName}
-    ...             ${startBlock}
-    ...             ${endBlock}
-    ...             ${fileLength}
-    ...             ${lastModified}
-    ...             ${clusterType}
-    [Return]        ${request}
+    [Arguments]  ${fileName}
+    ...          ${startBlock}
+    ...          ${endBlock}
+    ...          ${fileLength}
+    ...          ${lastModified}
+    ...          ${clusterType}
+    ${request} =  create Test Client Read Request
+    ...  file://${fileName}
+    ...  ${startBlock}
+    ...  ${endBlock}
+    ...  ${fileLength}
+    ...  ${lastModified}
+    ...  ${clusterType}
+    [Return]  ${request}
 
 Make similar read requests
-    [Arguments]         ${fileNames}
-    ...                 ${startBlock}
-    ...                 ${endBlock}
-    ...                 ${fileLength}
-    ...                 ${lastModified}
-    ...                 ${clusterType}
-    @{requests} =       Create List
-    :FOR    ${fileName}     IN      @{fileNames}
-    \   ${request} =    Create test client read request
-    ...                 file://${fileName}
-    ...                 ${startBlock}
-    ...                 ${endBlock}
-    ...                 ${fileLength}
-    ...                 ${lastModified}
-    ...                 ${clusterType}
-    \   Append To List  ${requests}    ${request}
-    [Return]            @{requests}
+    [Arguments]  ${fileNames}
+    ...          ${startBlock}
+    ...          ${endBlock}
+    ...          ${fileLength}
+    ...          ${lastModified}
+    ...          ${clusterType}
+    @{requests} =  CREATE LIST
+    :FOR  ${fileName}  IN  @{fileNames}
+    \   ${request} =  create Test Client Read Request
+    ...  file://${fileName}
+    ...  ${startBlock}
+    ...  ${endBlock}
+    ...  ${fileLength}
+    ...  ${lastModified}
+    ...  ${clusterType}
+    \   APPEND TO LIST  ${requests}    ${request}
+    [Return]  @{requests}
 
 ## Execution ##
 
 Execute concurrent requests
-    [Arguments]         ${clientKeyword}
-    ...                 ${numThreads}
-    ...                 ${requests}
-    Run Keyword         ${clientKeyword}
-    ...                 ${numThreads}
-    ...                 ${requests}
+    [Arguments]  ${executionKeyword}  ${numThreads}  ${requests}
+    RUN KEYWORD  ${executionKeyword}  ${numThreads}  ${requests}
 
 Execute sequential requests
-    [Arguments]         ${clientKeyword}
-    ...                 ${requests}
-    :FOR    ${request}     IN      @{requests}
-    \    Run Keyword    ${clientKeyword}
-    ...                 ${request}
+    [Arguments]  ${executionKeyword}
+    ...          ${requests}
+    :FOR  ${request}  IN  @{requests}
+    \  RUN KEYWORD  ${executionKeyword}  ${request}
 
 Download requests
-    [Arguments]         ${readRequest}
-    ${didRead} =        Download data to cache    ${readRequest}
-    Should be true      ${didRead}
+    [Arguments]  ${readRequest}
+    ${didRead} =  download Data To Cache  ${readRequest}
+    SHOULD BE TRUE  ${didRead}
 
-Multi download requests
-    [Arguments]         ${numThreads}
-    ...                 ${readRequests}
-    ${didReadAll} =     Multi download data to cache    ${numThreads}   @{readRequests}
-    Should be true      ${didReadAll}
+Concurrently download requests
+    [Arguments]  ${numThreads}  ${readRequests}
+    ${didReadAll} =  concurrent Download Data To Cache  ${numThreads}  @{readRequests}
+    SHOULD BE TRUE  ${didReadAll}
 
 Read requests
-    [Arguments]         ${readRequest}
-    ${didRead} =        Read data    ${readRequest}
-    Should be true      ${didRead}
+    [Arguments]  ${readRequest}
+    ${didRead} =  read Data  ${readRequest}
+    SHOULD BE TRUE  ${didRead}
 
-Multi read requests
-    [Arguments]         ${numThreads}
-    ...                 ${readRequests}
-    ${didReadAll} =     Multi read data    ${numThreads}    @{readRequests}
-    Should be true      ${didReadAll}
+Concurrently read requests
+    [Arguments]  ${numThreads}  ${readRequests}
+    ${didReadAll} =  concurrent Read Data  ${numThreads}  @{readRequests}
+    SHOULD BE TRUE  ${didReadAll}
 
 ## Verification ##
 
 Verify cache directory size
-    [Arguments]     ${cachePrefix}
-    ...             ${cacheSuffix}
-    ...             ${cacheNumDisks}
-    ...             ${expectedCacheSize}
-    ${cacheDirSize} =               Get cache dir size MB   ${cachePrefix}   ${cacheSuffix}    ${cacheNumDisks}
-    Should be equal as integers     ${cacheDirSize}         ${expectedCacheSize}
+    [Arguments]  ${cachePrefix}
+    ...          ${cacheSuffix}
+    ...          ${cacheNumDisks}
+    ...          ${expectedCacheSize}
+    ${cacheDirSize} =  get Cache Dir Size MB  ${cachePrefix}  ${cacheSuffix}  ${cacheNumDisks}
+    SHOULD BE EQUAL AS INTEGERS  ${cacheDirSize}  ${expectedCacheSize}
 
 Verify metric value
-    [Arguments]                 ${metricName}   ${expectedValue}
-    &{metrics} =                Get cache metrics
-    Log Many                    &{metrics}
-    Should not be empty         ${metrics}
-    Should be equal as numbers  &{metrics}[${metricName}]   ${expectedValue}
+    [Arguments]  ${metricName}  ${expectedValue}
+    &{metrics} =  get Cache Metrics
+    LOG MANY  &{metrics}
+    SHOULD NOT BE EMPTY  ${metrics}
+    SHOULD BE EQUAL AS NUMBERS  &{metrics}[${metricName}]  ${expectedValue}
