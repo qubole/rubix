@@ -51,7 +51,7 @@ Test cache eviction when data read
     ...                 rubix.cluster.on-master=true
     ...                 rubix.cache.dirprefix.list=${CACHE_DIR_PFX}
     ...                 rubix.cache.dirsuffix=${CACHE_DIR_SFX}
-    ...                 rubix.cache..max.disks=${CACHE_NUM_DISKS}
+    ...                 rubix.cache.max.disks=${CACHE_NUM_DISKS}
     ...                 rubix.cache.max.size=${CACHE_MAX_SIZE}
     [Teardown]          Cache test teardown
 
