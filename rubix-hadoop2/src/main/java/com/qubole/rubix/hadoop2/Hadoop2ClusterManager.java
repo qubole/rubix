@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018. Qubole Inc
+ * Copyright (c) 2019. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -120,7 +120,7 @@ public class Hadoop2ClusterManager extends ClusterManager
       return nodesCache.get("nodeList");
     }
     catch (ExecutionException e) {
-      e.printStackTrace();
+      log.error(Throwables.getStackTraceAsString(e));
     }
 
     return null;

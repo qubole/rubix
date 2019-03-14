@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018. Qubole Inc
+ * Copyright (c) 2019. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -541,7 +541,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
           fs.close();
         }
         catch (IOException e) {
-          e.printStackTrace();
+          log.error(Throwables.getStackTraceAsString(e));
         }
       }
     }
