@@ -58,7 +58,7 @@ public class MockCachingFileSystem extends CachingFileSystem<RawLocalFileSystem>
   public FSDataInputStream open(Path path, int i)
       throws IOException
   {
-    String localPath = path.toString();
+    String localPath = path.toUri().getPath();
     File file = new File(localPath);
     LocalFSInputStream inputStream = new LocalFSInputStream(localPath);
     return new FSDataInputStream(

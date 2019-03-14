@@ -407,6 +407,9 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   @Override
   public Map<String, Double> getCacheMetrics()
   {
+    // Clean up cache to resolve any pending changes.
+    fileMetadataCache.cleanUp();
+
     final long cachedRequests = cacheRequestCount.getCount();
     final long remoteRequests = remoteRequestCount.getCount();
     final long nonLocalRequests = nonlocalRequestCount.getCount();
