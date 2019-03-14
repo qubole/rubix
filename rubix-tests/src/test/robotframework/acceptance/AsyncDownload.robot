@@ -43,33 +43,33 @@ ${ASYNC_PROCESS_DELAY_SOME_DELAYED}     1500
 *** Test Cases ***
 Async caching
     [Template]      Test async caching
-    Download requests        isMultiClient=${false}
-    Multi download requests  isMultiClient=${true}
-    Read requests            isMultiClient=${false}
-    Multi read requests      isMultiClient=${true}
+    Download requests               runConcurrently=${false}
+    Concurrently download requests  runConcurrently=${true}
+    Read requests                   runConcurrently=${false}
+    Concurrently read requests      runConcurrently=${true}
 
 Async caching - Some requests delayed
     [Template]      Test async caching with some requests delayed
-    Download requests        isMultiClient=${false}
-    Multi download requests  isMultiClient=${true}
-    Read requests            isMultiClient=${false}
-    Multi read requests      isMultiClient=${true}
+    Download requests               runConcurrently=${false}
+    Concurrently download requests  runConcurrently=${true}
+    Read requests                   runConcurrently=${false}
+    Concurrently read requests      runConcurrently=${true}
 
 Async caching - Request 1 file date before Request 2
     [Template]      Test async caching with request 1 file date before request 2
-    Download requests        isMultiClient=${false}
-    Multi download requests  isMultiClient=${true}
+    Download requests               runConcurrently=${false}
+    Concurrently download requests  runConcurrently=${true}
 
 Async caching - Request 1 file date after Request 2
     [Template]      Test async caching with request 1 file date after request 2
-    Download requests        isMultiClient=${false}
-    Multi download requests  isMultiClient=${true}
+    Download requests               runConcurrently=${false}
+    Concurrently download requests  runConcurrently=${true}
 
 *** Keywords ***
 Test async caching
     [Documentation]     Verify that files are correctly cached when asynchronously downloaded.
     [Tags]              async
-    [Arguments]         ${clientKeyword}    ${isMultiClient}
+    [Arguments]         ${executionKeyword}  ${runConcurrently}
 
     # Setup
     Cache test setup
@@ -92,38 +92,38 @@ Test async caching
     ...     ${LAST_MODIFIED}
     ...     ${CLUSTER_TYPE}
 
-    Run Keyword If  ${isMultiClient}
+    Run Keyword If  ${runConcurrently}
     ...     Execute concurrent requests
-    ...     ${clientKeyword}
+    ...     ${executionKeyword}
     ...     ${NUM_CONCURRENT_THREADS}
     ...     ${requests}
     ...     ELSE
     ...     Execute sequential requests
-    ...     ${clientKeyword}
+    ...     ${executionKeyword}
     ...     ${requests}
 
     Verify metric value             ${METRIC_ASYNC_QUEUE_SIZE}  ${NUM_TEST_FILES}
 
-    ${waitTime} =       Evaluate    ${ASYNC_PROCESS_INTERVAL} * ${NUM_TEST_FILES}
-    Sleep               ${waitTime}ms      Wait for queued requests to finish
+    ${waitTime} =  Evaluate  ${ASYNC_PROCESS_INTERVAL} * ${NUM_TEST_FILES}
+    SLEEP  ${waitTime}ms  Wait for queued requests to finish
 
     Verify async metrics
-    ...    queueSize=0
-    ...    processedRequests=${NUM_TEST_FILES}
-    ...    totalRequests=${NUM_TEST_FILES}
-    ...    downloadedMB=${NUM_TEST_FILES}
+    ...  queueSize=0
+    ...  processedRequests=${NUM_TEST_FILES}
+    ...  totalRequests=${NUM_TEST_FILES}
+    ...  downloadedMB=${NUM_TEST_FILES}
     Verify cache directory size
-    ...     ${CACHE_DIR_PFX}
-    ...     ${CACHE_DIR_SFX}
-    ...     ${CACHE_NUM_DISKS}
-    ...     expectedCacheSize=${NUM_TEST_FILES}
+    ...  ${CACHE_DIR_PFX}
+    ...  ${CACHE_DIR_SFX}
+    ...  ${CACHE_NUM_DISKS}
+    ...  expectedCacheSize=${NUM_TEST_FILES}
 
     [Teardown]          Cache test teardown     ${DATADIR}
 
 Test async caching with some requests delayed
     [Documentation]     Verify that asynchronous caching only downloads files queued outside of the delay period.
     [Tags]              async
-    [Arguments]         ${clientKeyword}    ${isMultiClient}
+    [Arguments]         ${executionKeyword}    ${runConcurrently}
 
     # Setup
     Cache test setup
@@ -150,14 +150,14 @@ Test async caching with some requests delayed
     ...     ${LAST_MODIFIED}
     ...     ${CLUSTER_TYPE}
 
-    Run Keyword If  ${isMultiClient}
+    Run Keyword If  ${runConcurrently}
     ...     Execute concurrent requests
-    ...     ${clientKeyword}
+    ...     ${executionKeyword}
     ...     ${NUM_CONCURRENT_THREADS}
     ...     ${requests}
     ...     ELSE
     ...     Execute sequential requests
-    ...     ${clientKeyword}
+    ...     ${executionKeyword}
     ...     ${requests}
 
     Verify async metrics
@@ -178,14 +178,14 @@ Test async caching with some requests delayed
     ...     ${LAST_MODIFIED}
     ...     ${CLUSTER_TYPE}
 
-    Run Keyword If  ${isMultiClient}
+    Run Keyword If  ${runConcurrently}
     ...     Execute concurrent requests
-    ...     ${clientKeyword}
+    ...     ${executionKeyword}
     ...     ${NUM_CONCURRENT_THREADS}
     ...     ${requests}
     ...     ELSE
     ...     Execute sequential requests
-    ...     ${clientKeyword}
+    ...     ${executionKeyword}
     ...     ${requests}
 
     Verify async metrics
@@ -218,7 +218,7 @@ Test async caching with some requests delayed
 Test async caching with request 1 file date before request 2
     [Documentation]     Verify that later read requests for the same file with a later last-modified date are handled correctly.
     [Tags]              async
-    [Arguments]         ${clientKeyword}    ${isMultiClient}
+    [Arguments]         ${executionKeyword}    ${runConcurrently}
 
     # Setup
     Cache test setup
@@ -250,15 +250,15 @@ Test async caching with request 1 file date before request 2
     ...     ${CLUSTER_TYPE}
     @{requests} =       Create list     ${readRequestJan1}  ${readRequestJan2}
 
-    Run Keyword If  ${isMultiClient}
+    Run Keyword If  ${runConcurrently}
     ...     Execute concurrent requests
-    ...     ${clientKeyword}
+    ...     ${executionKeyword}
     ...     ${NUM_CONCURRENT_THREADS}
     ...     ${requests}
     ...     staggerRequests=${true}
     ...     ELSE
     ...     Execute sequential requests
-    ...     ${clientKeyword}
+    ...     ${executionKeyword}
     ...     ${requests}
 
     ${totalRequests} =      Get Length  ${requests}
@@ -283,7 +283,7 @@ Test async caching with request 1 file date before request 2
 Test async caching with request 1 file date after request 2
     [Documentation]     Verify that later read requests for the same file with an earlier last-modified date are handled correctly.
     [Tags]              async
-    [Arguments]         ${clientKeyword}    ${isMultiClient}
+    [Arguments]         ${executionKeyword}    ${runConcurrently}
 
     # Setup
     Cache test setup
@@ -315,15 +315,15 @@ Test async caching with request 1 file date after request 2
     ...     ${CLUSTER_TYPE}
     @{requests} =       Create List     ${readRequestJan2}  ${readRequestJan1}
 
-    Run Keyword If  ${isMultiClient}
+    Run Keyword If  ${runConcurrently}
     ...     Execute concurrent requests
-    ...     ${clientKeyword}
+    ...     ${executionKeyword}
     ...     ${NUM_CONCURRENT_THREADS}
     ...     ${requests}
     ...     staggerRequests=${true}
     ...     ELSE
     ...     Execute sequential requests
-    ...     ${clientKeyword}
+    ...     ${executionKeyword}
     ...     ${requests}
 
     ${expectedProcessedRequests} =  Set Variable    1
