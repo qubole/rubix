@@ -34,51 +34,51 @@ ${NUM_EXPECTED_EVICTIONS}   3
 
 *** Test Cases ***
 Cache eviction
-    [Template]          Test cache eviction
-    Download requests        isMultiClient=${false}
-    Multi download requests  isMultiClient=${true}
-    Read requests            isMultiClient=${false}
-    Multi read requests      isMultiClient=${true}
+    [Template]   Test cache eviction
+    Download requests               runConcurrently=${false}
+    Concurrently download requests  runConcurrently=${true}
+    Read requests                   runConcurrently=${false}
+    Concurrently read requests      runConcurrently=${true}
 
 *** Keywords ***
 Test cache eviction
-    [Documentation]     Verify that files are properly evicted once the cache reaches its maximum size.
-    [Tags]              eviction
-    [Arguments]         ${clientKeyword}    ${isMultiClient}
+    [Documentation]  Verify that files are properly evicted once the cache reaches its maximum size.
+    [Tags]           eviction
+    [Arguments]      ${executionKeyword}  ${runConcurrently}
 
     # Setup
     Cache test setup
-    ...   ${DATADIR}
-    ...   rubix.cluster.on-master=true
-    ...   hadoop.cache.data.dirprefix.list=${CACHE_DIR_PFX}
-    ...   hadoop.cache.data.dirsuffix=${CACHE_DIR_SFX}
-    ...   hadoop.cache.data.max.disks=${CACHE_NUM_DISKS}
-    ...   rubix.cache.fullness.size=${CACHE_MAX_SIZE}
+    ...  ${DATADIR}
+    ...  rubix.cluster.on-master=true
+    ...  hadoop.cache.data.dirprefix.list=${CACHE_DIR_PFX}
+    ...  hadoop.cache.data.dirsuffix=${CACHE_DIR_SFX}
+    ...  hadoop.cache.data.max.disks=${CACHE_NUM_DISKS}
+    ...  rubix.cache.fullness.size=${CACHE_MAX_SIZE}
 
-    @{testFileNames} =  Generate test files   ${REMOTE_PATH}    ${FILE_LENGTH}   ${NUM_TEST_FILES}
-    @{requests} =       Make similar read requests
-    ...     ${testFileNames}
-    ...     ${START_BLOCK}
-    ...     ${END_BLOCK}
-    ...     ${FILE_LENGTH}
-    ...     ${LAST_MODIFIED}
-    ...     ${CLUSTER_TYPE}
+    @{testFileNames} =  Generate test files  ${REMOTE_PATH}  ${FILE_LENGTH}  ${NUM_TEST_FILES}
+    @{requests} =  Make similar read requests
+    ...  ${testFileNames}
+    ...  ${START_BLOCK}
+    ...  ${END_BLOCK}
+    ...  ${FILE_LENGTH}
+    ...  ${LAST_MODIFIED}
+    ...  ${CLUSTER_TYPE}
 
-    Run Keyword If  ${isMultiClient}
-    ...     Execute concurrent requests
-    ...     ${clientKeyword}
-    ...     ${NUM_CONCURRENT_THREADS}
-    ...     ${requests}
-    ...     ELSE
-    ...     Execute sequential requests
-    ...     ${clientKeyword}
-    ...     ${requests}
+    RUN KEYWORD IF  ${runConcurrently}
+    ...  Execute concurrent requests
+    ...  ${executionKeyword}
+    ...  ${NUM_CONCURRENT_THREADS}
+    ...  ${requests}
+    ...  ELSE
+    ...  Execute sequential requests
+    ...  ${executionKeyword}
+    ...  ${requests}
 
-    Verify metric value            ${METRIC_EVICTION}  ${NUM_EXPECTED_EVICTIONS}
+    Verify metric value  ${METRIC_EVICTION}  ${NUM_EXPECTED_EVICTIONS}
     Verify cache directory size
-    ...     ${CACHE_DIR_PFX}
-    ...     ${CACHE_DIR_SFX}
-    ...     ${CACHE_NUM_DISKS}
-    ...     expectedCacheSize=${CACHE_MAX_SIZE}
+    ...  ${CACHE_DIR_PFX}
+    ...  ${CACHE_DIR_SFX}
+    ...  ${CACHE_NUM_DISKS}
+    ...  expectedCacheSize=${CACHE_MAX_SIZE}
 
-    [Teardown]          Cache test teardown     ${DATADIR}
+    [Teardown]  Cache test teardown  ${DATADIR}

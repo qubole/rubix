@@ -114,8 +114,7 @@ public class BookKeeperServer extends Configured implements Tool
       server.serve();
     }
     catch (TTransportException e) {
-      e.printStackTrace();
-      log.error(String.format("Error starting BookKeeper server %s", Throwables.getStackTraceAsString(e)));
+      log.error(Throwables.getStackTraceAsString(e));
     }
   }
 
