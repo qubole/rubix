@@ -1,5 +1,5 @@
 *** Settings ***
-Documentation       Rubix Cache Eviction Integration Tests
+Documentation       RubiX Cache Removal Integration Tests
 Resource            setup.robot
 Resource            bookkeeper.robot
 Suite Setup         Create Cache Parent Directories     ${CACHE_DIR_PFX}    ${CACHE_NUM_DISKS}
@@ -96,12 +96,12 @@ Test cache eviction
 
     RUN KEYWORD IF  ${runConcurrently}
     ...  Execute concurrent requests
-    ...  ${clientKeyword}
+    ...  ${executionKeyword}
     ...  ${NUM_CONCURRENT_THREADS}
     ...  ${requests}
     ...  ELSE
     ...  Execute sequential requests
-    ...  ${clientKeyword}
+    ...  ${executionKeyword}
     ...  ${requests}
 
     Verify metric value  ${METRIC_EVICTION}  ${NUM_EXPECTED_EVICTIONS}
@@ -116,7 +116,7 @@ Test cache eviction
 Test cache invalidation where last modified does not match
     [Documentation]  Verify that cache files are removed when requesting status for a file with a newer modified date than what is cached.
     [Tags]           eviction
-    [Arguments]      ${clientKeyword}  ${runConcurrently}
+    [Arguments]      ${executionKeyword}  ${runConcurrently}
 
     # Setup
     Cache test setup
@@ -137,12 +137,12 @@ Test cache invalidation where last modified does not match
 
     RUN KEYWORD IF  ${runConcurrently}
     ...  Execute concurrent requests
-    ...  ${clientKeyword}
+    ...  ${executionKeyword}
     ...  ${NUM_CONCURRENT_THREADS}
     ...  ${requests}
     ...  ELSE
     ...  Execute sequential requests
-    ...  ${clientKeyword}
+    ...  ${executionKeyword}
     ...  ${requests}
 
     ${statusRequest} =  Make status request
@@ -167,7 +167,7 @@ Test cache invalidation where last modified does not match
 Test cache invalidation during async download where MD exists but file does not
     [Documentation]  Verify that cache files are removed if metadata exists without a matching cache file during asynchronous downloads.
     [Tags]           eviction
-    [Arguments]      ${clientKeyword}  ${runConcurrently}
+    [Arguments]      ${executionKeyword}  ${runConcurrently}
 
     # Setup
     Cache test setup
@@ -207,12 +207,12 @@ Test cache invalidation during async download where MD exists but file does not
 
     RUN KEYWORD IF  ${runConcurrently}
     ...  Execute concurrent requests
-    ...  ${clientKeyword}
+    ...  ${executionKeyword}
     ...  ${NUM_CONCURRENT_THREADS}
     ...  ${requests}
     ...  ELSE
     ...  Execute sequential requests
-    ...  ${clientKeyword}
+    ...  ${executionKeyword}
     ...  ${requests}
 
     ${waitTime} =  EVALUATE  ${ASYNC_PROCESS_INTERVAL} * 2
@@ -230,7 +230,7 @@ Test cache invalidation during async download where MD exists but file does not
 Test cache expiry
     [Documentation]  Verify that cache files are removed once the cache expiry period has been reached.
     [Tags]           eviction
-    [Arguments]      ${clientKeyword}  ${runConcurrently}
+    [Arguments]      ${executionKeyword}  ${runConcurrently}
 
     # Setup
     Cache test setup
@@ -252,12 +252,12 @@ Test cache expiry
 
     RUN KEYWORD IF  ${runConcurrently}
     ...  Execute concurrent requests
-    ...  ${clientKeyword}
+    ...  ${executionKeyword}
     ...  ${NUM_CONCURRENT_THREADS}
     ...  ${requests}
     ...  ELSE
     ...  Execute sequential requests
-    ...  ${clientKeyword}
+    ...  ${executionKeyword}
     ...  ${requests}
 
     Verify metric value  ${METRIC_EXPIRY}  0
