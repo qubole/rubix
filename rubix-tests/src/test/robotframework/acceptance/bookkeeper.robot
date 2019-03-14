@@ -101,13 +101,13 @@ Make similar status requests
 ## Execution ##
 
 Execute concurrent requests
-    [Arguments]  ${clientKeyword}  ${numThreads}  ${requests}
-    RUN KEYWORD  ${clientKeyword}  ${numThreads}  ${requests}
+    [Arguments]  ${executionKeyword}  ${numThreads}  ${requests}
+    RUN KEYWORD  ${executionKeyword}  ${numThreads}  ${requests}
 
 Execute sequential requests
-    [Arguments]  ${clientKeyword}  ${requests}
+    [Arguments]  ${executionKeyword}  ${requests}
     :FOR  ${request}  IN  @{requests}
-    \  RUN KEYWORD  ${clientKeyword}  ${request}
+    \  RUN KEYWORD  ${executionKeyword}  ${request}
 
 Get status for blocks
     [Arguments]  ${statusRequest}
@@ -146,7 +146,7 @@ Verify cache directory size
     SHOULD BE EQUAL AS INTEGERS  ${cacheDirSize}  ${expectedCacheSize}
 
 Verify metric value
-    [Arguments]  ${metricName}   ${expectedValue}
+    [Arguments]  ${metricName}  ${expectedValue}
     &{metrics} =  get Cache Metrics
     LOG MANY  &{metrics}
     SHOULD NOT BE EMPTY  ${metrics}

@@ -545,7 +545,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
           fs.close();
         }
         catch (IOException e) {
-          e.printStackTrace();
+          log.error(Throwables.getStackTraceAsString(e));
         }
       }
     }

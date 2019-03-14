@@ -43,28 +43,28 @@ ${ASYNC_PROCESS_DELAY}      1
 
 *** Test Cases ***
 Cache eviction
-    [Template]          Test cache eviction
+    [Template]  Test cache eviction
     Download requests               runConcurrently=${false}
     Concurrently download requests  runConcurrently=${true}
     Read requests                   runConcurrently=${false}
     Concurrently read requests      runConcurrently=${true}
 
 Cache invalidation - last modified does not match
-    [Template]          Test cache invalidation where last modified does not match
+    [Template]  Test cache invalidation where last modified does not match
     Download requests               runConcurrently=${false}
     Concurrently download requests  runConcurrently=${true}
     Read requests                   runConcurrently=${false}
     Concurrently read requests      runConcurrently=${true}
 
 Cache invalidation - MD exists without file
-    [Template]          Test cache invalidation during async download where MD exists but file does not
+    [Template]  Test cache invalidation during async download where MD exists but file does not
     Download requests               runConcurrently=${false}
     Concurrently download requests  runConcurrently=${true}
     Read requests                   runConcurrently=${false}
     Concurrently read requests      runConcurrently=${true}
 
 Cache expiry
-    [Template]          Test cache expiry
+    [Template]  Test cache expiry
     Download requests               runConcurrently=${false}
     Concurrently download requests  runConcurrently=${true}
     Read requests                   runConcurrently=${false}
@@ -74,16 +74,16 @@ Cache expiry
 Test cache eviction
     [Documentation]  Verify that cache files are removed once the cache reaches its maximum size.
     [Tags]           eviction
-    [Arguments]      ${clientKeyword}  ${runConcurrently}
+    [Arguments]      ${executionKeyword}  ${runConcurrently}
 
     # Setup
     Cache test setup
-    ...   ${DATADIR}
-    ...   rubix.cluster.on-master=true
-    ...   hadoop.cache.data.dirprefix.list=${CACHE_DIR_PFX}
-    ...   hadoop.cache.data.dirsuffix=${CACHE_DIR_SFX}
-    ...   hadoop.cache.data.max.disks=${CACHE_NUM_DISKS}
-    ...   rubix.cache.fullness.size=${CACHE_MAX_SIZE}
+    ...  ${DATADIR}
+    ...  rubix.cluster.on-master=true
+    ...  hadoop.cache.data.dirprefix.list=${CACHE_DIR_PFX}
+    ...  hadoop.cache.data.dirsuffix=${CACHE_DIR_SFX}
+    ...  hadoop.cache.data.max.disks=${CACHE_NUM_DISKS}
+    ...  rubix.cache.fullness.size=${CACHE_MAX_SIZE}
 
     @{testFileNames} =  Generate test files  ${REMOTE_PATH}  ${FILE_LENGTH}  ${NUM_TEST_FILES}
     @{requests} =  Make similar read requests
