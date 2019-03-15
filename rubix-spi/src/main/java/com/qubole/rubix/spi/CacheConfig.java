@@ -67,7 +67,7 @@ public class CacheConfig
   private static final String KEY_PROCESS_THREAD_INTERVAL = "rubix.request.process.interval";
   private static final String KEY_REMOTE_FETCH_PROCESS_INTERVAL = "rubix.remotefetch.interval";
   private static final String KEY_REMOTE_FETCH_THREADS = "rubix.remotefetch.threads";
-  private static final String KEY_RUBIX_ON_MASTER = "rubix.cluster.on-master";
+  private static final String KEY_RUBIX_ON_MASTER = "rubix.cluster.is-master";
   private static final String KEY_SERVER_PORT = "rubix.cache.bookkeeper.server.port";
   private static final String KEY_SERVER_MAX_THREADS = "rubix.cache.bookkeeper.max-threads";
   private static final String KEY_SERVICE_RETRY_INTERVAL = "rubix.network.service.retry-interval";
