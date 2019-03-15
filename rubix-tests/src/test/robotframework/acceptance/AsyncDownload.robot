@@ -264,7 +264,7 @@ Test async caching with request 1 file date before request 2
     ${totalRequests} =      Get Length  ${requests}
     Verify metric value     ${METRIC_ASYNC_QUEUE_SIZE}  ${totalRequests}
 
-    ${waitTime} =   Evaluate    ${ASYNC_PROCESS_INTERVAL} * ${totalRequests} * 5
+    ${waitTime} =   Evaluate    ${ASYNC_PROCESS_INTERVAL} * ${totalRequests} * 6
     Sleep           ${waitTime}ms      Wait for queued requests to finish
 
     Verify async metrics
@@ -330,7 +330,7 @@ Test async caching with request 1 file date after request 2
     ${totalRequests} =              Get Length  ${requests}
     Verify metric value             ${METRIC_ASYNC_QUEUE_SIZE}    ${totalRequests}
 
-    ${waitTime} =       Evaluate    ${ASYNC_PROCESS_INTERVAL} * ${totalRequests} * 5
+    ${waitTime} =       Evaluate    ${ASYNC_PROCESS_INTERVAL} * ${totalRequests} * 6
     Sleep               ${waitTime}ms      Wait for queued requests to finish
 
     Verify async metrics
