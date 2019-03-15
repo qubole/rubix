@@ -215,7 +215,7 @@ Test cache invalidation during async download where MD exists but file does not
     ...  ${executionKeyword}
     ...  ${requests}
 
-    ${waitTime} =  EVALUATE  ${ASYNC_PROCESS_INTERVAL} * 2
+    ${waitTime} =  EVALUATE  ${ASYNC_PROCESS_INTERVAL} * 4
     SLEEP  ${waitTime}ms  Wait for async request to process.
 
     Verify metric value  ${METRIC_INVALIDATION}  1
