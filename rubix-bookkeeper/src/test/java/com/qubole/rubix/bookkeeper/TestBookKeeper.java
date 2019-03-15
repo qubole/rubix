@@ -106,7 +106,7 @@ public class TestBookKeeper
           throws IOException, TException
   {
     String testDirectory = CacheConfig.getCacheDirPrefixList(conf) + "0" + CacheConfig.getCacheDataDirSuffix(conf);
-    CacheConfig.setBlockSize(conf, 1 * 1024 * 1024);
+    CacheConfig.setBlockSize(conf, 1000000);
     String backendFileName = testDirectory + "testBackendFile";
     DataGen.populateFile(backendFileName, 1, 100000);
     final String remotePathWithScheme = "file://" + backendFileName;
@@ -117,24 +117,25 @@ public class TestBookKeeper
     bookKeeper.readData(remotePathWithScheme, (long) 1000000, 25000, 1025000, TEST_LAST_MODIFIED, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
 
     // read from randomAccessFile and verify that it has the right data
-    // 0 - 99614719 : should be filled with '0'
-    // 99614720 - 99999999 : should be filled with 'j'
-    // 100000000 - 102500000 : should be filled with 'k'
-    byte[] buffer = new byte[2600000];
+    // 0 - 999999 : should be filled with '0'
+    // 1000000 - 1024999 : should be filled with 'k'
+    byte[] buffer = new byte[1025000];
     FileInputStream localFileInputStream = new FileInputStream(new File(CacheUtil.getLocalPath(remotePathWithScheme, conf)));
     localFileInputStream.read(buffer, 0, 1025000);
-    /*for (int i = 0; i <= 99614719; i++) {
-      assertTrue(buffer[i] == 0, "Got data instead of hole: " + buffer[i]);
+
+    byte[] backendBuffer = new byte[1025000];
+    FileInputStream backendFileInputStream = new FileInputStream(new File(backendFileName));
+    backendFileInputStream.read(backendBuffer, 0, 1025000);
+
+    for (int i = 0; i <= 999999; i++) {
+      assertTrue(buffer[i] == 0, "Got " + buffer[i] + " at " + i + "instead of " + 0);
     }
-    for (int i = 99614720; i <= 99999999; i++) {
-      assertTrue(buffer[i] == 'j', "Got " + buffer[i] + " at " + i + "instead of 'j'");
+    for (int i = 1000000; i <= 1024999; i++) {
+      assertTrue(buffer[i] == backendBuffer[i], "Got " + buffer[i] + " at " + i + "instead of " + backendBuffer[i]);
     }
-    for (int i = 100000001; i <= 102499999; i++) {
-      assertTrue(buffer[i] == 'k', "Got " + buffer[i] + " at " + i + "instead of 'k'");
-    }*/
     localFileInputStream.close();
+    backendFileInputStream.close();
     long fileSize = DiskUtils.getDirectorySizeInMB(new File(testDirectory + backendFileName));
-    log.info("file size : " + fileSize);
     assertTrue(fileSize == 1, "getDirectorySizeInMB is reporting wrong file Size : " + fileSize);
   }
 

@@ -67,7 +67,7 @@ public class TestDiskUtils
   }
 
   @Test
-  public void testGetCacheSizeMB_Rafile() throws IOException
+  public void testGetCacheSizeMB_WithHoledFile() throws IOException
   {
     String fileName = testDirectory + "/testfile";
     File dirName = new File(testDirectory);

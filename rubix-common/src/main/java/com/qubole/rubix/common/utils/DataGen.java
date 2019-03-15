@@ -35,11 +35,11 @@ public class DataGen
   {
   }
 
-  public static String generateContent(int jump, int inputSize)
+  public static String generateContent(int jump, int sizeMultiplier)
   {
     StringBuilder stringBuilder = new StringBuilder();
     for (char i = 'a'; i <= 'z'; i = (char) (i + jump)) {
-      for (int j = 0; j < inputSize; j++) {
+      for (int j = 0; j < sizeMultiplier; j++) {
         stringBuilder.append(i);
       }
     }
@@ -56,9 +56,9 @@ public class DataGen
     return generateContent(1);
   }
 
-  public static String getExpectedOutput(int size, int inputSize)
+  public static String getExpectedOutput(int size, int sizeMultiplier)
   {
-    String expected = generateContent(2, inputSize);
+    String expected = generateContent(2, sizeMultiplier);
     return expected.substring(0, size);
   }
 
@@ -81,10 +81,10 @@ public class DataGen
     out.close();
   }
 
-  public static void populateFile(String filename, int skip, int inputSize) throws IOException
+  public static void populateFile(String filename, int skip, int sizeMultiplier) throws IOException
   {
     PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(filename, false)));
-    out.print(generateContent(skip, inputSize));
+    out.print(generateContent(skip, sizeMultiplier));
     out.close();
   }
 
