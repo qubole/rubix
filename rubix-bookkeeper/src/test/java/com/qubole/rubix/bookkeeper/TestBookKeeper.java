@@ -105,38 +105,33 @@ public class TestBookKeeper
   private void testGetCacheDirSizeinMBs()
           throws IOException, TException
   {
+    CacheConfig.setBlockSize(conf, 1024 * 1024);
+    cacheDirSizeHelper(10000000, 2500000);
+  }
+
+  private void cacheDirSizeHelper(long sizeMultiplier, long downloadSize) throws IOException, TException
+  {
     String testDirectory = CacheConfig.getCacheDirPrefixList(conf) + "0" + CacheConfig.getCacheDataDirSuffix(conf);
-    CacheConfig.setBlockSize(conf, 1000000);
     String backendFileName = testDirectory + "testBackendFile";
-    DataGen.populateFile(backendFileName, 1, 100000);
+    DataGen.populateFile(backendFileName, 1, (int) sizeMultiplier);
     final String remotePathWithScheme = "file://" + backendFileName;
-    log.info("Value of remotePathWithScheme " + remotePathWithScheme);
-    log.info("Value of testDirectory " + testDirectory);
-    log.info("Value of backendFileName " + backendFileName);
-    log.info("Value of LocalPath " + CacheUtil.getLocalPath(remotePathWithScheme, conf));
-    bookKeeper.readData(remotePathWithScheme, (long) 1000000, 25000, 1025000, TEST_LAST_MODIFIED, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+    bookKeeper.readData(remotePathWithScheme, (long) 10 * sizeMultiplier, (int) downloadSize, 10 * sizeMultiplier + downloadSize, TEST_LAST_MODIFIED, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
 
     // read from randomAccessFile and verify that it has the right data
     // 0 - 999999 : should be filled with '0'
     // 1000000 - 1024999 : should be filled with 'k'
-    byte[] buffer = new byte[1025000];
+    byte[] buffer = new byte[26 * (int) sizeMultiplier];
     FileInputStream localFileInputStream = new FileInputStream(new File(CacheUtil.getLocalPath(remotePathWithScheme, conf)));
-    localFileInputStream.read(buffer, 0, 1025000);
+    localFileInputStream.read(buffer, 0, (int) (sizeMultiplier + downloadSize));
 
-    byte[] backendBuffer = new byte[1025000];
+    byte[] backendBuffer = new byte[26 * (int) sizeMultiplier];
     FileInputStream backendFileInputStream = new FileInputStream(new File(backendFileName));
-    backendFileInputStream.read(backendBuffer, 0, 1025000);
+    backendFileInputStream.read(backendBuffer, 0, (int) (sizeMultiplier + downloadSize));
 
-    for (int i = 0; i <= 999999; i++) {
-      assertTrue(buffer[i] == 0, "Got " + buffer[i] + " at " + i + "instead of " + 0);
-    }
-    for (int i = 1000000; i <= 1024999; i++) {
-      assertTrue(buffer[i] == backendBuffer[i], "Got " + buffer[i] + " at " + i + "instead of " + backendBuffer[i]);
-    }
     localFileInputStream.close();
     backendFileInputStream.close();
-    long fileSize = DiskUtils.getDirectorySizeInMB(new File(testDirectory + backendFileName));
-    assertTrue(fileSize == 1, "getDirectorySizeInMB is reporting wrong file Size : " + fileSize);
+    long fileSize = DiskUtils.getDirectorySizeInMB(new File(CacheUtil.getLocalPath(remotePathWithScheme, conf)));
+    assertTrue(fileSize == 3, "getDirectorySizeInMB is reporting wrong file Size : " + fileSize);
   }
 
   @Test(expectedExceptions = ClusterManagerInitilizationException.class)
