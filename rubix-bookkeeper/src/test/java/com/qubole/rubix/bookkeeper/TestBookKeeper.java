@@ -118,16 +118,23 @@ public class TestBookKeeper
     bookKeeper.readData(remotePathWithScheme, (long) 10 * sizeMultiplier, (int) downloadSize, 10 * sizeMultiplier + downloadSize, TEST_LAST_MODIFIED, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
 
     // read from randomAccessFile and verify that it has the right data
-    // 0 - 999999 : should be filled with '0'
-    // 1000000 - 1024999 : should be filled with 'k'
-    byte[] buffer = new byte[26 * (int) sizeMultiplier];
+    // 0 - 99614719 : should be filled with '0'
+    // 99614720 - 10 * sizeMultiplier + downloadSize : same data as backendFile
+    byte[] buffer = new byte[11 * (int) sizeMultiplier];
     FileInputStream localFileInputStream = new FileInputStream(new File(CacheUtil.getLocalPath(remotePathWithScheme, conf)));
     localFileInputStream.read(buffer, 0, (int) (sizeMultiplier + downloadSize));
 
-    byte[] backendBuffer = new byte[26 * (int) sizeMultiplier];
+    byte[] backendBuffer = new byte[11 * (int) sizeMultiplier];
     FileInputStream backendFileInputStream = new FileInputStream(new File(backendFileName));
     backendFileInputStream.read(backendBuffer, 0, (int) (sizeMultiplier + downloadSize));
 
+    for (int i = 0; i <= 99614719; i++) {
+      assertTrue(buffer[i] == 0, "Got " + buffer[i] + " at " + i + "instead of " + 0);
+    }
+
+    for (int i = 99614720; i <= 10 * sizeMultiplier + downloadSize; i++) {
+      assertTrue(buffer[i] == backendBuffer[i], "Got " + buffer[i] + " at " + i + "instead of " + backendBuffer[i]);
+    }
     localFileInputStream.close();
     backendFileInputStream.close();
     long fileSize = DiskUtils.getDirectorySizeInMB(new File(CacheUtil.getLocalPath(remotePathWithScheme, conf)));
