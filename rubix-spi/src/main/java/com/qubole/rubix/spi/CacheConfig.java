@@ -84,6 +84,8 @@ public class CacheConfig
   private static final String KEY_STALE_FILEINFO_EXPIRY_PERIOD = "rubix.stale.fileinfo.expiry.period";
   private static final String KEY_CLEANUP_FILES_DURING_START = "rubix.cache.cleanup.files.during.start";
   private static final String KEY_MAX_CACHE_SIZE = "rubix.cache.max.size";
+  private static final String KEY_CACHE_FILE_SPLIT_SIZE = "rubix.cache.filesplit.size";
+  private static final String KEY_CLUSTER_NODE_REFRESH_TIME = "rubix.cluster.node.refresh.time";
 
   // default values
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
@@ -141,6 +143,8 @@ public class CacheConfig
   private static final int DEFAULT_STALE_FILEINFO_EXPIRY_PERIOD = 36000; // seconds
   private static final boolean DEFAULT_CLEANUP_FILES_DURING_START = true;
   private static final long DEFAULT_MAX_CACHE_SIZE = 0;
+  private static final long DEFAULT_CACHE_FILE_SPLIT_SIZE = 256 * 1024 * 1024;
+  private static final int DEFAULT_CLUSTER_NODE_REFRESH_TIME = 300; //seconds
 
   private CacheConfig()
   {
@@ -431,6 +435,16 @@ public class CacheConfig
     return conf.getBoolean(KEY_CLEANUP_FILES_DURING_START, DEFAULT_CLEANUP_FILES_DURING_START);
   }
 
+  public static long getCacheFileSplitSize(Configuration conf)
+  {
+    return conf.getLong(KEY_CACHE_FILE_SPLIT_SIZE, DEFAULT_CACHE_FILE_SPLIT_SIZE);
+  }
+
+  public static int getClusterNodeRefreshTime(Configuration conf)
+  {
+    return conf.getInt(KEY_CLUSTER_NODE_REFRESH_TIME, DEFAULT_CLUSTER_NODE_REFRESH_TIME);
+  }
+
   public static void setBlockSize(Configuration conf, int blockSize)
   {
     conf.setInt(KEY_BLOCK_SIZE, blockSize);
@@ -639,5 +653,15 @@ public class CacheConfig
   public static void setCleanupFilesDuringStart(Configuration conf, boolean isCleanupRequired)
   {
     conf.setBoolean(KEY_CLEANUP_FILES_DURING_START, isCleanupRequired);
+  }
+
+  public static void setCacheFileSplitSize(Configuration conf, long splitSize)
+  {
+    conf.setLong(KEY_CACHE_FILE_SPLIT_SIZE, splitSize);
+  }
+
+  public static void setClusterNodeRefreshTime(Configuration conf, int refreshTime)
+  {
+    conf.setInt(KEY_CLUSTER_NODE_REFRESH_TIME, refreshTime);
   }
 }
