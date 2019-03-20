@@ -68,7 +68,7 @@ public class CacheConfig
   private static final String KEY_REMOTE_FETCH_PROCESS_INTERVAL = "rubix.remotefetch.interval";
   private static final String KEY_REMOTE_FETCH_THREADS = "rubix.remotefetch.threads";
   private static final String KEY_RUBIX_ON_MASTER = "rubix.cluster.is-master";
-  private static final String KEY_SERVER_PORT = "rubix.cache.bookkeeper.server.port";
+  private static final String KEY_SERVER_PORT = "rubix.network.bookkeeper.server.port";
   private static final String KEY_SERVER_MAX_THREADS = "rubix.cache.bookkeeper.max-threads";
   private static final String KEY_SERVICE_RETRY_INTERVAL = "rubix.network.service.retry-interval";
   private static final String KEY_SERVICE_MAX_RETRIES = "rubix.network.service.max-retries";
@@ -77,11 +77,11 @@ public class CacheConfig
   private static final String KEY_FILE_VALIDATION_INTERVAL = "rubix.validation.file.interval";
   private static final String KEY_CACHING_VALIDATION_INTERVAL = "rubix.validation.caching.interval";
   private static final String KEY_HEALTH_STATUS_EXPIRY = "rubix.monitor.health.status.expiry";
-  private static final String KEY_PRESTO_CLUSTER_MANAGER = "rubix.clustermanager.presto.class";
-  private static final String KEY_HADOOP_CLUSTER_MANAGER = "rubix.clustermanager.hadoop.class";
-  private static final String KEY_DUMMY_CLUSTER_MANAGER = "rubix.clustermanager.dummy.class";
+  private static final String KEY_PRESTO_CLUSTER_MANAGER = "rubix.cluster.manager.presto.class";
+  private static final String KEY_HADOOP_CLUSTER_MANAGER = "rubix.cluster.manager.hadoop.class";
+  private static final String KEY_DUMMY_CLUSTER_MANAGER = "rubix.cluster.manager.dummy.class";
   private static final String KEY_ENABLE_FILE_STALESSNESS_CHECK = "rubix.cache.enable.file.staleness-check";
-  private static final String KEY_STALE_FILEINFO_EXPIRY_PERIOD = "rubix.stale.fileinfo.expiry.period";
+  private static final String KEY_STALE_FILEINFO_EXPIRY_PERIOD = "rubix.cache.stale.fileinfo.expiry.period";
   private static final String KEY_CLEANUP_FILES_DURING_START = "rubix.cache.cleanup.files.during.start";
   private static final String KEY_MAX_CACHE_SIZE = "rubix.cache.max.size";
   private static final String KEY_CACHE_FILE_SPLIT_SIZE = "rubix.cache.filesplit.size";

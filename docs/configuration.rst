@@ -33,11 +33,11 @@ Cache
 | rubix.cache.strict.mode                  | Propagate exceptions if there is an error while caching data if true;  | boolean           | false            | C             |
 |                                          | otherwise fall back on reading data directly from remote file system   |                   |                  |               |
 +------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+
-| rubix.enable.file.staleness-check        | When true, always check for updates to file metadata from remote       | boolean           | true             | S             |
+| rubix.cache.enable.file.staleness-check  | When true, always check for updates to file metadata from remote       | boolean           | true             | S             |
 |                                          | filesystem. When false, file metadata will be cached for a period of   |                   |                  |               |
 |                                          | time before being fetched again.                                       |                   |                  |               |
 +------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+
-| rubix.stale.fileinfo.expiry.period       | (**rubix.enable.file.staleness-check** must be false)                  | integer (s)       | 36000            | S             |
+| rubix.cache.stale.fileinfo.expiry.period | (**rubix.cache.enable.file.staleness-check** must be false)            | integer (s)       | 36000            | S             |
 |                                          | The time file metadata will be cached before it will be fetched again  |                   |                  |               |
 |                                          | from the remote filesystem.                                            |                   |                  |               |
 +------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+
@@ -50,7 +50,7 @@ Network
 +------------------------------------------+------------------------------------------------------------------------------------+-------------------+------------------+---------------+
 | Option                                   | Description                                                                        | Type              | Default          | Client/Server |
 +==========================================+====================================================================================+===================+==================+===============+
-| rubix.cache.bookkeeper.server.port       | The port on which the BookKeeper server is listening.                              | integer           | 8899             | C & S         |
+| rubix.network.bookkeeper.server.port       | The port on which the BookKeeper server is listening.                              | integer           | 8899             | C & S         |
 +------------------------------------------+------------------------------------------------------------------------------------+-------------------+------------------+---------------+
 | rubix.cache.local.transfer.server.port   | The port on which the Local Data Transfer server is listening.                     | integer           | 8898             | C             |
 +------------------------------------------+------------------------------------------------------------------------------------+-------------------+------------------+---------------+
@@ -69,9 +69,9 @@ Cluster
 +==========================================+================================================================================================+===================+=================================================+=================+
 | rubix.cluster.node.refresh.time          | The frequency at which the cluster node membership will be checked                             | integer (s)       | 300 sec                                         | C & S           |
 +------------------------------------------+------------------------------------------------------------------------------------------------+-------------------+-------------------------------------------------+-----------------+
-| rubix.clustermanager.hadoop.class        | The ``ClusterManager`` class to use for fetching node-related information for Hadoop clusters. | string            | com.qubole.rubix.hadoop2. Hadoop2ClusterManager | C & S           |
+| rubix.cluster.manager.hadoop.class        | The ``ClusterManager`` class to use for fetching node-related information for Hadoop clusters. | string            | com.qubole.rubix.hadoop2. Hadoop2ClusterManager | C & S           |
 +------------------------------------------+------------------------------------------------------------------------------------------------+-------------------+-------------------------------------------------+-----------------+
-| rubix.clustermanager.presto.class        | The ``ClusterManager`` class to use for fetching node-related information for Presto clusters. | string            | com.qubole.rubix.presto. PrestoClusterManager   | C & S           |
+| rubix.cluster.manager.presto.class        | The ``ClusterManager`` class to use for fetching node-related information for Presto clusters. | string            | com.qubole.rubix.presto. PrestoClusterManager   | C & S           |
 +------------------------------------------+------------------------------------------------------------------------------------------------+-------------------+-------------------------------------------------+-----------------+
 
 Metrics
