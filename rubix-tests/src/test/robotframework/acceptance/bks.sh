@@ -14,8 +14,9 @@ RUN_DIR=${BASE_DIR}/bks
 PID_FILE=${RUN_DIR}/bks.pid
 LOG4J_FILE=${RUN_DIR}/log4j.properties
 
+CUR_DATE=$(date '+%Y-%m-%dT%H-%M-%S')
 LOG_DIR=${RUN_DIR}/logs
-LOG_FILE=${LOG_DIR}/bks.log
+LOG_FILE=${LOG_DIR}/bks-${CUR_DATE}.log
 SCRIPT_LOG_FILE=${LOG_DIR}/bks-script.log
 
 HADOOP_DIR=/usr/lib/hadoop2
