@@ -102,43 +102,59 @@ public class TestBookKeeper
   }
 
   @Test
-  private void testGetCacheDirSizeinMBs()
-          throws IOException, TException
+  private void testGetCacheDirSizeinMBs() throws IOException, TException
   {
     CacheConfig.setBlockSize(conf, 1024 * 1024);
-    cacheDirSizeHelper(10000000, 2500000);
+    int downloadSize = 3145728; //3MB
+    cacheDirSizeHelper(2000000, downloadSize);
   }
 
   private void cacheDirSizeHelper(long sizeMultiplier, long downloadSize) throws IOException, TException
   {
     String testDirectory = CacheConfig.getCacheDirPrefixList(conf) + "0" + CacheConfig.getCacheDataDirSuffix(conf);
     String backendFileName = testDirectory + "testBackendFile";
-    DataGen.populateFile(backendFileName, 1, (int) sizeMultiplier);
+    long fileSize = DataGen.populateFile(backendFileName, 1, (int) sizeMultiplier);
     final String remotePathWithScheme = "file://" + backendFileName;
-    bookKeeper.readData(remotePathWithScheme, (long) 10 * sizeMultiplier, (int) downloadSize, 10 * sizeMultiplier + downloadSize, TEST_LAST_MODIFIED, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
 
-    // read from randomAccessFile and verify that it has the right data
-    // 0 - 99614719 : should be filled with '0'
-    // 99614720 - 10 * sizeMultiplier + downloadSize : same data as backendFile
-    byte[] buffer = new byte[11 * (int) sizeMultiplier];
+    // Read from 30th block to 33rd block
+    int offset = 31457280; //30MB
+    int holeSize = 5242880;
+
+    bookKeeper.readData(remotePathWithScheme, offset, (int) downloadSize, fileSize, TEST_LAST_MODIFIED, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+    verifyDownloadedData(backendFileName, offset, downloadSize);
+
+    // Create a hole of 5 mb at 34th block
+    // Read from 38th block to 40th block
+
+    offset = offset + (int) downloadSize + holeSize; //36MB
+    bookKeeper.readData(remotePathWithScheme, offset, (int) downloadSize, fileSize, TEST_LAST_MODIFIED, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+    verifyDownloadedData(backendFileName, offset, downloadSize);
+
+    int expectedSparseFileSize = (int) DiskUtils.bytesToMB(downloadSize + downloadSize + holeSize); // The system is going to take into account the hole in the middle of the file
+
+    long sparseFileSize = DiskUtils.getDirectorySizeInMB(new File(CacheUtil.getLocalPath(remotePathWithScheme, conf)));
+    assertTrue(sparseFileSize == expectedSparseFileSize, "getDirectorySizeInMB is reporting wrong file Size : " + sparseFileSize);
+  }
+
+  private void verifyDownloadedData(String backendFileName, int offset, long downloadSize) throws IOException
+  {
+    final String remotePathWithScheme = "file://" + backendFileName;
+
+    int bufferSize = (int) (offset + downloadSize);
+    byte[] buffer = new byte[bufferSize];
     FileInputStream localFileInputStream = new FileInputStream(new File(CacheUtil.getLocalPath(remotePathWithScheme, conf)));
-    localFileInputStream.read(buffer, 0, (int) (sizeMultiplier + downloadSize));
+    localFileInputStream.read(buffer, 0, bufferSize);
 
-    byte[] backendBuffer = new byte[11 * (int) sizeMultiplier];
+    byte[] backendBuffer = new byte[bufferSize];
     FileInputStream backendFileInputStream = new FileInputStream(new File(backendFileName));
-    backendFileInputStream.read(backendBuffer, 0, (int) (sizeMultiplier + downloadSize));
+    backendFileInputStream.read(backendBuffer, 0, bufferSize);
 
-    for (int i = 0; i <= 99614719; i++) {
-      assertTrue(buffer[i] == 0, "Got " + buffer[i] + " at " + i + "instead of " + 0);
-    }
-
-    for (int i = 99614720; i <= 10 * sizeMultiplier + downloadSize; i++) {
+    for (int i = offset; i <= downloadSize; i++) {
       assertTrue(buffer[i] == backendBuffer[i], "Got " + buffer[i] + " at " + i + "instead of " + backendBuffer[i]);
     }
+
     localFileInputStream.close();
     backendFileInputStream.close();
-    long fileSize = DiskUtils.getDirectorySizeInMB(new File(CacheUtil.getLocalPath(remotePathWithScheme, conf)));
-    assertTrue(fileSize == 3, "getDirectorySizeInMB is reporting wrong file Size : " + fileSize);
   }
 
   @Test(expectedExceptions = ClusterManagerInitilizationException.class)

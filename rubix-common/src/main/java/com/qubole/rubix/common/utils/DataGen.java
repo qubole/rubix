@@ -81,11 +81,13 @@ public class DataGen
     out.close();
   }
 
-  public static void populateFile(String filename, int skip, int sizeMultiplier) throws IOException
+  public static long populateFile(String filename, int skip, int sizeMultiplier) throws IOException
   {
     PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(filename, false)));
-    out.print(generateContent(skip, sizeMultiplier));
+    String data = generateContent(skip, sizeMultiplier);
+    out.print(data);
     out.close();
+    return data.length();
   }
 
   public static void writeZerosInFile(String filename, int start, int end) throws IOException
