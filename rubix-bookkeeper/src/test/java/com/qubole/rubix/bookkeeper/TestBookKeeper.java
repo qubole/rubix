@@ -102,14 +102,22 @@ public class TestBookKeeper
   }
 
   @Test
-  private void testGetCacheDirSizeinMBs() throws IOException, TException
+  private void testGetCacheDirSize_WithNoGapInMiddle() throws IOException, TException
   {
     CacheConfig.setBlockSize(conf, 1024 * 1024);
     int downloadSize = 3145728; //3MB
-    cacheDirSizeHelper(2000000, downloadSize);
+    cacheDirSizeHelper(2000000, downloadSize, false);
   }
 
-  private void cacheDirSizeHelper(long sizeMultiplier, long downloadSize) throws IOException, TException
+  @Test(enabled = false)
+  private void testGetCacheDirSize_WithGapInMiddle() throws IOException, TException
+  {
+    CacheConfig.setBlockSize(conf, 1024 * 1024);
+    int downloadSize = 3145728; //3MB
+    cacheDirSizeHelper(2000000, downloadSize, true);
+  }
+
+  private void cacheDirSizeHelper(long sizeMultiplier, long downloadSize, boolean hasHole) throws IOException, TException
   {
     String testDirectory = CacheConfig.getCacheDirPrefixList(conf) + "0" + CacheConfig.getCacheDataDirSuffix(conf);
     String backendFileName = testDirectory + "testBackendFile";
@@ -119,18 +127,21 @@ public class TestBookKeeper
     // Read from 30th block to 33rd block
     int offset = 31457280; //30MB
     int holeSize = 5242880;
+    int expectedSparseFileSize;
 
     bookKeeper.readData(remotePathWithScheme, offset, (int) downloadSize, fileSize, TEST_LAST_MODIFIED, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
     verifyDownloadedData(backendFileName, offset, downloadSize);
+    expectedSparseFileSize = (int) DiskUtils.bytesToMB(downloadSize);
 
-    // Create a hole of 5 mb at 34th block
-    // Read from 38th block to 40th block
+    if (hasHole) {
+      // Create a hole of 5 mb at 34th block
+      // Read from 38th block to 40th block
 
-    offset = offset + (int) downloadSize + holeSize; //36MB
-    bookKeeper.readData(remotePathWithScheme, offset, (int) downloadSize, fileSize, TEST_LAST_MODIFIED, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
-    verifyDownloadedData(backendFileName, offset, downloadSize);
-
-    int expectedSparseFileSize = (int) DiskUtils.bytesToMB(downloadSize + downloadSize + holeSize); // The system is going to take into account the hole in the middle of the file
+      offset = offset + (int) downloadSize + holeSize; //36MB
+      bookKeeper.readData(remotePathWithScheme, offset, (int) downloadSize, fileSize, TEST_LAST_MODIFIED, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+      verifyDownloadedData(backendFileName, offset, downloadSize);
+      expectedSparseFileSize = (int) DiskUtils.bytesToMB(downloadSize + downloadSize + holeSize); // The system is going to take into account the hole in the middle of the file
+    }
 
     long sparseFileSize = DiskUtils.getDirectorySizeInMB(new File(CacheUtil.getLocalPath(remotePathWithScheme, conf)));
     assertTrue(sparseFileSize == expectedSparseFileSize, "getDirectorySizeInMB is reporting wrong file Size : " + sparseFileSize);
