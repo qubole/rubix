@@ -140,7 +140,7 @@ public class TestBookKeeper
       offset = offset + (int) downloadSize + holeSize; //36MB
       bookKeeper.readData(remotePathWithScheme, offset, (int) downloadSize, fileSize, TEST_LAST_MODIFIED, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
       verifyDownloadedData(backendFileName, offset, downloadSize);
-      expectedSparseFileSize = (int) DiskUtils.bytesToMB(downloadSize + downloadSize); // The system is going to take into account the hole in the middle of the file
+      expectedSparseFileSize = (int) DiskUtils.bytesToMB(2 * downloadSize);
     }
 
     long sparseFileSize = DiskUtils.getDirectorySizeInMB(new File(CacheUtil.getLocalPath(remotePathWithScheme, conf)));
