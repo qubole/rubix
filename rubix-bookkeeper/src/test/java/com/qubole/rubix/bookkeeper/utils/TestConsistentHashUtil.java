@@ -56,9 +56,8 @@ public class TestConsistentHashUtil
     Map<String, NodeState> fourLiveWorkers = getNodes(4, 0);
     Map<String, NodeState> fourLiveWorkerOneDecommissioned = getNodes(4, 1);
 
-    String nodeHost1 = getConsistentHashedNodeIndex(fourLiveWorkers, key);
-
-    String nodeHost2 = getConsistentHashedNodeIndex(fourLiveWorkerOneDecommissioned, key);
+    String nodeHost1 = ConsistentHashUtil.getHashedNodeForKey(fourLiveWorkers, key);
+    String nodeHost2 = ConsistentHashUtil.getHashedNodeForKey(fourLiveWorkerOneDecommissioned, key);
 
     assertTrue(nodeHost1.equals(nodeHost2), "Both should be the same node");
   }
@@ -132,11 +131,5 @@ public class TestConsistentHashUtil
     }
 
     return map;
-  }
-
-  static String getConsistentHashedNodeIndex(Map<String, NodeState> nodesMap, String key)
-  {
-    final String host = ConsistentHashUtil.getHashedNodeForKey(nodesMap, key);
-    return host;
   }
 }

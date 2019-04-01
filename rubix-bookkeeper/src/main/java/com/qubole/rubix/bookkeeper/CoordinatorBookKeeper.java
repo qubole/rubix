@@ -64,7 +64,7 @@ public class CoordinatorBookKeeper extends BookKeeper
   }
 
   @VisibleForTesting
-  public CoordinatorBookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker) throws BookKeeperInitializationException
+  protected CoordinatorBookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker) throws BookKeeperInitializationException
   {
     super(conf, metrics, ticker);
     this.isValidationEnabled = CacheConfig.isValidationEnabled(conf);

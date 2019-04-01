@@ -61,7 +61,14 @@ public class WorkerBookKeeper extends BookKeeper
     this(conf, metrics, Ticker.systemTicker(), new BookKeeperFactory());
   }
 
-  public WorkerBookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker, BookKeeperFactory factory) throws BookKeeperInitializationException
+  public WorkerBookKeeper(Configuration conf, MetricRegistry metrics, BookKeeperFactory factory)
+      throws BookKeeperInitializationException
+  {
+    this(conf, metrics, Ticker.systemTicker(), factory);
+  }
+
+  public WorkerBookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker, BookKeeperFactory factory)
+      throws BookKeeperInitializationException
   {
     super(conf, metrics, Ticker.systemTicker());
     this.bookKeeperFactory = factory;
@@ -72,7 +79,8 @@ public class WorkerBookKeeper extends BookKeeper
     initializeWorker(conf, metrics, ticker, factory);
   }
 
-  private void initializeWorker(Configuration conf, MetricRegistry metrics, Ticker ticker, BookKeeperFactory factory) throws WorkerInitializationException
+  private void initializeWorker(Configuration conf, MetricRegistry metrics, Ticker ticker, BookKeeperFactory factory)
+      throws WorkerInitializationException
   {
     startHeartbeatService(conf, metrics, factory);
     initializeNodeStateCache(conf, ticker);
@@ -138,11 +146,6 @@ public class WorkerBookKeeper extends BookKeeper
             return client.getClusterNodes();
           }
         });
-  }
-
-  public WorkerBookKeeper(Configuration conf, MetricRegistry metrics, BookKeeperFactory factory) throws BookKeeperInitializationException
-  {
-    this(conf, metrics, Ticker.systemTicker(), factory);
   }
 
   @Override
