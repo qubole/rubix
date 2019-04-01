@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018. Qubole Inc
+ * Copyright (c) 2019. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -424,7 +424,6 @@ public abstract class BookKeeper implements BookKeeperService.Iface
           remoteReadRequestChain.addReadRequest(new ReadRequest(readStart, readStart + blockSize, readStart, readStart + blockSize, buffer, 0, fileSize));
           remoteReadRequestChain.lock();
           Integer dataRead = remoteReadRequestChain.call();
-
           // Making sure the data downloaded matches with the expected bytes. If not, there is some problem with
           // the download this time. So won't update the cache metadata and return false so that client can
           // fall back on the directread
@@ -450,7 +449,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
           fs.close();
         }
         catch (IOException e) {
-          e.printStackTrace();
+          log.error(Throwables.getStackTraceAsString(e));
         }
       }
     }

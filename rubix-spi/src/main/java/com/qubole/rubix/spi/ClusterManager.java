@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018. Qubole Inc
+ * Copyright (c) 2019. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,15 +12,12 @@
  */
 package com.qubole.rubix.spi;
 
-import com.google.common.base.Charsets;
-import com.google.common.hash.HashCode;
-import com.google.common.hash.HashFunction;
-import com.google.common.hash.Hashing;
+import com.qubole.rubix.spi.thrift.NodeState;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
-import java.util.List;
+import java.util.Map;
 
 /**
  * Created by stagra on 14/1/16.
@@ -48,29 +45,6 @@ public abstract class ClusterManager
     nodeRefreshTime = CacheConfig.getClusterNodeRefreshTime(conf);
   }
 
-  public String getNodeHostName(String remotePathKey)
-  {
-    List<String> nodes = getNodes();
-    int nodeIndex = getNodeIndex(nodes.size(), remotePathKey);
-    return nodes.get(nodeIndex);
-  }
-
-  public int getNodeIndex(int numNodes, String key)
-  {
-    HashFunction hf = Hashing.md5();
-    HashCode hc = hf.hashString(key, Charsets.UTF_8);
-    int initialNodeIndex = Hashing.consistentHash(hc, numNodes);
-    int finalNodeIndex = initialNodeIndex;
-    if (hc.asInt() % 2 == 0) {
-      finalNodeIndex = getNextRunningNodeIndex(initialNodeIndex);
-    }
-    else {
-      finalNodeIndex = getPreviousRunningNodeIndex(initialNodeIndex);
-    }
-
-    return finalNodeIndex;
-  }
-
   public int getNodeRefreshTime()
   {
     return nodeRefreshTime;
@@ -78,9 +52,5 @@ public abstract class ClusterManager
 
   // Nodes format as per the note above
   // Should return sorted list
-  public abstract List<String> getNodes();
-
-  public abstract Integer getNextRunningNodeIndex(int startIndex);
-
-  public abstract Integer getPreviousRunningNodeIndex(int startIndex);
+  public abstract Map<String, NodeState> getNodes();
 }

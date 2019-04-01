@@ -10,6 +10,11 @@ NON_LOCAL,
 UNKNOWN
 }
 
+enum NodeState {
+ACTIVE,
+INACTIVE
+}
+
 struct BlockLocation {
     1: required Location location;
     2: required string remoteLocation;
@@ -49,7 +54,7 @@ service BookKeeperService
 
     FileInfo getFileInfo(1:string remotePath)
 
-    list<string> getClusterNodes()
+    map<string, NodeState> getClusterNodes()
 
     string getOwnerNodeForPath(1:string remotePathKey)
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018. Qubole Inc
+ * Copyright (c) 2019. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,6 +15,7 @@ package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.collect.Lists;
 import com.google.common.testing.FakeTicker;
 import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
 import com.qubole.rubix.bookkeeper.exception.CoordinatorInitializationException;
@@ -24,6 +25,7 @@ import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.thrift.HeartbeatStatus;
+import com.qubole.rubix.spi.thrift.NodeState;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -35,8 +37,9 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static org.testng.Assert.assertEquals;
@@ -182,25 +185,13 @@ public class TestCoordinatorBookKeeper
           new ClusterManager()
           {
             @Override
-            public List<String> getNodes()
+            public Map<String, NodeState> getNodes()
             {
-              List<String> nodes = new ArrayList<>();
-              nodes.add("node1");
-              nodes.add("node2");
+              Map<String, NodeState> nodes = new HashMap<>();
+              nodes.put("node1", NodeState.ACTIVE);
+              nodes.put("node2", NodeState.ACTIVE);
 
               return nodes;
-            }
-
-            @Override
-            public Integer getNextRunningNodeIndex(int startIndex)
-            {
-              return null;
-            }
-
-            @Override
-            public Integer getPreviousRunningNodeIndex(int startIndex)
-            {
-              return null;
             }
           });
     }
@@ -208,7 +199,7 @@ public class TestCoordinatorBookKeeper
       fail("Not able to initialize Cluster Manager");
     }
 
-    List<String> hostNames = coordinator.getClusterNodes();
+    List<String> hostNames = Lists.newArrayList(coordinator.getClusterNodes().keySet().toArray(new String[0]));
     log.debug("HostNames : " + hostNames);
     assertTrue(hostNames.size() == 2, "Number of hosts does not match");
     assertTrue(hostNames.get(0).equals("node1") && hostNames.get(1).equals("node2"), "HostNames don't match");

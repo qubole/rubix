@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Rubix's documentation!
+Welcome to RubiX's documentation!
 =================================
 
 RubiX is a light-weight data caching framework that can be used by Big-Data engines.

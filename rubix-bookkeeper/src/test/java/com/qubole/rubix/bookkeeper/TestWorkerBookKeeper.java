@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018. Qubole Inc
+ * Copyright (c) 2019. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -22,6 +22,7 @@ import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import com.qubole.rubix.spi.thrift.HeartbeatStatus;
+import com.qubole.rubix.spi.thrift.NodeState;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -35,6 +36,8 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static org.mockito.ArgumentMatchers.anyString;
@@ -123,8 +126,11 @@ public class TestWorkerBookKeeper
 
     String testLocalhost = "localhost_test";
     String changedTestLocalhost = "changed_localhost";
+    Map<String, NodeState> nodes = new HashMap<String, NodeState>();
 
-    doReturn(testLocalhost).when(spyCoordinator).getOwnerNodeForPath(anyString());
+    nodes.put(testLocalhost, NodeState.ACTIVE);
+
+    doReturn(nodes).when(spyCoordinator).getClusterNodes();
 
     BookKeeperFactory factory = new BookKeeperFactory();
     final BookKeeperFactory bookKeeperFactory = spy(factory);
@@ -143,7 +149,10 @@ public class TestWorkerBookKeeper
 
     assertTrue(hostName.equals(testLocalhost), "HostName is not correct from the coordinator");
 
-    doReturn(changedTestLocalhost).when(spyCoordinator).getOwnerNodeForPath(anyString());
+    nodes.clear();
+    nodes.put(changedTestLocalhost, NodeState.ACTIVE);
+
+    doReturn(nodes).when(spyCoordinator).getClusterNodes();
     hostName = workerBookKeeper.getOwnerNodeForPath("remotepath");
 
     assertTrue(hostName.equals(testLocalhost), "HostName is not correct from the cache");

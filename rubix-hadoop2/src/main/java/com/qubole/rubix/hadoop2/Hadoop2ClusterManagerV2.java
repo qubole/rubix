@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018. Qubole Inc
+ * Copyright (c) 2019. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -19,13 +19,13 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableMap;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
+import com.qubole.rubix.spi.thrift.NodeState;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 import java.net.InetAddress;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,7 +39,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class Hadoop2ClusterManagerV2 extends ClusterManager
 {
-  static LoadingCache<String, Map<String, String>> nodesCache;
+  static LoadingCache<String, Map<String, NodeState>> nodesCache;
   YarnConfiguration yconf;
   private Log log = LogFactory.getLog(Hadoop2ClusterManagerV2.class);
 
@@ -52,14 +52,14 @@ public class Hadoop2ClusterManagerV2 extends ClusterManager
 
     nodesCache = CacheBuilder.newBuilder()
         .refreshAfterWrite(getNodeRefreshTime(), TimeUnit.SECONDS)
-        .build(CacheLoader.asyncReloading(new CacheLoader<String, Map<String, String>>()
+        .build(CacheLoader.asyncReloading(new CacheLoader<String, Map<String, NodeState>>()
         {
           @Override
-          public Map<String, String> load(String s)
+          public Map<String, NodeState> load(String s)
               throws Exception
           {
             try {
-              Map<String, String> hosts = new LinkedHashMap<String, String>();
+              Map<String, NodeState> hosts = new LinkedHashMap();
               List<Hadoop2ClusterManagerUtil.Node> allNodes = Hadoop2ClusterManagerUtil.getAllNodes(yconf);
 
               if (allNodes == null) {
@@ -69,13 +69,12 @@ public class Hadoop2ClusterManagerV2 extends ClusterManager
               if (allNodes.isEmpty()) {
                 // Empty result set => server up and only master node running, return localhost has the only node
                 // Do not need to consider failed nodes list as 1node cluster and server is up since it replied to allNodesRequest
-                return ImmutableMap.of(InetAddress.getLocalHost().getHostAddress(), "RUNNING");
+                return ImmutableMap.of(InetAddress.getLocalHost().getHostAddress(), NodeState.ACTIVE);
               }
 
               for (Hadoop2ClusterManagerUtil.Node node : allNodes) {
-                String state = node.getState();
-                log.debug("Hostname: " + node.getNodeHostName() + "State: " + state);
-                hosts.put(node.getNodeHostName(), node.getState());
+                NodeState nodeState = getNodeState(node.getState());
+                hosts.put(node.getNodeHostName(), nodeState);
               }
               log.debug("Hostlist: " + hosts.toString());
               return hosts;
@@ -87,63 +86,26 @@ public class Hadoop2ClusterManagerV2 extends ClusterManager
         }, executor));
   }
 
-  @Override
-  public List<String> getNodes()
+  private static NodeState getNodeState(String nodeState)
   {
-    try {
-      return new ArrayList<>(nodesCache.get("nodeList").keySet());
+    if (nodeState.equalsIgnoreCase("Running") ||
+        nodeState.equalsIgnoreCase("New") ||
+        nodeState.equalsIgnoreCase("Rebooted")) {
+      return NodeState.ACTIVE;
     }
-    catch (ExecutionException e) {
-      e.printStackTrace();
+    else {
+      return NodeState.INACTIVE;
     }
-
-    return null;
   }
 
   @Override
-  public Integer getNextRunningNodeIndex(int startIndex)
+  public Map<String, NodeState> getNodes()
   {
     try {
-      List<String> nodeList = new ArrayList<>(nodesCache.get("nodeList").keySet());
-      for (int i = startIndex; i < (startIndex + nodeList.size()); i++) {
-        int index = i >= nodeList.size() ? (i - nodeList.size()) : i;
-        String nodeState = nodesCache.get("nodeList").get(nodeList.get(index));
-        if (nodeState.equalsIgnoreCase("Running") || nodeState.equalsIgnoreCase("New")
-            || nodeState.equalsIgnoreCase("Rebooted")) {
-          return index;
-        }
-      }
+      return nodesCache.get("nodeList");
     }
     catch (ExecutionException e) {
-      e.printStackTrace();
-    }
-
-    return null;
-  }
-
-  @Override
-  public Integer getPreviousRunningNodeIndex(int startIndex)
-  {
-    try {
-      List<String> nodeList = new ArrayList<>(nodesCache.get("nodeList").keySet());
-      for (int i = startIndex; i >= 0; i--) {
-        String nodeState = nodesCache.get("nodeList").get(nodeList.get(i));
-        if (nodeState.equalsIgnoreCase("Running") || nodeState.equalsIgnoreCase("New")
-            || nodeState.equalsIgnoreCase("Rebooted")) {
-          return i;
-        }
-      }
-
-      for (int i = nodeList.size() - 1; i > startIndex; i--) {
-        String nodeState = nodesCache.get("nodeList").get(nodeList.get(i));
-        if (nodeState.equalsIgnoreCase("Running") || nodeState.equalsIgnoreCase("New")
-            || nodeState.equalsIgnoreCase("Rebooted")) {
-          return i;
-        }
-      }
-    }
-    catch (ExecutionException e) {
-      e.printStackTrace();
+      log.error(Throwables.getStackTraceAsString(e));
     }
 
     return null;

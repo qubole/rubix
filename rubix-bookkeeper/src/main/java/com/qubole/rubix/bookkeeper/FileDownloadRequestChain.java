@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018. Qubole Inc
+ * Copyright (c) 2019. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -105,9 +105,9 @@ public class FileDownloadRequestChain extends ReadRequestChain
         // Making sure when a new file gets created, we invalidate the existing metadata file
         bookKeeper.invalidateFileMetadata(remotePath);
       }
-      file.createNewFile();
       file.setWritable(true, false);
       file.setReadable(true, false);
+      file.createNewFile();
     }
 
     FSDataInputStream inputStream = null;

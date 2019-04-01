@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018. Qubole Inc
+ * Copyright (c) 2019. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,6 +12,7 @@
  */
 package com.qubole.rubix.presto;
 
+import com.google.common.collect.Lists;
 import com.qubole.rubix.spi.ClusterManager;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -50,7 +51,7 @@ public class TestClusterManager
     log.info("STARTED SERVER");
 
     ClusterManager clusterManager = getPrestoClusterManager();
-    List<String> nodes = clusterManager.getNodes();
+    List<String> nodes = Lists.newArrayList(clusterManager.getNodes().keySet().toArray(new String[0]));
     log.info("Got nodes: " + nodes);
 
     assertTrue(nodes.size() == 2, "Should only have two nodes");
@@ -71,7 +72,7 @@ public class TestClusterManager
     log.info("STARTED SERVER");
 
     ClusterManager clusterManager = getPrestoClusterManager();
-    List<String> nodes = clusterManager.getNodes();
+    List<String> nodes = Lists.newArrayList(clusterManager.getNodes().keySet().toArray(new String[0]));
     log.info("Got nodes: " + nodes);
 
     assertTrue(nodes.size() == 1, "Should have added localhost in list");
@@ -91,7 +92,7 @@ public class TestClusterManager
     log.info("STARTED SERVER");
 
     ClusterManager clusterManager = getPrestoClusterManager();
-    List<String> nodes = clusterManager.getNodes();
+    List<String> nodes = Lists.newArrayList(clusterManager.getNodes().keySet().toArray(new String[0]));
     log.info("Got nodes: " + nodes);
 
     assertTrue(nodes.size() == 1, "Should only have two nodes");

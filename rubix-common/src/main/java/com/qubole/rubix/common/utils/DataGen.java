@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018. Qubole Inc
+ * Copyright (c) 2019. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -35,15 +35,20 @@ public class DataGen
   {
   }
 
-  public static String generateContent(int jump)
+  public static String generateContent(int jump, int sizeMultiplier)
   {
     StringBuilder stringBuilder = new StringBuilder();
     for (char i = 'a'; i <= 'z'; i = (char) (i + jump)) {
-      for (int j = 0; j < 100; j++) {
+      for (int j = 0; j < sizeMultiplier; j++) {
         stringBuilder.append(i);
       }
     }
     return stringBuilder.toString();
+  }
+
+  public static String generateContent(int jump)
+  {
+    return generateContent(jump, 100);
   }
 
   public static String generateContent()
@@ -51,10 +56,15 @@ public class DataGen
     return generateContent(1);
   }
 
+  public static String getExpectedOutput(int size, int sizeMultiplier)
+  {
+    String expected = generateContent(2, sizeMultiplier);
+    return expected.substring(0, size);
+  }
+
   public static String getExpectedOutput(int size)
   {
-    String expected = generateContent(2);
-    return expected.substring(0, size);
+    return getExpectedOutput(size, 100);
   }
 
   public static void populateFile(String filename) throws IOException
@@ -69,6 +79,15 @@ public class DataGen
     PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(filename, false)));
     out.print(generateContent(skip));
     out.close();
+  }
+
+  public static long populateFile(String filename, int skip, int sizeMultiplier) throws IOException
+  {
+    PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(filename, false)));
+    String data = generateContent(skip, sizeMultiplier);
+    out.print(data);
+    out.close();
+    return data.length();
   }
 
   public static void writeZerosInFile(String filename, int start, int end) throws IOException

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018. Qubole Inc
+ * Copyright (c) 2019. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -193,18 +193,5 @@ public class TestHadoop2ClusterManager
 
     assertTrue(nodeHostnames.size() == 1, "Should only have one node");
     assertTrue(nodeHostnames.get(0).equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_2), "Wrong nodes data");
-  }
-
-  @Test
-  public void testClusterIndex()
-      throws IOException
-  {
-    final List<String> nodeHostnames = TestHadoop2ClusterManagerUtil.getNodeHostnamesFromCluster(
-        TestHadoop2ClusterManagerUtil.CLUSTER_NODES_ENDPOINT,
-        worker.new MultipleWorkersOneNew(), conf, ClusterType.HADOOP2_CLUSTER_MANAGER);
-    ClusterManager manager = TestHadoop2ClusterManagerUtil.getClusterManagerInstance(ClusterType.HADOOP2_CLUSTER_MANAGER, conf);
-    int index = manager.getNodeIndex(nodeHostnames.size(), "1");
-
-    assertTrue(index == 1, "Consistent Hasing logic returned wrong node index");
   }
 }

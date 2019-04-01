@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018. Qubole Inc
+ * Copyright (c) 2019. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,11 +14,12 @@ package com.qubole.rubix.core.utils;
 
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
+import com.qubole.rubix.spi.thrift.NodeState;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created by Abhishek on 6/8/18.
@@ -27,9 +28,9 @@ public class DummyClusterManager extends ClusterManager
 {
   private static long splitSize = 64 * 1024 * 1024;
   @Override
-  public List<String> getNodes()
+  public Map<String, NodeState> getNodes()
   {
-    List<String> list = new ArrayList<String>();
+    Map<String, NodeState> map = new HashMap<>();
     String hostName = "";
     try {
       hostName = InetAddress.getLocalHost().getHostAddress();
@@ -38,26 +39,14 @@ public class DummyClusterManager extends ClusterManager
       hostName = "localhost";
     }
 
-    list.add(hostName);
+    map.put(hostName, NodeState.ACTIVE);
 
-    return list;
+    return map;
   }
 
   @Override
   public ClusterType getClusterType()
   {
     return ClusterType.TEST_CLUSTER_MANAGER;
-  }
-
-  @Override
-  public Integer getNextRunningNodeIndex(int startIndex)
-  {
-    return startIndex;
-  }
-
-  @Override
-  public Integer getPreviousRunningNodeIndex(int startIndex)
-  {
-    return startIndex;
   }
 }

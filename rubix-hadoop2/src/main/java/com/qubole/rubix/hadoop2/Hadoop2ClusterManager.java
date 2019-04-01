@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018. Qubole Inc
+ * Copyright (c) 2019. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,20 +16,19 @@ import com.google.common.base.Throwables;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
+import com.google.common.collect.ImmutableMap;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
+import com.qubole.rubix.spi.thrift.NodeState;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 import java.net.InetAddress;
-import java.util.Collections;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -40,7 +39,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class Hadoop2ClusterManager extends ClusterManager
 {
-  static LoadingCache<String, List<String>> nodesCache;
+  static LoadingCache<String, Map<String, NodeState>> nodesCache;
   YarnConfiguration yconf;
   private Log log = LogFactory.getLog(Hadoop2ClusterManager.class);
 
@@ -52,24 +51,24 @@ public class Hadoop2ClusterManager extends ClusterManager
     ExecutorService executor = Executors.newSingleThreadExecutor();
     nodesCache = CacheBuilder.newBuilder()
         .refreshAfterWrite(getNodeRefreshTime(), TimeUnit.SECONDS)
-        .build(CacheLoader.asyncReloading(new CacheLoader<String, List<String>>()
+        .build(CacheLoader.asyncReloading(new CacheLoader<String, Map<String, NodeState>>()
         {
           @Override
-          public List<String> load(String s)
+          public Map<String, NodeState> load(String s)
               throws Exception
           {
             try {
               List<Hadoop2ClusterManagerUtil.Node> allNodes = Hadoop2ClusterManagerUtil.getAllNodes(yconf);
               if (allNodes == null) {
-                return ImmutableList.of();
+                return ImmutableMap.of();
               }
 
-              Set<String> hosts = new HashSet<>();
+              Map<String, NodeState> hosts = new HashMap<>();
 
               if (allNodes.isEmpty()) {
                 // Empty result set => server up and only master node running, return localhost has the only node
                 // Do not need to consider failed nodes list as 1node cluster and server is up since it replied to allNodesRequest
-                return ImmutableList.of(InetAddress.getLocalHost().getHostAddress());
+                return ImmutableMap.of(InetAddress.getLocalHost().getHostAddress(), NodeState.ACTIVE);
               }
 
               for (Hadoop2ClusterManagerUtil.Node node : allNodes) {
@@ -77,7 +76,7 @@ public class Hadoop2ClusterManager extends ClusterManager
                 log.debug("Hostname: " + node.getNodeHostName() + "State: " + state);
                 //keep only healthy data nodes
                 if (state.equalsIgnoreCase("Running") || state.equalsIgnoreCase("New") || state.equalsIgnoreCase("Rebooted")) {
-                  hosts.add(node.getNodeHostName());
+                  hosts.put(node.getNodeHostName(), NodeState.ACTIVE);
                 }
               }
 
@@ -85,10 +84,7 @@ public class Hadoop2ClusterManager extends ClusterManager
                 throw new Exception("No healthy data nodes found.");
               }
 
-              List<String> hostList = Lists.newArrayList(hosts.toArray(new String[0]));
-              Collections.sort(hostList);
-              log.debug("Hostlist: " + hostList.toString());
-              return hostList;
+              return hosts;
             }
             catch (Exception e) {
               throw Throwables.propagate(e);
@@ -98,28 +94,16 @@ public class Hadoop2ClusterManager extends ClusterManager
   }
 
   @Override
-  public List<String> getNodes()
+  public Map<String, NodeState> getNodes()
   {
     try {
       return nodesCache.get("nodeList");
     }
     catch (ExecutionException e) {
-      e.printStackTrace();
+      log.error(Throwables.getStackTraceAsString(e));
     }
 
     return null;
-  }
-
-  @Override
-  public Integer getNextRunningNodeIndex(int startIndex)
-  {
-    return startIndex;
-  }
-
-  @Override
-  public Integer getPreviousRunningNodeIndex(int startIndex)
-  {
-    return startIndex;
   }
 
   @Override

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018. Qubole Inc
+ * Copyright (c) 2019. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -26,7 +26,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.HashMap;
+import java.util.Set;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -43,7 +47,11 @@ public class TestCacheUtil
   @BeforeClass
   public void initializeCacheDirectories() throws IOException
   {
-    Files.createDirectories(Paths.get(cacheTestDirPrefix));
+    Set<PosixFilePermission> perms =
+            PosixFilePermissions.fromString("rwx------");
+    FileAttribute<Set<PosixFilePermission>> attr =
+            PosixFilePermissions.asFileAttribute(perms);
+    Files.createDirectories(Paths.get(cacheTestDirPrefix), attr);
     for (int i = 0; i < maxDisks; i++) {
       Files.createDirectories(Paths.get(cacheTestDirPrefix, String.valueOf(i)));
     }

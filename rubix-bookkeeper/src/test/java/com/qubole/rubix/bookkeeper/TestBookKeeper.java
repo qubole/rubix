@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018. Qubole Inc
+ * Copyright (c) 2019. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -26,6 +26,7 @@ import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.FileInfo;
+import com.qubole.rubix.spi.thrift.NodeState;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -38,11 +39,12 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static org.testng.Assert.assertEquals;
@@ -90,6 +92,73 @@ public class TestBookKeeper
     TestUtil.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
 
     conf.clear();
+  }
+
+  @Test
+  private void testGetCacheDirSize_WithNoGapInMiddle() throws IOException, TException
+  {
+    CacheConfig.setBlockSize(conf, 1024 * 1024);
+    int downloadSize = 3145728; //3MB
+    cacheDirSizeHelper(2000000, downloadSize, false);
+  }
+
+  @Test(enabled = false)
+  private void testGetCacheDirSize_WithGapInMiddle() throws IOException, TException
+  {
+    CacheConfig.setBlockSize(conf, 1024 * 1024);
+    int downloadSize = 3145728; //3MB
+    cacheDirSizeHelper(2000000, downloadSize, true);
+  }
+
+  private void cacheDirSizeHelper(long sizeMultiplier, long downloadSize, boolean hasHole) throws IOException, TException
+  {
+    String testDirectory = CacheConfig.getCacheDirPrefixList(conf) + "0" + CacheConfig.getCacheDataDirSuffix(conf);
+    String backendFileName = testDirectory + "testBackendFile";
+    long fileSize = DataGen.populateFile(backendFileName, 1, (int) sizeMultiplier);
+    final String remotePathWithScheme = "file://" + backendFileName;
+
+    // Read from 30th block to 33rd block
+    int offset = 31457280; //30MB
+    int holeSize = 5242880;
+    int expectedSparseFileSize;
+
+    bookKeeper.readData(remotePathWithScheme, offset, (int) downloadSize, fileSize, TEST_LAST_MODIFIED, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+    verifyDownloadedData(backendFileName, offset, downloadSize);
+    expectedSparseFileSize = (int) DiskUtils.bytesToMB(downloadSize);
+
+    if (hasHole) {
+      // Create a hole of 5 mb at 34th block
+      // Read from 38th block to 40th block
+
+      offset = offset + (int) downloadSize + holeSize; //36MB
+      bookKeeper.readData(remotePathWithScheme, offset, (int) downloadSize, fileSize, TEST_LAST_MODIFIED, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+      verifyDownloadedData(backendFileName, offset, downloadSize);
+      expectedSparseFileSize = (int) DiskUtils.bytesToMB(2 * downloadSize);
+    }
+
+    long sparseFileSize = DiskUtils.getDirectorySizeInMB(new File(CacheUtil.getLocalPath(remotePathWithScheme, conf)));
+    assertTrue(sparseFileSize == expectedSparseFileSize, "getDirectorySizeInMB is reporting wrong file Size : " + sparseFileSize);
+  }
+
+  private void verifyDownloadedData(String backendFileName, int offset, long downloadSize) throws IOException
+  {
+    final String remotePathWithScheme = "file://" + backendFileName;
+
+    int bufferSize = (int) (offset + downloadSize);
+    byte[] buffer = new byte[bufferSize];
+    FileInputStream localFileInputStream = new FileInputStream(new File(CacheUtil.getLocalPath(remotePathWithScheme, conf)));
+    localFileInputStream.read(buffer, 0, bufferSize);
+
+    byte[] backendBuffer = new byte[bufferSize];
+    FileInputStream backendFileInputStream = new FileInputStream(new File(backendFileName));
+    backendFileInputStream.read(backendBuffer, 0, bufferSize);
+
+    for (int i = offset; i <= downloadSize; i++) {
+      assertTrue(buffer[i] == backendBuffer[i], "Got " + buffer[i] + " at " + i + "instead of " + backendBuffer[i]);
+    }
+
+    localFileInputStream.close();
+    backendFileInputStream.close();
   }
 
   @Test
@@ -276,9 +345,9 @@ public class TestBookKeeper
           new ClusterManager()
           {
             @Override
-            public List<String> getNodes()
+            public Map<String, NodeState> getNodes()
             {
-              List<String> list = new ArrayList<>();
+              Map<String, NodeState> nodes = new HashMap<>();
               String hostName = "";
               try {
                 hostName = InetAddress.getLocalHost().getCanonicalHostName();
@@ -287,21 +356,9 @@ public class TestBookKeeper
                 hostName = "localhost";
               }
 
-              list.add(hostName + "_copy1");
-              list.add(hostName + "_copy2");
-              return list;
-            }
-
-            @Override
-            public Integer getNextRunningNodeIndex(int startIndex)
-            {
-              return startIndex;
-            }
-
-            @Override
-            public Integer getPreviousRunningNodeIndex(int startIndex)
-            {
-              return startIndex;
+              nodes.put((hostName + "_copy1"), NodeState.ACTIVE);
+              nodes.put((hostName + "_copy2"), NodeState.ACTIVE);
+              return nodes;
             }
           });
     }

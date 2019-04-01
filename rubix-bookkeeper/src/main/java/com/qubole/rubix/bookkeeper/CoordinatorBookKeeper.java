@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018. Qubole Inc
+ * Copyright (c) 2019. Qubole Inc
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -21,12 +21,14 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
 import com.qubole.rubix.bookkeeper.exception.CoordinatorInitializationException;
+import com.qubole.rubix.bookkeeper.utils.ConsistentHashUtil;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.common.utils.ClusterUtil;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.thrift.HeartbeatStatus;
+import com.qubole.rubix.spi.thrift.NodeState;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -35,7 +37,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class CoordinatorBookKeeper extends BookKeeper
@@ -161,7 +163,7 @@ public class CoordinatorBookKeeper extends BookKeeper
   }
 
   @Override
-  public List<String> getClusterNodes()
+  public Map<String, NodeState> getClusterNodes()
   {
     return getClusterManager().getNodes();
   }
@@ -169,7 +171,8 @@ public class CoordinatorBookKeeper extends BookKeeper
   @Override
   public String getOwnerNodeForPath(String remotePathKey)
   {
-    String hostName = getClusterManager().getNodeHostName(remotePathKey);
+    Map<String, NodeState> nodesMap = getClusterNodes();
+    String hostName = ConsistentHashUtil.getHashedNodeForKey(nodesMap, remotePathKey);
     return hostName;
   }
 
