@@ -65,7 +65,7 @@ public class TestThriftServerJVM extends Configured
   private static final String setCacheMaxDisks = "-Drubix.cache.max.disks=1";
   private static final String setCacheDirectory = "-Drubix.cache.dirprefix.list=" + testDirectoryPrefix + "dir";
   private static final String setmasterbookkeeper = "-Drubix.cluster.is-master=true";
-  private static final String disableParallelWarmup = "-Drubix.parallel.warmup=false";
+  private static final String disableParallelWarmup = "-Drubix.cache.parallel.warmup=false";
   private static String rubixclientJarPath;
 
   public BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();

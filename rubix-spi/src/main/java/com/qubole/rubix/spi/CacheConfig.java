@@ -62,7 +62,7 @@ public class CacheConfig
   private static final String KEY_METRICS_STATSD_PORT = "rubix.metrics.statsd.port";
   private static final String KEY_METRICS_GANGLIA_PORT = "rubix.metrics.ganglia.port";
   private static final String KEY_METRICS_REPORTERS = "rubix.metrics.reporters";
-  private static final String KEY_PARALLEL_WARMUP = "rubix.parallel.warmup";
+  private static final String KEY_PARALLEL_WARMUP = "rubix.cache.parallel.warmup";
   private static final String KEY_PROCESS_THREAD_INITIAL_DELAY = "rubix.request.process.initial.delay";
   private static final String KEY_PROCESS_THREAD_INTERVAL = "rubix.request.process.interval";
   private static final String KEY_REMOTE_FETCH_PROCESS_INTERVAL = "rubix.remotefetch.interval";

@@ -41,7 +41,7 @@ Cache
 |                                          | The time file metadata will be cached before it will be fetched again  |                   |                  |               |
 |                                          | from the remote filesystem.                                            |                   |                  |               |
 +------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+
-| rubix.parallel.warmup                    | When true, cache will be warmed up asynchronously.                     | boolean           | false            | C & S         |
+| rubix.cache.parallel.warmup              | When true, cache will be warmed up asynchronously.                     | boolean           | false            | C & S         |
 +------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+
 
 Network
@@ -50,7 +50,7 @@ Network
 +------------------------------------------+------------------------------------------------------------------------------------+-------------------+------------------+---------------+
 | Option                                   | Description                                                                        | Type              | Default          | Client/Server |
 +==========================================+====================================================================================+===================+==================+===============+
-| rubix.network.bookkeeper.server.port       | The port on which the BookKeeper server is listening.                              | integer           | 8899             | C & S         |
+| rubix.network.bookkeeper.server.port     | The port on which the BookKeeper server is listening.                              | integer           | 8899             | C & S         |
 +------------------------------------------+------------------------------------------------------------------------------------+-------------------+------------------+---------------+
 | rubix.network.local.transfer.server.port | The port on which the Local Data Transfer server is listening.                     | integer           | 8898             | C             |
 +------------------------------------------+------------------------------------------------------------------------------------+-------------------+------------------+---------------+
@@ -69,9 +69,9 @@ Cluster
 +==========================================+================================================================================================+===================+=================================================+=================+
 | rubix.cluster.node.refresh.time          | The frequency at which the cluster node membership will be checked                             | integer (s)       | 300 sec                                         | C & S           |
 +------------------------------------------+------------------------------------------------------------------------------------------------+-------------------+-------------------------------------------------+-----------------+
-| rubix.cluster.manager.hadoop.class        | The ``ClusterManager`` class to use for fetching node-related information for Hadoop clusters. | string            | com.qubole.rubix.hadoop2. Hadoop2ClusterManager | C & S           |
+| rubix.cluster.manager.hadoop.class       | The ``ClusterManager`` class to use for fetching node-related information for Hadoop clusters. | string            | com.qubole.rubix.hadoop2. Hadoop2ClusterManager | C & S           |
 +------------------------------------------+------------------------------------------------------------------------------------------------+-------------------+-------------------------------------------------+-----------------+
-| rubix.cluster.manager.presto.class        | The ``ClusterManager`` class to use for fetching node-related information for Presto clusters. | string            | com.qubole.rubix.presto. PrestoClusterManager   | C & S           |
+| rubix.cluster.manager.presto.class       | The ``ClusterManager`` class to use for fetching node-related information for Presto clusters. | string            | com.qubole.rubix.presto. PrestoClusterManager   | C & S           |
 +------------------------------------------+------------------------------------------------------------------------------------------------+-------------------+-------------------------------------------------+-----------------+
 
 Metrics
