@@ -311,7 +311,7 @@ public class CacheConfig
     return conf.getInt(KEY_SERVICE_RETRY_INTERVAL, DEFAULT_SERVICE_RETRY_INTERVAL);
   }
 
-  public static int getClientReadTimeOut(Configuration conf)
+  public static int getClientReadTimeout(Configuration conf)
   {
     return conf.getInt(KEY_CLIENT_READ_TIMEOUT, DEFAULT_CLIENT_READ_TIMEOUT);
   }
