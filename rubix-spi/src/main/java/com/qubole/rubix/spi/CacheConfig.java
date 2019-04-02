@@ -30,29 +30,29 @@ public class CacheConfig
 {
   public static final String RUBIX_SCHEME = "rubix";
 
-  private static final String KEY_BLOCK_SIZE = "hadoop.cache.data.block-size";
-  private static final String KEY_CACHE_ENABLED = "hadoop.cache.data.enabled";
+  private static final String KEY_BLOCK_SIZE = "rubix.cache.block.size";
+  private static final String KEY_CACHE_ENABLED = "rubix.cache.enabled";
   private static final String KEY_CACHE_METADATA_FILE_SUFFIX = "rubix.cache.metadata.file.suffix";
   private static final String KEY_SERVER_CONNECT_TIMEOUT = "rubix.network.server.connect.timeout";
-  private static final String KEY_DATA_CACHE_EXPIRY_AFTER_WRITE = "hadoop.cache.data.expiration.after-write";
-  private static final String KEY_DATA_CACHE_DIR_PREFIX = "hadoop.cache.data.dirprefix.list";
-  private static final String KEY_DATA_CACHE_DIR_SUFFIX = "hadoop.cache.data.dirsuffix";
-  private static final String KEY_DATA_CACHE_FULLNESS = "hadoop.cache.data.fullness.percentage";
-  private static final String KEY_DATA_CACHE_LOCATION_BLACKLIST = "hadoop.cache.data.location.blacklist"; // these locations will be skipped, takes priority over Whitelist
-  private static final String KEY_DATA_CACHE_LOCATION_WHITELIST = "hadoop.cache.data.location.whitelist"; // only these locations will cached
-  private static final String KEY_DATA_CACHE_MAX_DISKS = "hadoop.cache.data.max.disks";
-  private static final String KEY_DATA_CACHE_STRICT_MODE = "hadoop.cache.data.strict.mode"; // Internal; in strict mode, queries will error out if BookKeeper cannot be reached
-  private static final String KEY_DATA_CACHE_TABLE = "hadoop.cache.data.table";
-  private static final String KEY_DATA_CACHE_TABLE_COLS_CHOSEN = "hadoop.cache.data.table.columns.chosen";
-  private static final String KEY_DATA_CACHE_TABLE_MIN_COLS = "hadoop.cache.data.table.columns.min";
-  private static final String KEY_DATA_CACHE_TABLE_WHITELIST = "hadoop.cache.data.table.whitelist";
-  private static final String KEY_DATA_MAX_HEADER_SIZE = "hadoop.cache.data.transfer.header.size";
-  private static final String KEY_DISK_READ_BUFFER_SIZE = "hadoop.cache.data.disk.read.buffer.size";
+  private static final String KEY_DATA_CACHE_EXPIRY_AFTER_WRITE = "rubix.cache.expiration.after-write";
+  private static final String KEY_DATA_CACHE_DIR_PREFIX = "rubix.cache.dirprefix.list";
+  private static final String KEY_DATA_CACHE_DIR_SUFFIX = "rubix.cache.dirsuffix";
+  private static final String KEY_DATA_CACHE_FULLNESS = "rubix.cache.usage.percentage";
+  private static final String KEY_DATA_CACHE_LOCATION_BLACKLIST = "rubix.cache.location.blacklist"; // these locations will be skipped, takes priority over Whitelist
+  private static final String KEY_DATA_CACHE_LOCATION_WHITELIST = "rubix.cache.location.whitelist"; // only these locations will cached
+  private static final String KEY_DATA_CACHE_MAX_DISKS = "rubix.cache.max.disks";
+  private static final String KEY_DATA_CACHE_STRICT_MODE = "rubix.cache.strict.mode"; // Internal; in strict mode, queries will error out if BookKeeper cannot be reached
+  private static final String KEY_DATA_CACHE_TABLE = "rubix.cache.table.selected";
+  private static final String KEY_DATA_CACHE_TABLE_COLS_CHOSEN = "rubix.cache.table.columns.selected";
+  private static final String KEY_DATA_CACHE_TABLE_MIN_COLS = "rubix.cache.table.columns.min";
+  private static final String KEY_DATA_CACHE_TABLE_WHITELIST = "rubix.cache.table.whitelist";
+  private static final String KEY_DATA_MAX_HEADER_SIZE = "rubix.cache.data.transfer.header.size";
+  private static final String KEY_DISK_READ_BUFFER_SIZE = "rubix.cache.data.disk.read.buffer.size";
   private static final String KEY_HEARTBEAT_INITIAL_DELAY = "rubix.monitor.heartbeat.initial.delay";
   private static final String KEY_HEARTBEAT_INTERVAL = "rubix.monitor.heartbeat.interval";
-  private static final String KEY_LOCAL_TRANSFER_BUFFER_SIZE = "hadoop.cache.data.buffer.size";
-  private static final String KEY_LOCAL_SERVER_PORT = "hadoop.cache.data.local.server.port";
-  private static final String KEY_MAX_RETRIES = "hadoop.cache.data.client.num-retries";
+  private static final String KEY_LOCAL_TRANSFER_BUFFER_SIZE = "rubix.cache.local.transfer.buffer.size";
+  private static final String KEY_LOCAL_SERVER_PORT = "rubix.network.local.transfer.server.port";
+  private static final String KEY_MAX_RETRIES = "rubix.network.client.num-retries";
   private static final String KEY_METRICS_CACHE_ENABLED = "rubix.metrics.cache.enabled";
   private static final String KEY_METRICS_HEALTH_ENABLED = "rubix.metrics.health.enabled";
   private static final String KEY_METRICS_JVM_ENABLED = "rubix.metrics.jvm.enabled";
@@ -62,14 +62,14 @@ public class CacheConfig
   private static final String KEY_METRICS_STATSD_PORT = "rubix.metrics.statsd.port";
   private static final String KEY_METRICS_GANGLIA_PORT = "rubix.metrics.ganglia.port";
   private static final String KEY_METRICS_REPORTERS = "rubix.metrics.reporters";
-  private static final String KEY_PARALLEL_WARMUP = "rubix.parallel.warmup";
+  private static final String KEY_PARALLEL_WARMUP = "rubix.cache.parallel.warmup";
   private static final String KEY_PROCESS_THREAD_INITIAL_DELAY = "rubix.request.process.initial.delay";
   private static final String KEY_PROCESS_THREAD_INTERVAL = "rubix.request.process.interval";
   private static final String KEY_REMOTE_FETCH_PROCESS_INTERVAL = "rubix.remotefetch.interval";
   private static final String KEY_REMOTE_FETCH_THREADS = "rubix.remotefetch.threads";
-  private static final String KEY_RUBIX_ON_MASTER = "rubix.cluster.on-master";
-  private static final String KEY_SERVER_PORT = "hadoop.cache.data.bookkeeper.port";
-  private static final String KEY_SERVER_MAX_THREADS = "hadoop.cache.data.bookkeeper.max-threads";
+  private static final String KEY_RUBIX_ON_MASTER = "rubix.cluster.is-master";
+  private static final String KEY_SERVER_PORT = "rubix.network.bookkeeper.server.port";
+  private static final String KEY_SERVER_MAX_THREADS = "rubix.cache.bookkeeper.max-threads";
   private static final String KEY_SERVICE_RETRY_INTERVAL = "rubix.network.service.retry-interval";
   private static final String KEY_SERVICE_MAX_RETRIES = "rubix.network.service.max-retries";
   private static final String KEY_CLIENT_READ_TIMEOUT = "rubix.network.client.read.timeout";
@@ -77,13 +77,15 @@ public class CacheConfig
   private static final String KEY_FILE_VALIDATION_INTERVAL = "rubix.validation.file.interval";
   private static final String KEY_CACHING_VALIDATION_INTERVAL = "rubix.validation.caching.interval";
   private static final String KEY_HEALTH_STATUS_EXPIRY = "rubix.monitor.health.status.expiry";
-  private static final String KEY_PRESTO_CLUSTER_MANAGER = "rubix.presto.clustermanager.class";
-  private static final String KEY_HADOOP_CLUSTER_MANAGER = "rubix.hadoop.clustermanager.class";
-  private static final String KEY_DUMMY_CLUSTER_MANAGER = "rubix.dummy.clustermanager.class";
-  private static final String KEY_ENABLE_FILE_STALESSNESS_CHECK = "rubix.enable.file.staleness-check";
-  private static final String KEY_STALE_FILEINFO_EXPIRY_PERIOD = "rubix.stale.fileinfo.expiry.period";
-  private static final String KEY_CLEANUP_FILES_DURING_START = "rubix.cleanup.files.during.start";
-  private static final String KEY_MAX_CACHE_SIZE = "rubix.cache.fullness.size";
+  private static final String KEY_PRESTO_CLUSTER_MANAGER = "rubix.cluster.manager.presto.class";
+  private static final String KEY_HADOOP_CLUSTER_MANAGER = "rubix.cluster.manager.hadoop.class";
+  private static final String KEY_DUMMY_CLUSTER_MANAGER = "rubix.cluster.manager.dummy.class";
+  private static final String KEY_ENABLE_FILE_STALESSNESS_CHECK = "rubix.cache.file.staleness-check.enable";
+  private static final String KEY_STALE_FILEINFO_EXPIRY_PERIOD = "rubix.cache.stale.fileinfo.expiry.period";
+  private static final String KEY_CLEANUP_FILES_DURING_START = "rubix.cache.cleanup.files.during.start";
+  private static final String KEY_MAX_CACHE_SIZE = "rubix.cache.max.size";
+  private static final String KEY_CACHE_FILE_SPLIT_SIZE = "rubix.cache.filesplit.size";
+  private static final String KEY_CLUSTER_NODE_REFRESH_TIME = "rubix.cluster.node.refresh.time";
 
   // default values
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
@@ -141,6 +143,8 @@ public class CacheConfig
   private static final int DEFAULT_STALE_FILEINFO_EXPIRY_PERIOD = 36000; // seconds
   private static final boolean DEFAULT_CLEANUP_FILES_DURING_START = true;
   private static final long DEFAULT_MAX_CACHE_SIZE = 0;
+  private static final long DEFAULT_CACHE_FILE_SPLIT_SIZE = 256 * 1024 * 1024;
+  private static final int DEFAULT_CLUSTER_NODE_REFRESH_TIME = 300; //seconds
 
   private CacheConfig()
   {
@@ -431,6 +435,16 @@ public class CacheConfig
     return conf.getBoolean(KEY_CLEANUP_FILES_DURING_START, DEFAULT_CLEANUP_FILES_DURING_START);
   }
 
+  public static long getCacheFileSplitSize(Configuration conf)
+  {
+    return conf.getLong(KEY_CACHE_FILE_SPLIT_SIZE, DEFAULT_CACHE_FILE_SPLIT_SIZE);
+  }
+
+  public static int getClusterNodeRefreshTime(Configuration conf)
+  {
+    return conf.getInt(KEY_CLUSTER_NODE_REFRESH_TIME, DEFAULT_CLUSTER_NODE_REFRESH_TIME);
+  }
+
   public static void setBlockSize(Configuration conf, int blockSize)
   {
     conf.setInt(KEY_BLOCK_SIZE, blockSize);
@@ -639,5 +653,15 @@ public class CacheConfig
   public static void setCleanupFilesDuringStart(Configuration conf, boolean isCleanupRequired)
   {
     conf.setBoolean(KEY_CLEANUP_FILES_DURING_START, isCleanupRequired);
+  }
+
+  public static void setCacheFileSplitSize(Configuration conf, long splitSize)
+  {
+    conf.setLong(KEY_CACHE_FILE_SPLIT_SIZE, splitSize);
+  }
+
+  public static void setClusterNodeRefreshTime(Configuration conf, int refreshTime)
+  {
+    conf.setInt(KEY_CLUSTER_NODE_REFRESH_TIME, refreshTime);
   }
 }

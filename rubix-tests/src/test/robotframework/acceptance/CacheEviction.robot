@@ -49,11 +49,11 @@ Test cache eviction
     # Setup
     Cache test setup
     ...  ${DATADIR}
-    ...  rubix.cluster.on-master=true
-    ...  hadoop.cache.data.dirprefix.list=${CACHE_DIR_PFX}
-    ...  hadoop.cache.data.dirsuffix=${CACHE_DIR_SFX}
-    ...  hadoop.cache.data.max.disks=${CACHE_NUM_DISKS}
-    ...  rubix.cache.fullness.size=${CACHE_MAX_SIZE}
+    ...  rubix.cluster.is-master=true
+    ...  rubix.cache.dirprefix.list=${CACHE_DIR_PFX}
+    ...  rubix.cache.dirsuffix=${CACHE_DIR_SFX}
+    ...  rubix.cache.max.disks=${CACHE_NUM_DISKS}
+    ...  rubix.cache.max.size=${CACHE_MAX_SIZE}
 
     @{testFileNames} =  Generate test files  ${REMOTE_PATH}  ${FILE_LENGTH}  ${NUM_TEST_FILES}
     @{requests} =  Make similar read requests
