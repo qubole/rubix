@@ -56,9 +56,9 @@ Network
 +------------------------------------------+------------------------------------------------------------------------------------+-------------------+------------------+---------------+
 | hadoop.cache.data.client.num-retries     | The maximum number of retry attempts for executing calls to the BookKeeper server. | integer           | 3                | C & S         |
 +------------------------------------------+------------------------------------------------------------------------------------+-------------------+------------------+---------------+
-| rubix.server.connect.timeout             | The maximum time to wait for a connection to the BookKeeper server.                | integer (ms)      | 1000             | C & S         |
+| rubix.network.server.connect.timeout     | The maximum time to wait for a connection to the BookKeeper server.                | integer (ms)      | 1000             | C & S         |
 +------------------------------------------+------------------------------------------------------------------------------------+-------------------+------------------+---------------+
-| rubix.client.read.timeout                | The maximum time to wait when reading data from another node.                      | integer (ms)      | 5000             | C             |
+| rubix.network.client.read.timeout        | The maximum time to wait when reading data from another node.                      | integer (ms)      | 3000             | C             |
 +------------------------------------------+------------------------------------------------------------------------------------+-------------------+------------------+---------------+
 
 Cluster
