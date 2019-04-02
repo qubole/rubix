@@ -33,11 +33,11 @@ Cache
 | rubix.cache.strict.mode                  | Propagate exceptions if there is an error while caching data if true;  | boolean           | false            | C             |
 |                                          | otherwise fall back on reading data directly from remote file system   |                   |                  |               |
 +------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+
-| rubix.cache.enable.file.staleness-check  | When true, always check for updates to file metadata from remote       | boolean           | true             | S             |
+| rubix.cache.file.staleness-check.enable  | When true, always check for updates to file metadata from remote       | boolean           | true             | S             |
 |                                          | filesystem. When false, file metadata will be cached for a period of   |                   |                  |               |
 |                                          | time before being fetched again.                                       |                   |                  |               |
 +------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+
-| rubix.cache.stale.fileinfo.expiry.period | (**rubix.cache.enable.file.staleness-check** must be false)            | integer (s)       | 36000            | S             |
+| rubix.cache.stale.fileinfo.expiry.period | (**rubix.cache.file.staleness-check.enable** must be false)            | integer (s)       | 36000            | S             |
 |                                          | The time file metadata will be cached before it will be fetched again  |                   |                  |               |
 |                                          | from the remote filesystem.                                            |                   |                  |               |
 +------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+
@@ -52,9 +52,9 @@ Network
 +==========================================+====================================================================================+===================+==================+===============+
 | rubix.network.bookkeeper.server.port       | The port on which the BookKeeper server is listening.                              | integer           | 8899             | C & S         |
 +------------------------------------------+------------------------------------------------------------------------------------+-------------------+------------------+---------------+
-| rubix.cache.local.transfer.server.port   | The port on which the Local Data Transfer server is listening.                     | integer           | 8898             | C             |
+| rubix.network.local.transfer.server.port | The port on which the Local Data Transfer server is listening.                     | integer           | 8898             | C             |
 +------------------------------------------+------------------------------------------------------------------------------------+-------------------+------------------+---------------+
-| rubix.cache.client.num-retries           | The maximum number of retry attempts for executing calls to the BookKeeper server. | integer           | 3                | C & S         |
+| rubix.network.client.num-retries         | The maximum number of retry attempts for executing calls to the BookKeeper server. | integer           | 3                | C & S         |
 +------------------------------------------+------------------------------------------------------------------------------------+-------------------+------------------+---------------+
 | rubix.network.client.read.timeout        | The maximum time to wait for a connection to the BookKeeper server.                | integer (ms)      | 10000            | C & S         |
 +------------------------------------------+------------------------------------------------------------------------------------+-------------------+------------------+---------------+

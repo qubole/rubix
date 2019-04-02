@@ -51,8 +51,8 @@ public class CacheConfig
   private static final String KEY_HEARTBEAT_INITIAL_DELAY = "rubix.monitor.heartbeat.initial.delay";
   private static final String KEY_HEARTBEAT_INTERVAL = "rubix.monitor.heartbeat.interval";
   private static final String KEY_LOCAL_TRANSFER_BUFFER_SIZE = "rubix.cache.local.transfer.buffer.size";
-  private static final String KEY_LOCAL_SERVER_PORT = "rubix.cache.local.transfer.server.port";
-  private static final String KEY_MAX_RETRIES = "rubix.cache.client.num-retries";
+  private static final String KEY_LOCAL_SERVER_PORT = "rubix.network.local.transfer.server.port";
+  private static final String KEY_MAX_RETRIES = "rubix.network.client.num-retries";
   private static final String KEY_METRICS_CACHE_ENABLED = "rubix.metrics.cache.enabled";
   private static final String KEY_METRICS_HEALTH_ENABLED = "rubix.metrics.health.enabled";
   private static final String KEY_METRICS_JVM_ENABLED = "rubix.metrics.jvm.enabled";
@@ -80,7 +80,7 @@ public class CacheConfig
   private static final String KEY_PRESTO_CLUSTER_MANAGER = "rubix.cluster.manager.presto.class";
   private static final String KEY_HADOOP_CLUSTER_MANAGER = "rubix.cluster.manager.hadoop.class";
   private static final String KEY_DUMMY_CLUSTER_MANAGER = "rubix.cluster.manager.dummy.class";
-  private static final String KEY_ENABLE_FILE_STALESSNESS_CHECK = "rubix.cache.enable.file.staleness-check";
+  private static final String KEY_ENABLE_FILE_STALESSNESS_CHECK = "rubix.cache.file.staleness-check.enable";
   private static final String KEY_STALE_FILEINFO_EXPIRY_PERIOD = "rubix.cache.stale.fileinfo.expiry.period";
   private static final String KEY_CLEANUP_FILES_DURING_START = "rubix.cache.cleanup.files.during.start";
   private static final String KEY_MAX_CACHE_SIZE = "rubix.cache.max.size";
