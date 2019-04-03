@@ -27,6 +27,13 @@ Metrics relating to cache interactions.
 +------------------------------------------------+--------------------------------------------+--------------------------------+
 | Metric                                         | Description                                | Abnormalities                  |
 +================================================+============================================+================================+
+| rubix.bookkeeper.gauge.cache_size_mb           | The current size of the local cache in MB. | Cache size is bigger than      |
+|                                                |                                            | configured capacity            |
++------------------------------------------------+--------------------------------------------+--------------------------------+
+| rubix.bookkeeper.gauge.available_cache_size_mb | The current disk space available for       |                                |
+|                                                | cache in MB.                               |                                |
+|                                                |                                            |                                |
++------------------------------------------------+--------------------------------------------+--------------------------------+
 | rubix.bookkeeper.count.cache_eviction          | The number of files removed from the       | No cache evictions & cache has |
 |                                                | local cache due to size constraints.       | exceeded configured capacity   |
 +------------------------------------------------+--------------------------------------------+--------------------------------+
@@ -42,9 +49,6 @@ Metrics relating to cache interactions.
 +------------------------------------------------+--------------------------------------------+--------------------------------+
 | rubix.bookkeeper.gauge.cache_miss_rate         | The percentage of cache misses for the     | Cache miss rate near 100%      |
 |                                                | local cache.                               |                                |
-+------------------------------------------------+--------------------------------------------+--------------------------------+
-| rubix.bookkeeper.gauge.cache_size_mb           | The current size of the local cache in MB. | Cache size is bigger than      |
-|                                                |                                            | configured capacity            |
 +------------------------------------------------+--------------------------------------------+--------------------------------+
 | rubix.bookkeeper.count.total_request           | The total number of requests made          |                                |
 |                                                | to read data.                              |                                |
@@ -71,6 +75,9 @@ Metrics relating to cache interactions.
 |                                                | downloaded, in MB.                         |                                |
 |                                                | (If there are no cache evictions, this     |                                |
 |                                                | should match ``cache_size_mb``.)           |                                |
++------------------------------------------------+--------------------------------------------+--------------------------------+
+| rubix.bookkeeper.count.async_download_time     | Total time spent on downloading data in sec|                                |
+|                                                |                                            |                                |
 +------------------------------------------------+--------------------------------------------+--------------------------------+
 
 JVM
