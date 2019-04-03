@@ -33,7 +33,7 @@ public class CacheConfig
   private static final String KEY_BLOCK_SIZE = "rubix.cache.block.size";
   private static final String KEY_CACHE_ENABLED = "rubix.cache.enabled";
   private static final String KEY_CACHE_METADATA_FILE_SUFFIX = "rubix.cache.metadata.file.suffix";
-  private static final String KEY_CLIENT_TIMEOUT = "rubix.network.client.read.timeout";
+  private static final String KEY_SERVER_CONNECT_TIMEOUT = "rubix.network.server.connect.timeout";
   private static final String KEY_DATA_CACHE_EXPIRY_AFTER_WRITE = "rubix.cache.expiration.after-write";
   private static final String KEY_DATA_CACHE_DIR_PREFIX = "rubix.cache.dirprefix.list";
   private static final String KEY_DATA_CACHE_DIR_SUFFIX = "rubix.cache.dirsuffix";
@@ -72,7 +72,7 @@ public class CacheConfig
   private static final String KEY_SERVER_MAX_THREADS = "rubix.cache.bookkeeper.max-threads";
   private static final String KEY_SERVICE_RETRY_INTERVAL = "rubix.network.service.retry-interval";
   private static final String KEY_SERVICE_MAX_RETRIES = "rubix.network.service.max-retries";
-  private static final String KEY_SOCKET_READ_TIMEOUT = "rubix.network.server.connect.timeout";
+  private static final String KEY_CLIENT_READ_TIMEOUT = "rubix.network.client.read.timeout";
   private static final String KEY_VALIDATION_ENABLED = "rubix.validation.enabled";
   private static final String KEY_FILE_VALIDATION_INTERVAL = "rubix.validation.file.interval";
   private static final String KEY_CACHING_VALIDATION_INTERVAL = "rubix.validation.caching.interval";
@@ -89,7 +89,7 @@ public class CacheConfig
 
   // default values
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
-  private static final int DEFAULT_CLIENT_TIMEOUT = 10000; // ms
+  private static final int DEFAULT_SERVER_CONNECT_TIMEOUT = 1000; // ms
   private static final String DEFAULT_CACHE_METADATA_FILE_SUFFIX = "_mdfile";
   private static final String DEFAULT_DATA_CACHE_DIR_PREFIX = "/media/ephemeral";
   private static final String DEFAULT_DATA_CACHE_DIR_SUFFIX = "/fcache/";
@@ -131,7 +131,7 @@ public class CacheConfig
   private static final int DEFAULT_SERVER_PORT = 8899;
   private static final int DEFAULT_SERVICE_RETRY_INTERVAL = 30000; // ms
   private static final int DEFAULT_SERVICE_MAX_RETRIES = 100;
-  private static final int DEFAULT_SOCKET_READ_TIMEOUT = 30000; // ms
+  private static final int DEFAULT_CLIENT_READ_TIMEOUT = 3000; // ms
   private static final int DEFAULT_HEALTH_STATUS_EXPIRY = 60000; // ms
   private static final boolean DEFAULT_VALIDATION_ENABLED = false;
   private static final int DEFAULT_CACHING_VALIDATION_INTERVAL = 1800000; // ms (30min)
@@ -230,9 +230,9 @@ public class CacheConfig
     return conf.getInt(KEY_FILE_VALIDATION_INTERVAL, DEFAULT_FILE_VALIDATION_INTERVAL);
   }
 
-  public static int getClientTimeout(Configuration conf)
+  public static int getServerConnectTimeout(Configuration conf)
   {
-    return conf.getInt(KEY_CLIENT_TIMEOUT, DEFAULT_CLIENT_TIMEOUT);
+    return conf.getInt(KEY_SERVER_CONNECT_TIMEOUT, DEFAULT_SERVER_CONNECT_TIMEOUT);
   }
 
   public static int getDiskReadBufferSize(Configuration conf)
@@ -315,9 +315,9 @@ public class CacheConfig
     return conf.getInt(KEY_SERVICE_RETRY_INTERVAL, DEFAULT_SERVICE_RETRY_INTERVAL);
   }
 
-  public static int getSocketReadTimeOut(Configuration conf)
+  public static int getClientReadTimeout(Configuration conf)
   {
-    return conf.getInt(KEY_SOCKET_READ_TIMEOUT, DEFAULT_SOCKET_READ_TIMEOUT);
+    return conf.getInt(KEY_CLIENT_READ_TIMEOUT, DEFAULT_CLIENT_READ_TIMEOUT);
   }
 
   public static String getStatsDMetricsHost(Configuration conf)
