@@ -597,7 +597,7 @@ public class BaseServerTest
       try {
         when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
             new RetryingBookkeeperClient(
-                new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf)),
+                new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getServerConnectTimeout(conf)),
                 CacheConfig.getMaxRetries(conf)));
       }
       catch (TTransportException e) {

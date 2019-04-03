@@ -24,7 +24,7 @@ RUBIX_SITE="${RUBIX_HOME_DIR}/etc/rubix-site.xml"
 <?xml version="1.0"?>
 <configuration>
     <property>
-        <name>hadoop.cache.data.dirprefix.list</name>
+        <name>rubix.cache.dirprefix.list</name>
         <value>${RUBIX_CACHE_DIR}/data</value>
     </property>
 
