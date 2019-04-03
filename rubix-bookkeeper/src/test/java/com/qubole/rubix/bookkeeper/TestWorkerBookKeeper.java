@@ -135,7 +135,7 @@ public class TestWorkerBookKeeper
     BookKeeperFactory factory = new BookKeeperFactory();
     final BookKeeperFactory bookKeeperFactory = spy(factory);
 
-    TSocket socket = new TSocket("localhost", 1234, CacheConfig.getClientTimeout(conf));
+    TSocket socket = new TSocket("localhost", 1234, CacheConfig.getServerConnectTimeout(conf));
     socket.open();
 
     doReturn(new RetryingBookkeeperClient(socket, CacheConfig.getMaxRetries(conf)))

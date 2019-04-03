@@ -30,7 +30,6 @@ import java.util.Map;
 public abstract class ClusterManager
 {
   private static Log log = LogFactory.getLog(ClusterManager.class.getName());
-  private long splitSize = 256 * 1024 * 1024; // 256MB
 
   private int nodeRefreshTime;
 
@@ -40,7 +39,6 @@ public abstract class ClusterManager
   }
 
   public void initialize(Configuration conf)
-
   {
     nodeRefreshTime = CacheConfig.getClusterNodeRefreshTime(conf);
   }

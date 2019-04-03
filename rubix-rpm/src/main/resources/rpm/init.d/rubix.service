@@ -33,7 +33,7 @@ start() {
   if [[ $is_master == True ]]; then
         nohup $HADOOP_HOME/bin/hadoop jar /usr/lib/rubix/lib/rubix-bookkeeper-*.jar com.qubole.rubix.bookkeeper.BookKeeperServer \
             -conf /etc/rubix/rubix-site.xml \
-            -Drubix.cluster.on-master=true &
+            -Drubix.cluster.is-master=true &
   else
         nohup $HADOOP_HOME/bin/hadoop jar /usr/lib/rubix/lib/rubix-bookkeeper-*.jar com.qubole.rubix.bookkeeper.BookKeeperServer \
             -conf /etc/rubix/rubix-site.xml &
