@@ -40,6 +40,7 @@ import com.qubole.rubix.spi.thrift.BookKeeperService;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.FileInfo;
 import com.qubole.rubix.spi.thrift.Location;
+import com.qubole.rubix.spi.thrift.ReadDataRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -352,16 +353,18 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   // We cannot make it static because the variable is used in remoteReadRequestChain to write (cache) data to files.
   // So, it has to store the correct value in each thread. getCacheStatus is called twice.
   @Override
-  public boolean readData(String remotePath, long offset, int length, long fileSize, long lastModified, int clusterType)
+  public boolean readData(ReadDataRequest readDataRequest)
       throws TException
   {
     if (CacheConfig.isParallelWarmupEnabled(conf)) {
-      log.info("Adding to the queue Path : " + remotePath + " Offste : " + offset + " Length " + length);
-      fetchProcessor.addToProcessQueue(remotePath, offset, length, fileSize, lastModified);
+      log.info("Adding to the queue Path : " + readDataRequest.getRemotePath() +
+          " Offset : " + readDataRequest.getReadStart() + " Length " + readDataRequest.getReadLength());
+      fetchProcessor.addToProcessQueue(readDataRequest.getRemotePath(), readDataRequest.getReadStart(),
+          (int) readDataRequest.getReadLength(), readDataRequest.getFileSize(), readDataRequest.getLastModified());
       return true;
     }
     else {
-      return readDataInternal(remotePath, offset, length, fileSize, lastModified, clusterType);
+      return readDataInternal(readDataRequest);
     }
   }
 
@@ -393,12 +396,18 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     return null;
   }
 
-  private boolean readDataInternal(String remotePath, long offset, int length, long fileSize,
-                                   long lastModified, int clusterType) throws TException
+  private boolean readDataInternal(ReadDataRequest readDataRequest) throws TException
   {
     int blockSize = CacheConfig.getBlockSize(conf);
     byte[] buffer = new byte[blockSize];
     ByteBuffer byteBuffer = null;
+
+    String remotePath = readDataRequest.getRemotePath();
+    long offset = readDataRequest.getReadStart();
+    long length = readDataRequest.getReadLength();
+    long fileSize = readDataRequest.getFileSize();
+    long lastModified = readDataRequest.getLastModified();
+
     String localPath = CacheUtil.getLocalPath(remotePath, conf);
     FileSystem fs = null;
     FSDataInputStream inputStream = null;
@@ -407,7 +416,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     long endBlock = ((offset + (length - 1)) / CacheConfig.getBlockSize(conf)) + 1;
     try {
       int idx = 0;
-      CacheStatusRequest request = new CacheStatusRequest(remotePath, fileSize, lastModified, startBlock, endBlock, clusterType);
+      CacheStatusRequest request = new CacheStatusRequest(remotePath, fileSize, lastModified, startBlock, endBlock);
       List<BlockLocation> blockLocations = getCacheStatus(request);
 
       for (long blockNum = startBlock; blockNum < endBlock; blockNum++, idx++) {

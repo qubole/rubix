@@ -62,7 +62,6 @@ Test cache eviction
     ...  ${END_BLOCK}
     ...  ${FILE_LENGTH}
     ...  ${LAST_MODIFIED}
-    ...  ${CLUSTER_TYPE}
 
     RUN KEYWORD IF  ${runConcurrently}
     ...  Execute concurrent requests

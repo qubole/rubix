@@ -23,7 +23,6 @@ import com.qubole.rubix.core.LocalFSInputStream;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
-import com.qubole.rubix.spi.ClusterType;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -134,7 +133,7 @@ public class TestCachingInputStream
 
     // This should be after server comes up else client could not be created
     inputStream = new CachingInputStream(fsDataInputStream, conf, backendPath, file.length(),
-        file.lastModified(), new CachingFileSystemStats(), ClusterType.TEST_CLUSTER_MANAGER,
+        file.lastModified(), new CachingFileSystemStats(),
         new BookKeeperFactory(), FileSystem.get(new URI(backendFileName), conf),
         CacheConfig.getBlockSize(conf), null);
   }

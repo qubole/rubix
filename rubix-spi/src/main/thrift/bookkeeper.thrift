@@ -36,8 +36,15 @@ struct CacheStatusRequest {
 		3: required long lastModified;
 		4: required long startBlock;
 		5: required long endBlock;
-		6: required int clusterType;
-		7: optional bool incrMetrics = false;
+		6: optional bool incrMetrics = false;
+}
+
+struct ReadDataRequest {
+        1: required string remotePath;
+        2: required long readStart;
+        3: required long readLength;
+        4: required long fileSize;
+        5: required long lastModified;
 }
 
 service BookKeeperService
@@ -48,7 +55,7 @@ service BookKeeperService
 
     map<string,double> getCacheMetrics()
 
-    bool readData(1:string path, 2:long readStart, 3:int length, 4:long fileSize, 5:long lastModified, 6:int clusterType)
+    bool readData(1: ReadDataRequest request)
 
     oneway void handleHeartbeat(1:string workerHostname, 2:HeartbeatStatus heartbeatStatus)
 

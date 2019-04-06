@@ -21,25 +21,17 @@ public class DataTransferHeader
   public int readLength;
   public long fileSize;
   public long lastModified;
-  public int clusterType;
   public int filePathLength;
   public String filePath;
 
-  public DataTransferHeader(long offset, int readLength, long fileSize,
-                            long lastModified, int clusterType, String filePath)
+  public DataTransferHeader(long offset, int readLength, long fileSize, long lastModified, String filePath)
   {
-    this.clusterType = clusterType;
     this.filePath = filePath;
     this.fileSize = fileSize;
     this.lastModified = lastModified;
     this.offset = offset;
     this.filePathLength = filePath.length();
     this.readLength = readLength;
-  }
-
-  public int getClusterType()
-  {
-    return clusterType;
   }
 
   public long getOffset()

@@ -15,6 +15,7 @@ package com.qubole.rubix.client.robotframework;
 import com.qubole.rubix.core.MockCachingFileSystem;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.thrift.ReadDataRequest;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -53,12 +54,12 @@ public class BookKeeperClientRFLibrary
   {
     try (RetryingBookkeeperClient client = createBookKeeperClient()) {
       return client.readData(
-          readRequest.getRemotePath(),
-          readRequest.getReadStart(),
-          readRequest.getReadLength(),
-          readRequest.getFileLength(),
-          readRequest.getLastModified(),
-          readRequest.getClusterType());
+          new ReadDataRequest(
+              readRequest.getRemotePath(),
+              readRequest.getReadStart(),
+              readRequest.getReadLength(),
+              readRequest.getFileLength(),
+              readRequest.getLastModified()));
     }
   }
 
@@ -194,10 +195,9 @@ public class BookKeeperClientRFLibrary
                                                            long readStart,
                                                            int readLength,
                                                            long fileLength,
-                                                           long lastModified,
-                                                           int clusterType)
+                                                           long lastModified)
   {
-    return new TestClientReadRequest(remotePath, readStart, readLength, fileLength, lastModified, clusterType);
+    return new TestClientReadRequest(remotePath, readStart, readLength, fileLength, lastModified);
   }
 
   /**

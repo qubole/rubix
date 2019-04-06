@@ -45,7 +45,6 @@ public class NonLocalReadRequestChain extends ReadRequestChain
   int totalRead;
   int directRead;
   FileSystem remoteFileSystem;
-  int clusterType;
   public boolean strictMode;
   FileSystem.Statistics statistics;
 
@@ -54,7 +53,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
   private static final Log log = LogFactory.getLog(NonLocalReadRequestChain.class);
 
   public NonLocalReadRequestChain(String remoteLocation, long fileSize, long lastModified, Configuration conf,
-                                  FileSystem remoteFileSystem, String remotePath, int clusterType,
+                                  FileSystem remoteFileSystem, String remotePath,
                                   boolean strictMode, FileSystem.Statistics statistics)
   {
     this.remoteNodeName = remoteLocation;
@@ -63,7 +62,6 @@ public class NonLocalReadRequestChain extends ReadRequestChain
     this.filePath = remotePath;
     this.fileSize = fileSize;
     this.conf = conf;
-    this.clusterType = clusterType;
     this.strictMode = strictMode;
     this.statistics = statistics;
   }
@@ -115,7 +113,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
         ReadableByteChannel wrappedChannel = Channels.newChannel(inStream);
 
         ByteBuffer buf = DataTransferClientHelper.writeHeaders(conf, new DataTransferHeader(readRequest.getActualReadStart(),
-            readRequest.getActualReadLength(), fileSize, lastModified, clusterType, filePath));
+            readRequest.getActualReadLength(), fileSize, lastModified, filePath));
 
         dataTransferClient.write(buf);
         int bytesread = 0;

@@ -13,7 +13,6 @@
 package com.qubole.rubix.presto;
 
 import com.qubole.rubix.core.CachingFileSystem;
-import com.qubole.rubix.spi.ClusterType;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 
@@ -35,7 +34,6 @@ public class CachingPrestoNativeAzureFileSystem extends CachingFileSystem<Native
   @Override
   public void initialize(URI uri, Configuration conf) throws IOException
   {
-    setClusterType(ClusterType.PRESTO_CLUSTER_MANAGER);
     super.initialize(uri, conf);
   }
 
