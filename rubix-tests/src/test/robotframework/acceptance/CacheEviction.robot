@@ -49,7 +49,7 @@ Test cache eviction
     # Setup
     Cache test setup
     ...  ${DATADIR}
-    ...  rubix.cluster.on-master=true
+    ...  rubix.cluster.is-master=true
     ...  hadoop.cache.data.dirprefix.list=${CACHE_DIR_PFX}
     ...  hadoop.cache.data.dirsuffix=${CACHE_DIR_SFX}
     ...  hadoop.cache.data.max.disks=${CACHE_NUM_DISKS}
