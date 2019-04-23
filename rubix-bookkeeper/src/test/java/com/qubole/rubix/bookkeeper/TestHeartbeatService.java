@@ -100,7 +100,7 @@ public class TestHeartbeatService
     final BookKeeperFactory bookKeeperFactory = mock(BookKeeperFactory.class);
     when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
         new RetryingBookkeeperClient(
-            new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf)),
+            new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getServerConnectTimeout(conf)),
             CacheConfig.getMaxRetries(conf)));
 
     final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, new TestUtil.NonReportingBookKeeperMetrics(conf, new MetricRegistry()));
@@ -148,7 +148,7 @@ public class TestHeartbeatService
     final BookKeeperFactory bookKeeperFactory = mock(BookKeeperFactory.class);
     when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
         new RetryingBookkeeperClient(
-            new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf)),
+            new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getServerConnectTimeout(conf)),
             CacheConfig.getMaxRetries(conf)));
 
     final MetricRegistry metrics = new MetricRegistry();
@@ -172,7 +172,7 @@ public class TestHeartbeatService
     final BookKeeperFactory bookKeeperFactory = mock(BookKeeperFactory.class);
     when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
         new RetryingBookkeeperClient(
-            new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf)),
+            new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getServerConnectTimeout(conf)),
             CacheConfig.getMaxRetries(conf)));
 
     final MetricRegistry metrics = new MetricRegistry();

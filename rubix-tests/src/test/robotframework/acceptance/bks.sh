@@ -1,8 +1,8 @@
 #!/bin/bash -e
 
-CACHE_DIR_PREFIX_KEY="hadoop.cache.data.dirprefix.list"
-CACHE_DIR_SUFFIX_KEY="hadoop.cache.data.dirsuffix"
-CACHE_DIR_MAX_DISKS_KEY="hadoop.cache.data.max.disks"
+CACHE_DIR_PREFIX_KEY="rubix.cache.dirprefix.list"
+CACHE_DIR_SUFFIX_KEY="rubix.cache.dirsuffix"
+CACHE_DIR_MAX_DISKS_KEY="rubix.cache.max.disks"
 CACHE_DIR_PREFIX_VALUE=/media/ephemeral
 CACHE_DIR_SUFFIX_VALUE=/fcache/
 CACHE_DIR_MAX_DISKS_VALUE=5
