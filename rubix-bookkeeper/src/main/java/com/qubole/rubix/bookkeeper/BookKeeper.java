@@ -432,18 +432,18 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     ImmutableMap.Builder<String, Double> cacheMetrics = ImmutableMap.builder();
 
     // Add all enabled metrics gauges
-    for (Map.Entry<String, Gauge> gauge : metrics.getGauges(bookKeeperMetrics.getMetricsFilter()).entrySet()) {
+    for (Map.Entry<String, Gauge> gaugeEntry : metrics.getGauges(bookKeeperMetrics.getMetricsFilter()).entrySet()) {
       try {
-        cacheMetrics.put(gauge.getKey(), (double) gauge.getValue().getValue());
+        cacheMetrics.put(gaugeEntry.getKey(), getGaugeValueAsDouble(gaugeEntry.getValue().getValue()));
       }
       catch (ClassCastException e) {
-        log.error(String.format("Gauge metric %s is not a numeric value", gauge.getKey()), e);
+        log.error(String.format("Gauge metric %s is not a numeric value", gaugeEntry.getKey()), e);
       }
     }
 
     // Add all enabled metrics counters
-    for (Map.Entry<String, Counter> counter : metrics.getCounters(bookKeeperMetrics.getMetricsFilter()).entrySet()) {
-      cacheMetrics.put(counter.getKey(), (double) counter.getValue().getCount());
+    for (Map.Entry<String, Counter> counterEntry : metrics.getCounters(bookKeeperMetrics.getMetricsFilter()).entrySet()) {
+      cacheMetrics.put(counterEntry.getKey(), (double) counterEntry.getValue().getCount());
     }
 
     return cacheMetrics.build();
@@ -749,5 +749,24 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   private static boolean isValidatingCachingBehavior(String remotePath)
   {
     return CachingValidator.VALIDATOR_TEST_FILE_NAME.equals(CacheUtil.getName(remotePath));
+  }
+
+  /**
+   * Convert the provided gauge value to a {@code double}.
+   *
+   * @param gaugeValue The gauge value to convert.
+   * @return The gauge value as a {@code double}.
+   */
+  private double getGaugeValueAsDouble(Object gaugeValue)
+  {
+    if (gaugeValue instanceof Long) {
+      return ((Long) gaugeValue).doubleValue();
+    }
+    else if (gaugeValue instanceof Integer) {
+      return ((Integer) gaugeValue).doubleValue();
+    }
+    else {
+      throw new ClassCastException("Could not cast gauge metric value type to Double");
+    }
   }
 }
