@@ -416,13 +416,13 @@ public class TestBookKeeper
     bookKeeper = new CoordinatorBookKeeper(conf, new TestUtil.NonReportingBookKeeperMetrics(conf, new MetricRegistry()));
 
     // Since the value returned from a gauge metric is an object rather than a primitive, boxing is required here to properly compare the values.
-    assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.CACHE_SIZE_GAUGE.getMetricName()).getValue(), 0.0);
+    assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.CACHE_SIZE_GAUGE.getMetricName()).getValue(), 0);
 
     DataGen.populateFile(TEST_REMOTE_PATH);
     bookKeeper.readData(remotePathWithScheme, readOffset, readLength, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
 
     final long mdSize = FileUtils.sizeOf(new File(CacheUtil.getMetadataFilePath(TEST_REMOTE_PATH, conf)));
-    final double totalCacheSize = (double) DiskUtils.bytesToMB(readLength + mdSize);
+    final int totalCacheSize = (int) DiskUtils.bytesToMB(readLength + mdSize);
     assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.CACHE_SIZE_GAUGE.getMetricName()).getValue(), totalCacheSize);
   }
 

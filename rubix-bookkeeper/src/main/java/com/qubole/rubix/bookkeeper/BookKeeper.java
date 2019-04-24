@@ -70,6 +70,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.CACHE_AVAILABLE_SIZE_GAUGE;
 import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.CACHE_EVICTION_COUNT;
 import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.CACHE_EXPIRY_COUNT;
 import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.CACHE_HIT_RATE_GAUGE;
@@ -202,15 +203,15 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         return ((double) remoteRequestCount.getCount() / (cacheRequestCount.getCount() + remoteRequestCount.getCount()));
       }
     });
-    metrics.register(CACHE_SIZE_GAUGE.getMetricName(), new Gauge<Double>()
+    metrics.register(CACHE_SIZE_GAUGE.getMetricName(), new Gauge<Integer>()
     {
       @Override
-      public Double getValue()
+      public Integer getValue()
       {
-        return (double) DiskUtils.getCacheSizeMB(conf);
+        return DiskUtils.getCacheSizeMB(conf);
       }
     });
-    metrics.register(BookKeeperMetrics.CacheMetric.CACHE_AVAILABLE_SIZE_GAUGE.getMetricName(), new Gauge<Long>()
+    metrics.register(CACHE_AVAILABLE_SIZE_GAUGE.getMetricName(), new Gauge<Long>()
     {
       @Override
       public Long getValue()

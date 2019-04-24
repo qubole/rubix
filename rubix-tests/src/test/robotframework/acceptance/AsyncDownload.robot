@@ -42,6 +42,7 @@ ${ASYNC_PROCESS_DELAY_SOME_DELAYED}     1500
 
 *** Test Cases ***
 Async caching
+    [Documentation]  Verify that files are correctly cached when asynchronously downloaded.
     [Template]  Test async caching
     Download requests               runConcurrently=${false}
     Concurrently download requests  runConcurrently=${true}
@@ -49,6 +50,7 @@ Async caching
     Concurrently read requests      runConcurrently=${true}
 
 Async caching - Some requests delayed
+    [Documentation]  Verify that asynchronous caching only downloads files queued outside of the delay period.
     [Template]  Test async caching with some requests delayed
     Download requests               runConcurrently=${false}
     Concurrently download requests  runConcurrently=${true}
@@ -56,11 +58,13 @@ Async caching - Some requests delayed
     Concurrently read requests      runConcurrently=${true}
 
 Async caching - Request 1 file date before Request 2
+    [Documentation]  Verify that later read requests for the same file with a later last-modified date are handled correctly.
     [Template]  Test async caching with request 1 file date before request 2
     Download requests               runConcurrently=${false}
     Concurrently download requests  runConcurrently=${true}
 
 Async caching - Request 1 file date after Request 2
+    [Documentation]  Verify that later read requests for the same file with an earlier last-modified date are handled correctly.
     [Template]  Test async caching with request 1 file date after request 2
     Download requests               runConcurrently=${false}
     Concurrently download requests  runConcurrently=${true}
@@ -74,11 +78,11 @@ Test async caching
     # Setup
     Cache test setup
     ...  ${DATADIR}
-    ...  rubix.cluster.on-master=true
-    ...  hadoop.cache.data.dirprefix.list=${CACHE_DIR_PFX}
-    ...  hadoop.cache.data.dirsuffix=${CACHE_DIR_SFX}
-    ...  hadoop.cache.data.max.disks=${CACHE_NUM_DISKS}
-    ...  rubix.parallel.warmup=true
+    ...  rubix.cluster.is-master=true
+    ...  rubix.cache.dirprefix.list=${CACHE_DIR_PFX}
+    ...  rubix.cache.dirsuffix=${CACHE_DIR_SFX}
+    ...  rubix.cache.max.disks=${CACHE_NUM_DISKS}
+    ...  rubix.cache.parallel.warmup=true
     ...  rubix.request.process.initial.delay=${ASYNC_PROCESS_INTERVAL}
     ...  rubix.request.process.interval=${ASYNC_PROCESS_INTERVAL}
     ...  rubix.remotefetch.interval=${ASYNC_PROCESS_DELAY}
@@ -128,11 +132,11 @@ Test async caching with some requests delayed
     # Setup
     Cache test setup
     ...  ${DATADIR}
-    ...  rubix.cluster.on-master=true
-    ...  hadoop.cache.data.dirprefix.list=${CACHE_DIR_PFX}
-    ...  hadoop.cache.data.dirsuffix=${CACHE_DIR_SFX}
-    ...  hadoop.cache.data.max.disks=${CACHE_NUM_DISKS}
-    ...  rubix.parallel.warmup=true
+    ...  rubix.cluster.is-master=true
+    ...  rubix.cache.dirprefix.list=${CACHE_DIR_PFX}
+    ...  rubix.cache.dirsuffix=${CACHE_DIR_SFX}
+    ...  rubix.cache.max.disks=${CACHE_NUM_DISKS}
+    ...  rubix.cache.parallel.warmup=true
     ...  rubix.request.process.initial.delay=${ASYNC_PROCESS_INTERVAL_SOME_DELAYED}
     ...  rubix.request.process.interval=${ASYNC_PROCESS_INTERVAL_SOME_DELAYED}
     ...  rubix.remotefetch.interval=${ASYNC_PROCESS_DELAY_SOME_DELAYED}
@@ -224,11 +228,11 @@ Test async caching with request 1 file date before request 2
     # Setup
     Cache test setup
     ...  ${DATADIR}
-    ...  rubix.cluster.on-master=true
-    ...  hadoop.cache.data.dirprefix.list=${CACHE_DIR_PFX}
-    ...  hadoop.cache.data.dirsuffix=${CACHE_DIR_SFX}
-    ...  hadoop.cache.data.max.disks=${CACHE_NUM_DISKS}
-    ...  rubix.parallel.warmup=true
+    ...  rubix.cluster.is-master=true
+    ...  rubix.cache.dirprefix.list=${CACHE_DIR_PFX}
+    ...  rubix.cache.dirsuffix=${CACHE_DIR_SFX}
+    ...  rubix.cache.max.disks=${CACHE_NUM_DISKS}
+    ...  rubix.cache.parallel.warmup=true
     ...  rubix.request.process.initial.delay=${ASYNC_PROCESS_INTERVAL}
     ...  rubix.request.process.interval=${ASYNC_PROCESS_INTERVAL}
     ...  rubix.remotefetch.interval=${ASYNC_PROCESS_DELAY}
@@ -289,11 +293,11 @@ Test async caching with request 1 file date after request 2
     # Setup
     Cache test setup
     ...  ${DATADIR}
-    ...  rubix.cluster.on-master=true
-    ...  hadoop.cache.data.dirprefix.list=${CACHE_DIR_PFX}
-    ...  hadoop.cache.data.dirsuffix=${CACHE_DIR_SFX}
-    ...  hadoop.cache.data.max.disks=${CACHE_NUM_DISKS}
-    ...  rubix.parallel.warmup=true
+    ...  rubix.cluster.is-master=true
+    ...  rubix.cache.dirprefix.list=${CACHE_DIR_PFX}
+    ...  rubix.cache.dirsuffix=${CACHE_DIR_SFX}
+    ...  rubix.cache.max.disks=${CACHE_NUM_DISKS}
+    ...  rubix.cache.parallel.warmup=true
     ...  rubix.request.process.initial.delay=${ASYNC_PROCESS_INTERVAL}
     ...  rubix.request.process.interval=${ASYNC_PROCESS_INTERVAL}
     ...  rubix.remotefetch.interval=${ASYNC_PROCESS_DELAY}

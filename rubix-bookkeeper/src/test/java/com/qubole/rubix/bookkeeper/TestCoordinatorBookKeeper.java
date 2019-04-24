@@ -92,13 +92,13 @@ public class TestCoordinatorBookKeeper
     coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER1, TEST_STATUS_ALL_VALIDATED);
     coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER2, TEST_STATUS_ALL_VALIDATED);
 
-    double workerCount = (double) metrics.getGauges().get(BookKeeperMetrics.HealthMetric.LIVE_WORKER_GAUGE.getMetricName()).getValue();
-    double cachingValidatedCount = (double) metrics.getGauges().get(BookKeeperMetrics.HealthMetric.CACHING_VALIDATED_WORKER_GAUGE.getMetricName()).getValue();
-    double fileValidatedCount = (double) metrics.getGauges().get(BookKeeperMetrics.HealthMetric.FILE_VALIDATED_WORKER_GAUGE.getMetricName()).getValue();
+    long workerCount = (long) metrics.getGauges().get(BookKeeperMetrics.HealthMetric.LIVE_WORKER_GAUGE.getMetricName()).getValue();
+    long cachingValidatedCount = (long) metrics.getGauges().get(BookKeeperMetrics.HealthMetric.CACHING_VALIDATED_WORKER_GAUGE.getMetricName()).getValue();
+    long fileValidatedCount = (long) metrics.getGauges().get(BookKeeperMetrics.HealthMetric.FILE_VALIDATED_WORKER_GAUGE.getMetricName()).getValue();
 
-    assertEquals(workerCount, 2.0, "Incorrect number of workers reporting heartbeat");
-    assertEquals(cachingValidatedCount, 2.0, "Incorrect number of workers reporting heartbeat");
-    assertEquals(fileValidatedCount, 2.0, "Incorrect number of workers reporting heartbeat");
+    assertEquals(workerCount, 2, "Incorrect number of workers reporting heartbeat");
+    assertEquals(cachingValidatedCount, 2, "Incorrect number of workers reporting heartbeat");
+    assertEquals(fileValidatedCount, 2, "Incorrect number of workers reporting heartbeat");
   }
 
   /**
@@ -120,22 +120,22 @@ public class TestCoordinatorBookKeeper
     coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER1, TEST_STATUS_ALL_VALIDATED);
     coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER2, TEST_STATUS_ALL_VALIDATED);
 
-    double workerCount = (double) liveWorkerGauge.getValue();
-    double cachingValidationCount = (double) cachingValidatedWorkerGauge.getValue();
-    double fileValidationCount = (double) fileValidatedWorkerGauge.getValue();
-    assertEquals(workerCount, 2.0, "Incorrect number of workers reporting heartbeat");
-    assertEquals(cachingValidationCount, 2.0, "Incorrect number of workers have been validated");
-    assertEquals(fileValidationCount, 2.0, "Incorrect number of workers have been validated");
+    long workerCount = (long) liveWorkerGauge.getValue();
+    long cachingValidationCount = (long) cachingValidatedWorkerGauge.getValue();
+    long fileValidationCount = (long) fileValidatedWorkerGauge.getValue();
+    assertEquals(workerCount, 2, "Incorrect number of workers reporting heartbeat");
+    assertEquals(cachingValidationCount, 2, "Incorrect number of workers have been validated");
+    assertEquals(fileValidationCount, 2, "Incorrect number of workers have been validated");
 
     ticker.advance(healthStatusExpiry, TimeUnit.MILLISECONDS);
     coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER1, TEST_STATUS_ALL_VALIDATED);
 
-    workerCount = (double) liveWorkerGauge.getValue();
-    cachingValidationCount = (double) cachingValidatedWorkerGauge.getValue();
-    fileValidationCount = (double) fileValidatedWorkerGauge.getValue();
-    assertEquals(workerCount, 1.0, "Incorrect number of workers reporting heartbeat");
-    assertEquals(cachingValidationCount, 1.0, "Incorrect number of workers have been validated");
-    assertEquals(fileValidationCount, 1.0, "Incorrect number of workers have been validated");
+    workerCount = (long) liveWorkerGauge.getValue();
+    cachingValidationCount = (long) cachingValidatedWorkerGauge.getValue();
+    fileValidationCount = (long) fileValidatedWorkerGauge.getValue();
+    assertEquals(workerCount, 1, "Incorrect number of workers reporting heartbeat");
+    assertEquals(cachingValidationCount, 1, "Incorrect number of workers have been validated");
+    assertEquals(fileValidationCount, 1, "Incorrect number of workers have been validated");
   }
 
   /**

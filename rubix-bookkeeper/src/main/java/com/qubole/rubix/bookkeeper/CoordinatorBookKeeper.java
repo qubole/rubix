@@ -88,39 +88,39 @@ public class CoordinatorBookKeeper extends BookKeeper
    */
   private void registerMetrics()
   {
-    metrics.register(BookKeeperMetrics.HealthMetric.LIVE_WORKER_GAUGE.getMetricName(), new Gauge<Double>()
+    metrics.register(BookKeeperMetrics.HealthMetric.LIVE_WORKER_GAUGE.getMetricName(), new Gauge<Long>()
     {
       @Override
-      public Double getValue()
+      public Long getValue()
       {
         // Clean up cache to ensure accurate size is reported.
         liveWorkerCache.cleanUp();
         log.debug(String.format("Reporting %d live workers", liveWorkerCache.size()));
-        return (double) liveWorkerCache.size();
+        return liveWorkerCache.size();
       }
     });
 
     if (isValidationEnabled) {
-      metrics.register(BookKeeperMetrics.HealthMetric.CACHING_VALIDATED_WORKER_GAUGE.getMetricName(), new Gauge<Double>()
+      metrics.register(BookKeeperMetrics.HealthMetric.CACHING_VALIDATED_WORKER_GAUGE.getMetricName(), new Gauge<Long>()
       {
         @Override
-        public Double getValue()
+        public Long getValue()
         {
           // Clean up cache to ensure accurate size is reported.
           cachingValidatedWorkerCache.cleanUp();
           log.debug(String.format("Caching validation passed for %d workers", cachingValidatedWorkerCache.size()));
-          return (double) cachingValidatedWorkerCache.size();
+          return cachingValidatedWorkerCache.size();
         }
       });
-      metrics.register(BookKeeperMetrics.HealthMetric.FILE_VALIDATED_WORKER_GAUGE.getMetricName(), new Gauge<Double>()
+      metrics.register(BookKeeperMetrics.HealthMetric.FILE_VALIDATED_WORKER_GAUGE.getMetricName(), new Gauge<Long>()
       {
         @Override
-        public Double getValue()
+        public Long getValue()
         {
           // Clean up cache to ensure accurate size is reported.
           fileValidatedWorkerCache.cleanUp();
           log.debug(String.format("File validation passed for %d workers", fileValidatedWorkerCache.size()));
-          return (double) fileValidatedWorkerCache.size();
+          return fileValidatedWorkerCache.size();
         }
       });
     }
