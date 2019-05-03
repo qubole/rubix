@@ -1,0 +1,58 @@
+version: '3.7'
+services:
+  rubix-master:
+    build: .
+    volumes:
+      - type: bind
+        source: /Users/jordanw/Development/test-volume
+        target: /tmp/data
+    ports:
+      - "8899:8899"  # BookKeeperServer port
+      - "8898:8898"  # LocalDataTransferServer port
+    networks: 
+      rubix-cluster:
+        ipv4_address: 172.18.8.100
+    command: >
+      nohup /usr/lib/hadoop/bin/hadoop jar /usr/lib/rubix/lib/rubix-bookkeeper.jar com.qubole.rubix.bookkeeper.BookKeeperServer
+      -Drubix.cluster.is-master=true
+      -Drubix.cache.max.size=2
+      -Drubix.cluster.manager.dummy.class=com.qubole.rubix.core.utils.DockerTestClusterManager
+      -Drubix.cache.filesplit.size=1048576
+  rubix-worker-1:
+    depends_on:
+      - rubix-master
+    build: .
+    volumes:
+      - type: bind
+        source: /Users/jordanw/Development/test-volume
+        target: /tmp/data
+    ports:
+      - "8901:8899"  # BookKeeperServer port
+      - "8801:8898"  # LocalDataTransferServer port
+    networks: 
+      rubix-cluster:
+        ipv4_address: 172.18.8.1
+    command: /tmp/start-servers.sh
+  rubix-worker-2:
+    depends_on:
+      - rubix-master
+    build: .
+    volumes:
+      - type: bind
+        source: /Users/jordanw/Development/test-volume
+        target: /tmp/data
+    ports:
+      - "8902:8899"  # BookKeeperServer port
+      - "8802:8898"  # LocalDataTransferServer port
+    networks:
+      rubix-cluster:
+        ipv4_address: 172.18.8.2:8899
+    command: /tmp/start-servers.sh
+
+networks:
+  rubix-cluster:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.18.0.0/16

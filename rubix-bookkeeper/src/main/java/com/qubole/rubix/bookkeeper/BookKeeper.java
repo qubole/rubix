@@ -61,6 +61,7 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -250,6 +251,8 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       blockNumber++;
     }
 
+    log.info("Block splits: " + blockSplits.toString());
+
     FileMetadata md;
     try {
       md = fileMetadataCache.get(remotePath, new CreateFileMetadataCallable(remotePath, fileLength, lastModified, 0, conf));
@@ -331,6 +334,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
           if (clusterType == TEST_CLUSTER_MANAGER.ordinal() || clusterType == TEST_CLUSTER_MANAGER_MULTINODE.ordinal()) {
             currentNodeIndex = 0;
             nodes = clusterManager.getNodes();
+            log.info("ClusterManager nodes: " + Arrays.toString(nodes.toArray()));
             nodeName = nodes.get(currentNodeIndex);
             if (clusterType == TEST_CLUSTER_MANAGER_MULTINODE.ordinal()) {
               nodes.add(nodeName + "_copy");
@@ -374,7 +378,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     }
     catch (ClassNotFoundException | NoSuchMethodException | InstantiationException |
         IllegalAccessException | InvocationTargetException ex) {
-      String errorMessage = String.format("Not able to initialize ClusterManager class : {0} ",
+      String errorMessage = String.format("Not able to initialize ClusterManager class : %s ",
           clusterManagerClassName);
       log.error(errorMessage);
       throw new ClusterManagerInitilizationException(errorMessage, ex);

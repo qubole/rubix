@@ -42,6 +42,15 @@ Stop BKS
     ${optionArgs} =  Get options argument  &{options}
     RUN  ${CURDIR}${/}bks.sh stop ${optionArgs}
 
+Start BKS Multi
+    ${output} =  RUN  ${CURDIR}${/}multi-node${/}bks-multi.sh start-multi
+    LOG  ${output}
+    SLEEP  2s
+
+Stop BKS Multi
+    ${output} =  RUN  ${CURDIR}${/}multi-node${/}bks-multi.sh stop-multi
+    LOG  ${output}
+
 Get options argument
     [Arguments]  &{options}
     @{optionsList} =  CREATE LIST

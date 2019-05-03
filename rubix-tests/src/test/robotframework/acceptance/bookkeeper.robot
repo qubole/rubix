@@ -39,6 +39,22 @@ Make read request
     ...  ${clusterType}
     [Return]  ${request}
 
+Make status request
+    [Arguments]  ${fileName}
+    ...          ${fileLength}
+    ...          ${lastModified}
+    ...          ${startBlock}
+    ...          ${endBlock}
+    ...          ${clusterType}
+    ${request} =  create Test Client Status Request
+    ...  ${fileName}
+    ...  ${fileLength}
+    ...  ${lastModified}
+    ...  ${startBlock}
+    ...  ${endBlock}
+    ...  ${clusterType}
+    [Return]  ${request}
+
 Make similar read requests
     [Arguments]  ${fileNames}
     ...          ${startBlock}
@@ -103,6 +119,34 @@ Verify cache directory size
 Verify metric value
     [Arguments]  ${metricName}  ${expectedValue}
     &{metrics} =  get Cache Metrics
+    LOG MANY  &{metrics}
+    SHOULD NOT BE EMPTY  ${metrics}
+    SHOULD BE EQUAL AS NUMBERS  &{metrics}[${metricName}]  ${expectedValue}
+
+
+# Multi-node keywords
+
+Execute sequential requests on node
+    [Arguments]  ${executionKeyword}
+    ...          ${port}
+    ...          ${requests}
+    :FOR  ${request}  IN  @{requests}
+    \  RUN KEYWORD  ${executionKeyword}  ${port}  ${request}
+
+Get status for blocks on node
+    [Arguments]  ${port}  ${statusRequest}
+    @{locations} =  get Cache Status On Node  ${port}  ${statusRequest}
+    SHOULD NOT BE EMPTY  ${locations}
+    [Return]  ${locations}
+
+Download request on node
+    [Arguments]  ${port}  ${readRequest}
+    ${didRead} =  download Data To Cache On Node  ${port}  ${readRequest}
+    SHOULD BE TRUE  ${didRead}
+
+Verify metric value on node
+    [Arguments]  ${port}  ${metricName}  ${expectedValue}
+    &{metrics} =  get Cache Metrics On Node  ${port}
     LOG MANY  &{metrics}
     SHOULD NOT BE EMPTY  ${metrics}
     SHOULD BE EQUAL AS NUMBERS  &{metrics}[${metricName}]  ${expectedValue}
