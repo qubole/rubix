@@ -21,7 +21,6 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
 import com.qubole.rubix.bookkeeper.exception.CoordinatorInitializationException;
-import com.qubole.rubix.bookkeeper.utils.ConsistentHashUtil;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.common.utils.ClusterUtil;
 import com.qubole.rubix.spi.CacheConfig;
@@ -166,14 +165,6 @@ public class CoordinatorBookKeeper extends BookKeeper
   public Map<String, NodeState> getClusterNodes()
   {
     return getClusterManager().getNodes();
-  }
-
-  @Override
-  public String getOwnerNodeForPath(String remotePathKey)
-  {
-    Map<String, NodeState> nodesMap = getClusterNodes();
-    String hostName = ConsistentHashUtil.getHashedNodeForKey(nodesMap, remotePathKey);
-    return hostName;
   }
 
   /**

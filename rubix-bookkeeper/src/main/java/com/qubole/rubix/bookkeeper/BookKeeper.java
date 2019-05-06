@@ -27,6 +27,7 @@ import com.google.common.cache.RemovalNotification;
 import com.google.common.cache.Weigher;
 import com.google.common.collect.ImmutableMap;
 import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
+import com.qubole.rubix.bookkeeper.utils.ConsistentHashUtil;
 import com.qubole.rubix.bookkeeper.utils.DiskUtils;
 import com.qubole.rubix.bookkeeper.validation.CachingValidator;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
@@ -40,6 +41,7 @@ import com.qubole.rubix.spi.thrift.BookKeeperService;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.FileInfo;
 import com.qubole.rubix.spi.thrift.Location;
+import com.qubole.rubix.spi.thrift.NodeState;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -391,6 +393,20 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     }
 
     return null;
+  }
+
+  public abstract Map<String, NodeState> getClusterNodes();
+
+  @Override
+  public String getOwnerNodeForPath(String remotePathKey)
+  {
+    Map<String, NodeState> nodesMap = getClusterNodes();
+    if (nodesMap == null || nodesMap.isEmpty()) {
+      return null;
+    }
+
+    String hostName = ConsistentHashUtil.getHashedNodeForKey(nodesMap, remotePathKey);
+    return hostName;
   }
 
   private boolean readDataInternal(String remotePath, long offset, int length, long fileSize,
