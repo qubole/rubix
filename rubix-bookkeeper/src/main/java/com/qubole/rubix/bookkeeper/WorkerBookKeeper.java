@@ -35,7 +35,6 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
@@ -156,7 +155,7 @@ public class WorkerBookKeeper extends BookKeeper
     try {
       return nodeStateMap.get("nodes");
     }
-    catch (ExecutionException e) {
+    catch (Exception e) {
       log.error("Could not get node host name from cache with Exception : " + e);
     }
 
