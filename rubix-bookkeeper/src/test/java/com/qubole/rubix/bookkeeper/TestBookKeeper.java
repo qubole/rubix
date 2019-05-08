@@ -67,6 +67,7 @@ public class TestBookKeeper
 
   private final Configuration conf = new Configuration();
   private MetricRegistry metrics;
+  private BookKeeperMetrics bookKeeperMetrics;
 
   private BookKeeper bookKeeper;
 
@@ -79,7 +80,8 @@ public class TestBookKeeper
     TestUtil.createCacheParentDirectories(conf, TEST_MAX_DISKS);
 
     metrics = new MetricRegistry();
-    bookKeeper = new CoordinatorBookKeeper(conf, new BookKeeperMetrics(conf, metrics, false));
+    bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
+    bookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics);
     bookKeeper.clusterManager = null;
   }
 
@@ -88,6 +90,7 @@ public class TestBookKeeper
   {
     TestUtil.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
 
+    bookKeeperMetrics.close();
     conf.clear();
   }
 
@@ -273,26 +276,30 @@ public class TestBookKeeper
 
     FakeTicker ticker = new FakeTicker();
 
-    bookKeeper = new CoordinatorBookKeeper(conf, new BookKeeperMetrics(conf, new MetricRegistry(), false), ticker);
-    FileInfo info = bookKeeper.getFileInfo(backendFilePath.toString());
+    // Close metrics created in setUp(); we want a new one with the above configuration.
+    bookKeeperMetrics.close();
+    try (BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, new MetricRegistry())) {
+      bookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics, ticker);
+      FileInfo info = bookKeeper.getFileInfo(backendFilePath.toString());
 
-    assertTrue(info.getFileSize() == expectedFileSize, "FileSize was not equal to the expected value." +
-        " Got FileSize: " + info.getFileSize() + " Expected Value : " + expectedFileSize);
+      assertTrue(info.getFileSize() == expectedFileSize, "FileSize was not equal to the expected value." +
+          " Got FileSize: " + info.getFileSize() + " Expected Value : " + expectedFileSize);
 
-    //Rewrite the file with half the data
-    DataGen.populateFile(backendFilePath.toString(), 2);
+      //Rewrite the file with half the data
+      DataGen.populateFile(backendFilePath.toString(), 2);
 
-    info = bookKeeper.getFileInfo(backendFilePath.toString());
-    assertTrue(info.getFileSize() == expectedFileSize, "FileSize was not equal to the expected value." +
-        " Got FileSize: " + info.getFileSize() + " Expected Value : " + expectedFileSize);
+      info = bookKeeper.getFileInfo(backendFilePath.toString());
+      assertTrue(info.getFileSize() == expectedFileSize, "FileSize was not equal to the expected value." +
+          " Got FileSize: " + info.getFileSize() + " Expected Value : " + expectedFileSize);
 
-    // Advance the ticker to 5 sec
-    ticker.advance(5, TimeUnit.SECONDS);
+      // Advance the ticker to 5 sec
+      ticker.advance(5, TimeUnit.SECONDS);
 
-    expectedFileSize = DataGen.generateContent(2).length();
-    info = bookKeeper.getFileInfo(backendFilePath.toString());
-    assertTrue(info.getFileSize() == expectedFileSize, "FileSize was not equal to the expected value." +
-        " Got FileSize: " + info.getFileSize() + " Expected Value : " + expectedFileSize);
+      expectedFileSize = DataGen.generateContent(2).length();
+      info = bookKeeper.getFileInfo(backendFilePath.toString());
+      assertTrue(info.getFileSize() == expectedFileSize, "FileSize was not equal to the expected value." +
+          " Got FileSize: " + info.getFileSize() + " Expected Value : " + expectedFileSize);
+    }
   }
 
   /**
@@ -433,19 +440,24 @@ public class TestBookKeeper
     final FakeTicker ticker = new FakeTicker();
     CacheConfig.setCacheDataExpirationAfterWrite(conf, 1000);
     metrics = new MetricRegistry();
-    bookKeeper = new CoordinatorBookKeeper(conf, new BookKeeperMetrics(conf, metrics, false), ticker);
 
-    assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.CACHE_EXPIRY_COUNT.getMetricName()).getCount(), 0);
+    // Close metrics created in setUp(); we want a new one with the above configuration.
+    bookKeeperMetrics.close();
+    try (BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, metrics)) {
+      bookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics, ticker);
 
-    CacheStatusRequest request = new CacheStatusRequest(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
-        TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
-    request.setIncrMetrics(true);
-    bookKeeper.getCacheStatus(request);
+      assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.CACHE_EXPIRY_COUNT.getMetricName()).getCount(), 0);
 
-    ticker.advance(30000, TimeUnit.MILLISECONDS);
-    bookKeeper.fileMetadataCache.cleanUp();
+      CacheStatusRequest request = new CacheStatusRequest(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
+          TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+      request.setIncrMetrics(true);
+      bookKeeper.getCacheStatus(request);
 
-    assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.CACHE_EXPIRY_COUNT.getMetricName()).getCount(), 1);
+      ticker.advance(30000, TimeUnit.MILLISECONDS);
+      bookKeeper.fileMetadataCache.cleanUp();
+
+      assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.CACHE_EXPIRY_COUNT.getMetricName()).getCount(), 1);
+    }
   }
 
   /**

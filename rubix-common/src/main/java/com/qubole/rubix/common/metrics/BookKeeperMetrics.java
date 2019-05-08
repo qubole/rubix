@@ -42,17 +42,10 @@ public class BookKeeperMetrics implements AutoCloseable
 
   public BookKeeperMetrics(Configuration conf, MetricRegistry metrics)
   {
-    this(conf, metrics, true);
-  }
-
-  public BookKeeperMetrics(Configuration conf, MetricRegistry metrics, boolean reportMetrics)
-  {
     this.conf = conf;
     this.metrics = metrics;
     this.metricsFilter = new BookKeeperMetricsFilter(conf);
-    if (reportMetrics) {
-      initializeReporters();
-    }
+    initializeReporters();
   }
 
   public BookKeeperMetricsFilter getMetricsFilter()
