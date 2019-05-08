@@ -69,7 +69,7 @@ public class TestRemoteFetchProcessor
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     CacheConfig.setRemoteFetchProcessInterval(conf, TEST_REMOTE_FETCH_PROCESS_INTERVAL);
     metrics = new MetricRegistry();
-    bookKeeper = new CoordinatorBookKeeper(conf, new TestUtil.NonReportingBookKeeperMetrics(conf, metrics));
+    bookKeeper = new CoordinatorBookKeeper(conf, new BookKeeperMetrics(conf, metrics, false));
     processor = bookKeeper.getRemoteFetchProcessorInstance();
   }
 

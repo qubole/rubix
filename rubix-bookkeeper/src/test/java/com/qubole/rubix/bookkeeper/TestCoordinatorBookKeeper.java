@@ -88,7 +88,7 @@ public class TestCoordinatorBookKeeper
   {
     CacheConfig.setValidationEnabled(conf, true);
 
-    final CoordinatorBookKeeper coordinatorBookKeeper = new CoordinatorBookKeeper(conf, new TestUtil.NonReportingBookKeeperMetrics(conf, metrics));
+    final CoordinatorBookKeeper coordinatorBookKeeper = new CoordinatorBookKeeper(conf, new BookKeeperMetrics(conf, metrics, false));
     coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER1, TEST_STATUS_ALL_VALIDATED);
     coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER2, TEST_STATUS_ALL_VALIDATED);
 
@@ -112,7 +112,7 @@ public class TestCoordinatorBookKeeper
     CacheConfig.setValidationEnabled(conf, true);
     CacheConfig.setHealthStatusExpiry(conf, healthStatusExpiry);
 
-    final CoordinatorBookKeeper coordinatorBookKeeper = new CoordinatorBookKeeper(conf, new TestUtil.NonReportingBookKeeperMetrics(conf, metrics), ticker);
+    final CoordinatorBookKeeper coordinatorBookKeeper = new CoordinatorBookKeeper(conf, new BookKeeperMetrics(conf, metrics, false), ticker);
     final Gauge liveWorkerGauge = metrics.getGauges().get(BookKeeperMetrics.HealthMetric.LIVE_WORKER_GAUGE.getMetricName());
     final Gauge cachingValidatedWorkerGauge = metrics.getGauges().get(BookKeeperMetrics.HealthMetric.CACHING_VALIDATED_WORKER_GAUGE.getMetricName());
     final Gauge fileValidatedWorkerGauge = metrics.getGauges().get(BookKeeperMetrics.HealthMetric.FILE_VALIDATED_WORKER_GAUGE.getMetricName());
@@ -145,7 +145,7 @@ public class TestCoordinatorBookKeeper
   public void testWorkerHealthMetrics_validatedWorkersMetricsRegisteredWhenValidationEnabled() throws FileNotFoundException
   {
     CacheConfig.setValidationEnabled(conf, true);
-    final CoordinatorBookKeeper coordinatorBookKeeper = new CoordinatorBookKeeper(conf, new TestUtil.NonReportingBookKeeperMetrics(conf, metrics));
+    final CoordinatorBookKeeper coordinatorBookKeeper = new CoordinatorBookKeeper(conf, new BookKeeperMetrics(conf, metrics, false));
 
     assertNotNull(metrics.getGauges().get(BookKeeperMetrics.HealthMetric.CACHING_VALIDATED_WORKER_GAUGE.getMetricName()), "Caching-validated workers metric should be registered!");
     assertNotNull(metrics.getGauges().get(BookKeeperMetrics.HealthMetric.FILE_VALIDATED_WORKER_GAUGE.getMetricName()), "File-validated workers metric should be registered!");
@@ -158,7 +158,7 @@ public class TestCoordinatorBookKeeper
   public void testWorkerHealthMetrics_validatedWorkersMetricsNotRegisteredWhenValidationDisabled() throws FileNotFoundException
   {
     CacheConfig.setValidationEnabled(conf, false);
-    final CoordinatorBookKeeper coordinatorBookKeeper = new CoordinatorBookKeeper(conf, new TestUtil.NonReportingBookKeeperMetrics(conf, metrics));
+    final CoordinatorBookKeeper coordinatorBookKeeper = new CoordinatorBookKeeper(conf, new BookKeeperMetrics(conf, metrics, false));
 
     assertNull(metrics.getGauges().get(BookKeeperMetrics.HealthMetric.CACHING_VALIDATED_WORKER_GAUGE.getMetricName()), "Caching-validated workers metric should not be registered!");
     assertNull(metrics.getGauges().get(BookKeeperMetrics.HealthMetric.FILE_VALIDATED_WORKER_GAUGE.getMetricName()), "File-validated workers metric should not be registered!");

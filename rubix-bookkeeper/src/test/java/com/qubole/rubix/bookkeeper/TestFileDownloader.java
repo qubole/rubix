@@ -73,7 +73,7 @@ public class TestFileDownloader
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     CacheConfig.setBlockSize(conf, 200);
     metrics = new MetricRegistry();
-    bookKeeper = new CoordinatorBookKeeper(conf, new TestUtil.NonReportingBookKeeperMetrics(conf, metrics));
+    bookKeeper = new CoordinatorBookKeeper(conf, new BookKeeperMetrics(conf, metrics, false));
     downloader = bookKeeper.getRemoteFetchProcessorInstance().getFileDownloaderInstance();
   }
 

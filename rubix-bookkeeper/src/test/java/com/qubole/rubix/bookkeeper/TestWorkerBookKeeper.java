@@ -14,6 +14,7 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
+import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.common.utils.TestUtil;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.thrift.HeartbeatStatus;
@@ -79,7 +80,7 @@ public class TestWorkerBookKeeper
   @Test(expectedExceptions = UnsupportedOperationException.class)
   public void testHandleHeartbeat_shouldNotBeHandled() throws FileNotFoundException
   {
-    final WorkerBookKeeper workerBookKeeper = new WorkerBookKeeper(conf, new TestUtil.NonReportingBookKeeperMetrics(conf, new MetricRegistry()));
+    final WorkerBookKeeper workerBookKeeper = new WorkerBookKeeper(conf, new BookKeeperMetrics(conf, new MetricRegistry(), false));
     workerBookKeeper.handleHeartbeat("", new HeartbeatStatus());
   }
 }

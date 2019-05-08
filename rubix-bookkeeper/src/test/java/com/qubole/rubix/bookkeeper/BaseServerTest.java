@@ -29,6 +29,7 @@ import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.util.HashSet;
 import java.util.Set;
@@ -576,6 +577,12 @@ public class BaseServerTest
     public void stopServer()
     {
       removeMetrics();
+      try {
+        bookKeeperMetrics.close();
+      }
+      catch (IOException e) {
+        log.error("Metrics reporters could not be closed", e);
+      }
       isServerUp = false;
     }
 
@@ -621,6 +628,12 @@ public class BaseServerTest
     public void stopServer()
     {
       removeMetrics();
+      try {
+        bookKeeperMetrics.close();
+      }
+      catch (IOException e) {
+        log.error("Metrics reporters could not be closed", e);
+      }
       isServerUp = false;
     }
 
