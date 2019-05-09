@@ -15,19 +15,25 @@ package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Range;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.qubole.rubix.bookkeeper.utils.DiskUtils;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
+import com.qubole.rubix.core.FileDownloadRequestChain;
 import com.qubole.rubix.core.ReadRequest;
+import com.qubole.rubix.core.ReadRequestChainFactory;
+import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
+import com.qubole.rubix.spi.thrift.BookKeeperService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.DirectBufferPool;
+import org.apache.thrift.shaded.transport.TTransportException;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -94,9 +100,15 @@ class FileDownloader
       log.info("Processing Request for File : " + path.toString() + " LocalFile : " + localPath);
       ByteBuffer directWriteBuffer = bufferPool.getBuffer(diskReadBufferSize);
 
-      FileDownloadRequestChain requestChain = new FileDownloadRequestChain(bookKeeper, fs, localPath,
-          directWriteBuffer, conf, context.getRemoteFilePath(), context.getFileSize(),
-          context.getLastModifiedTime());
+      BookKeeperService.Client bookKeeperClient = null;
+      try {
+        bookKeeperClient = new BookKeeperFactory(bookKeeper).createBookKeeperClient(conf);
+      }
+      catch (TTransportException e) {
+        Throwables.propagate(e);
+      }
+      FileDownloadRequestChain requestChain = ReadRequestChainFactory.createReadRequestChain(FileDownloadRequestChain.class, bookKeeperClient, fs, localPath,
+          directWriteBuffer, conf, context.getRemoteFilePath(), context.getFileSize(), context.getLastModifiedTime());
 
       for (Range<Long> range : context.getRanges().asRanges()) {
         ReadRequest request = new ReadRequest(range.lowerEndpoint(), range.upperEndpoint(),

@@ -183,7 +183,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
       throws Exception
   {
     FSDataInputStream inputStream = remoteFileSystem.open(new Path(filePath));
-    directReadChain = new DirectReadRequestChain(inputStream);
+    directReadChain = ReadRequestChainFactory.createReadRequestChain(DirectReadRequestChain.class, inputStream);
     for (ReadRequest readRequest : readRequests.subList(index, readRequests.size())) {
       directReadChain.addReadRequest(readRequest);
     }

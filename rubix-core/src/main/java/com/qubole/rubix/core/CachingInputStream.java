@@ -362,7 +362,7 @@ public class CachingInputStream extends FSInputStream
       if (isCached == null) {
         log.debug(String.format("Sending block %d to DirectReadRequestChain", blockNum));
         if (directReadRequestChain == null) {
-          directReadRequestChain = new DirectReadRequestChain(getParentDataInputStream());
+          directReadRequestChain = ReadRequestChainFactory.createReadRequestChain(DirectReadRequestChain.class, getParentDataInputStream());
         }
         directReadRequestChain.addReadRequest(readRequest);
       }
@@ -374,8 +374,7 @@ public class CachingInputStream extends FSInputStream
             directReadBuffer = bufferPool.getBuffer(diskReadBufferSize);
           }
           if (cachedReadRequestChain == null) {
-            cachedReadRequestChain = new CachedReadRequestChain(remoteFileSystem, remotePath, directReadBuffer,
-                    statistics, conf, bookKeeperFactory);
+            cachedReadRequestChain = ReadRequestChainFactory.createReadRequestChain(CachedReadRequestChain.class, remoteFileSystem, remotePath, directReadBuffer, statistics, conf, bookKeeperFactory);
           }
           cachedReadRequestChain.addReadRequest(readRequest);
         }
@@ -395,16 +394,14 @@ public class CachingInputStream extends FSInputStream
           if (CacheConfig.isParallelWarmupEnabled(conf)) {
             log.debug(String.format("Sending block %d to NonLocalRequestChain to node : %s", blockNum, remoteLocation));
             if (!nonLocalAsyncRequests.containsKey(remoteLocation)) {
-              NonLocalRequestChain nonLocalRequestChain =
-                  new NonLocalRequestChain(remoteLocation, fileSize, lastModified,
-                      conf, remoteFileSystem, remotePath, clusterType.ordinal(), strictMode,
-                      statistics, nextReadBlock, endBlock);
+              NonLocalRequestChain nonLocalRequestChain = ReadRequestChainFactory.createReadRequestChain(NonLocalRequestChain.class, remoteLocation, fileSize, lastModified, conf,
+                      remoteFileSystem, remotePath, clusterType.ordinal(), strictMode, statistics, nextReadBlock, endBlock);
               nonLocalAsyncRequests.put(remoteLocation, nonLocalRequestChain);
             }
             nonLocalAsyncRequests.get(remoteLocation).addReadRequest(readRequest);
             if (nonLocalAsyncRequests.get(remoteLocation).needDirectReadRequest(blockNum)) {
               if (directReadRequestChain == null) {
-                directReadRequestChain = new DirectReadRequestChain(getParentDataInputStream());
+                directReadRequestChain = ReadRequestChainFactory.createReadRequestChain(DirectReadRequestChain.class, getParentDataInputStream());
               }
               directReadRequestChain.addReadRequest(readRequest.clone(false));
             }
@@ -412,9 +409,8 @@ public class CachingInputStream extends FSInputStream
           else {
             log.debug(String.format("Sending block %d to NonLocalReadRequestChain to node : %s", blockNum, remoteLocation));
             if (!nonLocalRequests.containsKey(remoteLocation)) {
-              NonLocalReadRequestChain nonLocalReadRequestChain =
-                  new NonLocalReadRequestChain(remoteLocation, fileSize, lastModified, conf,
-                      remoteFileSystem, remotePath, clusterType.ordinal(), strictMode, statistics);
+              NonLocalReadRequestChain nonLocalReadRequestChain = ReadRequestChainFactory.createReadRequestChain(NonLocalReadRequestChain.class, remoteLocation, fileSize, lastModified, conf,
+                      remoteFileSystem, remotePath, clusterType.ordinal(), strictMode, statistics, 0, 0);
               nonLocalRequests.put(remoteLocation, nonLocalReadRequestChain);
             }
             nonLocalRequests.get(remoteLocation).addReadRequest(readRequest);
@@ -427,12 +423,12 @@ public class CachingInputStream extends FSInputStream
           if (CacheConfig.isParallelWarmupEnabled(conf)) {
             log.debug(String.format("Sending block %d to remoteFetchRequestChain", blockNum));
             if (directReadRequestChain == null) {
-              directReadRequestChain = new DirectReadRequestChain(getParentDataInputStream());
+              directReadRequestChain = ReadRequestChainFactory.createReadRequestChain(DirectReadRequestChain.class, getParentDataInputStream());
             }
 
             if (remoteFetchRequestChain == null) {
-              remoteFetchRequestChain = new RemoteFetchRequestChain(remotePath, remoteFileSystem,
-                  "localhost", conf, lastModified, fileSize, clusterType.ordinal());
+              remoteFetchRequestChain = ReadRequestChainFactory.createReadRequestChain(RemoteFetchRequestChain.class, "localhost", fileSize, lastModified, conf,
+                      remoteFileSystem, remotePath, clusterType.ordinal(), false, null, 0, 0);
             }
 
             directReadRequestChain.addReadRequest(readRequest);
@@ -445,7 +441,7 @@ public class CachingInputStream extends FSInputStream
                 affixBuffer = new byte[blockSize];
               }
               if (remoteReadRequestChain == null) {
-                remoteReadRequestChain = new RemoteReadRequestChain(getParentDataInputStream(), localPath, directWriteBuffer, affixBuffer);
+                remoteReadRequestChain = ReadRequestChainFactory.createReadRequestChain(RemoteReadRequestChain.class, getParentDataInputStream(), localPath, directWriteBuffer, affixBuffer, null);
               }
             }
             catch (IOException e) {

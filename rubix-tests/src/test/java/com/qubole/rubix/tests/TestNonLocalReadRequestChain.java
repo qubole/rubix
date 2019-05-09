@@ -25,6 +25,7 @@ import com.qubole.rubix.common.utils.DeleteFileVisitor;
 import com.qubole.rubix.core.MockCachingFileSystem;
 import com.qubole.rubix.core.NonLocalReadRequestChain;
 import com.qubole.rubix.core.ReadRequest;
+import com.qubole.rubix.core.ReadRequestChainFactory;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
@@ -137,9 +138,9 @@ public class TestNonLocalReadRequestChain
   {
     MockCachingFileSystem fs = new MockCachingFileSystem();
     fs.initialize(backendPath.toUri(), conf);
-    NonLocalReadRequestChain requestChain = new NonLocalReadRequestChain("localhost", backendFile.length(),
+    NonLocalReadRequestChain requestChain = ReadRequestChainFactory.createReadRequestChain(NonLocalReadRequestChain.class, "localhost", backendFile.length(),
         backendFile.lastModified(), conf, fs, backendPath.toString(),
-        ClusterType.TEST_CLUSTER_MANAGER.ordinal(), false, null);
+        ClusterType.TEST_CLUSTER_MANAGER.ordinal(), false, null, 0, 0);
 
     return requestChain;
   }

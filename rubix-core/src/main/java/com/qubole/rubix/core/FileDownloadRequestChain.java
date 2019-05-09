@@ -10,21 +10,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-package com.qubole.rubix.bookkeeper;
+package com.qubole.rubix.core;
 
 import com.google.common.base.Throwables;
-import com.qubole.rubix.core.ReadRequest;
-import com.qubole.rubix.core.ReadRequestChain;
-import com.qubole.rubix.core.ReadRequestChainStats;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
+import com.qubole.rubix.spi.thrift.BookKeeperService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.thrift.shaded.TException;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -38,7 +37,7 @@ import static com.google.common.base.Preconditions.checkState;
 
 public class FileDownloadRequestChain extends ReadRequestChain
 {
-  private BookKeeper bookKeeper;
+  private BookKeeperService.Client bookKeeperClient;
   private FileSystem remoteFileSystem;
   private String localFile;
   private String remotePath;
@@ -54,11 +53,11 @@ public class FileDownloadRequestChain extends ReadRequestChain
 
   private static final Log log = LogFactory.getLog(FileDownloadRequestChain.class);
 
-  public FileDownloadRequestChain(BookKeeper bookKeeper, FileSystem remoteFileSystem, String localfile,
+  public FileDownloadRequestChain(BookKeeperService.Client bookKeeperClient, FileSystem remoteFileSystem, String localfile,
                                   ByteBuffer directBuffer, Configuration conf, String remotePath,
                                   long fileSize, long lastModified)
   {
-    this.bookKeeper = bookKeeper;
+    this.bookKeeperClient = bookKeeperClient;
     this.remoteFileSystem = remoteFileSystem;
     this.localFile = localfile;
     this.conf = conf;
@@ -109,7 +108,12 @@ public class FileDownloadRequestChain extends ReadRequestChain
       File mdFile = new File(metadataFilePath);
       if (mdFile.exists() && mdFile.length() > 0) {
         // Making sure when a new file gets created, we invalidate the existing metadata file
-        bookKeeper.invalidateFileMetadata(remotePath);
+        try {
+          bookKeeperClient.invalidateFileMetadata(remotePath);
+        }
+        catch (TException e) {
+          Throwables.propagate(e);
+        }
       }
       file.setWritable(true, false);
       file.setReadable(true, false);
@@ -202,7 +206,7 @@ public class FileDownloadRequestChain extends ReadRequestChain
       log.info("Updating cache for FileDownloadRequestChain . Num Requests : " + getReadRequests().size() + " for remotepath : " + remotePath);
       for (ReadRequest readRequest : getReadRequests()) {
         log.debug("Setting cached from : " + toBlock(readRequest.getBackendReadStart()) + " block to : " + (toBlock(readRequest.getBackendReadEnd() - 1) + 1));
-        bookKeeper.setAllCached(remotePath, fileSize, lastModified, toBlock(readRequest.getBackendReadStart()), toBlock(readRequest.getBackendReadEnd() - 1) + 1);
+        bookKeeperClient.setAllCached(remotePath, fileSize, lastModified, toBlock(readRequest.getBackendReadStart()), toBlock(readRequest.getBackendReadEnd() - 1) + 1);
       }
     }
     catch (Exception e) {

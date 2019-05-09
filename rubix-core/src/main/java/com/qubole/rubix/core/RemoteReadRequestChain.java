@@ -53,16 +53,6 @@ public class RemoteReadRequestChain extends ReadRequestChain
 
   private String localFile;
 
-  public RemoteReadRequestChain(FSDataInputStream inputStream, String localfile, ByteBuffer directBuffer, byte[] affixBuffer)
-      throws IOException
-  {
-    this(inputStream,
-        localfile,
-        directBuffer,
-        affixBuffer,
-        new BookKeeperFactory());
-  }
-
   public RemoteReadRequestChain(FSDataInputStream inputStream, String localfile, ByteBuffer directBuffer, byte[] affixBuffer, BookKeeperFactory bookKeeperFactory)
       throws IOException
   {
@@ -78,7 +68,7 @@ public class RemoteReadRequestChain extends ReadRequestChain
   public RemoteReadRequestChain(FSDataInputStream inputStream, String fileName)
       throws IOException
   {
-    this(inputStream, fileName, ByteBuffer.allocate(100), new byte[100]);
+    this(inputStream, fileName, ByteBuffer.allocate(100), new byte[100], new BookKeeperFactory());
   }
 
   public Integer call()
