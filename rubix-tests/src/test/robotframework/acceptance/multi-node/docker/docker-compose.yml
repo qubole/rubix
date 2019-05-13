@@ -46,7 +46,7 @@ services:
       - "8802:8898"  # LocalDataTransferServer port
     networks:
       rubix-cluster:
-        ipv4_address: 172.18.8.2:8899
+        ipv4_address: 172.18.8.2
     command: /tmp/start-servers.sh
 
 networks:
