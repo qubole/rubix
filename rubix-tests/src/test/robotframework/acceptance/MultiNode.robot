@@ -2,6 +2,7 @@
 Documentation   RubiX Multi-Node Integration Tests
 Resource        setup.robot
 Resource        bookkeeper.robot
+Library         com.qubole.rubix.client.robotframework.driver.client.RequestClient
 
 *** Variables ***
 
@@ -77,6 +78,14 @@ Multi Cache Eviction
     ...  ${METRIC_CACHE_EVICTION}
     ...  ${3_EXPECTED_EVICTIONS}
 
+Fetch cache metrics from container via RMI server
+    [Tags]  rmi
+
+    Start BKS Multi
+
+    &{metrics} =  client Get Cache Metrics  localhost  8123
+    LOG MANY  &{metrics}
+    SHOULD NOT BE EMPTY  ${metrics}
 
 #Simple Multi-Node Test Case
 #    [Tags]  not-multi

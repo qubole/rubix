@@ -6,7 +6,7 @@ ENV HADOOP_URL https://archive.apache.org/dist/hadoop/core/hadoop-$HADOOP_VERSIO
 ENV HADOOP_HOME /usr/lib/hadoop
 ENV HADOOP_CLASSPATH /usr/lib/rubix/lib/*
 ENV PATH $JAVA_HOME/bin:$PATH
-ENV HADOOP_OPTS "-Dlog4j.configuration=file:///tmp/log4j_bks.properties"
+
 # Get build deps
 RUN apk update && apk add curl bash \
     && set -x && curl -fSL "$HADOOP_URL" -o /tmp/hadoop.tar.gz \
@@ -20,7 +20,12 @@ COPY jars/rubix-common-*.jar /usr/lib/rubix/lib/rubix-common.jar
 COPY jars/rubix-core-*.jar /usr/lib/rubix/lib/rubix-core.jar
 COPY jars/rubix-spi-*.jar /usr/lib/rubix/lib/rubix-spi.jar
 COPY jars/rubix-hadoop2-*.jar /usr/lib/rubix/lib/rubix-hadoop2.jar
+COPY jars/rubix-client-*.jar /usr/lib/rubix/lib/rubix-client.jar
 
 COPY start-servers.sh /tmp/
+COPY rs.policy /tmp/
 
-COPY logging/log4j_bks.properties logging/log4j_lds.properties /tmp/
+COPY logging/log4j_bks.properties \
+    logging/log4j_lds.properties \
+    logging/log4j_rs.properties \
+    /tmp/

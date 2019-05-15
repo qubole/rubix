@@ -420,6 +420,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   @Override
   public Map<String, Double> getCacheMetrics()
   {
+    log.debug("== Cache metrics requested ==");
     final long cachedRequests = cacheRequestCount.getCount();
     final long remoteRequests = remoteRequestCount.getCount();
     final long nonLocalRequests = nonlocalRequestCount.getCount();

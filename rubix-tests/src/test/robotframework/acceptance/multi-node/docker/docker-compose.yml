@@ -9,7 +9,7 @@ services:
     ports:
       - "8899:8899"  # BookKeeperServer port
       - "8898:8898"  # LocalDataTransferServer port
-    networks: 
+    networks:
       rubix-cluster:
         ipv4_address: 172.18.8.100
     command: >
@@ -44,6 +44,8 @@ services:
     ports:
       - "8902:8899"  # BookKeeperServer port
       - "8802:8898"  # LocalDataTransferServer port
+      - "8123:8123/tcp"  # ContainerRequestServer port
+      - "1099:1099/tcp"  # rmiregistry port
     networks:
       rubix-cluster:
         ipv4_address: 172.18.8.2
