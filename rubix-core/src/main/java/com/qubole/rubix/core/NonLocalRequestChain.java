@@ -115,16 +115,16 @@ public class NonLocalRequestChain extends ReadRequestChain
     if (!needDirectReadRequest(blockNum)) {
       needDirectReadRequest = false;
       if (nonLocalReadRequestChain == null) {
-        nonLocalReadRequestChain = ReadRequestChainFactory.createReadRequestChain(NonLocalReadRequestChain.class, remoteNodeName, fileSize, lastModified, conf,
-            remoteFileSystem, remoteFilePath, clusterType, strictMode, statistics, 0, 0);
+        nonLocalReadRequestChain = ReadRequestChainFactory.createNonLocalReadRequestChain(remoteNodeName, fileSize, lastModified, conf,
+            remoteFileSystem, remoteFilePath, clusterType, strictMode, statistics);
       }
       nonLocalReadRequestChain.addReadRequest(readRequest);
     }
     else {
       needDirectReadRequest = true;
       if (remoteFetchRequestChain == null) {
-        remoteFetchRequestChain = ReadRequestChainFactory.createReadRequestChain(RemoteFetchRequestChain.class, remoteNodeName, fileSize, lastModified, conf,
-                remoteFileSystem, remoteFilePath, clusterType, false, null, 0, 0);
+        remoteFetchRequestChain = ReadRequestChainFactory.createRemoteFetchRequestChain(remoteNodeName, fileSize, lastModified, conf,
+                remoteFileSystem, remoteFilePath, clusterType);
       }
       remoteFetchRequestChain.addReadRequest(readRequest);
     }

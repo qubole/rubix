@@ -26,57 +26,89 @@ public final class ReadRequestChainFactory
   private ReadRequestChainFactory()
   { }
 
-  public static <T extends ReadRequestChain> T createReadRequestChain(Class<T> readRequestChainType, FSDataInputStream inputStream)
+  public static DirectReadRequestChain createDirectReadRequestChain(FSDataInputStream inputStream)
   {
-    if (readRequestChainType == DirectReadRequestChain.class) {
-      return readRequestChainType.cast(new DirectReadRequestChain(inputStream));
-    }
-    throw new IllegalArgumentException("The type of ReadRequestChain: " + readRequestChainType.getName() + " does not match the arguments or is unknown");
+    return new DirectReadRequestChain(inputStream);
   }
 
-  public static <T extends ReadRequestChain> T createReadRequestChain(Class<T> readRequestChainType, FileSystem remoteFileSystem, String remotePath, ByteBuffer buffer,
-                                                               FileSystem.Statistics statistics, Configuration conf, BookKeeperFactory bookKeeperFactory) throws IOException
+  public static CachedReadRequestChain createCachedReadRequestChain(FileSystem remoteFileSystem,
+                                                                    String remotePath,
+                                                                    ByteBuffer buffer,
+                                                                    FileSystem.Statistics statistics,
+                                                                    Configuration conf,
+                                                                    BookKeeperFactory bookKeeperFactory)
+          throws IOException
   {
-    if (readRequestChainType == CachedReadRequestChain.class) {
-      return readRequestChainType.cast(new CachedReadRequestChain(remoteFileSystem, remotePath, buffer, statistics, conf, bookKeeperFactory));
-    }
-    throw new IllegalArgumentException("The type of ReadRequestChain: " + readRequestChainType.getName() + " does not match the arguments or is unknown");
+    return new CachedReadRequestChain(remoteFileSystem, remotePath, buffer, statistics, conf, bookKeeperFactory);
   }
 
-  public static <T extends ReadRequestChain> T createReadRequestChain(Class<T> readRequestChainType, String remoteLocation, long fileSize, long lastModified, Configuration conf,
-                                                               FileSystem remoteFileSystem, String remotePath, int clusterType,
-                                                               boolean strictMode, FileSystem.Statistics statistics, long startBlock, long endBlock)
+  public static NonLocalReadRequestChain createNonLocalReadRequestChain(String remoteLocation,
+                                                                        long fileSize,
+                                                                        long lastModified,
+                                                                        Configuration conf,
+                                                                        FileSystem remoteFileSystem,
+                                                                        String remotePath,
+                                                                        int clusterType,
+                                                                        boolean strictMode,
+                                                                        FileSystem.Statistics statistics)
   {
-    if (readRequestChainType == NonLocalReadRequestChain.class) {
-      return readRequestChainType.cast(new NonLocalReadRequestChain(remoteLocation, fileSize, lastModified, conf, remoteFileSystem, remotePath, clusterType, strictMode, statistics));
-    }
-    else if (readRequestChainType == NonLocalRequestChain.class) {
-      return readRequestChainType.cast(new NonLocalRequestChain(remoteLocation, fileSize, lastModified, conf, remoteFileSystem, remotePath, clusterType, strictMode, statistics, startBlock, endBlock));
-    }
-    else if (readRequestChainType == RemoteFetchRequestChain.class) {
-      return readRequestChainType.cast(new RemoteFetchRequestChain(remotePath, remoteFileSystem, remoteLocation, conf, lastModified, fileSize, clusterType));
-    }
-    throw new IllegalArgumentException("The type of ReadRequestChain: " + readRequestChainType.getName() + " does not match the arguments or is unknown");
+    return new NonLocalReadRequestChain(remoteLocation, fileSize, lastModified, conf, remoteFileSystem, remotePath, clusterType, strictMode, statistics);
   }
 
-  public static <T extends ReadRequestChain> T createReadRequestChain(Class<T> readRequestChainType, FSDataInputStream inputStream, String localfile, ByteBuffer directBuffer, byte[] affixBuffer, BookKeeperFactory bookKeeperFactory) throws IOException
+  public static RemoteReadRequestChain createRemoteReadRequestChain(FSDataInputStream inputStream,
+                                                                    String localFile,
+                                                                    ByteBuffer directBuffer,
+                                                                    byte[] affixBuffer)
+          throws IOException
   {
-    if (readRequestChainType == RemoteReadRequestChain.class) {
-      if (bookKeeperFactory == null) {
-        bookKeeperFactory = new BookKeeperFactory();
-      }
-      return readRequestChainType.cast(new RemoteReadRequestChain(inputStream, localfile, directBuffer, affixBuffer, bookKeeperFactory));
-    }
-    throw new IllegalArgumentException("The type of ReadRequestChain: " + readRequestChainType.getName() + " does not match the arguments or is unknown");
+    return createRemoteReadRequestChain(inputStream, localFile, directBuffer, affixBuffer, new BookKeeperFactory());
   }
 
-  public static <T extends ReadRequestChain> T createReadRequestChain(Class<T> readRequestChainType, BookKeeperService.Client bookKeeperClient, FileSystem remoteFileSystem, String localfile,
-                                                               ByteBuffer directBuffer, Configuration conf, String remotePath,
-                                                               long fileSize, long lastModified)
+  public static RemoteReadRequestChain createRemoteReadRequestChain(FSDataInputStream inputStream,
+                                                                    String localFile,
+                                                                    ByteBuffer directBuffer,
+                                                                    byte[] affixBuffer,
+                                                                    BookKeeperFactory bookKeeperFactory)
+          throws IOException
   {
-    if (readRequestChainType == FileDownloadRequestChain.class) {
-      return readRequestChainType.cast(new FileDownloadRequestChain(bookKeeperClient, remoteFileSystem, localfile, directBuffer, conf, remotePath, fileSize, lastModified));
-    }
-    throw new IllegalArgumentException("The type of ReadRequestChain: " + readRequestChainType.getName() + " does not match the arguments or is unknown");
+    return new RemoteReadRequestChain(inputStream, localFile, directBuffer, affixBuffer, bookKeeperFactory);
+  }
+
+  public static NonLocalRequestChain createNonLocalRequestChain(String remoteLocation,
+                                                                long fileSize,
+                                                                long lastModified,
+                                                                Configuration conf,
+                                                                FileSystem remoteFileSystem,
+                                                                String remotePath,
+                                                                int clusterType,
+                                                                boolean strictMode,
+                                                                FileSystem.Statistics statistics,
+                                                                long startBlock,
+                                                                long endBlock)
+  {
+    return new NonLocalRequestChain(remoteLocation, fileSize, lastModified, conf, remoteFileSystem, remotePath, clusterType, strictMode, statistics, startBlock, endBlock);
+  }
+
+  public static RemoteFetchRequestChain createRemoteFetchRequestChain(String remoteLocation,
+                                                                      long fileSize,
+                                                                      long lastModified,
+                                                                      Configuration conf,
+                                                                      FileSystem remoteFileSystem,
+                                                                      String remotePath,
+                                                                      int clusterType)
+  {
+    return new RemoteFetchRequestChain(remotePath, remoteFileSystem, remoteLocation, conf, lastModified, fileSize, clusterType);
+  }
+
+  public static FileDownloadRequestChain createFileDownloadRequestChain(BookKeeperService.Client bookKeeperClient,
+                                                                        FileSystem remoteFileSystem,
+                                                                        String localFile,
+                                                                        ByteBuffer directBuffer,
+                                                                        Configuration conf,
+                                                                        String remotePath,
+                                                                        long fileSize,
+                                                                        long lastModified)
+  {
+    return new FileDownloadRequestChain(bookKeeperClient, remoteFileSystem, localFile, directBuffer, conf, remotePath, fileSize, lastModified);
   }
 }

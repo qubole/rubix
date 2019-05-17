@@ -205,7 +205,7 @@ public class CachedReadRequestChain extends ReadRequestChain
     read = 0;
 
     FSDataInputStream inputStream = remoteFileSystem.open(new Path(remotePath));
-    directReadChain = ReadRequestChainFactory.createReadRequestChain(DirectReadRequestChain.class, inputStream);
+    directReadChain = ReadRequestChainFactory.createDirectReadRequestChain(inputStream);
     for (ReadRequest readRequest : readRequests) {
       directReadChain.addReadRequest(readRequest);
     }

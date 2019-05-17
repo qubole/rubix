@@ -523,7 +523,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
           // Ue RRRC directly instead of creating instance of CachingFS as in certain circumstances, CachingFS could
           // send this request to NonLocalRRC which would be wrong as that would not cache it on disk
           long expectedBytesToRead = (readStart + blockSize) > fileSize ? (fileSize - readStart) : blockSize;
-          RemoteReadRequestChain remoteReadRequestChain = ReadRequestChainFactory.createReadRequestChain(RemoteReadRequestChain.class, inputStream, localPath, byteBuffer, buffer, new BookKeeperFactory(this));
+          RemoteReadRequestChain remoteReadRequestChain = ReadRequestChainFactory.createRemoteReadRequestChain(inputStream, localPath, byteBuffer, buffer, new BookKeeperFactory(this));
           remoteReadRequestChain.addReadRequest(new ReadRequest(readStart, readStart + blockSize, readStart, readStart + blockSize, buffer, 0, fileSize));
           remoteReadRequestChain.lock();
           Integer dataRead = remoteReadRequestChain.call();

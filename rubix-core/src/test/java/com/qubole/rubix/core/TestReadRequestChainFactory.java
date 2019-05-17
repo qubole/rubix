@@ -24,21 +24,27 @@ public class TestReadRequestChainFactory
   @Test
   public void testReadRequestChainFactory() throws IOException
   {
-    assertEquals(ReadRequestChainFactory.createReadRequestChain(DirectReadRequestChain.class, null).getClass(), DirectReadRequestChain.class);
+    assertEquals(ReadRequestChainFactory.createDirectReadRequestChain(null).getClass(), DirectReadRequestChain.class);
 
-    assertEquals(ReadRequestChainFactory.createReadRequestChain(CachedReadRequestChain.class, null, null, null, null,
+    assertEquals(ReadRequestChainFactory.createCachedReadRequestChain(null, null, null, null,
              null, null).getClass(), CachedReadRequestChain.class);
 
-    assertEquals(ReadRequestChainFactory.createReadRequestChain(NonLocalReadRequestChain.class, null, 0, 0,
-             null, null, null, 0, false, null, 0, 0).getClass(), NonLocalReadRequestChain.class);
+    assertEquals(ReadRequestChainFactory.createNonLocalReadRequestChain(null, 0, 0,
+             null, null, null, 0, false, null).getClass(), NonLocalReadRequestChain.class);
 
-    assertEquals(ReadRequestChainFactory.createReadRequestChain(RemoteFetchRequestChain.class, null, 0, 0,
-            null, null, null, 0, false, null, 0, 0).getClass(), RemoteFetchRequestChain.class);
+    assertEquals(ReadRequestChainFactory.createRemoteFetchRequestChain(null, 0, 0,
+            null, null, null, 0).getClass(), RemoteFetchRequestChain.class);
 
-    assertEquals(ReadRequestChainFactory.createReadRequestChain(RemoteReadRequestChain.class, null, null, null,
+    assertEquals(ReadRequestChainFactory.createRemoteReadRequestChain(null, null, null,
             new byte[0], null).getClass(), RemoteReadRequestChain.class);
 
-    assertEquals(ReadRequestChainFactory.createReadRequestChain(FileDownloadRequestChain.class, null, null, null,
+    assertEquals(ReadRequestChainFactory.createRemoteReadRequestChain(null, null, null,
+            new byte[0]).getClass(), RemoteReadRequestChain.class);
+
+    assertEquals(ReadRequestChainFactory.createFileDownloadRequestChain(null, null, null,
             null, new Configuration(), null, 0, 0).getClass(), FileDownloadRequestChain.class);
+
+    assertEquals(ReadRequestChainFactory.createNonLocalRequestChain(null, 0, 0,
+            new Configuration(), null, null, 0, false, null, 0, 0).getClass(), NonLocalRequestChain.class);
   }
 }

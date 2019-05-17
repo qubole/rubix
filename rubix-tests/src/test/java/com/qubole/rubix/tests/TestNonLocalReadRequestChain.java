@@ -138,9 +138,9 @@ public class TestNonLocalReadRequestChain
   {
     MockCachingFileSystem fs = new MockCachingFileSystem();
     fs.initialize(backendPath.toUri(), conf);
-    NonLocalReadRequestChain requestChain = ReadRequestChainFactory.createReadRequestChain(NonLocalReadRequestChain.class, "localhost", backendFile.length(),
+    NonLocalReadRequestChain requestChain = ReadRequestChainFactory.createNonLocalReadRequestChain("localhost", backendFile.length(),
         backendFile.lastModified(), conf, fs, backendPath.toString(),
-        ClusterType.TEST_CLUSTER_MANAGER.ordinal(), false, null, 0, 0);
+        ClusterType.TEST_CLUSTER_MANAGER.ordinal(), false, null);
 
     return requestChain;
   }

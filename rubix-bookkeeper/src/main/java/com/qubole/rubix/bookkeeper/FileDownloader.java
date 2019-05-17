@@ -26,7 +26,7 @@ import com.qubole.rubix.core.ReadRequestChainFactory;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
-import com.qubole.rubix.spi.thrift.BookKeeperService;
+import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -100,14 +100,14 @@ class FileDownloader
       log.info("Processing Request for File : " + path.toString() + " LocalFile : " + localPath);
       ByteBuffer directWriteBuffer = bufferPool.getBuffer(diskReadBufferSize);
 
-      BookKeeperService.Client bookKeeperClient = null;
+      RetryingBookkeeperClient bookKeeperClient = null;
       try {
         bookKeeperClient = new BookKeeperFactory(bookKeeper).createBookKeeperClient(conf);
       }
       catch (TTransportException e) {
         Throwables.propagate(e);
       }
-      FileDownloadRequestChain requestChain = ReadRequestChainFactory.createReadRequestChain(FileDownloadRequestChain.class, bookKeeperClient, fs, localPath,
+      FileDownloadRequestChain requestChain = ReadRequestChainFactory.createFileDownloadRequestChain(bookKeeperClient, fs, localPath,
           directWriteBuffer, conf, context.getRemoteFilePath(), context.getFileSize(), context.getLastModifiedTime());
 
       for (Range<Long> range : context.getRanges().asRanges()) {
