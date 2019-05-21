@@ -12,6 +12,8 @@
  */
 package com.qubole.rubix.client.robotframework.driver.server;
 
+import com.qubole.rubix.client.robotframework.driver.client.ReadDataCFSRequest;
+import com.qubole.rubix.client.robotframework.driver.client.ReadDataRequestParams;
 import com.qubole.rubix.client.robotframework.driver.execute.RubiXRequest;
 
 import java.rmi.Remote;
@@ -19,5 +21,9 @@ import java.rmi.RemoteException;
 
 public interface RequestServer extends Remote
 {
-  <T> T executeRequest(RubiXRequest<T> request) throws RemoteException;
+  <T, P> T executeGetCacheMetricsRequest(RubiXRequest<T, P> request) throws RemoteException;
+
+  <T, P> T executeReadDataRequest(RubiXRequest<T, P> request, P params) throws RemoteException;
+
+  boolean executeReadDataRequestWithCFS(ReadDataCFSRequest request, ReadDataRequestParams params) throws RemoteException;
 }

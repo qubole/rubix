@@ -39,6 +39,76 @@ public class RequestClient
     return runGetCacheMetrics(host, port);
   }
 
+  public boolean clientReadData(
+      String host,
+      int port,
+      String remotePath,
+      long readStart,
+      int length,
+      long fileSize,
+      long lastModified,
+      int clusterType)
+  {
+    ReadDataRequestParams params = new ReadDataRequestParams(remotePath, readStart, length, fileSize, lastModified, clusterType);
+    return runReadData(host, port, params);
+  }
+
+  private boolean runReadData(String host, int port, ReadDataRequestParams params)
+  {
+    System.setProperty("sun.rmi.transport.tcp.responseTimeout", "60000");
+
+    boolean dataRead = false;
+    // initializeSecurityManager();
+    try {
+      System.out.println("1. Getting access to server");
+      RequestServer containerDriver = getRequestServer(host, port);
+      System.out.println("2. Executing read request");
+      dataRead = containerDriver.executeReadDataRequest(new ReadDataRequest(), params);
+      System.out.println("3. Returning result");
+      System.out.println("Data read? " + dataRead);
+    }
+    catch (RemoteException | MalformedURLException | NotBoundException e) {
+      System.err.println("RequestClient exception:");
+      e.printStackTrace();
+    }
+    return dataRead;
+  }
+
+  public boolean clientReadDataFileSystem(
+      String host,
+      int port,
+      String remotePath,
+      long readStart,
+      int length,
+      long fileSize,
+      long lastModified,
+      int clusterType)
+  {
+    ReadDataRequestParams params = new ReadDataRequestParams(remotePath, readStart, length, fileSize, lastModified, clusterType);
+    return runReadDataCFS(host, port, params);
+  }
+
+  private boolean runReadDataCFS(String host, int port, ReadDataRequestParams params)
+  {
+    System.setProperty("sun.rmi.transport.tcp.responseTimeout", "60000");
+
+    boolean dataRead = false;
+    // initializeSecurityManager();
+    try {
+      System.out.println("1. Getting access to server");
+      RequestServer containerDriver = getRequestServer(host, port);
+      System.out.println("2. Executing read request");
+      dataRead = containerDriver.executeReadDataRequestWithCFS(new ReadDataCFSRequest(), params);
+      System.out.println("3. Returning result");
+      System.out.println("Data read? " + dataRead);
+    }
+    catch (RemoteException | MalformedURLException | NotBoundException e) {
+      System.err.println("RequestClient exception:");
+      e.printStackTrace();
+    }
+    return dataRead;
+  }
+
   private static Map<String, Double> runGetCacheMetrics(String host, int port)
   {
     Map<String, Double> metrics = new HashMap<>();
@@ -51,7 +121,7 @@ public class RequestClient
       System.out.println("1. Getting access to server");
       RequestServer containerDriver = getRequestServer(host, port);
       System.out.println("2. Executing request");
-      metrics = containerDriver.executeRequest(new GetCacheMetricsRequest());
+      metrics = containerDriver.executeGetCacheMetricsRequest(new GetCacheMetricsRequest());
       System.out.println("3. Returning results");
       System.out.println(metrics.toString());
     }

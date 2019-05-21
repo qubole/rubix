@@ -12,31 +12,29 @@
  */
 package com.qubole.rubix.client.robotframework.driver.client;
 
-import com.qubole.rubix.client.robotframework.driver.execute.RubiXRequest;
-import com.qubole.rubix.spi.RetryingBookkeeperClient;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.thrift.shaded.TException;
+import org.apache.hadoop.fs.FSDataInputStream;
 
+import java.io.IOException;
 import java.io.Serializable;
-import java.util.HashMap;
-import java.util.Map;
 
-public class GetCacheMetricsRequest implements RubiXRequest<Map<String, Double>, Void>, Serializable
+public class ReadDataCFSRequest implements Serializable
 {
-  private static final Log log = LogFactory.getLog(GetCacheMetricsRequest.class);
   public static final long serialVersionUID = 126L;
 
-  public Map<String, Double> execute(RetryingBookkeeperClient client, Void params)
+  public boolean execute(FSDataInputStream inputStream, ReadDataRequestParams params)
   {
-    log.info("Fetching metrics");
+    System.out.println("Reading data");
+
     try {
-      return client.getCacheMetrics();
+      final int readSize = inputStream.read(
+          new byte[params.getLength()],
+          (int) params.getReadStart(),
+          params.getLength());
+      return readSize == params.getLength();
     }
-    catch (TException ex) {
-      ex.printStackTrace();
+    catch (IOException ex) {
+      System.err.println("Could not read data: " + ex.toString());
     }
-    log.info("Could not fetch metrics; returning empty map");
-    return new HashMap<>();
+    return false;
   }
 }

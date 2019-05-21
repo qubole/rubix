@@ -18,6 +18,7 @@ RUN apk update && apk add curl bash \
 COPY jars/rubix-bookkeeper-*.jar /usr/lib/rubix/lib/rubix-bookkeeper.jar
 COPY jars/rubix-common-*.jar /usr/lib/rubix/lib/rubix-common.jar
 COPY jars/rubix-core-*.jar /usr/lib/rubix/lib/rubix-core.jar
+COPY jars/rubix-core_tests.jar /usr/lib/rubix/lib/rubix-core-tests.jar
 COPY jars/rubix-spi-*.jar /usr/lib/rubix/lib/rubix-spi.jar
 COPY jars/rubix-hadoop2-*.jar /usr/lib/rubix/lib/rubix-hadoop2.jar
 COPY jars/rubix-client-*.jar /usr/lib/rubix/lib/rubix-client.jar

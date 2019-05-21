@@ -19,24 +19,27 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.thrift.shaded.TException;
 
 import java.io.Serializable;
-import java.util.HashMap;
-import java.util.Map;
 
-public class GetCacheMetricsRequest implements RubiXRequest<Map<String, Double>, Void>, Serializable
+public class ReadDataRequest implements RubiXRequest<Boolean, ReadDataRequestParams>, Serializable
 {
-  private static final Log log = LogFactory.getLog(GetCacheMetricsRequest.class);
+  private static final Log log = LogFactory.getLog(ReadDataRequest.class);
   public static final long serialVersionUID = 126L;
 
-  public Map<String, Double> execute(RetryingBookkeeperClient client, Void params)
+  public Boolean execute(RetryingBookkeeperClient client, ReadDataRequestParams params)
   {
-    log.info("Fetching metrics");
+    log.info("Reading data");
     try {
-      return client.getCacheMetrics();
+      return client.readData(
+          params.getRemotePath(),
+          params.getReadStart(),
+          params.getLength(),
+          params.getFileSize(),
+          params.getLastModified(),
+          params.getClusterType());
     }
     catch (TException ex) {
-      ex.printStackTrace();
+      log.error("Could not read data", ex);
     }
-    log.info("Could not fetch metrics; returning empty map");
-    return new HashMap<>();
+    return false;
   }
 }

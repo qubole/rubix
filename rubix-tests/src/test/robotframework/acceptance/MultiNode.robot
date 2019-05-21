@@ -87,6 +87,38 @@ Fetch cache metrics from container via RMI server
     LOG MANY  &{metrics}
     SHOULD NOT BE EMPTY  ${metrics}
 
+Read data from container via RMI server using Thrift API
+    [Tags]  rmi-read
+
+    Start BKS Multi
+
+    ${didRead} =  client Read Data  localhost  8123
+    ...  file:${REMOTE_PATH}
+    ...  ${START_BLOCK}
+    ...  ${END_BLOCK}
+    ...  ${FILE_LENGTH}
+    ...  ${last_modified}
+    ...  ${cluster_type}
+    SHOULD BE TRUE  ${didRead}
+
+    [Teardown]  Stop BKS Multi
+
+Read data from container via RMI server using CachingFileSystem
+    [Tags]  rmi-read
+
+    Start BKS Multi
+
+    ${didRead} =  client Read Data File System  localhost  8123
+    ...  file:${REMOTE_PATH}
+    ...  ${START_BLOCK}
+    ...  ${END_BLOCK}
+    ...  ${FILE_LENGTH}
+    ...  ${last_modified}
+    ...  ${cluster_type}
+    SHOULD BE TRUE  ${didRead}
+
+    [Teardown]  Stop BKS Multi
+
 #Simple Multi-Node Test Case
 #    [Tags]  not-multi
 #    [Documentation]  A simple multi-node test

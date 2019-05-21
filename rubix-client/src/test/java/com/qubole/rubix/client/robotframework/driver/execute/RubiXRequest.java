@@ -14,7 +14,7 @@ package com.qubole.rubix.client.robotframework.driver.execute;
 
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
 
-public interface RubiXRequest<T>
+public interface RubiXRequest<T, P>
 {
-  T execute(RetryingBookkeeperClient client);
+  T execute(RetryingBookkeeperClient client, P params);
 }
