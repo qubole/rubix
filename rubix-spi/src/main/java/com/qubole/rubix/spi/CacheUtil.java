@@ -15,9 +15,13 @@ package com.qubole.rubix.spi;
 import com.google.common.base.Charsets;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
+import com.google.common.io.BaseEncoding;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -26,13 +30,22 @@ import org.apache.hadoop.fs.Path;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.net.URI;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
 public class CacheUtil
 {
-  private static final Log log = LogFactory.getLog(CacheUtil.class.getName());
+  private static final Log log = LogFactory.getLog(CacheUtil.class);
+  private static LoadingCache<String, String> hashedPaths = CacheBuilder.newBuilder().build(new CacheLoader<String, String>() {
+    @Override
+    public String load(final String relLocation) throws Exception {
+      return getHashedPath(relLocation);
+    }
+  });
 
   private CacheUtil()
   {
@@ -135,6 +148,8 @@ public class CacheUtil
   public static String getLocalPath(String remotePath, Configuration conf)
   {
     final String absLocation = getDirectory(remotePath, conf);
+
+    log.info("Value of absLocation : " + absLocation);
     return absLocation + "/" + getName(remotePath);
   }
 
@@ -156,6 +171,8 @@ public class CacheUtil
   public static String getMetadataFilePath(String remotePath, Configuration conf)
   {
     final String absLocation = getDirectory(remotePath, conf);
+    //log.info("Value of absLocation : " + absLocation);
+    //log.info("Value of MetadataFilePath : " + absLocation + "/" + getName(remotePath) + CacheConfig.getCacheMetadataFileSuffix(conf));
     return absLocation + "/" + getName(remotePath) + CacheConfig.getCacheMetadataFileSuffix(conf);
   }
 
@@ -231,7 +248,9 @@ public class CacheUtil
    */
   private static String getDirectory(String remotePath, Configuration conf)
   {
+    //log.info("Value of remotePath : " + remotePath);
     final String parentPath = getParent(remotePath);
+    //log.info("Value of parentPath : " + parentPath);
     String relLocation = parentPath;
 
     if (parentPath.contains(":")) {
@@ -243,12 +262,37 @@ public class CacheUtil
       if (relLocation.startsWith("/")) {
         relLocation = relLocation.substring(1);
       }
+      //log.info("Value of relLocation : " + relLocation);
     }
 
+    relLocation = hashedPaths.getUnchecked(relLocation);
     final String absLocation = getLocalDirFor(remotePath, conf) + relLocation;
     createCacheDirectory(absLocation);
 
     return absLocation;
+  }
+
+  private static String getHashedPath(String relLocation)
+  {
+    String hashRelLocation = relLocation;
+    try {
+      MessageDigest md = MessageDigest.getInstance("SHA-256");
+      byte[] pathBytes = md.digest(relLocation.getBytes());
+      StringBuilder sb = new StringBuilder();
+      for(int i=0; i < pathBytes.length; i++) {
+        sb.append(Integer.toString((pathBytes[i] & 0xff) + 0x100, 16).substring(1));
+      }
+      hashRelLocation = sb.toString();
+      //encodedPathBytes = BaseEncoding.base64().encode();
+      //log.info("Value of hashRelLocation " + hashRelLocation.toString());
+      //log.info("Value of pathBytes " + pathBytes.toString());
+      //log.info("relLocation path : " + relLocation + "  encodedPathBytes path : " + encodedPathBytes);
+    }
+    catch (NoSuchAlgorithmException e)
+    {
+      log.error("No Such Algorithm for Hashing " + e.toString());
+    }
+    return hashRelLocation;
   }
 
   /**

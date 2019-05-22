@@ -12,6 +12,9 @@
  */
 package com.qubole.rubix.spi;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.commons.net.util.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -29,6 +32,8 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Set;
 
@@ -39,6 +44,7 @@ import static org.testng.Assert.fail;
 
 public class TestCacheUtil
 {
+  private static final Log log = LogFactory.getLog(CacheUtil.class);
   private static final String cacheTestDirPrefix = System.getProperty("java.io.tmpdir") + "/cacheUtilTest/";
   private static final int maxDisks = 5;
 
@@ -60,13 +66,32 @@ public class TestCacheUtil
   @AfterClass
   public void tearDownClass() throws IOException
   {
-    cleanCacheDirectories(cacheTestDirPrefix);
+    //cleanCacheDirectories(cacheTestDirPrefix);
   }
 
   @BeforeMethod
   public void setUpConfiguration()
   {
     conf.clear();
+  }
+
+  private static String getHashedPath(String relLocation)
+  {
+    String hashRelLocation = relLocation;
+    try {
+      MessageDigest md = MessageDigest.getInstance("SHA-256");
+      byte[] pathBytes = md.digest(relLocation.getBytes());
+      StringBuilder sb = new StringBuilder();
+      for(int i=0; i < pathBytes.length; i++) {
+        sb.append(Integer.toString((pathBytes[i] & 0xff) + 0x100, 16).substring(1));
+      }
+      hashRelLocation = sb.toString();
+    }
+    catch (NoSuchAlgorithmException e)
+    {
+      log.error("No Such Algorithm for Hashing " + e.toString());
+    }
+    return hashRelLocation;
   }
 
   @Test
@@ -152,9 +177,10 @@ public class TestCacheUtil
     CacheConfig.setMaxDisks(conf, 1);
 
     createCacheDirectoriesForTest(conf);
-
-    String localPath = CacheUtil.getLocalPath(remotePath, conf);
-    assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + localRelPath, "Paths not equal!");
+    //String absLocation = CacheUtil.getDirectory(remotePath, conf);
+    String localPath = CacheUtil.getLocalPath(localRelPath, conf);
+    //assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + getHashedPath( cacheTestDirPrefix + "0" + "/fcache/" + remotePath), "Paths not equal!");
+    assertEquals( localPath, cacheTestDirPrefix + "0" + "/fcache/" + getHashedPath("testbucket/123/4566") + "/789", "Paths not equal!");
   }
 
   @Test
@@ -168,7 +194,8 @@ public class TestCacheUtil
     createCacheDirectoriesForTest(conf);
 
     String localPath = CacheUtil.getLocalPath(localRelPath, conf);
-    assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + localRelPath, "Paths not equal!");
+    //assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + localRelPath, "Paths not equal!");
+    assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + getHashedPath("testbucket/123/4566") + "/789", "Paths not equal!");
   }
 
   @Test
@@ -182,7 +209,7 @@ public class TestCacheUtil
     createCacheDirectoriesForTest(conf);
 
     String localPath = CacheUtil.getLocalPath(localRelPath, conf);
-    assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache//" + localRelPath, "Paths not equal!");
+    assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + getHashedPath("") + "/testbucket", "Paths not equal!");
   }
 
   @Test
@@ -197,12 +224,12 @@ public class TestCacheUtil
     createCacheDirectoriesForTest(conf);
 
     String localPath = CacheUtil.getMetadataFilePath(remotePath, conf);
-    assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + localRelPath + "_mdfile", "Paths not equal!");
+    assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + getHashedPath("testbucket/123/456") + "/789_mdfile", "Paths not equal!");
 
-    localRelPath = "tesbucket/123";
+    localRelPath = "123";
     remotePath = "s3://" + localRelPath;
     localPath = CacheUtil.getMetadataFilePath(remotePath, conf);
-    assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + localRelPath + "_mdfile", "Paths not equal!");
+    assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + getHashedPath("") + "/123_mdfile", "Paths not equal!");
   }
 
   @Test
@@ -217,7 +244,7 @@ public class TestCacheUtil
     createCacheDirectoriesForTest(conf);
 
     String localPath = CacheUtil.getMetadataFilePath(remotePath, conf);
-    assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + localRelPath + "_mdfile", "Paths not equal!");
+    assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + getHashedPath("testbucket/123/456") + "/789_mdfile", "Paths not equal!");
   }
 
   @Test
@@ -232,7 +259,7 @@ public class TestCacheUtil
     createCacheDirectoriesForTest(conf);
 
     String localPath = CacheUtil.getMetadataFilePath(remotePath, conf);
-    assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + localRelPath + "_mdfile", "Paths not equal!");
+    assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + getHashedPath("testbucket/123/456") + "/789_mdfile", "Paths not equal!");
   }
 
   @Test
