@@ -61,7 +61,6 @@ public class FileMetadata
     this.size = fileLength;
     this.lastModified = lastModified;
     this.currentFileSize = currentFileSize;
-    log.info("1 remotePath : " + remotePath);
     localPath = CacheUtil.getLocalPath(remotePath, conf);
     mdFilePath = CacheUtil.getMetadataFilePath(remotePath, conf);
 

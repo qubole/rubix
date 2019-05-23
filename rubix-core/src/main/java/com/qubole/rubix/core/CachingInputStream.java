@@ -138,7 +138,6 @@ public class CachingInputStream extends FSInputStream
     try {
       this.bookKeeperClient = bookKeeperFactory.createBookKeeperClient(conf);
       this.localPath = CacheUtil.getLocalPath(backendPath, conf);
-      log.info("2 backendPath" + backendPath + "localPath" + this.localPath);
     }
     catch (Exception e) {
       if (strictMode) {
