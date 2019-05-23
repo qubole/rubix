@@ -147,7 +147,6 @@ public class CacheUtil
   public static String getLocalPath(String remotePath, Configuration conf)
   {
     final String absLocation = getDirectory(remotePath, conf);
-
     return absLocation + "/" + getName(remotePath);
   }
 
