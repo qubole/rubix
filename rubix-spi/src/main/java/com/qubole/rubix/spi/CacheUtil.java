@@ -21,7 +21,6 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import com.google.common.io.BaseEncoding;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -32,7 +31,6 @@ import java.io.FileNotFoundException;
 import java.net.URI;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -42,7 +40,8 @@ public class CacheUtil
   private static final Log log = LogFactory.getLog(CacheUtil.class);
   private static LoadingCache<String, String> hashedPaths = CacheBuilder.newBuilder().build(new CacheLoader<String, String>() {
     @Override
-    public String load(final String relLocation) throws Exception {
+    public String load(final String relLocation) throws Exception
+    {
       return getHashedPath(relLocation);
     }
   });
@@ -280,17 +279,12 @@ public class CacheUtil
       MessageDigest md = MessageDigest.getInstance("SHA-256");
       byte[] pathBytes = md.digest(relLocation.getBytes());
       StringBuilder sb = new StringBuilder();
-      for(int i=0; i < pathBytes.length; i++) {
+      for (int i = 0; i < pathBytes.length; i++) {
         sb.append(Integer.toString((pathBytes[i] & 0xff) + 0x100, 16).substring(1));
       }
       hashRelLocation = sb.toString();
-      //encodedPathBytes = BaseEncoding.base64().encode();
-      //log.info("Value of hashRelLocation " + hashRelLocation.toString());
-      //log.info("Value of pathBytes " + pathBytes.toString());
-      //log.info("relLocation path : " + relLocation + "  encodedPathBytes path : " + encodedPathBytes);
     }
-    catch (NoSuchAlgorithmException e)
-    {
+    catch (NoSuchAlgorithmException e) {
       log.error("No Such Algorithm for Hashing " + e.toString());
     }
     return hashRelLocation;
