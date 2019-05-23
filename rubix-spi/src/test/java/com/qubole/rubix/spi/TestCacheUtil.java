@@ -85,7 +85,6 @@ public class TestCacheUtil
         sb.append(Integer.toString((pathBytes[i] & 0xff) + 0x100, 16).substring(1));
       }
       hashRelLocation = sb.toString();
-      log.info("relLocation : " + relLocation + "hashRelLocation : " + hashRelLocation);
     }
     catch (NoSuchAlgorithmException e) {
       log.error("No Such Algorithm for Hashing " + e.toString());
@@ -194,7 +193,7 @@ public class TestCacheUtil
     createCacheDirectoriesForTest(conf);
 
     String localPath = CacheUtil.getLocalPath(localRelPath, conf);
-    //assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + localRelPath, "Paths not equal!");
+    //assertEquals(localPath, cacheTestDirPrefix + "0+ "/fcache/" + localRelPath, "Paths not equal!");
     assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + getHashedPath("testbucket/123/4566") + "/789", "Paths not equal!");
     CacheConfig.setpathEncryptionEnabled(conf, false);
   }

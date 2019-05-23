@@ -148,7 +148,6 @@ public class CacheUtil
   {
     final String absLocation = getDirectory(remotePath, conf);
 
-    log.info("Value of absLocation : " + absLocation);
     return absLocation + "/" + getName(remotePath);
   }
 
@@ -170,8 +169,6 @@ public class CacheUtil
   public static String getMetadataFilePath(String remotePath, Configuration conf)
   {
     final String absLocation = getDirectory(remotePath, conf);
-    //log.info("Value of absLocation : " + absLocation);
-    //log.info("Value of MetadataFilePath : " + absLocation + "/" + getName(remotePath) + CacheConfig.getCacheMetadataFileSuffix(conf));
     return absLocation + "/" + getName(remotePath) + CacheConfig.getCacheMetadataFileSuffix(conf);
   }
 
@@ -247,9 +244,7 @@ public class CacheUtil
    */
   private static String getDirectory(String remotePath, Configuration conf)
   {
-    //log.info("Value of remotePath : " + remotePath);
     final String parentPath = getParent(remotePath);
-    //log.info("Value of parentPath : " + parentPath);
     String relLocation = parentPath;
 
     if (parentPath.contains(":")) {
@@ -261,7 +256,6 @@ public class CacheUtil
       if (relLocation.startsWith("/")) {
         relLocation = relLocation.substring(1);
       }
-      //log.info("Value of relLocation : " + relLocation);
     }
     if (CacheConfig.isPathEncryptionEnabled(conf)) {
       relLocation = hashedPaths.getUnchecked(relLocation);
