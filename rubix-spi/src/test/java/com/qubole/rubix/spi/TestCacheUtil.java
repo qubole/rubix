@@ -66,13 +66,14 @@ public class TestCacheUtil
   @AfterClass
   public void tearDownClass() throws IOException
   {
-    //cleanCacheDirectories(cacheTestDirPrefix);
+    cleanCacheDirectories(cacheTestDirPrefix);
   }
 
   @BeforeMethod
   public void setUpConfiguration()
   {
     conf.clear();
+    CacheConfig.setpathEncryptionEnabled(conf,true);
   }
 
   private static String getHashedPath(String relLocation)

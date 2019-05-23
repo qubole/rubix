@@ -86,6 +86,7 @@ public class CacheConfig
   private static final String KEY_MAX_CACHE_SIZE = "rubix.cache.max.size";
   private static final String KEY_CACHE_FILE_SPLIT_SIZE = "rubix.cache.filesplit.size";
   private static final String KEY_CLUSTER_NODE_REFRESH_TIME = "rubix.cluster.node.refresh.time";
+  private static final String KEY_ENABLE_PATH_ENCRYPTION = "rubix.cache.path.encryption";
 
   // default values
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
@@ -145,6 +146,7 @@ public class CacheConfig
   private static final long DEFAULT_MAX_CACHE_SIZE = 0;
   private static final long DEFAULT_CACHE_FILE_SPLIT_SIZE = 256 * 1024 * 1024;
   private static final int DEFAULT_CLUSTER_NODE_REFRESH_TIME = 300; //seconds
+  private static final boolean DEFAULT_ENABLE_PATH_ENCRYPTION = false;
 
   private CacheConfig()
   {
@@ -390,6 +392,11 @@ public class CacheConfig
     return conf.getBoolean(KEY_VALIDATION_ENABLED, DEFAULT_VALIDATION_ENABLED);
   }
 
+  public static boolean isPathEncryptionEnabled(Configuration conf)
+  {
+    return conf.getBoolean(KEY_ENABLE_PATH_ENCRYPTION, DEFAULT_ENABLE_PATH_ENCRYPTION);
+  }
+
   public static String getPrestoClusterManager(Configuration conf)
   {
     return conf.get(KEY_PRESTO_CLUSTER_MANAGER, DEFAULT_PRESTO_CLUSTER_MANAGER);
@@ -523,6 +530,11 @@ public class CacheConfig
   public static void setValidationEnabled(Configuration conf, boolean isValidationEnabled)
   {
     conf.setBoolean(KEY_VALIDATION_ENABLED, isValidationEnabled);
+  }
+
+  public static void setpathEncryptionEnabled(Configuration conf, boolean isPathEncryptionEnabled)
+  {
+    conf.setBoolean(KEY_ENABLE_PATH_ENCRYPTION, isPathEncryptionEnabled);
   }
 
   public static void setIsStrictMode(Configuration conf, boolean isStrictMode)

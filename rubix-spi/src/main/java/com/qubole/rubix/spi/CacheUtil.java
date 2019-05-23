@@ -264,8 +264,9 @@ public class CacheUtil
       }
       //log.info("Value of relLocation : " + relLocation);
     }
-
-    relLocation = hashedPaths.getUnchecked(relLocation);
+    if (CacheConfig.isPathEncryptionEnabled(conf)) {
+      relLocation = hashedPaths.getUnchecked(relLocation);
+    }
     final String absLocation = getLocalDirFor(remotePath, conf) + relLocation;
     createCacheDirectory(absLocation);
 
