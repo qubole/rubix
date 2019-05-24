@@ -24,6 +24,7 @@ import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import com.qubole.rubix.spi.thrift.BlockLocation;
+import com.qubole.rubix.spi.thrift.BookKeeperService;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.FileInfo;
 import com.qubole.rubix.spi.thrift.Location;
@@ -56,10 +57,10 @@ public class CachingInputStream extends FSInputStream
 
   private long nextReadPosition;
   private long nextReadBlock;
-  private int blockSize;
+  int blockSize;
   private CachingFileSystemStats statsMbean;
 
-  private static ListeningExecutorService readService = MoreExecutors.listeningDecorator(Executors.newCachedThreadPool());
+  static ListeningExecutorService readService = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(CacheConfig.READ_SERVICE_THREAD_POOL_SIZE));
   private static final Log log = LogFactory.getLog(CachingInputStream.class);
 
   private String remotePath;
@@ -68,7 +69,7 @@ public class CachingInputStream extends FSInputStream
   private long lastModified;
 
   private RetryingBookkeeperClient bookKeeperClient;
-  private Configuration conf;
+  Configuration conf;
 
   private boolean strictMode;
   ClusterType clusterType;
@@ -81,7 +82,7 @@ public class CachingInputStream extends FSInputStream
   private byte[] affixBuffer;
   private int diskReadBufferSize;
   private int bufferSize;
-  private BookKeeperFactory bookKeeperFactory;
+  BookKeeperFactory bookKeeperFactory;
 
   public CachingInputStream(FileSystem parentFs, Path backendPath, Configuration conf,
                             CachingFileSystemStats statsMbean, ClusterType clusterType,
@@ -150,7 +151,7 @@ public class CachingInputStream extends FSInputStream
     this.diskReadBufferSize = CacheConfig.getDiskReadBufferSize(conf);
   }
 
-  private FSDataInputStream getParentDataInputStream() throws IOException
+  FSDataInputStream getParentDataInputStream() throws IOException
   {
     if (inputStream == null) {
       inputStream = remoteFileSystem.open(new Path(remotePath), bufferSize);
@@ -213,7 +214,7 @@ public class CachingInputStream extends FSInputStream
     }
   }
 
-  private int readFullyDirect(byte[] buffer, int offset, int length)
+  int readFullyDirect(byte[] buffer, int offset, int length)
       throws IOException
   {
     int nread = 0;
@@ -245,7 +246,10 @@ public class CachingInputStream extends FSInputStream
     final List<ReadRequestChain> readRequestChains = setupReadRequestChains(buffer,
         offset,
         endBlock,
-        length);
+        length,
+        nextReadPosition,
+        nextReadBlock,
+        bookKeeperClient);
 
     log.debug("Executing Chains");
 
@@ -274,18 +278,11 @@ public class CachingInputStream extends FSInputStream
 
     // mark all read blocks cached
     // We can let this is happen in background
-    final long lastBlock = nextReadBlock;
-    readService.execute(new Runnable()
-    {
+    readService.execute(new Runnable() {
       @Override
       public void run()
       {
-        ReadRequestChainStats stats = new ReadRequestChainStats();
-        for (ReadRequestChain readRequestChain : readRequestChains) {
-          readRequestChain.updateCacheStatus(remotePath, fileSize, lastModified, blockSize, conf);
-          stats = stats.add(readRequestChain.getStats());
-        }
-        statsMbean.addReadRequestChainStats(stats);
+        updateCacheAndStats(readRequestChains);
       }
     });
 
@@ -298,10 +295,23 @@ public class CachingInputStream extends FSInputStream
     return sizeRead;
   }
 
-  private List<ReadRequestChain> setupReadRequestChains(byte[] buffer,
-                                                        int offset,
-                                                        long endBlock,
-                                                        int length) throws IOException
+  void updateCacheAndStats(final List<ReadRequestChain> readRequestChains)
+  {
+    ReadRequestChainStats stats = new ReadRequestChainStats();
+    for (ReadRequestChain readRequestChain : readRequestChains) {
+      readRequestChain.updateCacheStatus(remotePath, fileSize, lastModified, blockSize, conf);
+      stats = stats.add(readRequestChain.getStats());
+    }
+    statsMbean.addReadRequestChainStats(stats);
+  }
+
+  List<ReadRequestChain> setupReadRequestChains(byte[] buffer,
+                                                int offset,
+                                                long endBlock,
+                                                int length,
+                                                long nextReadPosition,
+                                                long nextReadBlock,
+                                                BookKeeperService.Client bookKeeperClient) throws IOException
   {
     DirectReadRequestChain directReadRequestChain = null;
     RemoteReadRequestChain remoteReadRequestChain = null;
@@ -382,7 +392,7 @@ public class CachingInputStream extends FSInputStream
         catch (IOException e) {
           log.error("Unable to open file channel in R mode", e);
           // reset bookkeeper client so that we take direct route
-          this.bookKeeperClient = null;
+          bookKeeperClient = null;
           isCached = null;
           idx--;
           blockNum--;
@@ -451,7 +461,7 @@ public class CachingInputStream extends FSInputStream
             catch (IOException e) {
               log.error("Unable to obtain open file channel in RW mode", e);
               // reset bookkeeper client so that we take direct route
-              this.bookKeeperClient = null;
+              bookKeeperClient = null;
               isCached = null;
               idx--;
               blockNum--;

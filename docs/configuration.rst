@@ -43,6 +43,11 @@ Cache
 +------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+
 | rubix.cache.parallel.warmup              | When true, cache will be warmed up asynchronously.                     | boolean           | false            | C & S         |
 +------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+
+| rubix.cache.dummy.mode                   | When true, the cache is not populated with data and queries read data  | boolean           | false            | C             |
+|                                          | directly from the source, but metadata is updated so that statistics   |                   |                  |               |
+|                                          | such as hitrate, cache reads etc. can be collected as if the data was  |                   |                  |               |
+|                                          | cached                                                                 |                   |                  |               |
++------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+
 
 Network
 -------
