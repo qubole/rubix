@@ -24,7 +24,7 @@ start-multi() {
 
   docker-compose -f ${SCRIPT_DIR}/docker/docker-compose.yml up -d --build
 
-  sleep 1
+  sleep 3
 }
 
 stop-multi() {

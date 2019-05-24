@@ -24,13 +24,13 @@ import java.rmi.registry.Registry;
 import java.util.HashMap;
 import java.util.Map;
 
-public class RequestClient
+public class ContainerRequestClient
 {
-  private static final Log log = LogFactory.getLog(RequestClient.class);
+  private static final Log log = LogFactory.getLog(ContainerRequestClient.class);
 
   private static final String SERVER_NAME = "ContainerRequestServer";
 
-  public RequestClient()
+  public ContainerRequestClient()
   {
   }
 
@@ -68,7 +68,7 @@ public class RequestClient
       System.out.println("Data read? " + dataRead);
     }
     catch (RemoteException | MalformedURLException | NotBoundException e) {
-      System.err.println("RequestClient exception:");
+      System.err.println("ContainerRequestClient exception:");
       e.printStackTrace();
     }
     return dataRead;
@@ -103,7 +103,7 @@ public class RequestClient
       System.out.println("Data read? " + dataRead);
     }
     catch (RemoteException | MalformedURLException | NotBoundException e) {
-      System.err.println("RequestClient exception:");
+      System.err.println("ContainerRequestClient exception:");
       e.printStackTrace();
     }
     return dataRead;
@@ -126,7 +126,7 @@ public class RequestClient
       System.out.println(metrics.toString());
     }
     catch (RemoteException | MalformedURLException | NotBoundException e) {
-      System.err.println("RequestClient exception:");
+      System.err.println("ContainerRequestClient exception:");
       e.printStackTrace();
     }
     return metrics;
@@ -134,9 +134,8 @@ public class RequestClient
 
   private static RequestServer getRequestServer(String host, int port) throws RemoteException, NotBoundException, MalformedURLException
   {
-    // Registry registry = LocateRegistry.getRegistry(host, 1234);
     System.out.println("1.1 Getting registry object");
-    Registry registry = LocateRegistry.getRegistry(host, 1099);
+    Registry registry = LocateRegistry.getRegistry(host, port);
     System.out.println("1.2 Looking up server");
     RequestServer containerServer = (RequestServer) registry.lookup(SERVER_NAME);
     // RequestServer containerServer = (RequestServer) Naming.lookup("//" + host + ":" + port + "/" + SERVER_NAME);

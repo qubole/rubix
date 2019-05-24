@@ -29,6 +29,8 @@ services:
     ports:
       - "8901:8899"  # BookKeeperServer port
       - "8801:8898"  # LocalDataTransferServer port
+      - "8123:8123/tcp"  # ContainerRequestServer port
+      - "1901:1099/tcp"  # rmiregistry port
     networks: 
       rubix-cluster:
         ipv4_address: 172.18.8.1
@@ -44,8 +46,6 @@ services:
     ports:
       - "8902:8899"  # BookKeeperServer port
       - "8802:8898"  # LocalDataTransferServer port
-      - "8123:8123/tcp"  # ContainerRequestServer port
-      - "1099:1099/tcp"  # rmiregistry port
     networks:
       rubix-cluster:
         ipv4_address: 172.18.8.2

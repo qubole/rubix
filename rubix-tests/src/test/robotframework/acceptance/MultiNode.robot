@@ -2,7 +2,7 @@
 Documentation   RubiX Multi-Node Integration Tests
 Resource        setup.robot
 Resource        bookkeeper.robot
-Library         com.qubole.rubix.client.robotframework.driver.client.RequestClient
+Library         com.qubole.rubix.client.robotframework.driver.client.ContainerRequestClient
 
 *** Variables ***
 
@@ -104,11 +104,11 @@ Read data from container via RMI server using Thrift API
     [Teardown]  Stop BKS Multi
 
 Read data from container via RMI server using CachingFileSystem
-    [Tags]  rmi-read
+    [Tags]  rmi-read  cfs
 
     Start BKS Multi
 
-    ${didRead} =  client Read Data File System  localhost  8123
+    ${didRead} =  client Read Data File System  localhost  1099
     ...  file:${REMOTE_PATH}
     ...  ${START_BLOCK}
     ...  ${END_BLOCK}
@@ -117,7 +117,28 @@ Read data from container via RMI server using CachingFileSystem
     ...  ${cluster_type}
     SHOULD BE TRUE  ${didRead}
 
-    [Teardown]  Stop BKS Multi
+#    [Teardown]  Stop BKS Multi
+
+Simple non-local read test case
+    [Tags]  nonlocal
+    [Documentation]  A simple non-local read test
+
+    # 1. Simple start-up & shutdown
+    Start BKS Multi
+
+    ${didRead} =  client Read Data File System  localhost  1901
+    ...  file:${TEST_FILE_3}
+    ...  ${START_BLOCK}
+    ...  ${END_BLOCK}
+    ...  ${FILE_LENGTH}
+    ...  ${LAST_MODIFIED}
+    ...  ${CLUSTER_TYPE}
+    SHOULD BE TRUE  ${didRead}
+
+    Verify metric value on node
+    ...  ${PORT_WORKER1}
+    ...  rubix.bookkeeper.count.nonlocal_request
+    ...  1
 
 #Simple Multi-Node Test Case
 #    [Tags]  not-multi
