@@ -20,12 +20,17 @@ ${TEST_FILE_3}      /tmp/data/testFile3
 ${TEST_FILE_4}      /tmp/data/testFile4
 ${TEST_FILE_5}      /tmp/data/testFile5
 
-${PORT_MASTER}      8899
-${PORT_WORKER1}     8901
-${PORT_WORKER2}     8902
+${PORT_MASTER_BKS}      8899
+${PORT_WORKER1_BKS}     8901
+${PORT_WORKER2_BKS}     8902
+
+${PORT_MASTER_RMI}      8899
+${PORT_WORKER1_RMI}     8901
+${PORT_WORKER2_RMI}     8902
 
 ${METRIC_CACHE_EVICTION}    rubix.bookkeeper.count.cache_eviction
 ${3_EXPECTED_EVICTIONS}     3
+${METRIC_NONLOCAL_REQUESTS}    rubix.bookkeeper.count.nonlocal_request
 
 *** Test Cases ***
 Multi Cache Eviction
@@ -46,11 +51,11 @@ Multi Cache Eviction
 
     Execute sequential requests on node
     ...  Download request on node
-    ...  ${PORT_MASTER}
+    ...  ${PORT_MASTER_BKS}
     ...  ${requests}
 
     Verify metric value on node
-    ...  ${PORT_MASTER}
+    ...  ${PORT_MASTER_BKS}
     ...  ${METRIC_CACHE_EVICTION}
     ...  ${3_EXPECTED_EVICTIONS}
 
@@ -58,11 +63,11 @@ Multi Cache Eviction
 
     Execute sequential requests on node
     ...  Download request on node
-    ...  ${PORT_WORKER1}
+    ...  ${PORT_WORKER1_BKS}
     ...  ${requests}
 
     Verify metric value on node
-    ...  ${PORT_WORKER1}
+    ...  ${PORT_WORKER1_BKS}
     ...  ${METRIC_CACHE_EVICTION}
     ...  ${3_EXPECTED_EVICTIONS}
 
@@ -70,29 +75,22 @@ Multi Cache Eviction
 
     Execute sequential requests on node
     ...  Download request on node
-    ...  ${PORT_WORKER2}
+    ...  ${PORT_WORKER2_BKS}
     ...  ${requests}
 
     Verify metric value on node
-    ...  ${PORT_WORKER2}
+    ...  ${PORT_WORKER2_BKS}
     ...  ${METRIC_CACHE_EVICTION}
     ...  ${3_EXPECTED_EVICTIONS}
 
-Fetch cache metrics from container via RMI server
-    [Tags]  rmi
-
-    Start BKS Multi
-
-    &{metrics} =  client Get Cache Metrics  localhost  8123
-    LOG MANY  &{metrics}
-    SHOULD NOT BE EMPTY  ${metrics}
+    [Teardown]  Stop BKS Multi
 
 Read data from container via RMI server using Thrift API
     [Tags]  rmi-read
 
     Start BKS Multi
 
-    ${didRead} =  client Read Data  localhost  8123
+    ${didRead} =  client Read Data  localhost  1901
     ...  file:${REMOTE_PATH}
     ...  ${START_BLOCK}
     ...  ${END_BLOCK}
@@ -108,7 +106,7 @@ Read data from container via RMI server using CachingFileSystem
 
     Start BKS Multi
 
-    ${didRead} =  client Read Data File System  localhost  1099
+    ${didRead} =  client Read Data File System  localhost  1901
     ...  file:${REMOTE_PATH}
     ...  ${START_BLOCK}
     ...  ${END_BLOCK}
@@ -117,7 +115,7 @@ Read data from container via RMI server using CachingFileSystem
     ...  ${cluster_type}
     SHOULD BE TRUE  ${didRead}
 
-#    [Teardown]  Stop BKS Multi
+    [Teardown]  Stop BKS Multi
 
 Simple non-local read test case
     [Tags]  nonlocal
@@ -136,9 +134,39 @@ Simple non-local read test case
     SHOULD BE TRUE  ${didRead}
 
     Verify metric value on node
-    ...  ${PORT_WORKER1}
+    ...  ${PORT_WORKER1_BKS}
     ...  rubix.bookkeeper.count.nonlocal_request
     ...  1
+
+    [Teardown]  Stop BKS Multi
+
+Simple local read test case
+    [Tags]  nonlocal
+    [Documentation]  A simple non-local read test
+
+    # 1. Simple start-up & shutdown
+    Start BKS Multi
+
+    ${didRead} =  client Read Data File System  localhost  1901
+    ...  file:${TEST_FILE_1}
+    ...  ${START_BLOCK}
+    ...  ${END_BLOCK}
+    ...  ${FILE_LENGTH}
+    ...  ${LAST_MODIFIED}
+    ...  ${CLUSTER_TYPE}
+    SHOULD BE TRUE  ${didRead}
+
+    Verify metric value on node
+    ...  ${PORT_WORKER1_BKS}
+    ...  rubix.bookkeeper.count.nonlocal_request
+    ...  0
+
+    Verify metric value on node
+    ...  ${PORT_WORKER1_BKS}
+    ...  rubix.bookkeeper.count.remote_request
+    ...  1
+
+    [Teardown]  Stop BKS Multi
 
 #Simple Multi-Node Test Case
 #    [Tags]  not-multi
