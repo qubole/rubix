@@ -185,13 +185,13 @@ public class TestThriftServerJVM extends Configured
     bookKeeperFactory.createBookKeeperClient(host, conf);
   }
 
-  // @Test
-  // public void testBookKeeperHealthMain() throws IOException, InterruptedException, TTransportException, TException
-  // {
-  //   String healthCheckCmd = hadoopDirectory + " jar " + rubixclientJarPath + BookKeeperHealthClass;
-  //   int exitval;
-  //   Process p = Runtime.getRuntime().exec(healthCheckCmd);
-  //   exitval = p.waitFor();
-  //   assertTrue(exitval == 0, "Main Function returning 1 eventhough bookkeeper is present at default port");
-  // }
+  @Test
+  public void testBookKeeperHealthMain() throws IOException, InterruptedException, TTransportException, TException
+  {
+    String healthCheckCmd = hadoopDirectory + " jar " + rubixclientJarPath + BookKeeperHealthClass;
+    int exitval;
+    Process p = Runtime.getRuntime().exec(healthCheckCmd);
+    exitval = p.waitFor();
+    assertTrue(exitval == 0, "Main Function returning 1 eventhough bookkeeper is present at default port");
+  }
 }
