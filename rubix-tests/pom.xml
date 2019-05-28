@@ -111,6 +111,8 @@
                     </execution>
                 </executions>
                 <configuration>
+                    <name>Integration</name>
+                    <testCasesDirectory>${project.basedir}/src/test/robotframework</testCasesDirectory>
                     <extraPathDirectories>
                         <extraPathDirectory>../rubix-client/target/rubix-client-${project.version}-tests.jar</extraPathDirectory>
                     </extraPathDirectories>

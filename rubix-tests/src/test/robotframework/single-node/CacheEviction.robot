@@ -1,7 +1,7 @@
 *** Settings ***
 Documentation       Rubix Cache Eviction Integration Tests
-Resource            setup.robot
-Resource            bookkeeper.robot
+Resource            ..${/}shared${/}setup.robot
+Resource            ..${/}shared${/}bookkeeper.robot
 Suite Setup         Create Cache Parent Directories     ${CACHE_DIR_PFX}    ${CACHE_NUM_DISKS}
 Suite Teardown      Remove Cache Parent Directories     ${CACHE_DIR_PFX}    ${CACHE_NUM_DISKS}
 
@@ -35,6 +35,7 @@ ${NUM_EXPECTED_EVICTIONS}   3
 *** Test Cases ***
 Cache eviction
     [Template]   Test cache eviction
+    [Tags]           eviction
     Download requests               runConcurrently=${false}
     Concurrently download requests  runConcurrently=${true}
     Read requests                   runConcurrently=${false}

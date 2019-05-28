@@ -141,7 +141,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
     }
     catch (ClassNotFoundException | NoSuchMethodException | InstantiationException |
             IllegalAccessException | InvocationTargetException ex) {
-      String errorMessage = String.format("Not able to initialize ClusterManager class : %s ",
+      String errorMessage = String.format("Not able to initialize ClusterManager class : {0} ",
           clusterManagerClassName);
       log.error(errorMessage);
       throw new ClusterManagerInitilizationException(errorMessage, ex);

@@ -23,8 +23,7 @@ COPY jars/rubix-spi-*.jar /usr/lib/rubix/lib/rubix-spi.jar
 COPY jars/rubix-hadoop2-*.jar /usr/lib/rubix/lib/rubix-hadoop2.jar
 COPY jars/rubix-client-*.jar /usr/lib/rubix/lib/rubix-client.jar
 
-COPY start-servers.sh /tmp/
-COPY rs.policy /tmp/
+COPY initialize-container.sh /tmp/
 
 COPY logging/log4j_bks.properties \
     logging/log4j_lds.properties \

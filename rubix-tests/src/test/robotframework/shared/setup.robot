@@ -34,21 +34,21 @@ Cache test teardown
 Start BKS
     [Arguments]  &{options}
     ${optionArgs} =  Get options argument  &{options}
-    RUN  ${CURDIR}${/}bks.sh start ${optionArgs}
+    RUN  ${CURDIR}${/}bks.sh start-bks ${optionArgs}
     SLEEP  1s
 
 Stop BKS
     [Arguments]  &{options}
     ${optionArgs} =  Get options argument  &{options}
-    RUN  ${CURDIR}${/}bks.sh stop ${optionArgs}
+    RUN  ${CURDIR}${/}bks.sh stop-bks ${optionArgs}
 
-Start BKS Multi
-    ${output} =  RUN  ${CURDIR}${/}multi-node${/}bks-multi.sh start-multi
+Start RubiX cluster
+    ${output} =  RUN  ${CURDIR}${/}bks.sh start-cluster
     LOG  ${output}
-    SLEEP  2s
+    SLEEP  5s
 
-Stop BKS Multi
-    ${output} =  RUN  ${CURDIR}${/}multi-node${/}bks-multi.sh stop-multi
+Stop RubiX cluster
+    ${output} =  RUN  ${CURDIR}${/}bks.sh stop-cluster
     LOG  ${output}
 
 Get options argument

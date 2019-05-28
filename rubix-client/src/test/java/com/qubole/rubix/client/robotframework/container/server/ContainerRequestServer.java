@@ -10,11 +10,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-package com.qubole.rubix.client.robotframework.driver.server;
+package com.qubole.rubix.client.robotframework.container.server;
 
-import com.qubole.rubix.client.robotframework.driver.client.ReadDataCFSRequest;
-import com.qubole.rubix.client.robotframework.driver.client.ReadDataRequestParams;
-import com.qubole.rubix.client.robotframework.driver.execute.RubiXRequest;
+import com.qubole.rubix.client.robotframework.container.client.GetCacheMetricsRequest;
+import com.qubole.rubix.client.robotframework.container.client.ReadDataRequestParams;
+import com.qubole.rubix.client.robotframework.container.client.ReadDataWithFileSystemRequest;
 import com.qubole.rubix.core.MockCachingFileSystem;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
@@ -31,6 +31,8 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.HashMap;
+import java.util.Map;
 
 public class ContainerRequestServer implements RequestServer
 {
@@ -45,68 +47,10 @@ public class ContainerRequestServer implements RequestServer
     super();
   }
 
-  @Override
-  public <T, P> T executeGetCacheMetricsRequest(RubiXRequest<T, P> request) throws RemoteException
-  {
-    T result = null;
-    log.info("Received request");
-    try (RetryingBookkeeperClient client = createBookKeeperClient()) {
-      log.info("Executing request");
-      result = request.execute(client, null);
-    }
-    catch (IOException | TTransportException e) {
-      e.printStackTrace();
-    }
-    log.info("Returning result");
-    return result;
-  }
-
-  @Override
-  public <T, P> T executeReadDataRequest(RubiXRequest<T, P> request, P params) throws RemoteException
-  {
-    T result = null;
-    try (RetryingBookkeeperClient client = createBookKeeperClient()) {
-      result = request.execute(client, params);
-    }
-    catch (IOException | TTransportException e) {
-      e.printStackTrace();
-    }
-    log.info("Returning rd result");
-    return result;
-  }
-
-  @Override
-  public boolean executeReadDataRequestWithCFS(ReadDataCFSRequest request, ReadDataRequestParams params) throws RemoteException
-  {
-    try (FSDataInputStream inputStream = createFSInputStream(params.getRemotePath(), params.getLength())) {
-      boolean didRead = request.execute(inputStream, params);
-      log.info("Returning rd-cfs result: " + didRead);
-      return didRead;
-    }
-    catch (IOException e) {
-      e.printStackTrace();
-    }
-    return false;
-  }
-
-  private RetryingBookkeeperClient createBookKeeperClient() throws TTransportException
-  {
-    log.info("Creating BK client");
-    return factory.createBookKeeperClient(conf);
-  }
-
-  private FSDataInputStream createFSInputStream(String remotePath, int readLength) throws IOException
-  {
-    final MockCachingFileSystem mockFS = new MockCachingFileSystem();
-    mockFS.initialize(URI.create(remotePath), conf);
-    return mockFS.open(new Path(remotePath), readLength);
-  }
-
   public static void main(String[] args)
   {
     try {
       bindServer();
-
       log.debug("ContainerRequestServer bound");
     }
     catch (RemoteException e) {
@@ -114,11 +58,64 @@ public class ContainerRequestServer implements RequestServer
     }
   }
 
+  @Override
+  public Map<String, Double> getCacheMetrics(GetCacheMetricsRequest request) throws RemoteException
+  {
+    try (RetryingBookkeeperClient client = createBookKeeperClient()) {
+      return request.execute(client, null);
+    }
+    catch (IOException | TTransportException e) {
+      log.error("Error getting cache metrics", e);
+    }
+    return new HashMap<>();
+  }
+
+  @Override
+  public boolean cacheDataUsingClientFileSystem(ReadDataWithFileSystemRequest request, ReadDataRequestParams params) throws RemoteException
+  {
+    try (FSDataInputStream inputStream = createFSInputStream(params.getRemotePath(), params.getLength())) {
+      return request.execute(inputStream, params);
+    }
+    catch (IOException e) {
+      log.error("Error caching data using CachingFileSystem", e);
+    }
+    return false;
+  }
+
+  /**
+   * Binds an RMI server to the registry for executing RubiX requests.
+   *
+   * @throws RemoteException if the server could not be bound.
+   */
   private static void bindServer() throws RemoteException
   {
-    RequestServer engine = new ContainerRequestServer();
-    RequestServer stub = (RequestServer) UnicastRemoteObject.exportObject(engine, SERVER_PORT);
-    Registry registry = LocateRegistry.getRegistry();
-    registry.rebind("ContainerRequestServer", stub);
+    final RequestServer server = (RequestServer) UnicastRemoteObject.exportObject(new ContainerRequestServer(), SERVER_PORT);
+    final Registry registry = LocateRegistry.getRegistry();
+    registry.rebind("ContainerRequestServer", server);
+  }
+
+  /**
+   * Create a client for interacting to a BookKeeper server.
+   *
+   * @return The BookKeeper client.
+   * @throws TTransportException if an error occurs when trying to connect to the BookKeeper server.
+   */
+  private RetryingBookkeeperClient createBookKeeperClient() throws TTransportException
+  {
+    return factory.createBookKeeperClient(conf);
+  }
+
+  /**
+   * Creates & initializes an input stream for executing client caching.
+   *
+   * @param remotePath  The path of the file to cache.
+   * @return the input stream for the file.
+   * @throws IOException if an error occurs when initializing the file system.
+   */
+  private FSDataInputStream createFSInputStream(String remotePath, int readLength) throws IOException
+  {
+    final MockCachingFileSystem mockFS = new MockCachingFileSystem();
+    mockFS.initialize(URI.create(remotePath), conf);
+    return mockFS.open(new Path(remotePath), readLength);
   }
 }

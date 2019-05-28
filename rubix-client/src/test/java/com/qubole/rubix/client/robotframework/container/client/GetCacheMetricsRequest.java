@@ -10,31 +10,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-package com.qubole.rubix.client.robotframework.driver.client;
+package com.qubole.rubix.client.robotframework.container.client;
 
-import org.apache.hadoop.fs.FSDataInputStream;
+import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import org.apache.thrift.shaded.TException;
 
-import java.io.IOException;
 import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
 
-public class ReadDataCFSRequest implements Serializable
+public class GetCacheMetricsRequest implements Serializable
 {
   public static final long serialVersionUID = 126L;
 
-  public boolean execute(FSDataInputStream inputStream, ReadDataRequestParams params)
+  public Map<String, Double> execute(RetryingBookkeeperClient client, Void params)
   {
-    System.out.println("Reading data");
-
     try {
-      final int readSize = inputStream.read(
-          new byte[params.getLength()],
-          (int) params.getReadStart(),
-          params.getLength());
-      return readSize == params.getLength();
+      return client.getCacheMetrics();
     }
-    catch (IOException ex) {
-      System.err.println("Could not read data: " + ex.toString());
+    catch (TException ex) {
+      ex.printStackTrace();
     }
-    return false;
+    return new HashMap<>();
   }
 }

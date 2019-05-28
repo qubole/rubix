@@ -1,6 +1,7 @@
 *** Settings ***
-Library     Collections
-Library     com.qubole.rubix.client.robotframework.BookKeeperClientRFLibrary
+Library  Collections
+Library  com.qubole.rubix.client.robotframework.BookKeeperClientRFLibrary
+Library  com.qubole.rubix.client.robotframework.container.client.ContainerRequestClient
 
 *** Keywords ***
 
@@ -36,22 +37,6 @@ Make read request
     ...  ${endBlock}
     ...  ${fileLength}
     ...  ${lastModified}
-    ...  ${clusterType}
-    [Return]  ${request}
-
-Make status request
-    [Arguments]  ${fileName}
-    ...          ${fileLength}
-    ...          ${lastModified}
-    ...          ${startBlock}
-    ...          ${endBlock}
-    ...          ${clusterType}
-    ${request} =  create Test Client Status Request
-    ...  ${fileName}
-    ...  ${fileLength}
-    ...  ${lastModified}
-    ...  ${startBlock}
-    ...  ${endBlock}
     ...  ${clusterType}
     [Return]  ${request}
 
@@ -106,6 +91,24 @@ Concurrently read requests
     ${didReadAll} =  concurrent Read Data  ${numThreads}  @{readRequests}
     SHOULD BE TRUE  ${didReadAll}
 
+Cache data for cluster node
+    [Arguments]  ${port}
+    ...          ${fileName}
+    ...          ${startBlock}
+    ...          ${endBlock}
+    ...          ${fileLength}
+    ...          ${lastModified}
+    ...          ${clusterType}
+    ${didRead} =  cache Data Using Client File System For Node
+    ...  ${port}
+    ...  ${fileName}
+    ...  ${startBlock}
+    ...  ${endBlock}
+    ...  ${fileLength}
+    ...  ${lastModified}
+    ...  ${clusterType}
+    SHOULD BE TRUE  ${didRead}
+
 ## Verification ##
 
 Verify cache directory size
@@ -123,30 +126,9 @@ Verify metric value
     SHOULD NOT BE EMPTY  ${metrics}
     SHOULD BE EQUAL AS NUMBERS  &{metrics}[${metricName}]  ${expectedValue}
 
-
-# Multi-node keywords
-
-Execute sequential requests on node
-    [Arguments]  ${executionKeyword}
-    ...          ${port}
-    ...          ${requests}
-    :FOR  ${request}  IN  @{requests}
-    \  RUN KEYWORD  ${executionKeyword}  ${port}  ${request}
-
-Get status for blocks on node
-    [Arguments]  ${port}  ${statusRequest}
-    @{locations} =  get Cache Status On Node  ${port}  ${statusRequest}
-    SHOULD NOT BE EMPTY  ${locations}
-    [Return]  ${locations}
-
-Download request on node
-    [Arguments]  ${port}  ${readRequest}
-    ${didRead} =  download Data To Cache On Node  ${port}  ${readRequest}
-    SHOULD BE TRUE  ${didRead}
-
 Verify metric value on node
     [Arguments]  ${port}  ${metricName}  ${expectedValue}
-    &{metrics} =  get Cache Metrics On Node  ${port}
+    &{metrics} =  get Cache Metrics For Node  ${port}
     LOG MANY  &{metrics}
     SHOULD NOT BE EMPTY  ${metrics}
     SHOULD BE EQUAL AS NUMBERS  &{metrics}[${metricName}]  ${expectedValue}

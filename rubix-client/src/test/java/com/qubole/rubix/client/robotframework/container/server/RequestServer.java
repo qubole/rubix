@@ -10,20 +10,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-package com.qubole.rubix.client.robotframework.driver.server;
+package com.qubole.rubix.client.robotframework.container.server;
 
-import com.qubole.rubix.client.robotframework.driver.client.ReadDataCFSRequest;
-import com.qubole.rubix.client.robotframework.driver.client.ReadDataRequestParams;
-import com.qubole.rubix.client.robotframework.driver.execute.RubiXRequest;
+import com.qubole.rubix.client.robotframework.container.client.GetCacheMetricsRequest;
+import com.qubole.rubix.client.robotframework.container.client.ReadDataRequestParams;
+import com.qubole.rubix.client.robotframework.container.client.ReadDataWithFileSystemRequest;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
+import java.util.Map;
 
 public interface RequestServer extends Remote
 {
-  <T, P> T executeGetCacheMetricsRequest(RubiXRequest<T, P> request) throws RemoteException;
+  Map<String, Double> getCacheMetrics(GetCacheMetricsRequest request) throws RemoteException;
 
-  <T, P> T executeReadDataRequest(RubiXRequest<T, P> request, P params) throws RemoteException;
-
-  boolean executeReadDataRequestWithCFS(ReadDataCFSRequest request, ReadDataRequestParams params) throws RemoteException;
+  boolean cacheDataUsingClientFileSystem(ReadDataWithFileSystemRequest request, ReadDataRequestParams params) throws RemoteException;
 }

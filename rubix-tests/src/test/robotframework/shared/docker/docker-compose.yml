@@ -7,17 +7,12 @@ services:
         source: /Users/jordanw/Development/test-volume
         target: /tmp/data
     ports:
-      - "8899:8899"  # BookKeeperServer port
-      - "8898:8898"  # LocalDataTransferServer port
+      - "8900:8899"  # BookKeeperServer
+      - "8800:8898"  # LocalDataTransferServer
     networks:
       rubix-cluster:
-        ipv4_address: 172.18.8.100
-    command: >
-      nohup /usr/lib/hadoop/bin/hadoop jar /usr/lib/rubix/lib/rubix-bookkeeper.jar com.qubole.rubix.bookkeeper.BookKeeperServer
-      -Drubix.cluster.is-master=true
-      -Drubix.cache.max.size=2
-      -Drubix.cluster.manager.dummy.class=com.qubole.rubix.core.utils.DockerTestClusterManager
-      -Drubix.cache.filesplit.size=1048576
+        ipv4_address: 172.18.8.0
+    command: /tmp/initialize-container.sh true
   rubix-worker-1:
     depends_on:
       - rubix-master
@@ -27,14 +22,14 @@ services:
         source: /Users/jordanw/Development/test-volume
         target: /tmp/data
     ports:
-      - "8901:8899"  # BookKeeperServer port
-      - "8801:8898"  # LocalDataTransferServer port
-      - "8123:8123/tcp"  # ContainerRequestServer port
-      - "1901:1099/tcp"  # rmiregistry port
+      - "8901:8899"  # BookKeeperServer
+      - "8801:8898"  # LocalDataTransferServer
+      - "8123:8123"  # ContainerRequestServer
+      - "1901:1099"  # rmiregistry
     networks: 
       rubix-cluster:
         ipv4_address: 172.18.8.1
-    command: /tmp/start-servers.sh
+    command: /tmp/initialize-container.sh false
   rubix-worker-2:
     depends_on:
       - rubix-master
@@ -44,12 +39,14 @@ services:
         source: /Users/jordanw/Development/test-volume
         target: /tmp/data
     ports:
-      - "8902:8899"  # BookKeeperServer port
-      - "8802:8898"  # LocalDataTransferServer port
+      - "8902:8899"  # BookKeeperServer
+      - "8802:8898"  # LocalDataTransferServer
+#      - "8123:8123"  # ContainerRequestServer
+#      - "1902:1099"  # rmiregistry
     networks:
       rubix-cluster:
         ipv4_address: 172.18.8.2
-    command: /tmp/start-servers.sh
+    command: /tmp/initialize-container.sh false
 
 networks:
   rubix-cluster:
