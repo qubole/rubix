@@ -86,7 +86,7 @@ public class CacheConfig
   private static final String KEY_MAX_CACHE_SIZE = "rubix.cache.max.size";
   private static final String KEY_CACHE_FILE_SPLIT_SIZE = "rubix.cache.filesplit.size";
   private static final String KEY_CLUSTER_NODE_REFRESH_TIME = "rubix.cluster.node.refresh.time";
-  private static final String KEY_ENABLE_PATH_ENCRYPTION = "rubix.cache.path.encryption";
+  private static final String KEY_ENABLE_PATH_ENCRYPTION = "rubix.cache.path.encryption.enabled";
 
   // default values
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
@@ -532,7 +532,7 @@ public class CacheConfig
     conf.setBoolean(KEY_VALIDATION_ENABLED, isValidationEnabled);
   }
 
-  public static void setpathEncryptionEnabled(Configuration conf, boolean isPathEncryptionEnabled)
+  public static void setPathEncryptionEnabled(Configuration conf, boolean isPathEncryptionEnabled)
   {
     conf.setBoolean(KEY_ENABLE_PATH_ENCRYPTION, isPathEncryptionEnabled);
   }

@@ -12,6 +12,7 @@
  */
 package com.qubole.rubix.spi;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -265,7 +266,8 @@ public class CacheUtil
     return absLocation;
   }
 
-  private static String getHashedPath(String relLocation)
+  @VisibleForTesting
+  protected static String getHashedPath(String relLocation)
   {
     String hashRelLocation = relLocation;
     try {
@@ -278,7 +280,7 @@ public class CacheUtil
       hashRelLocation = sb.toString();
     }
     catch (NoSuchAlgorithmException e) {
-      log.error("No Such Algorithm for Hashing " + e.toString());
+      log.error("No Such Algorithm for Hashing ", e);
     }
     return hashRelLocation;
   }

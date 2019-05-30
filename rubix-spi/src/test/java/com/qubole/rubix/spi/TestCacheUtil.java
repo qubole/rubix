@@ -31,11 +31,10 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Set;
 
+import static com.qubole.rubix.spi.CacheUtil.getHashedPath;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -72,24 +71,6 @@ public class TestCacheUtil
   public void setUpConfiguration()
   {
     conf.clear();
-  }
-
-  private static String getHashedPath(String relLocation)
-  {
-    String hashRelLocation = relLocation;
-    try {
-      MessageDigest md = MessageDigest.getInstance("SHA-256");
-      byte[] pathBytes = md.digest(relLocation.getBytes());
-      StringBuilder sb = new StringBuilder();
-      for (int i = 0; i < pathBytes.length; i++) {
-        sb.append(Integer.toString((pathBytes[i] & 0xff) + 0x100, 16).substring(1));
-      }
-      hashRelLocation = sb.toString();
-    }
-    catch (NoSuchAlgorithmException e) {
-      log.error("No Such Algorithm for Hashing " + e.toString());
-    }
-    return hashRelLocation;
   }
 
   @Test
@@ -173,12 +154,12 @@ public class TestCacheUtil
     CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
     CacheConfig.setCacheDataDirSuffix(conf, "/fcache/");
     CacheConfig.setMaxDisks(conf, 1);
-    CacheConfig.setpathEncryptionEnabled(conf, true);
+    CacheConfig.setPathEncryptionEnabled(conf, true);
 
     createCacheDirectoriesForTest(conf);
     String localPath = CacheUtil.getLocalPath(remotePath, conf);
     assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + getHashedPath("testbucket/123/4566") + "/789", "Paths not equal!");
-    CacheConfig.setpathEncryptionEnabled(conf, false);
+    CacheConfig.setPathEncryptionEnabled(conf, false);
   }
 
   @Test
@@ -188,14 +169,14 @@ public class TestCacheUtil
     CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
     CacheConfig.setCacheDataDirSuffix(conf, "/fcache/");
     CacheConfig.setMaxDisks(conf, 1);
-    CacheConfig.setpathEncryptionEnabled(conf, true);
+    CacheConfig.setPathEncryptionEnabled(conf, true);
 
     createCacheDirectoriesForTest(conf);
 
     String localPath = CacheUtil.getLocalPath(localRelPath, conf);
     //assertEquals(localPath, cacheTestDirPrefix + "0+ "/fcache/" + localRelPath, "Paths not equal!");
     assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + getHashedPath("testbucket/123/4566") + "/789", "Paths not equal!");
-    CacheConfig.setpathEncryptionEnabled(conf, false);
+    CacheConfig.setPathEncryptionEnabled(conf, false);
   }
 
   @Test
@@ -205,13 +186,13 @@ public class TestCacheUtil
     CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
     CacheConfig.setCacheDataDirSuffix(conf, "/fcache/");
     CacheConfig.setMaxDisks(conf, 1);
-    CacheConfig.setpathEncryptionEnabled(conf, true);
+    CacheConfig.setPathEncryptionEnabled(conf, true);
 
     createCacheDirectoriesForTest(conf);
 
     String localPath = CacheUtil.getLocalPath(localRelPath, conf);
     assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + getHashedPath("") + "/testbucket", "Paths not equal!");
-    CacheConfig.setpathEncryptionEnabled(conf, false);
+    CacheConfig.setPathEncryptionEnabled(conf, false);
   }
 
   @Test
@@ -222,7 +203,7 @@ public class TestCacheUtil
     CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
     CacheConfig.setCacheDataDirSuffix(conf, "/fcache/");
     CacheConfig.setMaxDisks(conf, 1);
-    CacheConfig.setpathEncryptionEnabled(conf, true);
+    CacheConfig.setPathEncryptionEnabled(conf, true);
 
     createCacheDirectoriesForTest(conf);
 
@@ -233,7 +214,7 @@ public class TestCacheUtil
     remotePath = "s3://" + localRelPath;
     localPath = CacheUtil.getMetadataFilePath(remotePath, conf);
     assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + getHashedPath("") + "/123_mdfile", "Paths not equal!");
-    CacheConfig.setpathEncryptionEnabled(conf, false);
+    CacheConfig.setPathEncryptionEnabled(conf, false);
   }
 
   @Test
@@ -244,13 +225,13 @@ public class TestCacheUtil
     CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
     CacheConfig.setCacheDataDirSuffix(conf, "/fcache/");
     CacheConfig.setMaxDisks(conf, 1);
-    CacheConfig.setpathEncryptionEnabled(conf, true);
+    CacheConfig.setPathEncryptionEnabled(conf, true);
 
     createCacheDirectoriesForTest(conf);
 
     String localPath = CacheUtil.getMetadataFilePath(remotePath, conf);
     assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + getHashedPath("testbucket/123/456") + "/789_mdfile", "Paths not equal!");
-    CacheConfig.setpathEncryptionEnabled(conf, false);
+    CacheConfig.setPathEncryptionEnabled(conf, false);
   }
 
   @Test
@@ -261,13 +242,13 @@ public class TestCacheUtil
     CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
     CacheConfig.setCacheDataDirSuffix(conf, "/fcache/");
     CacheConfig.setMaxDisks(conf, 1);
-    CacheConfig.setpathEncryptionEnabled(conf, true);
+    CacheConfig.setPathEncryptionEnabled(conf, true);
 
     createCacheDirectoriesForTest(conf);
 
     String localPath = CacheUtil.getMetadataFilePath(remotePath, conf);
     assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + getHashedPath("testbucket/123/456") + "/789_mdfile", "Paths not equal!");
-    CacheConfig.setpathEncryptionEnabled(conf, false);
+    CacheConfig.setPathEncryptionEnabled(conf, false);
   }
 
   @Test
