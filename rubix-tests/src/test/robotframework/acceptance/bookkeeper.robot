@@ -101,8 +101,14 @@ Make similar status requests
 ## Execution ##
 
 Execute concurrent requests
-    [Arguments]  ${executionKeyword}  ${numThreads}  ${requests}
-    RUN KEYWORD  ${executionKeyword}  ${numThreads}  ${requests}
+    [Arguments]  ${executionKeyword}
+    ...          ${numThreads}
+    ...          ${requests}
+    ...          ${staggerRequests}=false
+    RUN KEYWORD  ${executionKeyword}
+    ...  ${numThreads}
+    ...  ${requests}
+    ...  ${staggerRequests}
 
 Execute sequential requests
     [Arguments]  ${executionKeyword}  ${requests}
@@ -121,8 +127,8 @@ Download requests
     SHOULD BE TRUE  ${didRead}
 
 Concurrently download requests
-    [Arguments]  ${numThreads}  ${readRequests}
-    ${didReadAll} =  concurrent Download Data To Cache  ${numThreads}  @{readRequests}
+    [Arguments]  ${numThreads}  ${readRequests}  ${staggerRequests}
+    ${didReadAll} =  concurrent Download Data To Cache  ${numThreads}  ${staggerRequests}  @{readRequests}
     SHOULD BE TRUE  ${didReadAll}
 
 Read requests
@@ -131,8 +137,8 @@ Read requests
     SHOULD BE TRUE  ${didRead}
 
 Concurrently read requests
-    [Arguments]  ${numThreads}  ${readRequests}
-    ${didReadAll} =  concurrent Read Data  ${numThreads}  @{readRequests}
+    [Arguments]  ${numThreads}  ${readRequests}  ${staggerRequests}
+    ${didReadAll} =  concurrent Read Data  ${numThreads}  ${staggerRequests}  @{readRequests}
     SHOULD BE TRUE  ${didReadAll}
 
 ## Verification ##

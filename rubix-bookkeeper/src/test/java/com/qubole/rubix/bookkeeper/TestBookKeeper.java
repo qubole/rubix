@@ -39,6 +39,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
@@ -66,6 +67,7 @@ public class TestBookKeeper
 
   private final Configuration conf = new Configuration();
   private MetricRegistry metrics;
+  private BookKeeperMetrics bookKeeperMetrics;
 
   private BookKeeper bookKeeper;
 
@@ -78,7 +80,8 @@ public class TestBookKeeper
     TestUtil.createCacheParentDirectories(conf, TEST_MAX_DISKS);
 
     metrics = new MetricRegistry();
-    bookKeeper = new CoordinatorBookKeeper(conf, metrics);
+    bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
+    bookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics);
     bookKeeper.clusterManager = null;
   }
 
@@ -87,6 +90,7 @@ public class TestBookKeeper
   {
     TestUtil.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
 
+    bookKeeperMetrics.close();
     conf.clear();
   }
 
@@ -98,6 +102,73 @@ public class TestBookKeeper
 
     assertTrue(manager instanceof DummyClusterManager, " Didn't initialize the correct cluster manager class." +
         " Expected : " + DummyClusterManager.class + " Got : " + manager.getClass());
+  }
+
+  @Test
+  private void testGetCacheDirSize_WithNoGapInMiddle() throws IOException, TException
+  {
+    CacheConfig.setBlockSize(conf, 1024 * 1024);
+    int downloadSize = 3145728; //3MB
+    cacheDirSizeHelper(2000000, downloadSize, false);
+  }
+
+  @Test(enabled = false)
+  private void testGetCacheDirSize_WithGapInMiddle() throws IOException, TException
+  {
+    CacheConfig.setBlockSize(conf, 1024 * 1024);
+    int downloadSize = 3145728; //3MB
+    cacheDirSizeHelper(2000000, downloadSize, true);
+  }
+
+  private void cacheDirSizeHelper(long sizeMultiplier, long downloadSize, boolean hasHole) throws IOException, TException
+  {
+    String testDirectory = CacheConfig.getCacheDirPrefixList(conf) + "0" + CacheConfig.getCacheDataDirSuffix(conf);
+    String backendFileName = testDirectory + "testBackendFile";
+    long fileSize = DataGen.populateFile(backendFileName, 1, (int) sizeMultiplier);
+    final String remotePathWithScheme = "file://" + backendFileName;
+
+    // Read from 30th block to 33rd block
+    int offset = 31457280; //30MB
+    int holeSize = 5242880;
+    int expectedSparseFileSize;
+
+    bookKeeper.readData(remotePathWithScheme, offset, (int) downloadSize, fileSize, TEST_LAST_MODIFIED, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+    verifyDownloadedData(backendFileName, offset, downloadSize);
+    expectedSparseFileSize = (int) DiskUtils.bytesToMB(downloadSize);
+
+    if (hasHole) {
+      // Create a hole of 5 mb at 34th block
+      // Read from 38th block to 40th block
+
+      offset = offset + (int) downloadSize + holeSize; //36MB
+      bookKeeper.readData(remotePathWithScheme, offset, (int) downloadSize, fileSize, TEST_LAST_MODIFIED, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+      verifyDownloadedData(backendFileName, offset, downloadSize);
+      expectedSparseFileSize = (int) DiskUtils.bytesToMB(2 * downloadSize);
+    }
+
+    long sparseFileSize = DiskUtils.getDirectorySizeInMB(new File(CacheUtil.getLocalPath(remotePathWithScheme, conf)));
+    assertTrue(sparseFileSize == expectedSparseFileSize, "getDirectorySizeInMB is reporting wrong file Size : " + sparseFileSize);
+  }
+
+  private void verifyDownloadedData(String backendFileName, int offset, long downloadSize) throws IOException
+  {
+    final String remotePathWithScheme = "file://" + backendFileName;
+
+    int bufferSize = (int) (offset + downloadSize);
+    byte[] buffer = new byte[bufferSize];
+    FileInputStream localFileInputStream = new FileInputStream(new File(CacheUtil.getLocalPath(remotePathWithScheme, conf)));
+    localFileInputStream.read(buffer, 0, bufferSize);
+
+    byte[] backendBuffer = new byte[bufferSize];
+    FileInputStream backendFileInputStream = new FileInputStream(new File(backendFileName));
+    backendFileInputStream.read(backendBuffer, 0, bufferSize);
+
+    for (int i = offset; i <= downloadSize; i++) {
+      assertTrue(buffer[i] == backendBuffer[i], "Got " + buffer[i] + " at " + i + "instead of " + backendBuffer[i]);
+    }
+
+    localFileInputStream.close();
+    backendFileInputStream.close();
   }
 
   @Test(expectedExceptions = ClusterManagerInitilizationException.class)
@@ -156,7 +227,6 @@ public class TestBookKeeper
 
     CacheConfig.setFileStalenessCheck(conf, true);
 
-    bookKeeper = new CoordinatorBookKeeper(conf, new MetricRegistry());
     FileInfo info = bookKeeper.getFileInfo(backendFilePath.toString());
 
     assertTrue(info.getFileSize() == expectedFileSize, "FileSize was not equal to the expected value." +
@@ -181,7 +251,6 @@ public class TestBookKeeper
 
     CacheConfig.setFileStalenessCheck(conf, false);
 
-    bookKeeper = new CoordinatorBookKeeper(conf, new MetricRegistry());
     FileInfo info = bookKeeper.getFileInfo(backendFilePath.toString());
 
     assertTrue(info.getFileSize() == expectedFileSize, "FileSize was not equal to the expected value." +
@@ -207,26 +276,30 @@ public class TestBookKeeper
 
     FakeTicker ticker = new FakeTicker();
 
-    bookKeeper = new CoordinatorBookKeeper(conf, new MetricRegistry(), ticker);
-    FileInfo info = bookKeeper.getFileInfo(backendFilePath.toString());
+    // Close metrics created in setUp(); we want a new one with the above configuration.
+    bookKeeperMetrics.close();
+    try (BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, new MetricRegistry())) {
+      bookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics, ticker);
+      FileInfo info = bookKeeper.getFileInfo(backendFilePath.toString());
 
-    assertTrue(info.getFileSize() == expectedFileSize, "FileSize was not equal to the expected value." +
-        " Got FileSize: " + info.getFileSize() + " Expected Value : " + expectedFileSize);
+      assertTrue(info.getFileSize() == expectedFileSize, "FileSize was not equal to the expected value." +
+          " Got FileSize: " + info.getFileSize() + " Expected Value : " + expectedFileSize);
 
-    //Rewrite the file with half the data
-    DataGen.populateFile(backendFilePath.toString(), 2);
+      //Rewrite the file with half the data
+      DataGen.populateFile(backendFilePath.toString(), 2);
 
-    info = bookKeeper.getFileInfo(backendFilePath.toString());
-    assertTrue(info.getFileSize() == expectedFileSize, "FileSize was not equal to the expected value." +
-        " Got FileSize: " + info.getFileSize() + " Expected Value : " + expectedFileSize);
+      info = bookKeeper.getFileInfo(backendFilePath.toString());
+      assertTrue(info.getFileSize() == expectedFileSize, "FileSize was not equal to the expected value." +
+          " Got FileSize: " + info.getFileSize() + " Expected Value : " + expectedFileSize);
 
-    // Advance the ticker to 5 sec
-    ticker.advance(5, TimeUnit.SECONDS);
+      // Advance the ticker to 5 sec
+      ticker.advance(5, TimeUnit.SECONDS);
 
-    expectedFileSize = DataGen.generateContent(2).length();
-    info = bookKeeper.getFileInfo(backendFilePath.toString());
-    assertTrue(info.getFileSize() == expectedFileSize, "FileSize was not equal to the expected value." +
-        " Got FileSize: " + info.getFileSize() + " Expected Value : " + expectedFileSize);
+      expectedFileSize = DataGen.generateContent(2).length();
+      info = bookKeeper.getFileInfo(backendFilePath.toString());
+      assertTrue(info.getFileSize() == expectedFileSize, "FileSize was not equal to the expected value." +
+          " Got FileSize: " + info.getFileSize() + " Expected Value : " + expectedFileSize);
+    }
   }
 
   /**
@@ -344,9 +417,6 @@ public class TestBookKeeper
     final int readOffset = 0;
     final int readLength = 100;
 
-    CacheConfig.setIsParallelWarmupEnabled(conf, false);
-    bookKeeper = new CoordinatorBookKeeper(conf, new MetricRegistry());
-
     // Since the value returned from a gauge metric is an object rather than a primitive, boxing is required here to properly compare the values.
     assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.CACHE_SIZE_GAUGE.getMetricName()).getValue(), 0);
 
@@ -365,24 +435,29 @@ public class TestBookKeeper
    * @throws FileNotFoundException when cache directories cannot be created.
    */
   @Test
-  public void verifyCacheEvictionMetricIsReported() throws TException, FileNotFoundException
+  public void verifyCacheExpiryMetricIsReported() throws TException, IOException
   {
     final FakeTicker ticker = new FakeTicker();
     CacheConfig.setCacheDataExpirationAfterWrite(conf, 1000);
     metrics = new MetricRegistry();
-    bookKeeper = new CoordinatorBookKeeper(conf, metrics, ticker);
 
-    assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.CACHE_EXPIRY_COUNT.getMetricName()).getCount(), 0);
+    // Close metrics created in setUp(); we want a new one with the above configuration.
+    bookKeeperMetrics.close();
+    try (BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, metrics)) {
+      bookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics, ticker);
 
-    CacheStatusRequest request = new CacheStatusRequest(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
-        TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
-    request.setIncrMetrics(true);
-    bookKeeper.getCacheStatus(request);
+      assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.CACHE_EXPIRY_COUNT.getMetricName()).getCount(), 0);
 
-    ticker.advance(30000, TimeUnit.MILLISECONDS);
-    bookKeeper.fileMetadataCache.cleanUp();
+      CacheStatusRequest request = new CacheStatusRequest(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
+          TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+      request.setIncrMetrics(true);
+      bookKeeper.getCacheStatus(request);
 
-    assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.CACHE_EXPIRY_COUNT.getMetricName()).getCount(), 1);
+      ticker.advance(30000, TimeUnit.MILLISECONDS);
+      bookKeeper.fileMetadataCache.cleanUp();
+
+      assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.CACHE_EXPIRY_COUNT.getMetricName()).getCount(), 1);
+    }
   }
 
   /**

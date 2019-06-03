@@ -30,7 +30,6 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import static org.mockito.ArgumentMatchers.anyString;
@@ -95,29 +94,37 @@ public class TestHeartbeatService
    * @throws TTransportException if the BookKeeper client cannot be created.
    */
   @Test
-  public void testHeartbeatRetryLogic_noRetriesNeeded() throws TTransportException, FileNotFoundException
+  public void testHeartbeatRetryLogic_noRetriesNeeded() throws TTransportException, IOException
   {
     final BookKeeperFactory bookKeeperFactory = mock(BookKeeperFactory.class);
     when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
         new RetryingBookkeeperClient(
-            new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf)),
+            new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getServerConnectTimeout(conf)),
             CacheConfig.getMaxRetries(conf)));
 
-    final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, new MetricRegistry());
-    final HeartbeatService heartbeatService = new HeartbeatService(conf, new MetricRegistry(), bookKeeperFactory, bookKeeper);
+    // Disable default reporters for this BookKeeper, since they will conflict with the running server.
+    CacheConfig.setMetricsReporters(conf, "");
+    try (BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, new MetricRegistry())) {
+      final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics);
+      final HeartbeatService heartbeatService = new HeartbeatService(conf, new MetricRegistry(), bookKeeperFactory, bookKeeper);
+    }
   }
 
   /**
    * Verify that the heartbeat service correctly makes a connection using a BookKeeper client after a number of retries.
    */
   @Test
-  public void testHeartbeatRetryLogic_connectAfterRetries() throws FileNotFoundException
+  public void testHeartbeatRetryLogic_connectAfterRetries() throws IOException
   {
     BaseServerTest.stopBookKeeperServer();
     BaseServerTest.startCoordinatorBookKeeperServerWithDelay(conf, new MetricRegistry(), TEST_RETRY_INTERVAL * 2);
 
-    final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, new MetricRegistry());
-    final HeartbeatService heartbeatService = new HeartbeatService(conf, new MetricRegistry(), new BookKeeperFactory(), bookKeeper);
+    // Disable default reporters for this BookKeeper, since they will conflict with the running server.
+    CacheConfig.setMetricsReporters(conf, "");
+    try (BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, new MetricRegistry())) {
+      final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics);
+      final HeartbeatService heartbeatService = new HeartbeatService(conf, new MetricRegistry(), new BookKeeperFactory(), bookKeeper);
+    }
   }
 
   /**
@@ -126,13 +133,17 @@ public class TestHeartbeatService
    * @throws TTransportException if the BookKeeper client cannot be created.
    */
   @Test(expectedExceptions = RuntimeException.class)
-  public void testHeartbeatRetryLogic_outOfRetries() throws TTransportException, FileNotFoundException
+  public void testHeartbeatRetryLogic_outOfRetries() throws TTransportException, IOException
   {
     final BookKeeperFactory bookKeeperFactory = mock(BookKeeperFactory.class);
     when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenThrow(TTransportException.class);
 
-    final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, new MetricRegistry());
-    final HeartbeatService heartbeatService = new HeartbeatService(conf, new MetricRegistry(), bookKeeperFactory, bookKeeper);
+    // Disable default reporters for this BookKeeper, since they will conflict with the running server.
+    CacheConfig.setMetricsReporters(conf, "");
+    try (BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, new MetricRegistry())) {
+      final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics);
+      final HeartbeatService heartbeatService = new HeartbeatService(conf, new MetricRegistry(), bookKeeperFactory, bookKeeper);
+    }
   }
 
   /**
@@ -141,22 +152,27 @@ public class TestHeartbeatService
    * @throws TTransportException if the BookKeeper client cannot be created.
    */
   @Test
-  public void verifyValidationMetricsAreCorrectlyRegistered_validationEnabled() throws FileNotFoundException, TTransportException
+  public void verifyValidationMetricsAreCorrectlyRegistered_validationEnabled() throws IOException, TTransportException
   {
     CacheConfig.setValidationEnabled(conf, true);
 
     final BookKeeperFactory bookKeeperFactory = mock(BookKeeperFactory.class);
     when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
         new RetryingBookkeeperClient(
-            new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf)),
+            new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getServerConnectTimeout(conf)),
             CacheConfig.getMaxRetries(conf)));
 
     final MetricRegistry metrics = new MetricRegistry();
-    final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);
-    final HeartbeatService heartbeatService = new HeartbeatService(conf, metrics, bookKeeperFactory, bookKeeper);
 
-    assertNotNull(metrics.getGauges().get(BookKeeperMetrics.ValidationMetric.CACHING_VALIDATION_SUCCESS_GAUGE.getMetricName()), "Caching validation success metric should be registered!");
-    assertNotNull(metrics.getGauges().get(BookKeeperMetrics.ValidationMetric.FILE_VALIDATION_SUCCESS_GAUGE.getMetricName()), "File validation success metric should be registered!");
+    // Disable default reporters for this BookKeeper, since they will conflict with the running server.
+    CacheConfig.setMetricsReporters(conf, "");
+    try (BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, metrics)) {
+      final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics);
+      final HeartbeatService heartbeatService = new HeartbeatService(conf, metrics, bookKeeperFactory, bookKeeper);
+
+      assertNotNull(metrics.getGauges().get(BookKeeperMetrics.ValidationMetric.CACHING_VALIDATION_SUCCESS_GAUGE.getMetricName()), "Caching validation success metric should be registered!");
+      assertNotNull(metrics.getGauges().get(BookKeeperMetrics.ValidationMetric.FILE_VALIDATION_SUCCESS_GAUGE.getMetricName()), "File validation success metric should be registered!");
+    }
   }
 
   /**
@@ -165,21 +181,26 @@ public class TestHeartbeatService
    * @throws TTransportException if the BookKeeper client cannot be created.
    */
   @Test
-  public void verifyValidationMetricsAreCorrectlyRegistered_validationDisabled() throws FileNotFoundException, TTransportException
+  public void verifyValidationMetricsAreCorrectlyRegistered_validationDisabled() throws IOException, TTransportException
   {
     CacheConfig.setValidationEnabled(conf, false);
 
     final BookKeeperFactory bookKeeperFactory = mock(BookKeeperFactory.class);
     when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
         new RetryingBookkeeperClient(
-            new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf)),
+            new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getServerConnectTimeout(conf)),
             CacheConfig.getMaxRetries(conf)));
 
     final MetricRegistry metrics = new MetricRegistry();
-    final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);
-    final HeartbeatService heartbeatService = new HeartbeatService(conf, metrics, bookKeeperFactory, bookKeeper);
 
-    assertNull(metrics.getGauges().get(BookKeeperMetrics.ValidationMetric.CACHING_VALIDATION_SUCCESS_GAUGE.getMetricName()), "Caching validation success metric should not be registered!");
-    assertNull(metrics.getGauges().get(BookKeeperMetrics.ValidationMetric.FILE_VALIDATION_SUCCESS_GAUGE.getMetricName()), "File validation success metric should not be registered!");
+    // Disable default reporters for this BookKeeper, since they will conflict with the running server.
+    CacheConfig.setMetricsReporters(conf, "");
+    try (BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, metrics)) {
+      final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics);
+      final HeartbeatService heartbeatService = new HeartbeatService(conf, metrics, bookKeeperFactory, bookKeeper);
+
+      assertNull(metrics.getGauges().get(BookKeeperMetrics.ValidationMetric.CACHING_VALIDATION_SUCCESS_GAUGE.getMetricName()), "Caching validation success metric should not be registered!");
+      assertNull(metrics.getGauges().get(BookKeeperMetrics.ValidationMetric.FILE_VALIDATION_SUCCESS_GAUGE.getMetricName()), "File validation success metric should not be registered!");
+    }
   }
 }
