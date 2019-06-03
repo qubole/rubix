@@ -53,6 +53,11 @@ public class BookKeeperMetrics implements AutoCloseable
     return metricsFilter;
   }
 
+  public MetricRegistry getMetricsRegistry()
+  {
+    return metrics;
+  }
+
   /**
    * Initialize reporters for reporting metrics to desired services.
    */

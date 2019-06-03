@@ -14,6 +14,7 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
+import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.thrift.HeartbeatStatus;
 import org.apache.commons.logging.Log;
@@ -27,14 +28,14 @@ public class WorkerBookKeeper extends BookKeeper
   private static Log log = LogFactory.getLog(WorkerBookKeeper.class);
   private HeartbeatService heartbeatService;
 
-  public WorkerBookKeeper(Configuration conf, MetricRegistry metrics) throws FileNotFoundException
+  public WorkerBookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics) throws FileNotFoundException
   {
-    this(conf, metrics, new BookKeeperFactory());
+    this(conf, bookKeeperMetrics, new BookKeeperFactory());
   }
 
-  public WorkerBookKeeper(Configuration conf, MetricRegistry metrics, BookKeeperFactory factory) throws FileNotFoundException
+  public WorkerBookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics, BookKeeperFactory factory) throws FileNotFoundException
   {
-    super(conf, metrics);
+    super(conf, bookKeeperMetrics);
     startHeartbeatService(conf, metrics, factory);
   }
 
