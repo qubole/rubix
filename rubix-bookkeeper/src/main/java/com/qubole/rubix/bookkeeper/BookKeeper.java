@@ -768,6 +768,9 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     else if (gaugeValue instanceof Integer) {
       return ((Integer) gaugeValue).doubleValue();
     }
+    else if (Double.isNaN((double) gaugeValue)) {
+      return Double.NaN;
+    }
     else {
       throw new ClassCastException("Could not cast gauge metric value type to Double");
     }
