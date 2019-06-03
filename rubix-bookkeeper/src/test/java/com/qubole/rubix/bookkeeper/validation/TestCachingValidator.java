@@ -85,9 +85,11 @@ public class TestCachingValidator
    * @throws FileNotFoundException when cache directories cannot be created.
    */
   @Test
-  public void testValidateCachingBehavior() throws TException, FileNotFoundException
+  public void testValidateCachingBehavior() throws TException, IOException
   {
-    checkValidator(new CoordinatorBookKeeper(conf, new MetricRegistry()), true);
+    try (BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, new MetricRegistry())) {
+      checkValidator(new CoordinatorBookKeeper(conf, bookKeeperMetrics), true);
+    }
   }
 
   /**
@@ -169,16 +171,19 @@ public class TestCachingValidator
    * @throws FileNotFoundException when cache directories cannot be created.
    */
   @Test
-  public void testValidateCachingBehavior_verifyOtherMetricsUnaffected() throws TException, FileNotFoundException
+  public void testValidateCachingBehavior_verifyOtherMetricsUnaffected() throws TException, IOException
   {
     final MetricRegistry metrics = new MetricRegistry();
-    final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);
 
-    assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.TOTAL_REQUEST_COUNT.getMetricName()).getCount(), 0);
+    try (BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, metrics)) {
+      final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics);
 
-    checkValidator(bookKeeper, true);
+      assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.TOTAL_REQUEST_COUNT.getMetricName()).getCount(), 0);
 
-    assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.TOTAL_REQUEST_COUNT.getMetricName()).getCount(), 0);
+      checkValidator(bookKeeper, true);
+
+      assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.TOTAL_REQUEST_COUNT.getMetricName()).getCount(), 0);
+    }
   }
 
   /**
@@ -193,7 +198,7 @@ public class TestCachingValidator
     final BookKeeperFactory bookKeeperFactory = mock(BookKeeperFactory.class);
     when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
         new RetryingBookkeeperClient(
-            new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getClientTimeout(conf)),
+            new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getServerConnectTimeout(conf)),
             CacheConfig.getMaxRetries(conf)));
 
     CachingValidator validator = new CachingValidator(conf, bookKeeper, Executors.newSingleThreadScheduledExecutor());

@@ -66,8 +66,14 @@ Make similar read requests
 
 Execute concurrent requests
     [Documentation]  Using the provided keyword, execute the requests concurrently on the specified number of threads.
-    [Arguments]  ${executionKeyword}  ${numThreads}  ${requests}
-    RUN KEYWORD  ${executionKeyword}  ${numThreads}  ${requests}
+    [Arguments]  ${executionKeyword}
+    ...          ${numThreads}
+    ...          ${requests}
+    ...          ${staggerRequests}=false
+    RUN KEYWORD  ${executionKeyword}
+    ...  ${numThreads}
+    ...  ${requests}
+    ...  ${staggerRequests}
 
 Execute sequential requests
     [Documentation]  Using the provided keyword, execute the requests sequentially.
@@ -83,8 +89,8 @@ Execute read request using BookKeeper server call
 
 Concurrently execute read requests using BookKeeper server call
     [Documentation]  Execute the read requests concurrently by directly calling the BookKeeper server.
-    [Arguments]  ${numThreads}  ${readRequests}
-    ${didReadAll} =  concurrently Cache Data Using BookKeeper Server Call  ${numThreads}  @{readRequests}
+    [Arguments]  ${numThreads}  ${readRequests}  ${staggerRequests}
+    ${didReadAll} =  concurrently Cache Data Using BookKeeper Server Call  ${numThreads}  ${staggerRequests}  @{readRequests}
     SHOULD BE TRUE  ${didReadAll}
 
 Execute read request using client file system
@@ -95,8 +101,8 @@ Execute read request using client file system
 
 Concurrently execute read requests using client file system
     [Documentation]  Execute the read requests concurrently by using a client-side CachingFileSystem.
-    [Arguments]  ${numThreads}  ${readRequests}
-    ${didReadAll} =  concurrently Cache Data Using Client File System  ${numThreads}  @{readRequests}
+    [Arguments]  ${numThreads}  ${readRequests}  ${staggerRequests}
+    ${didReadAll} =  concurrently Cache Data Using Client File System  ${numThreads}  ${staggerRequests}  @{readRequests}
     SHOULD BE TRUE  ${didReadAll}
 
 ## Verification ##

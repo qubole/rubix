@@ -31,24 +31,16 @@ import java.util.concurrent.ExecutionException;
  */
 public abstract class ClusterManager
 {
-  private long splitSize = 256 * 1024 * 1024; // 256MB
+  private long splitSize;
+  private int nodeRefreshTime;
 
-  private int nodeRefreshTime = 300; //sec
-
-  public static String splitSizeConf = "caching.fs.split-size";
-
-  public static String nodeRefreshTimeConf = "caching.fs.node-refresh-time";
-
-  public ClusterType getClusterType()
-  {
-    return null;
-  }
+  public abstract ClusterType getClusterType();
 
   public void initialize(Configuration conf)
 
   {
-    splitSize = conf.getLong(splitSizeConf, splitSize);
-    nodeRefreshTime = conf.getInt(nodeRefreshTimeConf, nodeRefreshTime);
+    splitSize = CacheConfig.getCacheFileSplitSize(conf);
+    nodeRefreshTime = CacheConfig.getClusterNodeRefreshTime(conf);
   }
 
   public int getNodeIndex(int numNodes, String key)
