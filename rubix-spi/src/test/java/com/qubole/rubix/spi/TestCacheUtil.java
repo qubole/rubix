@@ -163,22 +163,6 @@ public class TestCacheUtil
   }
 
   @Test
-  public void testGetLocalPathTemp() throws ExecutionException
-  {
-    String localRelPath = "testbucket/123/4566/789";
-    String remotePath = "s3://" + localRelPath;
-    CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
-    CacheConfig.setCacheDataDirSuffix(conf, "/fcache/");
-    CacheConfig.setMaxDisks(conf, 1);
-    CacheConfig.setPathEncryptionEnabled(conf, true);
-
-    createCacheDirectoriesForTest(conf);
-    String localPath = CacheUtil.getLocalPath(remotePath, conf);
-    assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + CacheUtil.hashedPaths.get("testbucket/123/4566") + "/789", "Paths not equal!");
-    CacheConfig.setPathEncryptionEnabled(conf, false);
-  }
-
-  @Test
   public void testGetLocalPath_noRemotePathScheme_WithPathEncryption() throws ExecutionException
   {
     String localRelPath = "testbucket/123/4566/789";
