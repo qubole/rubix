@@ -14,13 +14,6 @@
         <main.basedir>${project.parent.basedir}</main.basedir>
     </properties>
 
-    <pluginRepositories>
-        <pluginRepository>
-            <id>dtrott</id>
-            <url>http://maven.davidtrott.com/repository</url>
-        </pluginRepository>
-    </pluginRepositories>
-
     <dependencies>
         <dependency>
             <groupId>commons-logging</groupId>

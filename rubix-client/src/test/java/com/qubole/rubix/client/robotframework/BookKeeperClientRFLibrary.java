@@ -53,7 +53,7 @@ public class BookKeeperClientRFLibrary
    * @param readRequest The read request to execute.
    * @return True if the data was read into the cache correctly, false otherwise.
    */
-  public boolean downloadDataToCache(TestClientReadRequest readRequest) throws IOException, TException
+  public boolean cacheDataUsingBookKeeperServerCall(TestClientReadRequest readRequest) throws IOException, TException
   {
     try (RetryingBookkeeperClient client = createBookKeeperClient()) {
       return client.readData(
@@ -73,9 +73,9 @@ public class BookKeeperClientRFLibrary
    * @param readRequests  The read requests to concurrently execute.
    * @return True if all read requests succeeded, false otherwise.
    */
-  public boolean concurrentDownloadDataToCache(int numThreads,
-                                               boolean staggerRequests,
-                                               List<TestClientReadRequest> readRequests) throws TException, InterruptedException, ExecutionException
+  public boolean concurrentlyCacheDataUsingBookKeeperServerCall(int numThreads,
+                                                                boolean staggerRequests,
+                                                                List<TestClientReadRequest> readRequests) throws TException, InterruptedException, ExecutionException
   {
     final List<Callable<Boolean>> tasks = new ArrayList<>();
     for (final TestClientReadRequest request : readRequests) {
@@ -84,7 +84,7 @@ public class BookKeeperClientRFLibrary
         @Override
         public Boolean call() throws Exception
         {
-          return downloadDataToCache(request);
+          return cacheDataUsingBookKeeperServerCall(request);
         }
       };
       tasks.add(callable);
@@ -101,7 +101,7 @@ public class BookKeeperClientRFLibrary
    * @param readRequest The read request to execute.
    * @return True if the data was read into the cache correctly, false otherwise.
    */
-  public boolean readData(TestClientReadRequest readRequest) throws IOException, TException, URISyntaxException
+  public boolean cacheDataUsingClientFileSystem(TestClientReadRequest readRequest) throws IOException, TException, URISyntaxException
   {
     try (FSDataInputStream inputStream = createFSInputStream(getPathWithFileScheme(readRequest.getRemotePath()), readRequest.getReadLength())) {
       final int readSize = inputStream.read(
@@ -119,9 +119,9 @@ public class BookKeeperClientRFLibrary
    * @param readRequests  The read requests to concurrently execute.
    * @return True if all read requests succeeded, false otherwise.
    */
-  public boolean concurrentReadData(int numThreads,
-                                    boolean staggerRequests,
-                                    List<TestClientReadRequest> readRequests) throws TException, InterruptedException, ExecutionException
+  public boolean concurrentlyCacheDataUsingClientFileSystem(int numThreads,
+                                                            boolean staggerRequests,
+                                                            List<TestClientReadRequest> readRequests) throws TException, InterruptedException, ExecutionException
   {
     final List<Callable<Boolean>> tasks = new ArrayList<>();
     for (final TestClientReadRequest request : readRequests) {
@@ -130,7 +130,7 @@ public class BookKeeperClientRFLibrary
         @Override
         public Boolean call() throws Exception
         {
-          return readData(request);
+          return cacheDataUsingClientFileSystem(request);
         }
       };
       tasks.add(callable);
