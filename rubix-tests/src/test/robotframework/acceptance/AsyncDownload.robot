@@ -44,30 +44,30 @@ ${ASYNC_PROCESS_DELAY_SOME_DELAYED}     2000
 Async caching
     [Documentation]  Verify that files are correctly cached when asynchronously downloaded.
     [Template]  Test async caching
-    Download requests               runConcurrently=${false}
-    Concurrently download requests  runConcurrently=${true}
-    Read requests                   runConcurrently=${false}
-    Concurrently read requests      runConcurrently=${true}
+    Execute read request using BookKeeper server call                runConcurrently=${false}
+    Concurrently execute read requests using BookKeeper server call  runConcurrently=${true}
+    Execute read request using client file system                    runConcurrently=${false}
+    Concurrently execute read requests using client file system      runConcurrently=${true}
 
 Async caching - Some requests delayed
     [Documentation]  Verify that asynchronous caching only downloads files queued outside of the delay period.
     [Template]  Test async caching with some requests delayed
-    Download requests               runConcurrently=${false}
-    Concurrently download requests  runConcurrently=${true}
-    Read requests                   runConcurrently=${false}
-    Concurrently read requests      runConcurrently=${true}
+    Execute read request using BookKeeper server call                runConcurrently=${false}
+    Concurrently execute read requests using BookKeeper server call  runConcurrently=${true}
+    Execute read request using client file system                    runConcurrently=${false}
+    Concurrently execute read requests using client file system      runConcurrently=${true}
 
 Async caching - Request 1 file date before Request 2
     [Documentation]  Verify that later read requests for the same file with a later last-modified date are handled correctly.
     [Template]  Test async caching with request 1 file date before request 2
-    Download requests               runConcurrently=${false}
-    Concurrently download requests  runConcurrently=${true}
+    Execute read request using BookKeeper server call                runConcurrently=${false}
+    Concurrently execute read requests using BookKeeper server call  runConcurrently=${true}
 
 Async caching - Request 1 file date after Request 2
     [Documentation]  Verify that later read requests for the same file with an earlier last-modified date are handled correctly.
     [Template]  Test async caching with request 1 file date after request 2
-    Download requests               runConcurrently=${false}
-    Concurrently download requests  runConcurrently=${true}
+    Execute read request using BookKeeper server call                runConcurrently=${false}
+    Concurrently execute read requests using BookKeeper server call  runConcurrently=${true}
 
 *** Keywords ***
 Test async caching
