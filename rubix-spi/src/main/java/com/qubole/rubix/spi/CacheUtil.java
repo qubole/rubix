@@ -35,11 +35,15 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 
 public class CacheUtil
 {
   private static final Log log = LogFactory.getLog(CacheUtil.class);
-  private static LoadingCache<String, String> hashedPaths = CacheBuilder.newBuilder().build(new CacheLoader<String, String>() {
+  private static ConcurrentHashMap<String, Boolean> hashedPathSet = new ConcurrentHashMap<>();
+  @VisibleForTesting
+  protected static LoadingCache<String, String> hashedPaths = CacheBuilder.newBuilder().build(new CacheLoader<String, String>() {
     @Override
     public String load(final String relLocation) throws Exception
     {
@@ -258,7 +262,12 @@ public class CacheUtil
       }
     }
     if (CacheConfig.isPathEncryptionEnabled(conf)) {
-      relLocation = hashedPaths.getUnchecked(relLocation);
+      try {
+        relLocation = hashedPaths.get(relLocation);
+      }
+      catch (ExecutionException e) {
+        log.error("Couldn't find the hashed path for the location ", e);
+      }
     }
     final String absLocation = getLocalDirFor(remotePath, conf) + relLocation;
     createCacheDirectory(absLocation);
@@ -278,6 +287,12 @@ public class CacheUtil
         sb.append(Integer.toString((pathBytes[i] & 0xff) + 0x100, 16).substring(1));
       }
       hashRelLocation = sb.toString();
+      if (hashedPathSet.get(hashRelLocation) != null) {
+        return getHashedPath(hashRelLocation);
+      }
+      else {
+        hashedPathSet.put(hashRelLocation, true);
+      }
     }
     catch (NoSuchAlgorithmException e) {
       log.error("No Such Algorithm for Hashing ", e);
