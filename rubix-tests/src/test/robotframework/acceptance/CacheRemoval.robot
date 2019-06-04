@@ -45,34 +45,34 @@ ${ASYNC_PROCESS_DELAY}      1
 Cache eviction
     [Template]  Test cache eviction
     [Tags]  eviction
-    Download requests               runConcurrently=${false}
-    Concurrently download requests  runConcurrently=${true}
-    Read requests                   runConcurrently=${false}
-    Concurrently read requests      runConcurrently=${true}
+    Execute read request using BookKeeper server call                runConcurrently=${false}
+    Concurrently execute read requests using BookKeeper server call  runConcurrently=${true}
+    Execute read request using client file system                    runConcurrently=${false}
+    Concurrently execute read requests using client file system      runConcurrently=${true}
 
 Cache invalidation - last modified does not match
     [Tags]  invalidation
     [Template]  Test cache invalidation where last modified does not match
-    Download requests               runConcurrently=${false}
-    Concurrently download requests  runConcurrently=${true}
-    Read requests                   runConcurrently=${false}
-    Concurrently read requests      runConcurrently=${true}
+    Execute read request using BookKeeper server call                runConcurrently=${false}
+    Concurrently execute read requests using BookKeeper server call  runConcurrently=${true}
+    Execute read request using client file system                    runConcurrently=${false}
+    Concurrently execute read requests using client file system      runConcurrently=${true}
 
 Cache invalidation - MD exists without file
     [Template]  Test cache invalidation during async download where MD exists but file does not
     [Tags]  invalidation
-    Download requests               runConcurrently=${false}
-    Concurrently download requests  runConcurrently=${true}
-    Read requests                   runConcurrently=${false}
-    Concurrently read requests      runConcurrently=${true}
+    Execute read request using BookKeeper server call                runConcurrently=${false}
+    Concurrently execute read requests using BookKeeper server call  runConcurrently=${true}
+    Execute read request using client file system                    runConcurrently=${false}
+    Concurrently execute read requests using client file system      runConcurrently=${true}
 
 Cache expiry
     [Template]  Test cache expiry
     [Tags]  expiry
-    Download requests               runConcurrently=${false}
-    Concurrently download requests  runConcurrently=${true}
-    Read requests                   runConcurrently=${false}
-    Concurrently read requests      runConcurrently=${true}
+    Execute read request using BookKeeper server call                runConcurrently=${false}
+    Concurrently execute read requests using BookKeeper server call  runConcurrently=${true}
+    Execute read request using client file system                    runConcurrently=${false}
+    Concurrently execute read requests using client file system      runConcurrently=${true}
 
 *** Keywords ***
 Test cache eviction
