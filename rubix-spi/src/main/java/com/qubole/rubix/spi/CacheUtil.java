@@ -42,12 +42,23 @@ public class CacheUtil
 {
   private static final Log log = LogFactory.getLog(CacheUtil.class);
   private static ConcurrentHashMap<String, Boolean> hashedPathSet = new ConcurrentHashMap<>();
+  private static ConcurrentHashMap<String, Boolean> hashedFileNameSet = new ConcurrentHashMap<>();
+
   @VisibleForTesting
   protected static LoadingCache<String, String> hashedPaths = CacheBuilder.newBuilder().build(new CacheLoader<String, String>() {
     @Override
     public String load(final String relLocation) throws Exception
     {
       return getHashedPath(relLocation);
+    }
+  });
+
+  @VisibleForTesting
+  protected static LoadingCache<String, String> hashedFileNames = CacheBuilder.newBuilder().build(new CacheLoader<String, String>() {
+    @Override
+    public String load(final String fileName) throws Exception
+    {
+      return getHashedFileName(fileName);
     }
   });
 
@@ -152,7 +163,7 @@ public class CacheUtil
   public static String getLocalPath(String remotePath, Configuration conf)
   {
     final String absLocation = getDirectory(remotePath, conf);
-    return absLocation + "/" + getName(remotePath);
+    return absLocation + "/" + getName(remotePath, conf);
   }
 
   public static String getRemotePath(String localPath, Configuration conf)
@@ -173,7 +184,7 @@ public class CacheUtil
   public static String getMetadataFilePath(String remotePath, Configuration conf)
   {
     final String absLocation = getDirectory(remotePath, conf);
-    return absLocation + "/" + getName(remotePath) + CacheConfig.getCacheMetadataFileSuffix(conf);
+    return absLocation + "/" + getName(remotePath, conf) + CacheConfig.getCacheMetadataFileSuffix(conf);
   }
 
   /**
@@ -332,15 +343,49 @@ public class CacheUtil
     return dirname;
   }
 
+  @VisibleForTesting
+  protected static String getHashedFileName(String fileName)
+  {
+    String hashFileName = fileName;
+    try {
+      MessageDigest md = MessageDigest.getInstance("SHA-256");
+      byte[] pathBytes = md.digest(fileName.getBytes());
+      StringBuilder sb = new StringBuilder();
+      for (int i = 0; i < pathBytes.length; i++) {
+        sb.append(Integer.toString((pathBytes[i] & 0xff) + 0x100, 16).substring(1));
+      }
+      hashFileName = sb.toString();
+      if (hashedFileNameSet.get(hashFileName) != null) {
+        return getHashedFileName(hashFileName);
+      }
+      else {
+        hashedFileNameSet.put(hashFileName, true);
+      }
+    }
+    catch (NoSuchAlgorithmException e) {
+      log.error("No Such Algorithm for Hashing ", e);
+    }
+    return hashFileName;
+  }
+
   /**
    * Get the directory name for a given remote path.
    *
    * @param remotePath  The remote path to parse.
    * @return The remote path's directory name.
    */
-  public static String getName(String remotePath)
+  public static String getName(String remotePath, Configuration conf)
   {
-    return remotePath.contains("/") ? remotePath.substring(remotePath.lastIndexOf('/') + 1) : remotePath;
+    String hashedFileName = remotePath.contains("/") ? remotePath.substring(remotePath.lastIndexOf('/') + 1) : remotePath;
+    if (CacheConfig.isPathEncryptionEnabled(conf)) {
+      try {
+        hashedFileName = hashedFileNames.get(hashedFileName);
+      }
+      catch (ExecutionException e) {
+        log.info("Couldn't get the hashed FileName from the cached hashes", e);
+      }
+    }
+    return hashedFileName;
   }
 
   /**

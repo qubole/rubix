@@ -568,7 +568,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     return endBlock;
   }
 
-  private static synchronized void initializeCache(final Configuration conf, final Ticker ticker)
+  private void initializeCache(final Configuration conf, final Ticker ticker)
       throws FileNotFoundException
   {
     CacheUtil.createCacheDirectories(conf);
@@ -642,7 +642,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         }, executor));
   }
 
-  protected static class CacheRemovalListener implements RemovalListener<String, FileMetadata>
+  protected class CacheRemovalListener implements RemovalListener<String, FileMetadata>
   {
     @Override
     public void onRemoval(RemovalNotification<String, FileMetadata> notification)
@@ -733,8 +733,8 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     return false;
   }
 
-  private static boolean isValidatingCachingBehavior(String remotePath)
+  private boolean isValidatingCachingBehavior(String remotePath)
   {
-    return CachingValidator.VALIDATOR_TEST_FILE_NAME.equals(CacheUtil.getName(remotePath));
+    return CachingValidator.VALIDATOR_TEST_FILE_NAME.equals(CacheUtil.getName(remotePath, this.conf));
   }
 }
