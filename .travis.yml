@@ -5,7 +5,7 @@ language: java
 services:
   - docker
 jdk:
-  - openjdk8
+  - openjdk7
 sudo: enabled
 before_install:
   - docker pull quboleinc/hadoop_mvn_thrift
