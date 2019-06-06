@@ -50,6 +50,7 @@ public class FileDownloadRequestChain extends ReadRequestChain
   private int blockSize;
   Configuration conf;
   ByteBuffer directBuffer;
+  private long timeSpentOnDownload;
 
   private static final Log log = LogFactory.getLog(FileDownloadRequestChain.class);
 
@@ -84,11 +85,15 @@ public class FileDownloadRequestChain extends ReadRequestChain
     return this.lastModified;
   }
 
+  public long getTimeSpentOnDownload()
+  {
+    return this.timeSpentOnDownload;
+  }
+
   public Integer call() throws IOException
   {
     Thread.currentThread().setName(threadName);
     checkState(isLocked(), "Trying to execute Chain without locking");
-    long startTime = System.currentTimeMillis();
 
     List<ReadRequest> readRequests = getReadRequests();
 
@@ -96,6 +101,7 @@ public class FileDownloadRequestChain extends ReadRequestChain
       return 0;
     }
 
+    long startTime = System.currentTimeMillis();
     File file = new File(localFile);
     if (!file.exists()) {
       log.info("Creating localfile : " + localFile);
@@ -105,9 +111,9 @@ public class FileDownloadRequestChain extends ReadRequestChain
         // Making sure when a new file gets created, we invalidate the existing metadata file
         bookKeeper.invalidateFileMetadata(remotePath);
       }
-      file.createNewFile();
       file.setWritable(true, false);
       file.setReadable(true, false);
+      file.createNewFile();
     }
 
     FSDataInputStream inputStream = null;
@@ -130,8 +136,11 @@ public class FileDownloadRequestChain extends ReadRequestChain
             readRequest.getBackendReadStart());
         totalRequestedRead += readBytes;
       }
+      long endTime = System.currentTimeMillis();
+      timeSpentOnDownload = (endTime - startTime) / 1000;
+
       log.info("Downloaded " + totalRequestedRead + " bytes of file " + remotePath);
-      log.debug("RemoteFetchRequest took : " + (System.currentTimeMillis() - startTime) + " msecs ");
+      log.debug("RemoteFetchRequest took : " + timeSpentOnDownload + " secs ");
       return totalRequestedRead;
     }
     finally {

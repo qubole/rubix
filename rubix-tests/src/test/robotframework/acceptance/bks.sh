@@ -1,8 +1,8 @@
 #!/bin/bash -e
 
-CACHE_DIR_PREFIX_KEY="hadoop.cache.data.dirprefix.list"
-CACHE_DIR_SUFFIX_KEY="hadoop.cache.data.dirsuffix"
-CACHE_DIR_MAX_DISKS_KEY="hadoop.cache.data.max.disks"
+CACHE_DIR_PREFIX_KEY="rubix.cache.dirprefix.list"
+CACHE_DIR_SUFFIX_KEY="rubix.cache.dirsuffix"
+CACHE_DIR_MAX_DISKS_KEY="rubix.cache.max.disks"
 CACHE_DIR_PREFIX_VALUE=/media/ephemeral
 CACHE_DIR_SUFFIX_VALUE=/fcache/
 CACHE_DIR_MAX_DISKS_VALUE=5
@@ -14,8 +14,9 @@ RUN_DIR=${BASE_DIR}/bks
 PID_FILE=${RUN_DIR}/bks.pid
 LOG4J_FILE=${RUN_DIR}/log4j.properties
 
+CUR_DATE=$(date '+%Y-%m-%dT%H-%M-%S')
 LOG_DIR=${RUN_DIR}/logs
-LOG_FILE=${LOG_DIR}/bks.log
+LOG_FILE=${LOG_DIR}/bks-${CUR_DATE}.log
 SCRIPT_LOG_FILE=${LOG_DIR}/bks-script.log
 
 HADOOP_DIR=/usr/lib/hadoop2

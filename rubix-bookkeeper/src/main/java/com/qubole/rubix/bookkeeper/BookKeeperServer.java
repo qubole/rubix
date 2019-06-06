@@ -50,13 +50,13 @@ public class BookKeeperServer extends Configured implements Tool
 
   // Registry for gathering & storing necessary metrics
   protected MetricRegistry metrics;
+  protected BookKeeperMetrics bookKeeperMetrics;
 
   public Configuration conf;
 
   private TServer server;
 
   private static Log log = LogFactory.getLog(BookKeeperServer.class.getName());
-  private BookKeeperMetrics bookKeeperMetrics;
 
   public BookKeeperServer()
   {
@@ -85,20 +85,22 @@ public class BookKeeperServer extends Configured implements Tool
   public void startServer(Configuration conf, MetricRegistry metricsRegistry)
   {
     metrics = metricsRegistry;
+    bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
+
+    registerMetrics(conf);
+
     try {
       if (CacheConfig.isOnMaster(conf)) {
-        bookKeeper = new CoordinatorBookKeeper(conf, metrics);
+        bookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics);
       }
       else {
-        bookKeeper = new WorkerBookKeeper(conf, metrics);
+        bookKeeper = new WorkerBookKeeper(conf, bookKeeperMetrics);
       }
     }
     catch (FileNotFoundException e) {
       log.error("Cache directories could not be created", e);
       return;
     }
-
-    registerMetrics(conf);
 
     processor = new BookKeeperService.Processor(bookKeeper);
     log.info("Starting BookKeeperServer on port " + getServerPort(conf));
@@ -112,8 +114,7 @@ public class BookKeeperServer extends Configured implements Tool
       server.serve();
     }
     catch (TTransportException e) {
-      e.printStackTrace();
-      log.error(String.format("Error starting BookKeeper server %s", Throwables.getStackTraceAsString(e)));
+      log.error(Throwables.getStackTraceAsString(e));
     }
   }
 
@@ -122,8 +123,6 @@ public class BookKeeperServer extends Configured implements Tool
    */
   protected void registerMetrics(Configuration conf)
   {
-    bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
-
     metrics.register(BookKeeperMetrics.BookKeeperJvmMetric.BOOKKEEPER_JVM_GC_PREFIX.getMetricName(), new GarbageCollectorMetricSet());
     metrics.register(BookKeeperMetrics.BookKeeperJvmMetric.BOOKKEEPER_JVM_THREADS_PREFIX.getMetricName(), new CachedThreadStatesGaugeSet(CacheConfig.getMetricsReportingInterval(conf), TimeUnit.MILLISECONDS));
     metrics.register(BookKeeperMetrics.BookKeeperJvmMetric.BOOKKEEPER_JVM_MEMORY_PREFIX.getMetricName(), new MemoryUsageGaugeSet());
