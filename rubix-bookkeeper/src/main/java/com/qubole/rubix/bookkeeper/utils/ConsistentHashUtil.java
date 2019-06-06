@@ -14,7 +14,6 @@
 package com.qubole.rubix.bookkeeper.utils;
 
 import com.google.common.base.Charsets;
-import com.google.common.collect.Lists;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
@@ -37,30 +36,29 @@ public class ConsistentHashUtil
 
   public static String getHashedNodeForKey(Map<String, NodeState> nodesMap, String key)
   {
-    List<String> nodes = Lists.newArrayList(nodesMap.keySet().toArray(new String[0]));
-    int nodeIndex = getNodeIndex(nodesMap, key);
-    return nodes.get(nodeIndex);
+    List<String> nodeList = new ArrayList<>(nodesMap.keySet());
+    int nodeIndex = getNodeIndex(nodesMap, nodeList, key);
+    return nodeList.get(nodeIndex);
   }
 
-  public static int getNodeIndex(Map<String, NodeState> nodesMap, String key)
+  public static int getNodeIndex(Map<String, NodeState> nodesMap, List<String> nodeList, String key)
   {
     HashFunction hf = Hashing.md5();
     HashCode hc = hf.hashString(key, Charsets.UTF_8);
 
     int nodeIndex = Hashing.consistentHash(hc, nodesMap.size());
     if (hc.asInt() % 2 == 0) {
-      nodeIndex = getNextRunningNodeIndex(nodesMap, nodeIndex);
+      nodeIndex = getNextRunningNodeIndex(nodesMap, nodeList, nodeIndex);
     }
     else {
-      nodeIndex = getPreviousRunningNodeIndex(nodesMap, nodeIndex);
+      nodeIndex = getPreviousRunningNodeIndex(nodesMap, nodeList, nodeIndex);
     }
 
     return nodeIndex;
   }
 
-  private static Integer getNextRunningNodeIndex(Map<String, NodeState> nodesMap, int startIndex)
+  private static Integer getNextRunningNodeIndex(Map<String, NodeState> nodesMap, List<String> nodeList, int startIndex)
   {
-    List<String> nodeList = new ArrayList<>(nodesMap.keySet());
     for (int i = startIndex; i < (startIndex + nodeList.size()); i++) {
       int index = i >= nodeList.size() ? (i - nodeList.size()) : i;
       NodeState nodeState = nodesMap.get(nodeList.get(index));
@@ -72,9 +70,8 @@ public class ConsistentHashUtil
     return null;
   }
 
-  private static Integer getPreviousRunningNodeIndex(Map<String, NodeState> nodesMap, int startIndex)
+  private static Integer getPreviousRunningNodeIndex(Map<String, NodeState> nodesMap, List<String> nodeList, int startIndex)
   {
-    List<String> nodeList = new ArrayList<>(nodesMap.keySet());
     for (int i = startIndex; i >= 0; i--) {
       NodeState nodeState = nodesMap.get(nodeList.get(i));
       if (nodeState == NodeState.ACTIVE) {

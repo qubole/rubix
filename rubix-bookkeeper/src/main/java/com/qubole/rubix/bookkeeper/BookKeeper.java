@@ -220,7 +220,6 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     long lastModified = request.getLastModified();
     long startBlock = request.getStartBlock();
     long endBlock = request.getEndBlock();
-    boolean incrMetrics = request.isIncrMetrics();
 
     for (long i = 0; i < fileLength; i = i + splitSize) {
       long end = i + splitSize;
