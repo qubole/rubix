@@ -17,6 +17,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Ticker;
 import com.google.common.testing.FakeTicker;
 import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
+import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.common.utils.TestUtil;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
@@ -96,76 +97,83 @@ public class TestWorkerBookKeeper
    * @throws BookKeeperInitializationException if the parent directory for the cache cannot be found when initializing the BookKeeper.
    */
   @Test(expectedExceptions = UnsupportedOperationException.class)
-  public void testHandleHeartbeat_shouldNotBeHandled() throws BookKeeperInitializationException
+  public void testHandleHeartbeat_shouldNotBeHandled() throws BookKeeperInitializationException, IOException
   {
-    final WorkerBookKeeper workerBookKeeper = new WorkerBookKeeper(conf, new MetricRegistry());
-    workerBookKeeper.handleHeartbeat("", new HeartbeatStatus());
-  }
-
-  @Test
-  public void testGetOwnerNodeForPathFromCoordinatorAndThenWorkerCache() throws BookKeeperInitializationException, TTransportException, InterruptedException
-  {
-    final MetricRegistry metricRegistry = new MetricRegistry();
-    final CoordinatorBookKeeper spyCoordinator = spy(new CoordinatorBookKeeper(conf, metricRegistry));
-    final BookKeeperServer bookKeeperServer = new BookKeeperServer();
-
-    CacheConfig.setServerPort(conf, 1234);
-    final Thread thread = new Thread()
-    {
-      public void run()
-      {
-        bookKeeperServer.startServer(conf, new MetricRegistry(), spyCoordinator);
-      }
-    };
-    thread.start();
-
-    while (!bookKeeperServer.isServerUp()) {
-      Thread.sleep(200);
-      log.info("Waiting for BookKeeper Server to come up");
+    // Disable default reporters for this BookKeeper, since they will conflict with the running server.
+    CacheConfig.setMetricsReporters(conf, "");
+    try (BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, new MetricRegistry())) {
+      final WorkerBookKeeper workerBookKeeper = new WorkerBookKeeper(conf, bookKeeperMetrics);
+      workerBookKeeper.handleHeartbeat("", new HeartbeatStatus());
     }
-
-    String testLocalhost = "localhost_test";
-    String changedTestLocalhost = "changed_localhost";
-    Map<String, NodeState> nodes = new HashMap<String, NodeState>();
-
-    nodes.put(testLocalhost, NodeState.ACTIVE);
-
-    doReturn(nodes).when(spyCoordinator).getClusterNodes();
-
-    BookKeeperFactory factory = new BookKeeperFactory();
-    final BookKeeperFactory bookKeeperFactory = spy(factory);
-
-    TSocket socket = new TSocket("localhost", 1234, CacheConfig.getServerConnectTimeout(conf));
-    socket.open();
-
-    doReturn(new RetryingBookkeeperClient(socket, CacheConfig.getMaxRetries(conf)))
-        .when(bookKeeperFactory).createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any());
-
-    FakeTicker ticker = new FakeTicker();
-
-    CacheConfig.setWorkerNodeInfoExpiryPeriod(conf, 100);
-    final WorkerBookKeeper workerBookKeeper = new WorkerBookKeeper(conf, new MetricRegistry(), ticker, bookKeeperFactory);
-    String hostName = workerBookKeeper.getOwnerNodeForPath("remotepath");
-
-    assertTrue(hostName.equals(testLocalhost), "HostName is not correct from the coordinator");
-
-    nodes.clear();
-    nodes.put(changedTestLocalhost, NodeState.ACTIVE);
-
-    doReturn(nodes).when(spyCoordinator).getClusterNodes();
-    hostName = workerBookKeeper.getOwnerNodeForPath("remotepath");
-
-    assertTrue(hostName.equals(testLocalhost), "HostName is not correct from the cache");
-    ticker.advance(500, TimeUnit.SECONDS);
-
-    hostName = workerBookKeeper.getOwnerNodeForPath("remotepath");
-    assertTrue(hostName.equals(changedTestLocalhost), "HostName is not refreshed from Coordinator");
-
-    bookKeeperServer.stopServer();
   }
 
   @Test
-  public void testGetClusterNodeHostNameWhenCoordinatorIsDown() throws BookKeeperInitializationException, TTransportException
+  public void testGetOwnerNodeForPathFromCoordinatorAndThenWorkerCache() throws TTransportException,
+      BookKeeperInitializationException, InterruptedException, IOException
+  {
+    try (final BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, new MetricRegistry())) {
+      final CoordinatorBookKeeper spyCoordinator = spy(new CoordinatorBookKeeper(conf, bookKeeperMetrics));
+      final BookKeeperServer bookKeeperServer = new BookKeeperServer();
+
+      CacheConfig.setServerPort(conf, 1234);
+      final Thread thread = new Thread() {
+        public void run()
+        {
+          bookKeeperServer.startServer(conf, spyCoordinator, bookKeeperMetrics);
+        }
+      };
+      thread.start();
+
+      while (!bookKeeperServer.isServerUp()) {
+        Thread.sleep(200);
+        log.info("Waiting for BookKeeper Server to come up");
+      }
+
+      String testLocalhost = "localhost_test";
+      String changedTestLocalhost = "changed_localhost";
+      Map<String, NodeState> nodes = new HashMap<String, NodeState>();
+
+      nodes.put(testLocalhost, NodeState.ACTIVE);
+
+      doReturn(nodes).when(spyCoordinator).getClusterNodes();
+
+      BookKeeperFactory factory = new BookKeeperFactory();
+      final BookKeeperFactory bookKeeperFactory = spy(factory);
+
+      TSocket socket = new TSocket("localhost", 1234, CacheConfig.getServerConnectTimeout(conf));
+      socket.open();
+
+      doReturn(new RetryingBookkeeperClient(socket, CacheConfig.getMaxRetries(conf)))
+          .when(bookKeeperFactory).createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any());
+
+      FakeTicker ticker = new FakeTicker();
+
+      CacheConfig.setWorkerNodeInfoExpiryPeriod(conf, 100);
+      try (final BookKeeperMetrics workerMetrics = new BookKeeperMetrics(conf, new MetricRegistry())) {
+        final WorkerBookKeeper workerBookKeeper = new WorkerBookKeeper(conf, workerMetrics, ticker, bookKeeperFactory);
+        String hostName = workerBookKeeper.getOwnerNodeForPath("remotepath");
+
+        assertTrue(hostName.equals(testLocalhost), "HostName is not correct from the coordinator");
+
+        nodes.clear();
+        nodes.put(changedTestLocalhost, NodeState.ACTIVE);
+
+        doReturn(nodes).when(spyCoordinator).getClusterNodes();
+        hostName = workerBookKeeper.getOwnerNodeForPath("remotepath");
+
+        assertTrue(hostName.equals(testLocalhost), "HostName is not correct from the cache");
+        ticker.advance(500, TimeUnit.SECONDS);
+
+        hostName = workerBookKeeper.getOwnerNodeForPath("remotepath");
+        assertTrue(hostName.equals(changedTestLocalhost), "HostName is not refreshed from Coordinator");
+      }
+
+      bookKeeperServer.stopServer();
+    }
+  }
+
+  @Test
+  public void testGetClusterNodeHostNameWhenCoordinatorIsDown() throws TTransportException, BookKeeperInitializationException, IOException
   {
     CacheConfig.setServiceMaxRetries(conf, 1);
     CacheConfig.setServiceRetryInterval(conf, 1);
@@ -173,16 +181,19 @@ public class TestWorkerBookKeeper
     final BookKeeperFactory spyBookKeeperFactory = spy(bookKeeperFactory);
     doThrow(TTransportException.class).when(spyBookKeeperFactory).createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any());
     FakeTicker ticker = new FakeTicker();
-    final WorkerBookKeeper workerBookKeeper = new MockWorkerBookKeeper(conf, new MetricRegistry(), ticker, spyBookKeeperFactory);
-    String hostName = workerBookKeeper.getOwnerNodeForPath("remotePath");
+    String hostName = "";
+    try (BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, new MetricRegistry())) {
+      final WorkerBookKeeper workerBookKeeper = new MockWorkerBookKeeper(conf, bookKeeperMetrics, ticker, spyBookKeeperFactory);
+      hostName = workerBookKeeper.getOwnerNodeForPath("remotePath");
+    }
     assertNull(hostName, "HostName should be null as Cooordinator is down");
   }
 
   private class MockWorkerBookKeeper extends WorkerBookKeeper
   {
-    public MockWorkerBookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker, BookKeeperFactory factory) throws BookKeeperInitializationException
+    public MockWorkerBookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics, Ticker ticker, BookKeeperFactory factory) throws BookKeeperInitializationException
     {
-      super(conf, metrics, ticker, factory);
+      super(conf, bookKeeperMetrics, ticker, factory);
     }
 
     @Override

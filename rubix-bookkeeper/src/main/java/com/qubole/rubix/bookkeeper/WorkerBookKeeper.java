@@ -21,6 +21,7 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
 import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
 import com.qubole.rubix.bookkeeper.exception.WorkerInitializationException;
+import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.common.utils.ClusterUtil;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
@@ -52,21 +53,21 @@ public class WorkerBookKeeper extends BookKeeper
   private int clusterType;
   RetryingBookkeeperClient client;
 
-  public WorkerBookKeeper(Configuration conf, MetricRegistry metrics) throws BookKeeperInitializationException
+  public WorkerBookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics) throws BookKeeperInitializationException
   {
-    this(conf, metrics, Ticker.systemTicker(), new BookKeeperFactory());
+    this(conf, bookKeeperMetrics, Ticker.systemTicker(), new BookKeeperFactory());
   }
 
-  public WorkerBookKeeper(Configuration conf, MetricRegistry metrics, BookKeeperFactory factory)
+  public WorkerBookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics, BookKeeperFactory factory)
       throws BookKeeperInitializationException
   {
-    this(conf, metrics, Ticker.systemTicker(), factory);
+    this(conf, bookKeeperMetrics, Ticker.systemTicker(), factory);
   }
 
-  public WorkerBookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker, BookKeeperFactory factory)
+  public WorkerBookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics, Ticker ticker, BookKeeperFactory factory)
       throws BookKeeperInitializationException
   {
-    super(conf, metrics, Ticker.systemTicker());
+    super(conf, bookKeeperMetrics, Ticker.systemTicker());
     this.bookKeeperFactory = factory;
     this.masterHostname = ClusterUtil.getMasterHostname(conf);
     this.clusterType = CacheConfig.getClusterType(conf);

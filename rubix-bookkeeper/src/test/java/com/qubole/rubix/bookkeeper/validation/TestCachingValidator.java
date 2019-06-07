@@ -81,9 +81,11 @@ public class TestCachingValidator
    * @throws BookKeeperInitializationException when cache directories cannot be created.
    */
   @Test
-  public void testValidateCachingBehavior() throws TException, BookKeeperInitializationException
+  public void testValidateCachingBehavior() throws TException, BookKeeperInitializationException, IOException
   {
-    checkValidator(new CoordinatorBookKeeper(conf, new MetricRegistry()), true);
+    try (BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, new MetricRegistry())) {
+      checkValidator(new CoordinatorBookKeeper(conf, bookKeeperMetrics), true);
+    }
   }
 
   /**
@@ -165,16 +167,19 @@ public class TestCachingValidator
    * @throws BookKeeperInitializationException when cache directories cannot be created.
    */
   @Test
-  public void testValidateCachingBehavior_verifyOtherMetricsUnaffected() throws TException, BookKeeperInitializationException
+  public void testValidateCachingBehavior_verifyOtherMetricsUnaffected() throws TException, BookKeeperInitializationException, IOException
   {
     final MetricRegistry metrics = new MetricRegistry();
-    final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, metrics);
 
-    assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.TOTAL_REQUEST_COUNT.getMetricName()).getCount(), 0);
+    try (BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, metrics)) {
+      final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics);
 
-    checkValidator(bookKeeper, true);
+      assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.TOTAL_REQUEST_COUNT.getMetricName()).getCount(), 0);
 
-    assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.TOTAL_REQUEST_COUNT.getMetricName()).getCount(), 0);
+      checkValidator(bookKeeper, true);
+
+      assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.TOTAL_REQUEST_COUNT.getMetricName()).getCount(), 0);
+    }
   }
 
   /**

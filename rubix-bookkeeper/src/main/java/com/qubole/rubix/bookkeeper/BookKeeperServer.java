@@ -12,6 +12,7 @@
  */
 package com.qubole.rubix.bookkeeper;
 
+import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.jvm.CachedThreadStatesGaugeSet;
 import com.codahale.metrics.jvm.GarbageCollectorMetricSet;
@@ -49,13 +50,13 @@ public class BookKeeperServer extends Configured implements Tool
 
   // Registry for gathering & storing necessary metrics
   protected MetricRegistry metrics;
+  protected BookKeeperMetrics bookKeeperMetrics;
 
   public Configuration conf;
 
   private TServer server;
 
   private static Log log = LogFactory.getLog(BookKeeperServer.class.getName());
-  private BookKeeperMetrics bookKeeperMetrics;
 
   public BookKeeperServer()
   {
@@ -84,12 +85,16 @@ public class BookKeeperServer extends Configured implements Tool
   public void startServer(Configuration conf, MetricRegistry metricsRegistry)
   {
     BookKeeper localBookKeeper;
+    this.metrics = metricsRegistry;
+    this.bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
+    registerMetrics(conf);
+
     try {
       if (CacheConfig.isOnMaster(conf)) {
-        localBookKeeper = new CoordinatorBookKeeper(conf, metricsRegistry);
+        localBookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics);
       }
       else {
-        localBookKeeper = new WorkerBookKeeper(conf, metricsRegistry);
+        localBookKeeper = new WorkerBookKeeper(conf, bookKeeperMetrics);
       }
     }
     catch (BookKeeperInitializationException e) {
@@ -97,15 +102,20 @@ public class BookKeeperServer extends Configured implements Tool
       return;
     }
 
-    startServer(conf, metricsRegistry, localBookKeeper);
+    startThriftServer(conf, localBookKeeper);
   }
 
-  void startServer(Configuration conf, MetricRegistry metricsRegistry, BookKeeper bookKeeper)
+  void startServer(Configuration conf, BookKeeper bookKeeper, BookKeeperMetrics bookKeeperMetrics)
   {
-    metrics = metricsRegistry;
-
+    this.metrics = bookKeeperMetrics.getMetricsRegistry();
+    this.bookKeeperMetrics = bookKeeperMetrics;
     registerMetrics(conf);
 
+    startThriftServer(conf, bookKeeper);
+  }
+
+  private void startThriftServer(Configuration conf, BookKeeper bookKeeper)
+  {
     processor = new BookKeeperService.Processor(bookKeeper);
     log.info("Starting BookKeeperServer on port " + getServerPort(conf));
     try {
@@ -127,8 +137,6 @@ public class BookKeeperServer extends Configured implements Tool
    */
   protected void registerMetrics(Configuration conf)
   {
-    bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
-
     metrics.register(BookKeeperMetrics.BookKeeperJvmMetric.BOOKKEEPER_JVM_GC_PREFIX.getMetricName(), new GarbageCollectorMetricSet());
     metrics.register(BookKeeperMetrics.BookKeeperJvmMetric.BOOKKEEPER_JVM_THREADS_PREFIX.getMetricName(), new CachedThreadStatesGaugeSet(CacheConfig.getMetricsReportingInterval(conf), TimeUnit.MILLISECONDS));
     metrics.register(BookKeeperMetrics.BookKeeperJvmMetric.BOOKKEEPER_JVM_MEMORY_PREFIX.getMetricName(), new MemoryUsageGaugeSet());
@@ -149,7 +157,8 @@ public class BookKeeperServer extends Configured implements Tool
 
   protected void removeMetrics()
   {
-    metrics.removeMatching(bookKeeperMetrics.getMetricsFilter());
+    MetricFilter filter = bookKeeperMetrics.getMetricsFilter();
+    metrics.removeMatching(filter);
   }
 
   @VisibleForTesting

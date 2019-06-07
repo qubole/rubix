@@ -14,7 +14,6 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.Gauge;
-import com.codahale.metrics.MetricRegistry;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ticker;
 import com.google.common.cache.Cache;
@@ -57,15 +56,15 @@ public class CoordinatorBookKeeper extends BookKeeper
   protected ClusterManager clusterManager;
   int clusterType;
 
-  public CoordinatorBookKeeper(Configuration conf, MetricRegistry metrics) throws BookKeeperInitializationException
+  public CoordinatorBookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics) throws BookKeeperInitializationException
   {
-    this(conf, metrics, Ticker.systemTicker());
+    this(conf, bookKeeperMetrics, Ticker.systemTicker());
   }
 
   @VisibleForTesting
-  protected CoordinatorBookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker) throws BookKeeperInitializationException
+  public CoordinatorBookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics, Ticker ticker) throws BookKeeperInitializationException
   {
-    super(conf, metrics, ticker);
+    super(conf, bookKeeperMetrics, ticker);
     this.isValidationEnabled = CacheConfig.isValidationEnabled(conf);
     this.liveWorkerCache = createHealthCache(conf, ticker);
     this.cachingValidatedWorkerCache = createHealthCache(conf, ticker);

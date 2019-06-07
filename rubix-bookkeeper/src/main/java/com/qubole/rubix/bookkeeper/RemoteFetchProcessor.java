@@ -94,7 +94,9 @@ public class RemoteFetchProcessor extends AbstractScheduledService
   {
     long currentTime = System.currentTimeMillis();
 
-    processRequest(currentTime);
+    if (!processQueue.isEmpty()) {
+      processRequest(currentTime);
+    }
   }
 
   protected void processRequest(long currentTime) throws IOException, InterruptedException, ExecutionException
@@ -132,6 +134,8 @@ public class RemoteFetchProcessor extends AbstractScheduledService
           contextMap.putIfAbsent(request.getRemotePath(), context);
         }
         else if (contextMap.get(request.getRemotePath()).getLastModifiedTime() > request.getLastModified()) {
+          // TODO add metric to track ignored requests
+          processQueue.remove();
           continue;
         }
       }
