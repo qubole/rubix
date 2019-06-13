@@ -1,9 +1,9 @@
 *** Settings ***
-Documentation       Rubix Asynchronous Download Integration Tests
-Resource            setup.robot
-Resource            bookkeeper.robot
-Suite Setup         Create Cache Parent Directories     ${CACHE_DIR_PFX}    ${CACHE_NUM_DISKS}
-Suite Teardown      Remove Cache Parent Directories     ${CACHE_DIR_PFX}    ${CACHE_NUM_DISKS}
+Documentation   Rubix Asynchronous Download Integration Tests
+Resource        ..${/}shared${/}setup.robot
+Resource        ..${/}shared${/}bookkeeper.robot
+Suite Setup     Create Cache Parent Directories  ${CACHE_DIR_PFX}  ${CACHE_NUM_DISKS}
+Suite Teardown  Remove Cache Parent Directories  ${CACHE_DIR_PFX}  ${CACHE_NUM_DISKS}
 
 *** Variables ***
 # Cache settings
