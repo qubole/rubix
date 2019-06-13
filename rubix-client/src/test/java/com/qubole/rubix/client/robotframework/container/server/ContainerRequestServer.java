@@ -47,17 +47,6 @@ public class ContainerRequestServer implements RequestServer
     super();
   }
 
-  public static void main(String[] args)
-  {
-    try {
-      bindServer();
-      log.debug("ContainerRequestServer bound");
-    }
-    catch (RemoteException e) {
-      log.error("Error binding server", e);
-    }
-  }
-
   @Override
   public Map<String, Double> getCacheMetrics(GetCacheMetricsRequest request) throws RemoteException
   {
@@ -117,5 +106,16 @@ public class ContainerRequestServer implements RequestServer
     final MockCachingFileSystem mockFS = new MockCachingFileSystem();
     mockFS.initialize(URI.create(remotePath), conf);
     return mockFS.open(new Path(remotePath), readLength);
+  }
+
+  public static void main(String[] args)
+  {
+    try {
+      bindServer();
+      log.debug("ContainerRequestServer bound");
+    }
+    catch (RemoteException e) {
+      log.error("Error binding server", e);
+    }
   }
 }

@@ -45,7 +45,7 @@ Stop BKS
 Start RubiX cluster
     ${output} =  RUN  ${CURDIR}${/}bks.sh start-cluster
     LOG  ${output}
-    SLEEP  5s
+    SLEEP  12s  Allow time for daemons to start on cluster
 
 Stop RubiX cluster
     ${output} =  RUN  ${CURDIR}${/}bks.sh stop-cluster

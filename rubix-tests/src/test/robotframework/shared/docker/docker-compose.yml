@@ -1,7 +1,10 @@
 version: '3.7'
 services:
   rubix-master:
-    build: .
+    build:
+      context: .
+      args:
+        is_master: "true"
     volumes:
       - type: bind
         source: /Users/jordanw/Development/test-volume
@@ -12,11 +15,13 @@ services:
     networks:
       rubix-cluster:
         ipv4_address: 172.18.8.0
-    command: /tmp/initialize-container.sh true
   rubix-worker-1:
     depends_on:
       - rubix-master
-    build: .
+    build:
+      context: .
+      args:
+        is_master: "false"
     volumes:
       - type: bind
         source: /Users/jordanw/Development/test-volume
@@ -29,11 +34,13 @@ services:
     networks: 
       rubix-cluster:
         ipv4_address: 172.18.8.1
-    command: /tmp/initialize-container.sh false
   rubix-worker-2:
     depends_on:
       - rubix-master
-    build: .
+    build:
+      context: .
+      args:
+        is_master: "false"
     volumes:
       - type: bind
         source: /Users/jordanw/Development/test-volume
@@ -46,7 +53,6 @@ services:
     networks:
       rubix-cluster:
         ipv4_address: 172.18.8.2
-    command: /tmp/initialize-container.sh false
 
 networks:
   rubix-cluster:
