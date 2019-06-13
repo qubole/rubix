@@ -53,6 +53,7 @@ public class TestRemoteFetchProcessor
   private RemoteFetchProcessor processor;
 
   private final Configuration conf = new Configuration();
+  private BookKeeperMetrics bookKeeperMetrics;
 
   @BeforeClass
   public void setUpForClass() throws Exception
@@ -69,13 +70,15 @@ public class TestRemoteFetchProcessor
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     CacheConfig.setRemoteFetchProcessInterval(conf, TEST_REMOTE_FETCH_PROCESS_INTERVAL);
     metrics = new MetricRegistry();
-    bookKeeper = new CoordinatorBookKeeper(conf, metrics);
+    bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
+    bookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics);
     processor = bookKeeper.getRemoteFetchProcessorInstance();
   }
 
   @AfterMethod
   public void tearDown() throws Exception
   {
+    bookKeeperMetrics.close();
     conf.clear();
   }
 
