@@ -47,6 +47,14 @@ COPY logging/log4j_bks.properties \
     logging/log4j_crs.properties \
     /home/props/
 
+##########################
+### CONTAINER REQUESTS ###
+##########################
+
+RUN mkdir /etc/service/crs
+COPY start-crs.sh /etc/service/crs/run
+RUN chmod +x /etc/service/crs/run
+
 ##################
 ### BOOKKEEPER ###
 ##################
@@ -62,11 +70,3 @@ RUN chmod +x /etc/service/bks/run
 RUN mkdir /etc/service/lds
 COPY start-lds.sh /etc/service/lds/run
 RUN chmod +x /etc/service/lds/run
-
-##########################
-### CONTAINER REQUESTS ###
-##########################
-
-RUN mkdir /etc/service/crs
-COPY start-crs.sh /etc/service/crs/run
-RUN chmod +x /etc/service/crs/run
