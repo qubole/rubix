@@ -88,12 +88,14 @@ start-cluster() {
 
   copy-jars-for-containers ${SCRIPT_DIR}
 
-  docker-compose -f ${SCRIPT_DIR}/docker/docker-compose.yml up -d --build
+  export DATADIR=$1
+  docker-compose -f ${SCRIPT_DIR}/docker/docker-compose.yml up -d
 }
 
 stop-cluster() {
   SCRIPT_DIR=$(dirname "$0")
 
+  export DATADIR=$1
   docker-compose -f ${SCRIPT_DIR}/docker/docker-compose.yml down -t 1
 }
 
@@ -141,8 +143,8 @@ cmd=$1
 case "$cmd" in
   start-bks) shift ; start-bks $@;;
   stop-bks) shift ; stop-bks $@;;
-  start-cluster) shift ; start-cluster;;
-  stop-cluster) shift ; stop-cluster;;
+  start-cluster) shift ; start-cluster $@;;
+  stop-cluster) shift ; stop-cluster $@;;
 esac
 
 exit 0;

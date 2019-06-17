@@ -5,6 +5,11 @@ Resource        ..${/}shared${/}bookkeeper.robot
 Library         com.qubole.rubix.client.robotframework.container.client.ContainerRequestClient
 
 *** Variables ***
+# Cache settings
+${WORKINGDIR}  ${CURDIR}${/}files${/}NonLocalRead
+${DATADIR}     ${WORKINGDIR}${/}data${/}
+
+${FILEPREFIX}  ${DATADIR}${/}testFile
 
 # Request specs
 ${TEST_FILE_1}  /tmp/data/testFile1
@@ -18,6 +23,8 @@ ${LAST_MODIFIED}  1514764800
 ${START_BLOCK}    0
 ${END_BLOCK}      1048576
 ${CLUSTER_TYPE}   3   # TEST_CLUSTER_MANAGER
+
+${NUM_TEST_FILES}  5
 
 ${PORT_WORKER1_REQUEST_SERVER}  1901
 ${PORT_WORKER2_REQUEST_SERVER}  1902
@@ -33,7 +40,9 @@ Simple non-local read test case
     [Tags]  nonlocal
     [Documentation]  A simple non-local read test
 
-    [Setup]  Start RubiX cluster
+    [Setup]  Multi-node test setup  ${DATADIR}
+
+    Generate test files  ${FILEPREFIX}  ${FILE_LENGTH}  ${NUM_TEST_FILES}  1
 
     Cache data for cluster node  ${PORT_WORKER1_REQUEST_SERVER}
     ...  file:${TEST_FILE_3}
@@ -45,13 +54,15 @@ Simple non-local read test case
 
     Verify metric value on node  ${PORT_WORKER1_REQUEST_SERVER}  ${METRIC_NONLOCAL_REQUESTS}  ${NUM_EXPECTED_REQUESTS_NONLOCAL}
 
-    [Teardown]  Stop RubiX cluster
+    [Teardown]  Multi-node test teardown  ${DATADIR}
 
 Simple local read test case
     [Tags]  local
     [Documentation]  A simple local read test
 
-    [Setup]  Start RubiX cluster
+    [Setup]  Multi-node test setup  ${DATADIR}
+
+    Generate test files  ${FILEPREFIX}  ${FILE_LENGTH}  ${NUM_TEST_FILES}  1
 
     Cache data for cluster node  ${PORT_WORKER1_REQUEST_SERVER}
     ...  file:${TEST_FILE_1}
@@ -63,4 +74,4 @@ Simple local read test case
 
     Verify metric value on node  ${PORT_WORKER1_REQUEST_SERVER}  ${METRIC_REMOTE_REQUESTS}  ${NUM_EXPECTED_REQUESTS_REMOTE}
 
-    [Teardown]  Stop RubiX cluster
+    [Teardown]  Multi-node test teardown  ${DATADIR}

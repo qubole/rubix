@@ -7,7 +7,7 @@ services:
         is_master: "true"
     volumes:
       - type: bind
-        source: /Users/jordanw/Development/test-volume
+        source: ${DATADIR} # Environment variable set at start of Compose command execution
         target: /tmp/data
     ports:
       - "8900:8899"  # BookKeeperServer
@@ -24,7 +24,7 @@ services:
         is_master: "false"
     volumes:
       - type: bind
-        source: /Users/jordanw/Development/test-volume
+        source: ${DATADIR} # Environment variable set at start of Compose command execution
         target: /tmp/data
     ports:
       - "8901:8899"  # BookKeeperServer
@@ -43,7 +43,7 @@ services:
         is_master: "false"
     volumes:
       - type: bind
-        source: /Users/jordanw/Development/test-volume
+        source: ${DATADIR} # Environment variable set at start of Compose command execution
         target: /tmp/data
     ports:
       - "8902:8899"  # BookKeeperServer

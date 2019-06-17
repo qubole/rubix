@@ -48,13 +48,29 @@ Stop BKS
     ${optionArgs} =  Get options argument  &{options}
     RUN  ${CURDIR}${/}bks.sh stop-bks ${optionArgs}
 
+## Multi-Node Test Setup/Teardown ##
+
+Multi-node test setup
+    [Documentation]  Performs steps necessary for setting up a multi-node test case.
+    [Arguments]  ${dataDir}
+    CREATE DIRECTORY  ${dataDir}
+    Start RubiX cluster  ${dataDir}
+
+Multi-node test teardown
+    [Documentation]  Performs steps necessary for tearing down a multi-node test case.
+    [Arguments]  ${dataDir}
+    Stop RubiX cluster  ${dataDir}
+    REMOVE DIRECTORY  ${dataDir}  recursive=${True}
+
 Start RubiX cluster
-    ${output} =  RUN  ${CURDIR}${/}bks.sh start-cluster
+    [Arguments]  ${dataDir}
+    ${output} =  RUN  ${CURDIR}${/}bks.sh start-cluster ${dataDir}
     LOG  ${output}
     SLEEP  12s  Allow time for daemons to start on cluster
 
 Stop RubiX cluster
-    ${output} =  RUN  ${CURDIR}${/}bks.sh stop-cluster
+    [Arguments]  ${dataDir}
+    ${output} =  RUN  ${CURDIR}${/}bks.sh stop-cluster ${dataDir}
     LOG  ${output}
 
 Get options argument
