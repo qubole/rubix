@@ -85,7 +85,7 @@ public class CacheUtil
         if (exists(cacheParentDir)) {
           parentDirectoryExists = true;
           final String cacheDirPath = cacheParentDir + "/" + CacheConfig.getCacheDataDirSuffix(conf);
-          createCacheDirectory(cacheDirPath);
+          createCacheDirectory(cacheDirPath, conf);
         }
       }
     }
@@ -232,11 +232,15 @@ public class CacheUtil
    *
    * @param cacheDirPath  The path for which to create the directory.
    */
-  private static void createCacheDirectory(String cacheDirPath)
+  private static void createCacheDirectory(String cacheDirPath, Configuration conf)
   {
     final File cacheDir = new File(cacheDirPath);
     cacheDir.mkdirs();
-    cacheDir.setWritable(true, false);
+    File parentFile = cacheDir;
+    do {
+      parentFile.setWritable(true, false);
+      parentFile = parentFile.getParentFile();
+    } while (parentFile.getAbsolutePath().contains(CacheConfig.getCacheDataDirSuffix(conf).split("/")[1]));
   }
 
   /**
@@ -281,7 +285,7 @@ public class CacheUtil
       }
     }
     final String absLocation = getLocalDirFor(remotePath, conf) + relLocation;
-    createCacheDirectory(absLocation);
+    createCacheDirectory(absLocation, conf);
 
     return absLocation;
   }
