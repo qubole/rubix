@@ -15,6 +15,7 @@ This section provides guidelines to contribute to the project through code, issu
    env.md
    develop.md
    coding.md
+   testing/index.rst
    commit.md
    issues.md
    doc.md
