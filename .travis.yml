@@ -8,8 +8,8 @@ jdk:
   - openjdk7
 sudo: enabled
 before_install:
-  - docker pull quboleinc/hadoop_mvn_thrift
+  - /bin/bash rubix_travis_before_install.sh
 install: true
-script: docker run -it --rm -v "$PWD":/usr/src/rubix -v "$HOME/.m2":/root/.m2 $ci_env -w /usr/src/rubix quboleinc/hadoop_mvn_thrift /bin/bash script.sh
+script: /bin/bash rubix_travis_script.sh
 env:
   - ci_env=`bash <(curl -s https://codecov.io/env)`
