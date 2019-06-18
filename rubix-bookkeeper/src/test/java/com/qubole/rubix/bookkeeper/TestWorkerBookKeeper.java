@@ -73,6 +73,7 @@ public class TestWorkerBookKeeper
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     CacheConfig.setMaxDisks(conf, TEST_MAX_DISKS);
     CacheConfig.setOnMaster(conf, true);
+    CacheConfig.setMetricsReporters(conf, "");
     BaseServerTest.startCoordinatorBookKeeperServer(conf, new MetricRegistry());
   }
 
