@@ -59,7 +59,6 @@ public class TestCoordinatorBookKeeper
 
   private final Configuration conf = new Configuration();
   private MetricRegistry metrics;
-  private BookKeeperMetrics bookKeeperMetrics;
 
   @BeforeClass
   public void setUpForClass() throws IOException
@@ -76,7 +75,6 @@ public class TestCoordinatorBookKeeper
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
 
     metrics = new MetricRegistry();
-    bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
   }
 
   @AfterMethod

@@ -47,6 +47,7 @@ public class TestClusterManager
   private MetricRegistry metrics;
 
   private CoordinatorBookKeeper bookKeeper;
+  BookKeeperMetrics bookKeeperMetrics;
 
   @BeforeMethod
   public void setUp() throws IOException, BookKeeperInitializationException
@@ -57,7 +58,7 @@ public class TestClusterManager
     TestUtil.createCacheParentDirectories(conf, TEST_MAX_DISKS);
 
     metrics = new MetricRegistry();
-    BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
+    bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
     bookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics);
   }
 
@@ -65,7 +66,7 @@ public class TestClusterManager
   public void tearDown() throws Exception
   {
     TestUtil.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
-
+    bookKeeperMetrics.close();
     conf.clear();
   }
 
