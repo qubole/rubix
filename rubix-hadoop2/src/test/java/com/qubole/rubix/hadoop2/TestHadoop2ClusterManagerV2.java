@@ -58,7 +58,6 @@ public class TestHadoop2ClusterManagerV2
         worker.new MultipleRunningWorkers(), conf, ClusterType.HADOOP2_CLUSTER_MANAGER);
 
     assertTrue(nodeHostnames.size() == 2, "Should only have two nodes");
-    log.info(" ABHISHEK TEST " + nodeHostnames.get(0).nodeUrl + " -- " + nodeHostnames.get(1).nodeUrl);
     assertTrue(nodeHostnames.get(0).nodeUrl.equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_2) &&
         nodeHostnames.get(1).nodeUrl.equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_1), "Wrong nodes data");
   }
