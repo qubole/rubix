@@ -21,13 +21,18 @@ import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.common.utils.TestUtil;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.thrift.BlockLocation;
+import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.ClusterNode;
 import com.qubole.rubix.spi.thrift.HeartbeatStatus;
+import com.qubole.rubix.spi.thrift.Location;
 import com.qubole.rubix.spi.thrift.NodeState;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.thrift.shaded.TException;
 import org.apache.thrift.shaded.transport.TSocket;
 import org.apache.thrift.shaded.transport.TTransportException;
 import org.mockito.ArgumentMatchers;
@@ -56,6 +61,12 @@ public class TestWorkerBookKeeper
 
   private static final String TEST_CACHE_DIR_PREFIX = TestUtil.getTestCacheDirPrefix("TestWorkerBookKeeper");
   private static final int TEST_MAX_DISKS = 1;
+  private static final String TEST_REMOTE_PATH = "/tmp/testPath";
+  private static final int TEST_BLOCK_SIZE = 100;
+  private static final long TEST_LAST_MODIFIED = 1514764800; // 2018-01-01T00:00:00
+  private static final long TEST_FILE_LENGTH = 5000;
+  private static final long TEST_START_BLOCK = 20;
+  private static final long TEST_END_BLOCK = 23;
 
   private final Configuration conf = new Configuration();
 
@@ -74,6 +85,7 @@ public class TestWorkerBookKeeper
     CacheConfig.setMaxDisks(conf, TEST_MAX_DISKS);
     CacheConfig.setOnMaster(conf, true);
     CacheConfig.setMetricsReporters(conf, "");
+    CacheConfig.setBlockSize(conf, TEST_BLOCK_SIZE);
     BaseServerTest.startCoordinatorBookKeeperServer(conf, new MetricRegistry());
   }
 
@@ -189,6 +201,37 @@ public class TestWorkerBookKeeper
       hostName = workerBookKeeper.getOwnerNodeForPath("remotePath");
     }
     assertNull(hostName, "HostName should be null as Cooordinator is down");
+  }
+
+  @Test
+  public void testGetCacheStatusWhenHostNameIsNull() throws TException, BookKeeperInitializationException, IOException
+  {
+    CacheConfig.setServiceMaxRetries(conf, 1);
+    CacheConfig.setServiceRetryInterval(conf, 1);
+    BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
+    final BookKeeperFactory spyBookKeeperFactory = spy(bookKeeperFactory);
+    doThrow(TTransportException.class).when(spyBookKeeperFactory).createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any());
+    FakeTicker ticker = new FakeTicker();
+    String hostName = "";
+    try (BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, new MetricRegistry())) {
+      final WorkerBookKeeper workerBookKeeper = new MockWorkerBookKeeper(conf, bookKeeperMetrics, ticker, spyBookKeeperFactory);
+      hostName = workerBookKeeper.getOwnerNodeForPath("remotePath");
+      assertNull(hostName, "HostName should be null as Cooordinator is down");
+
+      CacheStatusRequest request = new CacheStatusRequest(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
+          TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+      List<BlockLocation> locations = workerBookKeeper.getCacheStatus(request);
+
+      assertTrue(locations.size() == TEST_END_BLOCK - TEST_START_BLOCK, " Not all block locations are returned");
+      int unknownLocations = 0;
+      for (BlockLocation location : locations) {
+        if (location.getLocation() == Location.UNKNOWN) {
+          unknownLocations++;
+        }
+      }
+
+      assertTrue(unknownLocations == TEST_END_BLOCK - TEST_START_BLOCK, " All the block locations should be unknown");
+    }
   }
 
   private class MockWorkerBookKeeper extends WorkerBookKeeper
