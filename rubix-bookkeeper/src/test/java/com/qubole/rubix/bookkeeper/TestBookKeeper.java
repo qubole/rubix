@@ -25,6 +25,7 @@ import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
+import com.qubole.rubix.spi.thrift.ClusterNode;
 import com.qubole.rubix.spi.thrift.FileInfo;
 import com.qubole.rubix.spi.thrift.NodeState;
 import org.apache.commons.io.FileUtils;
@@ -43,8 +44,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static org.testng.Assert.assertEquals;
@@ -351,9 +352,9 @@ public class TestBookKeeper
         Mockito.when(spyBookKeeper.getClusterManagerInstance(ClusterType.TEST_CLUSTER_MANAGER, conf)).thenReturn(
             new ClusterManager() {
               @Override
-              public Map<String, NodeState> getNodes()
+              public List<ClusterNode> getNodes()
               {
-                Map<String, NodeState> nodes = new HashMap<>();
+                List<ClusterNode> nodes = new ArrayList<>();
                 String hostName = "";
                 try {
                   hostName = InetAddress.getLocalHost().getCanonicalHostName();
@@ -362,8 +363,8 @@ public class TestBookKeeper
                   hostName = "localhost";
                 }
 
-                nodes.put((hostName + "_copy1"), NodeState.ACTIVE);
-                nodes.put((hostName + "_copy2"), NodeState.ACTIVE);
+                nodes.add(new ClusterNode((hostName + "_copy1"), NodeState.ACTIVE));
+                nodes.add(new ClusterNode((hostName + "_copy2"), NodeState.ACTIVE));
                 return nodes;
               }
             });

@@ -14,12 +14,13 @@ package com.qubole.rubix.core.utils;
 
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
+import com.qubole.rubix.spi.thrift.ClusterNode;
 import com.qubole.rubix.spi.thrift.NodeState;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by Abhishek on 6/8/18.
@@ -28,9 +29,9 @@ public class DummyClusterManager extends ClusterManager
 {
   private static long splitSize = 64 * 1024 * 1024;
   @Override
-  public Map<String, NodeState> getNodes()
+  public List<ClusterNode> getNodes()
   {
-    Map<String, NodeState> map = new HashMap<>();
+    List<ClusterNode> list = new ArrayList<>();
     String hostName = "";
     try {
       hostName = InetAddress.getLocalHost().getHostAddress();
@@ -39,9 +40,9 @@ public class DummyClusterManager extends ClusterManager
       hostName = "localhost";
     }
 
-    map.put(hostName, NodeState.ACTIVE);
+    list.add(new ClusterNode(hostName, NodeState.ACTIVE));
 
-    return map;
+    return list;
   }
 
   @Override

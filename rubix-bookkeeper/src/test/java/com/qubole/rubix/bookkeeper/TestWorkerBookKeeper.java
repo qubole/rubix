@@ -22,6 +22,7 @@ import com.qubole.rubix.common.utils.TestUtil;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.thrift.ClusterNode;
 import com.qubole.rubix.spi.thrift.HeartbeatStatus;
 import com.qubole.rubix.spi.thrift.NodeState;
 import org.apache.commons.logging.Log;
@@ -37,8 +38,8 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static org.mockito.ArgumentMatchers.anyString;
@@ -131,9 +132,9 @@ public class TestWorkerBookKeeper
 
       String testLocalhost = "localhost_test";
       String changedTestLocalhost = "changed_localhost";
-      Map<String, NodeState> nodes = new HashMap<String, NodeState>();
+      List<ClusterNode> nodes = new ArrayList<>();
 
-      nodes.put(testLocalhost, NodeState.ACTIVE);
+      nodes.add(new ClusterNode(testLocalhost, NodeState.ACTIVE));
 
       doReturn(nodes).when(spyCoordinator).getClusterNodes();
 
@@ -156,7 +157,7 @@ public class TestWorkerBookKeeper
         assertTrue(hostName.equals(testLocalhost), "HostName is not correct from the coordinator");
 
         nodes.clear();
-        nodes.put(changedTestLocalhost, NodeState.ACTIVE);
+        nodes.add(new ClusterNode(changedTestLocalhost, NodeState.ACTIVE));
 
         doReturn(nodes).when(spyCoordinator).getClusterNodes();
         hostName = workerBookKeeper.getOwnerNodeForPath("remotepath");

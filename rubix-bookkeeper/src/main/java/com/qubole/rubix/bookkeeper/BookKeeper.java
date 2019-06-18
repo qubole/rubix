@@ -39,9 +39,9 @@ import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.BookKeeperService;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
+import com.qubole.rubix.spi.thrift.ClusterNode;
 import com.qubole.rubix.spi.thrift.FileInfo;
 import com.qubole.rubix.spi.thrift.Location;
-import com.qubole.rubix.spi.thrift.NodeState;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -408,17 +408,17 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     return null;
   }
 
-  public abstract Map<String, NodeState> getClusterNodes();
+  public abstract List<ClusterNode> getClusterNodes();
 
   @Override
   public String getOwnerNodeForPath(String remotePathKey)
   {
-    Map<String, NodeState> nodesMap = getClusterNodes();
-    if (nodesMap == null || nodesMap.isEmpty()) {
+    List<ClusterNode> nodeList = getClusterNodes();
+    if (nodeList == null || nodeList.isEmpty()) {
       return null;
     }
 
-    String hostName = ConsistentHashUtil.getHashedNodeForKey(nodesMap, remotePathKey);
+    String hostName = ConsistentHashUtil.getHashedNodeForKey(nodeList, remotePathKey);
     return hostName;
   }
 

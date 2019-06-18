@@ -18,7 +18,6 @@ import com.google.common.base.Ticker;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.google.common.collect.Lists;
 import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
 import com.qubole.rubix.bookkeeper.exception.WorkerInitializationException;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
@@ -26,8 +25,8 @@ import com.qubole.rubix.common.utils.ClusterUtil;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.thrift.ClusterNode;
 import com.qubole.rubix.spi.thrift.HeartbeatStatus;
-import com.qubole.rubix.spi.thrift.NodeState;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -35,7 +34,6 @@ import org.apache.hadoop.conf.Configuration;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
@@ -44,7 +42,7 @@ import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER_MULTINODE;
 public class WorkerBookKeeper extends BookKeeper
 {
   private static Log log = LogFactory.getLog(WorkerBookKeeper.class);
-  private LoadingCache<String, Map<String, NodeState>> nodeStateMap;
+  private LoadingCache<String, List<ClusterNode>> nodeStateMap;
   private HeartbeatService heartbeatService;
   private BookKeeperFactory bookKeeperFactory;
   private RetryingBookkeeperClient coordinatorClient;
@@ -97,30 +95,29 @@ public class WorkerBookKeeper extends BookKeeper
       throw new WorkerInitializationException("Could not get NodeName ", e);
     }
 
-    Map<String, NodeState> nodesMap = getClusterNodes();
+    List<ClusterNode> nodeList = getClusterNodes();
 
-    if (nodesMap != null && nodesMap.size() > 0) {
-      List<String> nodes = Lists.newArrayList(nodesMap.keySet().toArray(new String[0]));
+    if (nodeList != null && nodeList.size() > 0) {
       if (clusterType == TEST_CLUSTER_MANAGER.ordinal() || clusterType == TEST_CLUSTER_MANAGER_MULTINODE.ordinal()) {
-        nodeName = nodes.get(0);
+        nodeName = nodeList.get(0).nodeUrl;
         return;
       }
-      if (nodes.indexOf(nodeHostName) >= 0) {
+      if (nodeList.indexOf(nodeHostName) >= 0) {
         nodeName = nodeHostName;
       }
-      else if (nodes.indexOf(nodeHostAddress) >= 0) {
+      else if (nodeList.indexOf(nodeHostAddress) >= 0) {
         nodeName = nodeHostAddress;
       }
       else {
         String errorMessage = String.format("Could not find nodeHostName=%s nodeHostAddress=%s among cluster nodes=%s  " +
-            "provide by master bookkeeper", nodeHostName, nodeHostAddress, nodesMap);
+            "provide by master bookkeeper", nodeHostName, nodeHostAddress, nodeList);
         log.error(errorMessage);
         throw new WorkerInitializationException(errorMessage);
       }
     }
     else {
       String errorMessage = String.format("Could not find nodeHostName=%s nodeHostAddress=%s among cluster nodes=%s  " +
-              "provide by master bookkeeper", nodeHostName, nodeHostAddress, nodesMap);
+              "provide by master bookkeeper", nodeHostName, nodeHostAddress, nodeList);
       log.error(errorMessage);
       throw new WorkerInitializationException(errorMessage);
     }
@@ -132,9 +129,9 @@ public class WorkerBookKeeper extends BookKeeper
     nodeStateMap = CacheBuilder.newBuilder()
         .ticker(ticker)
         .refreshAfterWrite(expiryPeriod, TimeUnit.SECONDS)
-        .build(new CacheLoader<String, Map<String, NodeState>>() {
+        .build(new CacheLoader<String, List<ClusterNode>>() {
           @Override
-          public Map<String, NodeState> load(String s) throws Exception
+          public List<ClusterNode> load(String s) throws Exception
           {
             if (client == null) {
               client = createBookKeeperClientWithRetry(bookKeeperFactory, masterHostname, conf);
@@ -151,7 +148,7 @@ public class WorkerBookKeeper extends BookKeeper
   }
 
   @Override
-  public Map<String, NodeState> getClusterNodes()
+  public List<ClusterNode> getClusterNodes()
   {
     try {
       return nodeStateMap.get("nodes");

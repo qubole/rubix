@@ -15,7 +15,6 @@ package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.collect.Lists;
 import com.google.common.testing.FakeTicker;
 import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
 import com.qubole.rubix.bookkeeper.exception.CoordinatorInitializationException;
@@ -24,6 +23,7 @@ import com.qubole.rubix.common.utils.TestUtil;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
+import com.qubole.rubix.spi.thrift.ClusterNode;
 import com.qubole.rubix.spi.thrift.HeartbeatStatus;
 import com.qubole.rubix.spi.thrift.NodeState;
 import org.apache.commons.logging.Log;
@@ -37,9 +37,8 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static org.testng.Assert.assertEquals;
@@ -195,11 +194,11 @@ public class TestCoordinatorBookKeeper
         Mockito.when(coordinator.getClusterManagerInstance(ClusterType.TEST_CLUSTER_MANAGER, conf)).thenReturn(
             new ClusterManager() {
               @Override
-              public Map<String, NodeState> getNodes()
+              public List<ClusterNode> getNodes()
               {
-                Map<String, NodeState> nodes = new HashMap<>();
-                nodes.put("node1", NodeState.ACTIVE);
-                nodes.put("node2", NodeState.ACTIVE);
+                List<ClusterNode> nodes = new ArrayList<>();
+                nodes.add(new ClusterNode("node1", NodeState.ACTIVE));
+                nodes.add(new ClusterNode("node2", NodeState.ACTIVE));
 
                 return nodes;
               }
@@ -209,10 +208,10 @@ public class TestCoordinatorBookKeeper
         fail("Not able to initialize Cluster Manager");
       }
 
-      List<String> hostNames = Lists.newArrayList(coordinator.getClusterNodes().keySet().toArray(new String[0]));
+      List<ClusterNode> hostNames = coordinator.getClusterNodes();
       log.debug("HostNames : " + hostNames);
       assertTrue(hostNames.size() == 2, "Number of hosts does not match");
-      assertTrue(hostNames.get(0).equals("node1") && hostNames.get(1).equals("node2"), "HostNames don't match");
+      assertTrue(hostNames.get(0).nodeUrl.equals("node1") && hostNames.get(1).nodeUrl.equals("node2"), "HostNames don't match");
     }
   }
 

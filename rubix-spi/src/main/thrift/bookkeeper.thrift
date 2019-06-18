@@ -15,6 +15,11 @@ ACTIVE,
 INACTIVE
 }
 
+struct ClusterNode {
+    1: required string nodeUrl;
+    2: required NodeState nodeState;
+}
+
 struct BlockLocation {
     1: required Location location;
     2: required string remoteLocation;
@@ -54,7 +59,7 @@ service BookKeeperService
 
     FileInfo getFileInfo(1:string remotePath)
 
-    map<string, NodeState> getClusterNodes()
+    list<ClusterNode> getClusterNodes()
 
     string getOwnerNodeForPath(1:string remotePathKey)
 

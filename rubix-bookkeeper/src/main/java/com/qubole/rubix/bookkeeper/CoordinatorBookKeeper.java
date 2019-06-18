@@ -25,8 +25,8 @@ import com.qubole.rubix.common.utils.ClusterUtil;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
+import com.qubole.rubix.spi.thrift.ClusterNode;
 import com.qubole.rubix.spi.thrift.HeartbeatStatus;
-import com.qubole.rubix.spi.thrift.NodeState;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -35,7 +35,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Map;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class CoordinatorBookKeeper extends BookKeeper
@@ -161,7 +161,7 @@ public class CoordinatorBookKeeper extends BookKeeper
   }
 
   @Override
-  public Map<String, NodeState> getClusterNodes()
+  public List<ClusterNode> getClusterNodes()
   {
     return getClusterManager().getNodes();
   }

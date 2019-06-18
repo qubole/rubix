@@ -82,6 +82,7 @@ public class Hadoop2ClusterManagerUtil
     }.getType();
     NodesResponse nodesResponse = gson.fromJson(response.toString(), type);
     allNodes = nodesResponse.getNodes().getNodeList();
+    log.info(" ABHISHEK " + allNodes.toString());
 
     return allNodes;
   }
