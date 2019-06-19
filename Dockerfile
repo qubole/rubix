@@ -4,6 +4,8 @@ MAINTAINER Kamesh Vankayala - Qubole Inc.
 ## Install thrift 0.9.3
 ENV THRIFT_VERSION 0.9.3
 
+RUN printf "deb http://archive.debian.org/debian/ jessie main\ndeb-src http://archive.debian.org/debian/ jessie main\ndeb http://security.debian.org jessie/updates main\ndeb-src http://security.debian.org jessie/updates main" > /etc/apt/sources.list
+
 RUN buildDeps=" \
 		automake \
 		bison \
@@ -62,5 +64,15 @@ ENV HADOOP_CLASSPATH=$HADOOP_CLASSPATH:/usr/lib/hadoop2/share/hadoop/tools/lib/*
 
 ENV USER=root
 ENV PATH $HADOOP_PREFIX/bin/:$PATH
+
+# Install Docker and Docker Compose for integration tests
+RUN set -x \
+    && curl -fSL "https://download.docker.com/linux/static/stable/x86_64/docker-17.09.0-ce.tgz" -o /tmp/docker-ce.tgz \
+    && tar -xvzf /tmp/docker-ce.tgz \
+    && cp docker/* /usr/local/bin
+
+RUN set -x \
+    && curl -L "https://github.com/docker/compose/releases/download/1.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose \
+    && chmod +x /usr/local/bin/docker-compose
 
 RUN mkdir -p /media/ephemeral0
