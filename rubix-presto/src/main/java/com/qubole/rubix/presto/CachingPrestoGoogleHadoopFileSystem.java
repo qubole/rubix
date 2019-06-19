@@ -11,14 +11,12 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-package com.qubole.rubix.hadoop2;
+package com.qubole.rubix.presto;
 
 import com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem;
 import com.qubole.rubix.core.CachingFileSystem;
 import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.spi.ClusterType;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
 import java.io.IOException;
@@ -27,31 +25,29 @@ import java.net.URI;
 /**
  * Created by Kamesh Vankayala 06/19/2019
  */
-public class CachingGoogleHadoopFileSystem extends CachingFileSystem<GoogleHadoopFileSystem>
+public class CachingPrestoGoogleHadoopFileSystem extends CachingFileSystem<GoogleHadoopFileSystem>
 {
-  private static final Log LOG = LogFactory.getLog(CachingGoogleHadoopFileSystem.class);
   private static final String SCHEME = "gs";
 
-  public CachingGoogleHadoopFileSystem() throws IOException
+  public CachingPrestoGoogleHadoopFileSystem()
   {
     super();
   }
 
-  public String getScheme()
-  {
-    return SCHEME;
-  }
-
   @Override
-  public void initialize(URI uri, Configuration conf)
-      throws IOException
+  public void initialize(URI uri, Configuration conf) throws IOException
   {
     try {
-      initializeClusterManager(conf, ClusterType.HADOOP2_CLUSTER_MANAGER);
+      initializeClusterManager(conf, ClusterType.PRESTO_CLUSTER_MANAGER);
       super.initialize(uri, conf);
     }
     catch (ClusterManagerInitilizationException ex) {
       throw new IOException(ex);
     }
+  }
+
+  public String getScheme()
+  {
+    return SCHEME;
   }
 }
