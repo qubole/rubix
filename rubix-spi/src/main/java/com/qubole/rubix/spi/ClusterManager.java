@@ -48,7 +48,5 @@ public abstract class ClusterManager
     return nodeRefreshTime;
   }
 
-  // Nodes format as per the note above
-  // Should return sorted list
   public abstract List<ClusterNode> getNodes();
 }
