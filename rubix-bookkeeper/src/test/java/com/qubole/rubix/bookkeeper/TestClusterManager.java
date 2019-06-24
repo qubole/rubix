@@ -15,6 +15,7 @@ package com.qubole.rubix.bookkeeper;
 import com.codahale.metrics.MetricRegistry;
 import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
 import com.qubole.rubix.bookkeeper.exception.CoordinatorInitializationException;
+import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.common.utils.TestUtil;
 import com.qubole.rubix.core.utils.DummyClusterManager;
 import com.qubole.rubix.hadoop2.Hadoop2ClusterManager;
@@ -46,6 +47,7 @@ public class TestClusterManager
   private MetricRegistry metrics;
 
   private CoordinatorBookKeeper bookKeeper;
+  BookKeeperMetrics bookKeeperMetrics;
 
   @BeforeMethod
   public void setUp() throws IOException, BookKeeperInitializationException
@@ -56,14 +58,15 @@ public class TestClusterManager
     TestUtil.createCacheParentDirectories(conf, TEST_MAX_DISKS);
 
     metrics = new MetricRegistry();
-    bookKeeper = new CoordinatorBookKeeper(conf, metrics);
+    bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
+    bookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics);
   }
 
   @AfterMethod
   public void tearDown() throws Exception
   {
     TestUtil.removeCacheParentDirectories(conf, TEST_MAX_DISKS);
-
+    bookKeeperMetrics.close();
     conf.clear();
   }
 

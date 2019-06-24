@@ -25,9 +25,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
 import org.apache.thrift.shaded.TException;
@@ -179,13 +177,6 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
       files[i].setPath(getRubixPath(files[i].getPath(), isRubixSchemeUsed));
     }
     return files;
-  }
-
-  @Override
-  public RemoteIterator<LocatedFileStatus> listLocatedStatus(final Path path)
-      throws FileNotFoundException, IOException
-  {
-    return fs.listLocatedStatus(path);
   }
 
   @Override

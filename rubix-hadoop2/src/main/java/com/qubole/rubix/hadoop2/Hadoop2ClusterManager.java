@@ -16,9 +16,10 @@ import com.google.common.base.Throwables;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableList;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
+import com.qubole.rubix.spi.thrift.ClusterNode;
 import com.qubole.rubix.spi.thrift.NodeState;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -26,9 +27,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 import java.net.InetAddress;
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -39,7 +39,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class Hadoop2ClusterManager extends ClusterManager
 {
-  static LoadingCache<String, Map<String, NodeState>> nodesCache;
+  static LoadingCache<String, List<ClusterNode>> nodesCache;
   YarnConfiguration yconf;
   private Log log = LogFactory.getLog(Hadoop2ClusterManager.class);
 
@@ -51,24 +51,24 @@ public class Hadoop2ClusterManager extends ClusterManager
     ExecutorService executor = Executors.newSingleThreadExecutor();
     nodesCache = CacheBuilder.newBuilder()
         .refreshAfterWrite(getNodeRefreshTime(), TimeUnit.SECONDS)
-        .build(CacheLoader.asyncReloading(new CacheLoader<String, Map<String, NodeState>>()
+        .build(CacheLoader.asyncReloading(new CacheLoader<String, List<ClusterNode>>()
         {
           @Override
-          public Map<String, NodeState> load(String s)
+          public List<ClusterNode> load(String s)
               throws Exception
           {
             try {
               List<Hadoop2ClusterManagerUtil.Node> allNodes = Hadoop2ClusterManagerUtil.getAllNodes(yconf);
               if (allNodes == null) {
-                return ImmutableMap.of();
+                return ImmutableList.of();
               }
 
-              Map<String, NodeState> hosts = new HashMap<>();
+              List<ClusterNode> hosts = new ArrayList<>();
 
               if (allNodes.isEmpty()) {
                 // Empty result set => server up and only master node running, return localhost has the only node
                 // Do not need to consider failed nodes list as 1node cluster and server is up since it replied to allNodesRequest
-                return ImmutableMap.of(InetAddress.getLocalHost().getHostAddress(), NodeState.ACTIVE);
+                return ImmutableList.of(new ClusterNode(InetAddress.getLocalHost().getHostAddress(), NodeState.ACTIVE));
               }
 
               for (Hadoop2ClusterManagerUtil.Node node : allNodes) {
@@ -76,7 +76,7 @@ public class Hadoop2ClusterManager extends ClusterManager
                 log.debug("Hostname: " + node.getNodeHostName() + "State: " + state);
                 //keep only healthy data nodes
                 if (state.equalsIgnoreCase("Running") || state.equalsIgnoreCase("New") || state.equalsIgnoreCase("Rebooted")) {
-                  hosts.put(node.getNodeHostName(), NodeState.ACTIVE);
+                  hosts.add(new ClusterNode(node.getNodeHostName(), NodeState.ACTIVE));
                 }
               }
 
@@ -94,7 +94,7 @@ public class Hadoop2ClusterManager extends ClusterManager
   }
 
   @Override
-  public Map<String, NodeState> getNodes()
+  public List<ClusterNode> getNodes()
   {
     try {
       return nodesCache.get("nodeList");

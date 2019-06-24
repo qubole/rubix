@@ -14,6 +14,7 @@ package com.qubole.rubix.hadoop2;
 
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterType;
+import com.qubole.rubix.spi.thrift.ClusterNode;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -52,13 +53,13 @@ public class TestHadoop2ClusterManagerV2
   public void testGetNodes_multipleWorkers()
       throws IOException
   {
-    final List<String> nodeHostnames = TestHadoop2ClusterManagerUtil.getNodeHostnamesFromCluster(
+    final List<ClusterNode> nodeHostnames = TestHadoop2ClusterManagerUtil.getNodeHostnamesFromCluster(
         TestHadoop2ClusterManagerUtil.CLUSTER_NODES_ENDPOINT,
         worker.new MultipleRunningWorkers(), conf, ClusterType.HADOOP2_CLUSTER_MANAGER);
 
     assertTrue(nodeHostnames.size() == 2, "Should only have two nodes");
-    assertTrue(nodeHostnames.get(0).equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_2) &&
-        nodeHostnames.get(1).equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_1), "Wrong nodes data");
+    assertTrue(nodeHostnames.get(0).nodeUrl.equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_2) &&
+        nodeHostnames.get(1).nodeUrl.equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_1), "Wrong nodes data");
   }
 
   @Test
@@ -68,13 +69,13 @@ public class TestHadoop2ClusterManagerV2
   public void testGetNodes_oneNewWorker()
       throws IOException
   {
-    final List<String> nodeHostnames = TestHadoop2ClusterManagerUtil.getNodeHostnamesFromCluster(
+    final List<ClusterNode> nodeHostnames = TestHadoop2ClusterManagerUtil.getNodeHostnamesFromCluster(
         TestHadoop2ClusterManagerUtil.CLUSTER_NODES_ENDPOINT,
         worker.new MultipleWorkersOneNew(), conf, ClusterType.HADOOP2_CLUSTER_MANAGER);
 
     assertTrue(nodeHostnames.size() == 2, "Should only have two nodes");
-    assertTrue(nodeHostnames.get(0).equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_2) &&
-        nodeHostnames.get(1).equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_1), "Wrong nodes data");
+    assertTrue(nodeHostnames.get(0).nodeUrl.equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_2) &&
+        nodeHostnames.get(1).nodeUrl.equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_1), "Wrong nodes data");
   }
 
   @Test
@@ -84,13 +85,13 @@ public class TestHadoop2ClusterManagerV2
   public void testUnhealthyNodeCluster_decommissioned()
       throws IOException
   {
-    final List<String> nodeHostnames = TestHadoop2ClusterManagerUtil.getNodeHostnamesFromCluster(
+    final List<ClusterNode> nodeHostnames = TestHadoop2ClusterManagerUtil.getNodeHostnamesFromCluster(
         TestHadoop2ClusterManagerUtil.CLUSTER_NODES_ENDPOINT,
         worker.new MultipleWorkersOneDecommissioned(), conf, ClusterType.HADOOP2_CLUSTER_MANAGER);
 
     assertTrue(nodeHostnames.size() == 2, "Should have two nodes");
-    assertTrue(nodeHostnames.get(0).equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_2) &&
-        nodeHostnames.get(1).equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_1), "Wrong nodes data");
+    assertTrue(nodeHostnames.get(0).nodeUrl.equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_2) &&
+        nodeHostnames.get(1).nodeUrl.equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_1), "Wrong nodes data");
   }
 
   @Test
@@ -100,11 +101,11 @@ public class TestHadoop2ClusterManagerV2
   public void testMasterOnlyCluster()
       throws IOException
   {
-    final List<String> nodeHostnames = TestHadoop2ClusterManagerUtil.getNodeHostnamesFromCluster(
+    final List<ClusterNode> nodeHostnames = TestHadoop2ClusterManagerUtil.getNodeHostnamesFromCluster(
         TestHadoop2ClusterManagerUtil.CLUSTER_NODES_ENDPOINT,
         worker.new NoWorkers(), conf, ClusterType.HADOOP2_CLUSTER_MANAGER);
 
     assertTrue(nodeHostnames.size() == 1, "Should have added localhost in list");
-    assertTrue(nodeHostnames.get(0).equals(InetAddress.getLocalHost().getHostAddress()), "Not added right hostname");
+    assertTrue(nodeHostnames.get(0).nodeUrl.equals(InetAddress.getLocalHost().getHostAddress()), "Not added right hostname");
   }
 }

@@ -1,9 +1,9 @@
 *** Settings ***
-Documentation       Rubix Cache Eviction Integration Tests
-Resource            setup.robot
-Resource            bookkeeper.robot
-Suite Setup         Create Cache Parent Directories     ${CACHE_DIR_PFX}    ${CACHE_NUM_DISKS}
-Suite Teardown      Remove Cache Parent Directories     ${CACHE_DIR_PFX}    ${CACHE_NUM_DISKS}
+Documentation   Rubix Cache Eviction Integration Tests
+Resource        setup.robot
+Resource        bookkeeper.robot
+Suite Setup     Create Cache Parent Directories  ${CACHE_DIR_PFX}  ${CACHE_NUM_DISKS}
+Suite Teardown  Remove Cache Parent Directories  ${CACHE_DIR_PFX}  ${CACHE_NUM_DISKS}
 
 *** Variables ***
 # Cache settings
@@ -27,18 +27,18 @@ ${END_BLOCK}        1048576
 ${CLUSTER_TYPE}     3   # TEST_CLUSTER_MANAGER
 
 # Test constants
-${NUM_TEST_FILES}           5
-${NUM_CONCURRENT_THREADS}   3
+${NUM_TEST_FILES}          5
+${NUM_CONCURRENT_THREADS}  3
 
-${NUM_EXPECTED_EVICTIONS}   3
+${NUM_EXPECTED_EVICTIONS}  3
 
 *** Test Cases ***
 Cache eviction
-    [Template]   Test cache eviction
-    Download requests               runConcurrently=${false}
-    Concurrently download requests  runConcurrently=${true}
-    Read requests                   runConcurrently=${false}
-    Concurrently read requests      runConcurrently=${true}
+    [Template]  Test cache eviction
+    Execute read request using BookKeeper server call                runConcurrently=${false}
+    Concurrently execute read requests using BookKeeper server call  runConcurrently=${true}
+    Execute read request using client file system                    runConcurrently=${false}
+    Concurrently execute read requests using client file system      runConcurrently=${true}
 
 *** Keywords ***
 Test cache eviction

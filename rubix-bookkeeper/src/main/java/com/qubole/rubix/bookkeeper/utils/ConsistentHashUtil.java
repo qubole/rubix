@@ -14,17 +14,15 @@
 package com.qubole.rubix.bookkeeper.utils;
 
 import com.google.common.base.Charsets;
-import com.google.common.collect.Lists;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
+import com.qubole.rubix.spi.thrift.ClusterNode;
 import com.qubole.rubix.spi.thrift.NodeState;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public class ConsistentHashUtil
 {
@@ -35,35 +33,33 @@ public class ConsistentHashUtil
     //
   }
 
-  public static String getHashedNodeForKey(Map<String, NodeState> nodesMap, String key)
+  public static String getHashedNodeForKey(List<ClusterNode> nodeList, String key)
   {
-    List<String> nodes = Lists.newArrayList(nodesMap.keySet().toArray(new String[0]));
-    int nodeIndex = getNodeIndex(nodesMap, key);
-    return nodes.get(nodeIndex);
+    int nodeIndex = getNodeIndex(nodeList, key);
+    return nodeList.get(nodeIndex).nodeUrl;
   }
 
-  public static int getNodeIndex(Map<String, NodeState> nodesMap, String key)
+  public static int getNodeIndex(List<ClusterNode> nodeList, String key)
   {
     HashFunction hf = Hashing.md5();
     HashCode hc = hf.hashString(key, Charsets.UTF_8);
 
-    int nodeIndex = Hashing.consistentHash(hc, nodesMap.size());
+    int nodeIndex = Hashing.consistentHash(hc, nodeList.size());
     if (hc.asInt() % 2 == 0) {
-      nodeIndex = getNextRunningNodeIndex(nodesMap, nodeIndex);
+      nodeIndex = getNextRunningNodeIndex(nodeList, nodeIndex);
     }
     else {
-      nodeIndex = getPreviousRunningNodeIndex(nodesMap, nodeIndex);
+      nodeIndex = getPreviousRunningNodeIndex(nodeList, nodeIndex);
     }
 
     return nodeIndex;
   }
 
-  private static Integer getNextRunningNodeIndex(Map<String, NodeState> nodesMap, int startIndex)
+  private static Integer getNextRunningNodeIndex(List<ClusterNode> nodeList, int startIndex)
   {
-    List<String> nodeList = new ArrayList<>(nodesMap.keySet());
     for (int i = startIndex; i < (startIndex + nodeList.size()); i++) {
       int index = i >= nodeList.size() ? (i - nodeList.size()) : i;
-      NodeState nodeState = nodesMap.get(nodeList.get(index));
+      NodeState nodeState = nodeList.get(index).nodeState;
       if (nodeState == NodeState.ACTIVE) {
         return index;
       }
@@ -72,18 +68,17 @@ public class ConsistentHashUtil
     return null;
   }
 
-  private static Integer getPreviousRunningNodeIndex(Map<String, NodeState> nodesMap, int startIndex)
+  private static Integer getPreviousRunningNodeIndex(List<ClusterNode> nodeList, int startIndex)
   {
-    List<String> nodeList = new ArrayList<>(nodesMap.keySet());
     for (int i = startIndex; i >= 0; i--) {
-      NodeState nodeState = nodesMap.get(nodeList.get(i));
+      NodeState nodeState = nodeList.get(i).nodeState;
       if (nodeState == NodeState.ACTIVE) {
         return i;
       }
     }
 
     for (int i = nodeList.size() - 1; i > startIndex; i--) {
-      NodeState nodeState = nodesMap.get(nodeList.get(i));
+      NodeState nodeState = nodeList.get(i).nodeState;
       if (nodeState == NodeState.ACTIVE) {
         return i;
       }

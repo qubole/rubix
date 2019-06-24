@@ -102,7 +102,13 @@ public class NonLocalRequestChain extends ReadRequestChain
 
   public ReadRequestChainStats getStats()
   {
-    return new ReadRequestChainStats().setRemoteReads(requests);
+    if (nonLocalReadRequestChain != null) {
+      return new ReadRequestChainStats().setNonLocalReads(nonLocalReadRequestChain.requests);
+    }
+    else {
+      // TODO: ReadRequestChainStats could collect number of direct reads from here
+      return new ReadRequestChainStats();
+    }
   }
 
   public void addReadRequest(ReadRequest readRequest)

@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.util.HashSet;
 import java.util.Set;
@@ -553,9 +554,10 @@ public class BaseServerTest
     public void startServer(Configuration conf, MetricRegistry metricRegistry)
     {
       metrics = metricRegistry;
+      bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
       try {
         // Initializing this BookKeeper here allows it to register the live worker count metric for testing.
-        new CoordinatorBookKeeper(conf, metrics);
+        new CoordinatorBookKeeper(conf, bookKeeperMetrics);
       }
       catch (BookKeeperInitializationException e) {
         log.error("Could not instantiate Coordinator", e);
@@ -568,6 +570,12 @@ public class BaseServerTest
     public void stopServer()
     {
       removeMetrics();
+      try {
+        bookKeeperMetrics.close();
+      }
+      catch (IOException e) {
+        log.error("Metrics reporters could not be closed", e);
+      }
       isServerUp = false;
     }
 
@@ -589,8 +597,9 @@ public class BaseServerTest
       final BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
 
       metrics = metricRegistry;
+      bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
       try {
-        new WorkerBookKeeper(conf, metrics, bookKeeperFactory);
+        new WorkerBookKeeper(conf, bookKeeperMetrics, bookKeeperFactory);
       }
       catch (BookKeeperInitializationException e) {
         log.error("Could not instantiate Worker", e);
@@ -603,6 +612,12 @@ public class BaseServerTest
     public void stopServer()
     {
       removeMetrics();
+      try {
+        bookKeeperMetrics.close();
+      }
+      catch (IOException e) {
+        log.error("Metrics reporters could not be closed", e);
+      }
       isServerUp = false;
     }
 

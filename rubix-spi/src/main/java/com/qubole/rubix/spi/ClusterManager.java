@@ -12,12 +12,12 @@
  */
 package com.qubole.rubix.spi;
 
-import com.qubole.rubix.spi.thrift.NodeState;
+import com.qubole.rubix.spi.thrift.ClusterNode;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
-import java.util.Map;
+import java.util.List;
 
 /**
  * Created by stagra on 14/1/16.
@@ -48,7 +48,5 @@ public abstract class ClusterManager
     return nodeRefreshTime;
   }
 
-  // Nodes format as per the note above
-  // Should return sorted list
-  public abstract Map<String, NodeState> getNodes();
+  public abstract List<ClusterNode> getNodes();
 }

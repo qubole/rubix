@@ -14,21 +14,19 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.Gauge;
-import com.codahale.metrics.MetricRegistry;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ticker;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
 import com.qubole.rubix.bookkeeper.exception.CoordinatorInitializationException;
-import com.qubole.rubix.bookkeeper.utils.ConsistentHashUtil;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.common.utils.ClusterUtil;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
+import com.qubole.rubix.spi.thrift.ClusterNode;
 import com.qubole.rubix.spi.thrift.HeartbeatStatus;
-import com.qubole.rubix.spi.thrift.NodeState;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -37,7 +35,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Map;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class CoordinatorBookKeeper extends BookKeeper
@@ -58,15 +56,15 @@ public class CoordinatorBookKeeper extends BookKeeper
   protected ClusterManager clusterManager;
   int clusterType;
 
-  public CoordinatorBookKeeper(Configuration conf, MetricRegistry metrics) throws BookKeeperInitializationException
+  public CoordinatorBookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics) throws BookKeeperInitializationException
   {
-    this(conf, metrics, Ticker.systemTicker());
+    this(conf, bookKeeperMetrics, Ticker.systemTicker());
   }
 
   @VisibleForTesting
-  protected CoordinatorBookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker) throws BookKeeperInitializationException
+  public CoordinatorBookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics, Ticker ticker) throws BookKeeperInitializationException
   {
-    super(conf, metrics, ticker);
+    super(conf, bookKeeperMetrics, ticker);
     this.isValidationEnabled = CacheConfig.isValidationEnabled(conf);
     this.liveWorkerCache = createHealthCache(conf, ticker);
     this.cachingValidatedWorkerCache = createHealthCache(conf, ticker);
@@ -163,17 +161,9 @@ public class CoordinatorBookKeeper extends BookKeeper
   }
 
   @Override
-  public Map<String, NodeState> getClusterNodes()
+  public List<ClusterNode> getClusterNodes()
   {
     return getClusterManager().getNodes();
-  }
-
-  @Override
-  public String getOwnerNodeForPath(String remotePathKey)
-  {
-    Map<String, NodeState> nodesMap = getClusterNodes();
-    String hostName = ConsistentHashUtil.getHashedNodeForKey(nodesMap, remotePathKey);
-    return hostName;
   }
 
   /**

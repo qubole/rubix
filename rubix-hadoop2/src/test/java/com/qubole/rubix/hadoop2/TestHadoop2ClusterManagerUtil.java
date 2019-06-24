@@ -13,10 +13,10 @@
 
 package com.qubole.rubix.hadoop2;
 
-import com.google.common.collect.Lists;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
+import com.qubole.rubix.spi.thrift.ClusterNode;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import org.apache.commons.logging.Log;
@@ -80,8 +80,8 @@ public class TestHadoop2ClusterManagerUtil
    * @return A list of hostnames for the nodes in the cluster.
    * @throws IOException if the cluster server could not be created.
    */
-  static List<String> getNodeHostnamesFromCluster(String endpoint, HttpHandler responseHandler,
-                                                  Configuration conf, ClusterType clusterType)
+  static List<ClusterNode> getNodeHostnamesFromCluster(String endpoint, HttpHandler responseHandler,
+                                                       Configuration conf, ClusterType clusterType)
       throws IOException
   {
     final HttpServer server = createServer(endpoint, responseHandler);
@@ -89,7 +89,7 @@ public class TestHadoop2ClusterManagerUtil
 
     ClusterManager clusterManager = getClusterManagerInstance(clusterType, conf);
     clusterManager.initialize(conf);
-    List<String> nodes = Lists.newArrayList(clusterManager.getNodes().keySet().toArray(new String[0]));
+    List<ClusterNode> nodes = clusterManager.getNodes();
     log.info("Got nodes: " + nodes);
 
     server.stop(0);

@@ -27,6 +27,7 @@ import com.google.common.cache.RemovalNotification;
 import com.google.common.cache.Weigher;
 import com.google.common.collect.ImmutableMap;
 import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
+import com.qubole.rubix.bookkeeper.utils.ConsistentHashUtil;
 import com.qubole.rubix.bookkeeper.utils.DiskUtils;
 import com.qubole.rubix.bookkeeper.validation.CachingValidator;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
@@ -38,6 +39,7 @@ import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.BookKeeperService;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
+import com.qubole.rubix.spi.thrift.ClusterNode;
 import com.qubole.rubix.spi.thrift.FileInfo;
 import com.qubole.rubix.spi.thrift.Location;
 import com.qubole.rubix.spi.thrift.ReadDataRequest;
@@ -65,6 +67,18 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.CACHE_AVAILABLE_SIZE_GAUGE;
+import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.CACHE_EVICTION_COUNT;
+import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.CACHE_EXPIRY_COUNT;
+import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.CACHE_HIT_RATE_GAUGE;
+import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.CACHE_INVALIDATION_COUNT;
+import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.CACHE_MISS_RATE_GAUGE;
+import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.CACHE_REQUEST_COUNT;
+import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.CACHE_SIZE_GAUGE;
+import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.NONLOCAL_REQUEST_COUNT;
+import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.REMOTE_REQUEST_COUNT;
+import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.TOTAL_REQUEST_COUNT;
+
 /**
  * Created by stagra on 12/2/16.
  */
@@ -84,6 +98,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
 
   // Registry for gathering & storing necessary metrics
   protected final MetricRegistry metrics;
+  private final BookKeeperMetrics bookKeeperMetrics;
 
   // Metrics to keep track of cache interactions
   private static Counter cacheEvictionCount;
@@ -94,9 +109,9 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   private Counter cacheRequestCount;
   private Counter nonlocalRequestCount;
 
-  public BookKeeper(Configuration conf, MetricRegistry metrics) throws BookKeeperInitializationException
+  public BookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics) throws BookKeeperInitializationException
   {
-    this(conf, metrics, Ticker.systemTicker());
+    this(conf, bookKeeperMetrics, Ticker.systemTicker());
   }
 
   @Override
@@ -106,10 +121,11 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   }
 
   @VisibleForTesting
-  BookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker) throws BookKeeperInitializationException
+  BookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics, Ticker ticker) throws BookKeeperInitializationException
   {
     this.conf = conf;
-    this.metrics = metrics;
+    this.bookKeeperMetrics = bookKeeperMetrics;
+    this.metrics = bookKeeperMetrics.getMetricsRegistry();
     this.ticker = ticker;
     this.splitSize = CacheConfig.getCacheFileSplitSize(conf);
     cleanupOldCacheFiles(conf);
@@ -166,15 +182,15 @@ public abstract class BookKeeper implements BookKeeperService.Iface
    */
   private void initializeMetrics()
   {
-    cacheEvictionCount = metrics.counter(BookKeeperMetrics.CacheMetric.CACHE_EVICTION_COUNT.getMetricName());
-    cacheInvalidationCount = metrics.counter(BookKeeperMetrics.CacheMetric.CACHE_INVALIDATION_COUNT.getMetricName());
-    cacheExpiryCount = metrics.counter(BookKeeperMetrics.CacheMetric.CACHE_EXPIRY_COUNT.getMetricName());
-    totalRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.TOTAL_REQUEST_COUNT.getMetricName());
-    cacheRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.CACHE_REQUEST_COUNT.getMetricName());
-    nonlocalRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.NONLOCAL_REQUEST_COUNT.getMetricName());
-    remoteRequestCount = metrics.counter(BookKeeperMetrics.CacheMetric.REMOTE_REQUEST_COUNT.getMetricName());
+    cacheEvictionCount = metrics.counter(CACHE_EVICTION_COUNT.getMetricName());
+    cacheInvalidationCount = metrics.counter(CACHE_INVALIDATION_COUNT.getMetricName());
+    cacheExpiryCount = metrics.counter(CACHE_EXPIRY_COUNT.getMetricName());
+    totalRequestCount = metrics.counter(TOTAL_REQUEST_COUNT.getMetricName());
+    cacheRequestCount = metrics.counter(CACHE_REQUEST_COUNT.getMetricName());
+    nonlocalRequestCount = metrics.counter(NONLOCAL_REQUEST_COUNT.getMetricName());
+    remoteRequestCount = metrics.counter(REMOTE_REQUEST_COUNT.getMetricName());
 
-    metrics.register(BookKeeperMetrics.CacheMetric.CACHE_HIT_RATE_GAUGE.getMetricName(), new Gauge<Double>()
+    metrics.register(CACHE_HIT_RATE_GAUGE.getMetricName(), new Gauge<Double>()
     {
       @Override
       public Double getValue()
@@ -182,7 +198,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         return ((double) cacheRequestCount.getCount() / (cacheRequestCount.getCount() + remoteRequestCount.getCount()));
       }
     });
-    metrics.register(BookKeeperMetrics.CacheMetric.CACHE_MISS_RATE_GAUGE.getMetricName(), new Gauge<Double>()
+    metrics.register(CACHE_MISS_RATE_GAUGE.getMetricName(), new Gauge<Double>()
     {
       @Override
       public Double getValue()
@@ -190,7 +206,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         return ((double) remoteRequestCount.getCount() / (cacheRequestCount.getCount() + remoteRequestCount.getCount()));
       }
     });
-    metrics.register(BookKeeperMetrics.CacheMetric.CACHE_SIZE_GAUGE.getMetricName(), new Gauge<Integer>()
+    metrics.register(CACHE_SIZE_GAUGE.getMetricName(), new Gauge<Integer>()
     {
       @Override
       public Integer getValue()
@@ -198,7 +214,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         return DiskUtils.getCacheSizeMB(conf);
       }
     });
-    metrics.register(BookKeeperMetrics.CacheMetric.CACHE_AVAILABLE_SIZE_GAUGE.getMetricName(), new Gauge<Long>()
+    metrics.register(CACHE_AVAILABLE_SIZE_GAUGE.getMetricName(), new Gauge<Long>()
     {
       @Override
       public Long getValue()
@@ -219,7 +235,6 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     long lastModified = request.getLastModified();
     long startBlock = request.getStartBlock();
     long endBlock = request.getEndBlock();
-    boolean incrMetrics = request.isIncrMetrics();
 
     for (long i = 0; i < fileLength; i = i + splitSize) {
       long end = i + splitSize;
@@ -325,23 +340,23 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   @Override
   public Map<String, Double> getCacheMetrics()
   {
-    final long cachedRequests = cacheRequestCount.getCount();
-    final long remoteRequests = remoteRequestCount.getCount();
-    final long nonLocalRequests = nonlocalRequestCount.getCount();
-    final long totalRequests = totalRequestCount.getCount();
-
     ImmutableMap.Builder<String, Double> cacheMetrics = ImmutableMap.builder();
-    cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_HIT_RATE_GAUGE.getMetricName(), ((double) cachedRequests / (cachedRequests + remoteRequests)));
-    cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_MISS_RATE_GAUGE.getMetricName(), ((double) (remoteRequests) / (cachedRequests + remoteRequests)));
-    cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_REQUEST_COUNT.getMetricName(), ((double) cachedRequests));
-    cacheMetrics.put(BookKeeperMetrics.CacheMetric.REMOTE_REQUEST_COUNT.getMetricName(), ((double) remoteRequests));
-    cacheMetrics.put(BookKeeperMetrics.CacheMetric.NONLOCAL_REQUEST_COUNT.getMetricName(), ((double) nonLocalRequests));
-    cacheMetrics.put(BookKeeperMetrics.CacheMetric.TOTAL_REQUEST_COUNT.getMetricName(), ((double) totalRequests));
-    cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_EVICTION_COUNT.getMetricName(), (double) cacheEvictionCount.getCount());
-    cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_INVALIDATION_COUNT.getMetricName(), (double) cacheInvalidationCount.getCount());
-    cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_EXPIRY_COUNT.getMetricName(), (double) cacheExpiryCount.getCount());
-    cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_SIZE_GAUGE.getMetricName(), (double) DiskUtils.getCacheSizeMB(conf));
-    cacheMetrics.put(BookKeeperMetrics.CacheMetric.CACHE_AVAILABLE_SIZE_GAUGE.getMetricName(), (double) totalAvailableForCache);
+
+    // Add all enabled metrics gauges
+    for (Map.Entry<String, Gauge> gaugeEntry : metrics.getGauges(bookKeeperMetrics.getMetricsFilter()).entrySet()) {
+      try {
+        cacheMetrics.put(gaugeEntry.getKey(), getGaugeValueAsDouble(gaugeEntry.getValue().getValue()));
+      }
+      catch (ClassCastException e) {
+        log.error(String.format("Gauge metric %s is not a numeric value", gaugeEntry.getKey()), e);
+      }
+    }
+
+    // Add all enabled metrics counters
+    for (Map.Entry<String, Counter> counterEntry : metrics.getCounters(bookKeeperMetrics.getMetricsFilter()).entrySet()) {
+      cacheMetrics.put(counterEntry.getKey(), (double) counterEntry.getValue().getCount());
+    }
+
     return cacheMetrics.build();
   }
 
@@ -394,6 +409,20 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     }
 
     return null;
+  }
+
+  public abstract List<ClusterNode> getClusterNodes();
+
+  @Override
+  public String getOwnerNodeForPath(String remotePathKey)
+  {
+    List<ClusterNode> nodeList = getClusterNodes();
+    if (nodeList == null || nodeList.isEmpty()) {
+      return null;
+    }
+
+    String hostName = ConsistentHashUtil.getHashedNodeForKey(nodeList, remotePathKey);
+    return hostName;
   }
 
   private boolean readDataInternal(ReadDataRequest readDataRequest) throws TException
@@ -650,5 +679,24 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   private static boolean isValidatingCachingBehavior(String remotePath)
   {
     return CachingValidator.VALIDATOR_TEST_FILE_NAME.equals(CacheUtil.getName(remotePath));
+  }
+
+  /**
+   * Convert the provided gauge value to a {@code double}.
+   *
+   * @param gaugeValue The gauge value to convert.
+   * @return The gauge value as a {@code double}.
+   */
+  private double getGaugeValueAsDouble(Object gaugeValue)
+  {
+    if (gaugeValue instanceof Long) {
+      return ((Long) gaugeValue).doubleValue();
+    }
+    else if (gaugeValue instanceof Integer) {
+      return ((Integer) gaugeValue).doubleValue();
+    }
+    else {
+      throw new ClassCastException("Could not cast gauge metric value type to Double");
+    }
   }
 }

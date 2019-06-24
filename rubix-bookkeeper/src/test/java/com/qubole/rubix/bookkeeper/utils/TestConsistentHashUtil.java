@@ -13,12 +13,17 @@
 
 package com.qubole.rubix.bookkeeper.utils;
 
+import com.qubole.rubix.spi.thrift.ClusterNode;
 import com.qubole.rubix.spi.thrift.NodeState;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.testng.annotations.Test;
 
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -26,13 +31,15 @@ import static org.testng.Assert.assertTrue;
 
 public class TestConsistentHashUtil
 {
+  private static final Log log = LogFactory.getLog(TestConsistentHashUtil.class);
+
   @Test
   public void consistent_hashing_downScaling()
   {
     int numKeys = 10;
     Set<String> keys = generateRandomKeys(numKeys);
-    Map<String, NodeState> sixLiveWorkers = getNodes(6, 0);
-    Map<String, NodeState> fourLiveWorkerTwoDecommissioned = getNodes(4, 0);
+    List<ClusterNode> sixLiveWorkers = getNodes(6, 0);
+    List<ClusterNode> fourLiveWorkerTwoDecommissioned = getNodes(4, 0);
 
     int match = matchMemberships(sixLiveWorkers, fourLiveWorkerTwoDecommissioned, keys);
 
@@ -40,8 +47,11 @@ public class TestConsistentHashUtil
 
     int expected = 0;
     for (Map.Entry<String, String> entry : keyMembership.entrySet()) {
-      if (fourLiveWorkerTwoDecommissioned.get(entry.getValue()) == NodeState.ACTIVE) {
-        expected++;
+      for (ClusterNode item : fourLiveWorkerTwoDecommissioned) {
+        if (item.nodeUrl.equals(entry.getValue()) && item.nodeState == NodeState.ACTIVE) {
+          expected++;
+          break;
+        }
       }
     }
 
@@ -53,8 +63,8 @@ public class TestConsistentHashUtil
   {
     String key = "1";
 
-    Map<String, NodeState> fourLiveWorkers = getNodes(4, 0);
-    Map<String, NodeState> fourLiveWorkerOneDecommissioned = getNodes(4, 1);
+    List<ClusterNode> fourLiveWorkers = getNodes(4, 0);
+    List<ClusterNode> fourLiveWorkerOneDecommissioned = getNodes(4, 1);
 
     String nodeHost1 = ConsistentHashUtil.getHashedNodeForKey(fourLiveWorkers, key);
     String nodeHost2 = ConsistentHashUtil.getHashedNodeForKey(fourLiveWorkerOneDecommissioned, key);
@@ -87,7 +97,7 @@ public class TestConsistentHashUtil
     return saltStr;
   }
 
-  static int matchMemberships(Map<String, NodeState> prevWorker, Map<String, NodeState> newWorker, Set<String> keys)
+  static int matchMemberships(List<ClusterNode> prevWorker, List<ClusterNode> newWorker, Set<String> keys)
   {
     Map<String, String> keyMembership1 = getConsistentHashedMembership(prevWorker, keys);
     Map<String, String> keyMembership2 = getConsistentHashedMembership(newWorker, keys);
@@ -107,29 +117,29 @@ public class TestConsistentHashUtil
     return match;
   }
 
-  static Map<String, String> getConsistentHashedMembership(Map<String, NodeState> nodesMap, Set<String> keys)
+  static Map<String, String> getConsistentHashedMembership(List<ClusterNode> nodeList, Set<String> keys)
   {
     Map<String, String> keyMembership = new HashMap<>();
     String host;
 
     for (String key : keys) {
-      host = ConsistentHashUtil.getHashedNodeForKey(nodesMap, key);
+      host = ConsistentHashUtil.getHashedNodeForKey(nodeList, key);
       keyMembership.put(key, host);
     }
     return keyMembership;
   }
 
-  static Map<String, NodeState> getNodes(int liveWorkers, int inactiveWorkers)
+  static List<ClusterNode> getNodes(int liveWorkers, int inactiveWorkers)
   {
-    Map<String, NodeState> map = new HashMap<>();
+    List<ClusterNode> list = new ArrayList<>();
     for (int i = 0; i < liveWorkers; i++) {
-      map.put(Integer.toString(i), NodeState.ACTIVE);
+      list.add(new ClusterNode(Integer.toString(i + 1), NodeState.ACTIVE));
     }
 
     for (int i = liveWorkers; i < (liveWorkers + inactiveWorkers); i++) {
-      map.put(Integer.toString(i), NodeState.INACTIVE);
+      list.add(new ClusterNode(Integer.toString(i + 1), NodeState.INACTIVE));
     }
 
-    return map;
+    return list;
   }
 }

@@ -18,16 +18,15 @@ import com.google.common.base.Ticker;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.google.common.collect.Lists;
 import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
 import com.qubole.rubix.bookkeeper.exception.WorkerInitializationException;
-import com.qubole.rubix.bookkeeper.utils.ConsistentHashUtil;
+import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.common.utils.ClusterUtil;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.thrift.ClusterNode;
 import com.qubole.rubix.spi.thrift.HeartbeatStatus;
-import com.qubole.rubix.spi.thrift.NodeState;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -35,8 +34,6 @@ import org.apache.hadoop.conf.Configuration;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
@@ -45,36 +42,33 @@ import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER_MULTINODE;
 public class WorkerBookKeeper extends BookKeeper
 {
   private static Log log = LogFactory.getLog(WorkerBookKeeper.class);
-  private LoadingCache<String, Map<String, NodeState>> nodeStateMap;
+  private LoadingCache<String, List<ClusterNode>> nodeStateMap;
   private HeartbeatService heartbeatService;
   private BookKeeperFactory bookKeeperFactory;
   private RetryingBookkeeperClient coordinatorClient;
-  private ThreadLocal<RetryingBookkeeperClient> threadLocalConnections;
   // The hostname of the master node.
   private String masterHostname;
   private int clusterType;
-  String nodeHostName;
-  String nodeHostAddress;
+  RetryingBookkeeperClient client;
 
-  public WorkerBookKeeper(Configuration conf, MetricRegistry metrics) throws BookKeeperInitializationException
+  public WorkerBookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics) throws BookKeeperInitializationException
   {
-    this(conf, metrics, Ticker.systemTicker(), new BookKeeperFactory());
+    this(conf, bookKeeperMetrics, Ticker.systemTicker(), new BookKeeperFactory());
   }
 
-  public WorkerBookKeeper(Configuration conf, MetricRegistry metrics, BookKeeperFactory factory)
+  public WorkerBookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics, BookKeeperFactory factory)
       throws BookKeeperInitializationException
   {
-    this(conf, metrics, Ticker.systemTicker(), factory);
+    this(conf, bookKeeperMetrics, Ticker.systemTicker(), factory);
   }
 
-  public WorkerBookKeeper(Configuration conf, MetricRegistry metrics, Ticker ticker, BookKeeperFactory factory)
+  public WorkerBookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics, Ticker ticker, BookKeeperFactory factory)
       throws BookKeeperInitializationException
   {
-    super(conf, metrics, Ticker.systemTicker());
+    super(conf, bookKeeperMetrics, ticker);
     this.bookKeeperFactory = factory;
     this.masterHostname = ClusterUtil.getMasterHostname(conf);
     this.clusterType = CacheConfig.getClusterType(conf);
-    this.threadLocalConnections = new ThreadLocal<>();
 
     initializeWorker(conf, metrics, ticker, factory);
   }
@@ -89,6 +83,8 @@ public class WorkerBookKeeper extends BookKeeper
 
   void setCurrentNodeName() throws WorkerInitializationException
   {
+    String nodeHostName;
+    String nodeHostAddress;
     try {
       nodeHostName = InetAddress.getLocalHost().getCanonicalHostName();
       nodeHostAddress = InetAddress.getLocalHost().getHostAddress();
@@ -99,30 +95,29 @@ public class WorkerBookKeeper extends BookKeeper
       throw new WorkerInitializationException("Could not get NodeName ", e);
     }
 
-    Map<String, NodeState> nodesMap = getClusterNodes();
+    List<ClusterNode> nodeList = getClusterNodes();
 
-    if (nodesMap != null && nodesMap.size() > 0) {
-      List<String> nodes = Lists.newArrayList(nodesMap.keySet().toArray(new String[0]));
+    if (nodeList != null && nodeList.size() > 0) {
       if (clusterType == TEST_CLUSTER_MANAGER.ordinal() || clusterType == TEST_CLUSTER_MANAGER_MULTINODE.ordinal()) {
-        nodeName = nodes.get(0);
+        nodeName = nodeList.get(0).nodeUrl;
         return;
       }
-      if (nodes.indexOf(nodeHostName) >= 0) {
+      if (nodeList.indexOf(nodeHostName) >= 0) {
         nodeName = nodeHostName;
       }
-      else if (nodes.indexOf(nodeHostAddress) >= 0) {
+      else if (nodeList.indexOf(nodeHostAddress) >= 0) {
         nodeName = nodeHostAddress;
       }
       else {
         String errorMessage = String.format("Could not find nodeHostName=%s nodeHostAddress=%s among cluster nodes=%s  " +
-            "provide by master bookkeeper", nodeHostName, nodeHostAddress, nodesMap);
+            "provide by master bookkeeper", nodeHostName, nodeHostAddress, nodeList);
         log.error(errorMessage);
         throw new WorkerInitializationException(errorMessage);
       }
     }
     else {
       String errorMessage = String.format("Could not find nodeHostName=%s nodeHostAddress=%s among cluster nodes=%s  " +
-              "provide by master bookkeeper", nodeHostName, nodeHostAddress, nodesMap);
+              "provide by master bookkeeper", nodeHostName, nodeHostAddress, nodeList);
       log.error(errorMessage);
       throw new WorkerInitializationException(errorMessage);
     }
@@ -134,14 +129,12 @@ public class WorkerBookKeeper extends BookKeeper
     nodeStateMap = CacheBuilder.newBuilder()
         .ticker(ticker)
         .refreshAfterWrite(expiryPeriod, TimeUnit.SECONDS)
-        .build(new CacheLoader<String, Map<String, NodeState>>() {
+        .build(new CacheLoader<String, List<ClusterNode>>() {
           @Override
-          public Map<String, NodeState> load(String s) throws Exception
+          public List<ClusterNode> load(String s) throws Exception
           {
-            RetryingBookkeeperClient client = threadLocalConnections.get();
             if (client == null) {
-              client = bookKeeperFactory.createBookKeeperClient(masterHostname, conf);
-              threadLocalConnections.set(client);
+              client = createBookKeeperClientWithRetry(bookKeeperFactory, masterHostname, conf);
             }
             return client.getClusterNodes();
           }
@@ -155,34 +148,16 @@ public class WorkerBookKeeper extends BookKeeper
   }
 
   @Override
-  public Map<String, NodeState> getClusterNodes()
+  public List<ClusterNode> getClusterNodes()
   {
-    RetryingBookkeeperClient client = threadLocalConnections.get();
     try {
-      if (client == null) {
-        client = createBookKeeperClientWithRetry(bookKeeperFactory, masterHostname, conf);
-        threadLocalConnections.set(client);
-      }
-
       return nodeStateMap.get("nodes");
     }
-    catch (ExecutionException e) {
+    catch (Exception e) {
       log.error("Could not get node host name from cache with Exception : " + e);
     }
 
     return null;
-  }
-
-  @Override
-  public String getOwnerNodeForPath(String remotePathKey)
-  {
-    Map<String, NodeState> nodesMap = getClusterNodes();
-    if (nodesMap == null || nodesMap.isEmpty()) {
-      return null;
-    }
-
-    String hostName = ConsistentHashUtil.getHashedNodeForKey(nodesMap, remotePathKey);
-    return hostName;
   }
 
   /**
