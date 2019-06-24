@@ -14,27 +14,27 @@ package com.qubole.rubix.client.robotframework;
 
 import com.qubole.rubix.spi.ClusterType;
 
-public class TestClientReadRequest
+public class TestClientStatusRequest
 {
   private final String remotePath;
-  private final long readStart;
-  private final int readLength;
   private final long fileLength;
   private final long lastModified;
+  private final long startBlock;
+  private final long endBlock;
   private final int clusterType;
 
-  public TestClientReadRequest(String remotePath,
-                               long readStart,
-                               int readLength,
-                               long fileLength,
-                               long lastModified,
-                               int clusterType)
+  public TestClientStatusRequest(String remotePath,
+                                 long fileLength,
+                                 long lastModified,
+                                 long startBlock,
+                                 long endBlock,
+                                 int clusterType)
   {
     this.remotePath = remotePath;
-    this.readStart = readStart;
-    this.readLength = readLength;
     this.fileLength = fileLength;
     this.lastModified = lastModified;
+    this.startBlock = startBlock;
+    this.endBlock = endBlock;
     this.clusterType = clusterType;
   }
 
@@ -43,14 +43,14 @@ public class TestClientReadRequest
     return remotePath;
   }
 
-  public long getReadStart()
+  public long getStartBlock()
   {
-    return readStart;
+    return startBlock;
   }
 
-  public int getReadLength()
+  public long getEndBlock()
   {
-    return readLength;
+    return endBlock;
   }
 
   public long getFileLength()
@@ -72,10 +72,10 @@ public class TestClientReadRequest
   public String toString()
   {
     return String.format(
-        "Read request for file %s [%s-%s] (%sB / LM: %s) {Cluster type: %s}",
+        "Status request for file %s [%s-%s] (%sB / LM: %s) {Cluster type: %s}",
         remotePath,
-        readStart,
-        readLength,
+        startBlock,
+        endBlock,
         fileLength,
         lastModified,
         ClusterType.findByValue(clusterType));
