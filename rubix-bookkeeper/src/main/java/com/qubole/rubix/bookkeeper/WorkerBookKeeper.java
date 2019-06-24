@@ -65,7 +65,7 @@ public class WorkerBookKeeper extends BookKeeper
   public WorkerBookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics, Ticker ticker, BookKeeperFactory factory)
       throws BookKeeperInitializationException
   {
-    super(conf, bookKeeperMetrics, Ticker.systemTicker());
+    super(conf, bookKeeperMetrics, ticker);
     this.bookKeeperFactory = factory;
     this.masterHostname = ClusterUtil.getMasterHostname(conf);
     this.clusterType = CacheConfig.getClusterType(conf);
