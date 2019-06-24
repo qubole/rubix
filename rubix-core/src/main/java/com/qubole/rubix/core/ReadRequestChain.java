@@ -35,7 +35,6 @@ public abstract class ReadRequestChain implements Callable<Integer>
   boolean isLocked;
   boolean cancelled;
 
-  protected String threadName;
   protected long requests;
 
   private static final Log log = LogFactory.getLog(ReadRequestChain.class);
@@ -43,7 +42,6 @@ public abstract class ReadRequestChain implements Callable<Integer>
   public ReadRequestChain()
   {
     super();
-    this.threadName = Thread.currentThread().getName();
   }
 
   // Should be added in forward seek fashion for better performance
