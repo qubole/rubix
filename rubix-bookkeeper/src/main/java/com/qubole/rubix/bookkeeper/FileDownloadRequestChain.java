@@ -92,7 +92,7 @@ public class FileDownloadRequestChain extends ReadRequestChain
 
   public Integer call() throws IOException
   {
-    Thread.currentThread().setName(threadName);
+    log.info(String.format("Read Request threadName: %s, FileDownload Executor threadName: %s", threadName, Thread.currentThread().getName()));
     checkState(isLocked(), "Trying to execute Chain without locking");
 
     List<ReadRequest> readRequests = getReadRequests();
