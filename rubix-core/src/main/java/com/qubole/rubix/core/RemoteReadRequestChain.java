@@ -116,14 +116,14 @@ public class RemoteReadRequestChain extends ReadRequestChain
           log.debug(String.format("Trying to Read %d bytes into prefix buffer", prefixBufferLength));
           totalPrefixRead += readIntoBuffer(affixBuffer, 0, prefixBufferLength);
           log.debug(String.format("Read %d bytes into prefix buffer", prefixBufferLength));
-          copyIntoCache(fileChannel, affixBuffer, 0, prefixBufferLength, readRequest.backendReadStart, "prefix");
+          copyIntoCache(fileChannel, affixBuffer, 0, prefixBufferLength, readRequest.backendReadStart);
           log.debug(String.format("Copied %d prefix bytes into cache", prefixBufferLength));
         }
 
         log.debug(String.format("Trying to Read %d bytes into destination buffer", readRequest.getActualReadLength()));
         int readBytes = readIntoBuffer(readRequest.getDestBuffer(), readRequest.destBufferOffset, readRequest.getActualReadLength());
         log.debug(String.format("Read %d bytes into destination buffer", readBytes));
-        copyIntoCache(fileChannel, readRequest.destBuffer, readRequest.destBufferOffset, readBytes, readRequest.actualReadStart, "destination");
+        copyIntoCache(fileChannel, readRequest.destBuffer, readRequest.destBufferOffset, readBytes, readRequest.actualReadStart);
         log.debug(String.format("Copied %d requested bytes into cache", readBytes));
         totalRequestedRead += readBytes;
 
@@ -133,7 +133,7 @@ public class RemoteReadRequestChain extends ReadRequestChain
           log.debug(String.format("Trying to Read %d bytes into suffix buffer", suffixBufferLength));
           totalSuffixRead += readIntoBuffer(affixBuffer, 0, suffixBufferLength);
           log.debug(String.format("Read %d bytes into suffix buffer", suffixBufferLength));
-          copyIntoCache(fileChannel, affixBuffer, 0, suffixBufferLength, readRequest.actualReadEnd, "suffix");
+          copyIntoCache(fileChannel, affixBuffer, 0, suffixBufferLength, readRequest.actualReadEnd);
           log.debug(String.format("Copied %d suffix bytes into cache", suffixBufferLength));
         }
       }
@@ -159,10 +159,10 @@ public class RemoteReadRequestChain extends ReadRequestChain
     return nread;
   }
 
-  private int copyIntoCache(FileChannel fileChannel, byte[] destBuffer, int destBufferOffset, int length, long cacheReadStart, String bufferType)
+  private int copyIntoCache(FileChannel fileChannel, byte[] destBuffer, int destBufferOffset, int length, long cacheReadStart)
       throws IOException
   {
-    log.info(String.format("Trying to copy [%d - %d] bytes into cache from %s buffer offset %d into localFile %s", cacheReadStart, cacheReadStart + length, bufferType, destBufferOffset, localFile));
+    log.info(String.format("Trying to copy [%d - %d] bytes into cache with offset %d into localFile %s", cacheReadStart, cacheReadStart + length, destBufferOffset, localFile));
     long start = System.nanoTime();
     int leftToWrite = length;
     int writtenSoFar = 0;
