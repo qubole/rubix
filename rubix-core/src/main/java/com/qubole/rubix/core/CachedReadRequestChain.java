@@ -80,6 +80,7 @@ public class CachedReadRequestChain extends ReadRequestChain
   {
     // TODO: any exception here should not cause workload to fail
     // rather should be retried and eventually read from backend
+    log.info(String.format("Read Request threadName: %s, Cached read Executor threadName: %s", threadName, Thread.currentThread().getName()));
 
     if (readRequests.size() == 0) {
       return 0;
