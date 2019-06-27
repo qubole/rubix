@@ -34,6 +34,7 @@ public class CacheConfig
   private static final String KEY_CACHE_ENABLED = "rubix.cache.enabled";
   private static final String KEY_CACHE_METADATA_FILE_SUFFIX = "rubix.cache.metadata.file.suffix";
   private static final String KEY_SERVER_CONNECT_TIMEOUT = "rubix.network.server.connect.timeout";
+  private static final String KEY_SERVER_SOCKET_TIMEOUT = "rubix.network.server.socket.timeout";
   private static final String KEY_DATA_CACHE_EXPIRY_AFTER_WRITE = "rubix.cache.expiration.after-write";
   private static final String KEY_DATA_CACHE_DIR_PREFIX = "rubix.cache.dirprefix.list";
   private static final String KEY_DATA_CACHE_DIR_SUFFIX = "rubix.cache.dirsuffix";
@@ -90,6 +91,7 @@ public class CacheConfig
   // default values
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
   private static final int DEFAULT_SERVER_CONNECT_TIMEOUT = 1000; // ms
+  private static final int DEFAULT_SERVER_SOCKET_TIMEOUT = 3000; // ms
   private static final String DEFAULT_CACHE_METADATA_FILE_SUFFIX = "_mdfile";
   private static final String DEFAULT_DATA_CACHE_DIR_PREFIX = "/media/ephemeral";
   private static final String DEFAULT_DATA_CACHE_DIR_SUFFIX = "/fcache/";
@@ -233,6 +235,11 @@ public class CacheConfig
   public static int getServerConnectTimeout(Configuration conf)
   {
     return conf.getInt(KEY_SERVER_CONNECT_TIMEOUT, DEFAULT_SERVER_CONNECT_TIMEOUT);
+  }
+
+  public static int getServerSocketTimeout(Configuration conf)
+  {
+    return conf.getInt(KEY_SERVER_SOCKET_TIMEOUT, DEFAULT_SERVER_SOCKET_TIMEOUT);
   }
 
   public static int getDiskReadBufferSize(Configuration conf)
