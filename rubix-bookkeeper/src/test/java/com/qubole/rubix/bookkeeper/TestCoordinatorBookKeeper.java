@@ -29,7 +29,6 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
@@ -84,83 +83,91 @@ public class TestCoordinatorBookKeeper
    * Verify that the health metrics are correctly registered.
    */
   @Test
-  public void testWorkerHealthMetrics() throws FileNotFoundException
+  public void testWorkerHealthMetrics() throws IOException
   {
     CacheConfig.setValidationEnabled(conf, true);
 
-    final CoordinatorBookKeeper coordinatorBookKeeper = new CoordinatorBookKeeper(conf, metrics);
-    coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER1, TEST_STATUS_ALL_VALIDATED);
-    coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER2, TEST_STATUS_ALL_VALIDATED);
+    try (BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, metrics)) {
+      final CoordinatorBookKeeper coordinatorBookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics);
+      coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER1, TEST_STATUS_ALL_VALIDATED);
+      coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER2, TEST_STATUS_ALL_VALIDATED);
 
-    long workerCount = (long) metrics.getGauges().get(BookKeeperMetrics.HealthMetric.LIVE_WORKER_GAUGE.getMetricName()).getValue();
-    long cachingValidatedCount = (long) metrics.getGauges().get(BookKeeperMetrics.HealthMetric.CACHING_VALIDATED_WORKER_GAUGE.getMetricName()).getValue();
-    long fileValidatedCount = (long) metrics.getGauges().get(BookKeeperMetrics.HealthMetric.FILE_VALIDATED_WORKER_GAUGE.getMetricName()).getValue();
+      long workerCount = (long) metrics.getGauges().get(BookKeeperMetrics.HealthMetric.LIVE_WORKER_GAUGE.getMetricName()).getValue();
+      long cachingValidatedCount = (long) metrics.getGauges().get(BookKeeperMetrics.HealthMetric.CACHING_VALIDATED_WORKER_GAUGE.getMetricName()).getValue();
+      long fileValidatedCount = (long) metrics.getGauges().get(BookKeeperMetrics.HealthMetric.FILE_VALIDATED_WORKER_GAUGE.getMetricName()).getValue();
 
-    assertEquals(workerCount, 2, "Incorrect number of workers reporting heartbeat");
-    assertEquals(cachingValidatedCount, 2, "Incorrect number of workers reporting heartbeat");
-    assertEquals(fileValidatedCount, 2, "Incorrect number of workers reporting heartbeat");
+      assertEquals(workerCount, 2, "Incorrect number of workers reporting heartbeat");
+      assertEquals(cachingValidatedCount, 2, "Incorrect number of workers reporting heartbeat");
+      assertEquals(fileValidatedCount, 2, "Incorrect number of workers reporting heartbeat");
+    }
   }
 
   /**
    * Verify that the worker health status properly expires.
    */
   @Test
-  public void testWorkerHealthMetrics_healthStatusExpired() throws FileNotFoundException
+  public void testWorkerHealthMetrics_healthStatusExpired() throws IOException
   {
     final FakeTicker ticker = new FakeTicker();
     final int healthStatusExpiry = 1000; // ms
     CacheConfig.setValidationEnabled(conf, true);
     CacheConfig.setHealthStatusExpiry(conf, healthStatusExpiry);
 
-    final CoordinatorBookKeeper coordinatorBookKeeper = new CoordinatorBookKeeper(conf, metrics, ticker);
-    final Gauge liveWorkerGauge = metrics.getGauges().get(BookKeeperMetrics.HealthMetric.LIVE_WORKER_GAUGE.getMetricName());
-    final Gauge cachingValidatedWorkerGauge = metrics.getGauges().get(BookKeeperMetrics.HealthMetric.CACHING_VALIDATED_WORKER_GAUGE.getMetricName());
-    final Gauge fileValidatedWorkerGauge = metrics.getGauges().get(BookKeeperMetrics.HealthMetric.FILE_VALIDATED_WORKER_GAUGE.getMetricName());
+    try (BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, metrics)) {
+      final CoordinatorBookKeeper coordinatorBookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics, ticker);
+      final Gauge liveWorkerGauge = metrics.getGauges().get(BookKeeperMetrics.HealthMetric.LIVE_WORKER_GAUGE.getMetricName());
+      final Gauge cachingValidatedWorkerGauge = metrics.getGauges().get(BookKeeperMetrics.HealthMetric.CACHING_VALIDATED_WORKER_GAUGE.getMetricName());
+      final Gauge fileValidatedWorkerGauge = metrics.getGauges().get(BookKeeperMetrics.HealthMetric.FILE_VALIDATED_WORKER_GAUGE.getMetricName());
 
-    coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER1, TEST_STATUS_ALL_VALIDATED);
-    coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER2, TEST_STATUS_ALL_VALIDATED);
+      coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER1, TEST_STATUS_ALL_VALIDATED);
+      coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER2, TEST_STATUS_ALL_VALIDATED);
 
-    long workerCount = (long) liveWorkerGauge.getValue();
-    long cachingValidationCount = (long) cachingValidatedWorkerGauge.getValue();
-    long fileValidationCount = (long) fileValidatedWorkerGauge.getValue();
-    assertEquals(workerCount, 2, "Incorrect number of workers reporting heartbeat");
-    assertEquals(cachingValidationCount, 2, "Incorrect number of workers have been validated");
-    assertEquals(fileValidationCount, 2, "Incorrect number of workers have been validated");
+      long workerCount = (long) liveWorkerGauge.getValue();
+      long cachingValidationCount = (long) cachingValidatedWorkerGauge.getValue();
+      long fileValidationCount = (long) fileValidatedWorkerGauge.getValue();
+      assertEquals(workerCount, 2, "Incorrect number of workers reporting heartbeat");
+      assertEquals(cachingValidationCount, 2, "Incorrect number of workers have been validated");
+      assertEquals(fileValidationCount, 2, "Incorrect number of workers have been validated");
 
-    ticker.advance(healthStatusExpiry, TimeUnit.MILLISECONDS);
-    coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER1, TEST_STATUS_ALL_VALIDATED);
+      ticker.advance(healthStatusExpiry, TimeUnit.MILLISECONDS);
+      coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER1, TEST_STATUS_ALL_VALIDATED);
 
-    workerCount = (long) liveWorkerGauge.getValue();
-    cachingValidationCount = (long) cachingValidatedWorkerGauge.getValue();
-    fileValidationCount = (long) fileValidatedWorkerGauge.getValue();
-    assertEquals(workerCount, 1, "Incorrect number of workers reporting heartbeat");
-    assertEquals(cachingValidationCount, 1, "Incorrect number of workers have been validated");
-    assertEquals(fileValidationCount, 1, "Incorrect number of workers have been validated");
+      workerCount = (long) liveWorkerGauge.getValue();
+      cachingValidationCount = (long) cachingValidatedWorkerGauge.getValue();
+      fileValidationCount = (long) fileValidatedWorkerGauge.getValue();
+      assertEquals(workerCount, 1, "Incorrect number of workers reporting heartbeat");
+      assertEquals(cachingValidationCount, 1, "Incorrect number of workers have been validated");
+      assertEquals(fileValidationCount, 1, "Incorrect number of workers have been validated");
+    }
   }
 
   /**
    * Verify that the validated workers metrics are correctly registered when validation is enabled.
    */
   @Test
-  public void testWorkerHealthMetrics_validatedWorkersMetricsRegisteredWhenValidationEnabled() throws FileNotFoundException
+  public void testWorkerHealthMetrics_validatedWorkersMetricsRegisteredWhenValidationEnabled() throws IOException
   {
     CacheConfig.setValidationEnabled(conf, true);
-    final CoordinatorBookKeeper coordinatorBookKeeper = new CoordinatorBookKeeper(conf, metrics);
+    try (BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, metrics)) {
+      final CoordinatorBookKeeper coordinatorBookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics);
 
-    assertNotNull(metrics.getGauges().get(BookKeeperMetrics.HealthMetric.CACHING_VALIDATED_WORKER_GAUGE.getMetricName()), "Caching-validated workers metric should be registered!");
-    assertNotNull(metrics.getGauges().get(BookKeeperMetrics.HealthMetric.FILE_VALIDATED_WORKER_GAUGE.getMetricName()), "File-validated workers metric should be registered!");
+      assertNotNull(metrics.getGauges().get(BookKeeperMetrics.HealthMetric.CACHING_VALIDATED_WORKER_GAUGE.getMetricName()), "Caching-validated workers metric should be registered!");
+      assertNotNull(metrics.getGauges().get(BookKeeperMetrics.HealthMetric.FILE_VALIDATED_WORKER_GAUGE.getMetricName()), "File-validated workers metric should be registered!");
+    }
   }
 
   /**
    * Verify that the validated workers metrics are not registered when validation is disabled.
    */
   @Test
-  public void testWorkerHealthMetrics_validatedWorkersMetricsNotRegisteredWhenValidationDisabled() throws FileNotFoundException
+  public void testWorkerHealthMetrics_validatedWorkersMetricsNotRegisteredWhenValidationDisabled() throws IOException
   {
     CacheConfig.setValidationEnabled(conf, false);
-    final CoordinatorBookKeeper coordinatorBookKeeper = new CoordinatorBookKeeper(conf, metrics);
+    try (BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, new MetricRegistry())) {
+      final CoordinatorBookKeeper coordinatorBookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics);
 
-    assertNull(metrics.getGauges().get(BookKeeperMetrics.HealthMetric.CACHING_VALIDATED_WORKER_GAUGE.getMetricName()), "Caching-validated workers metric should not be registered!");
-    assertNull(metrics.getGauges().get(BookKeeperMetrics.HealthMetric.FILE_VALIDATED_WORKER_GAUGE.getMetricName()), "File-validated workers metric should not be registered!");
+      assertNull(metrics.getGauges().get(BookKeeperMetrics.HealthMetric.CACHING_VALIDATED_WORKER_GAUGE.getMetricName()), "Caching-validated workers metric should not be registered!");
+      assertNull(metrics.getGauges().get(BookKeeperMetrics.HealthMetric.FILE_VALIDATED_WORKER_GAUGE.getMetricName()), "File-validated workers metric should not be registered!");
+    }
   }
 }

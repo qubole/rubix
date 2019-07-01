@@ -14,7 +14,10 @@ package com.qubole.rubix.client.robotframework;
 
 import com.qubole.rubix.core.MockCachingFileSystem;
 import com.qubole.rubix.spi.BookKeeperFactory;
+import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.thrift.BlockLocation;
+import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -42,6 +45,7 @@ public class BookKeeperClientRFLibrary
 {
   private final BookKeeperFactory factory = new BookKeeperFactory();
   private final Configuration conf = new Configuration();
+  private static final String FILE_SCHEME = "file:";
 
   /**
    * Read data from a given file into the BookKeeper cache using the BookKeeper Thrift API.
@@ -49,11 +53,11 @@ public class BookKeeperClientRFLibrary
    * @param readRequest The read request to execute.
    * @return True if the data was read into the cache correctly, false otherwise.
    */
-  public boolean downloadDataToCache(TestClientReadRequest readRequest) throws IOException, TException
+  public boolean cacheDataUsingBookKeeperServerCall(TestClientReadRequest readRequest) throws IOException, TException
   {
     try (RetryingBookkeeperClient client = createBookKeeperClient()) {
       return client.readData(
-          readRequest.getRemotePath(),
+          getPathWithFileScheme(readRequest.getRemotePath()),
           readRequest.getReadStart(),
           readRequest.getReadLength(),
           readRequest.getFileLength(),
@@ -69,8 +73,9 @@ public class BookKeeperClientRFLibrary
    * @param readRequests  The read requests to concurrently execute.
    * @return True if all read requests succeeded, false otherwise.
    */
-  public boolean concurrentDownloadDataToCache(int numThreads,
-                                               List<TestClientReadRequest> readRequests) throws TException, InterruptedException, ExecutionException
+  public boolean concurrentlyCacheDataUsingBookKeeperServerCall(int numThreads,
+                                                                boolean staggerRequests,
+                                                                List<TestClientReadRequest> readRequests) throws TException, InterruptedException, ExecutionException
   {
     final List<Callable<Boolean>> tasks = new ArrayList<>();
     for (final TestClientReadRequest request : readRequests) {
@@ -79,13 +84,13 @@ public class BookKeeperClientRFLibrary
         @Override
         public Boolean call() throws Exception
         {
-          return downloadDataToCache(request);
+          return cacheDataUsingBookKeeperServerCall(request);
         }
       };
       tasks.add(callable);
     }
 
-    final List<Future<Boolean>> results = executeConcurrentTasks(numThreads, tasks);
+    final List<Future<Boolean>> results = executeConcurrentTasks(numThreads, tasks, staggerRequests);
     final boolean didAllSucceed = didConcurrentDataDownloadSucceed(results);
     return didAllSucceed;
   }
@@ -96,9 +101,9 @@ public class BookKeeperClientRFLibrary
    * @param readRequest The read request to execute.
    * @return True if the data was read into the cache correctly, false otherwise.
    */
-  public boolean readData(TestClientReadRequest readRequest) throws IOException, TException, URISyntaxException
+  public boolean cacheDataUsingClientFileSystem(TestClientReadRequest readRequest) throws IOException, TException, URISyntaxException
   {
-    try (FSDataInputStream inputStream = createFSInputStream(readRequest.getRemotePath(), readRequest.getReadLength())) {
+    try (FSDataInputStream inputStream = createFSInputStream(getPathWithFileScheme(readRequest.getRemotePath()), readRequest.getReadLength())) {
       final int readSize = inputStream.read(
           new byte[readRequest.getReadLength()],
           (int) readRequest.getReadStart(),
@@ -114,8 +119,9 @@ public class BookKeeperClientRFLibrary
    * @param readRequests  The read requests to concurrently execute.
    * @return True if all read requests succeeded, false otherwise.
    */
-  public boolean concurrentReadData(int numThreads,
-                                    List<TestClientReadRequest> readRequests) throws TException, InterruptedException, ExecutionException
+  public boolean concurrentlyCacheDataUsingClientFileSystem(int numThreads,
+                                                            boolean staggerRequests,
+                                                            List<TestClientReadRequest> readRequests) throws TException, InterruptedException, ExecutionException
   {
     final List<Callable<Boolean>> tasks = new ArrayList<>();
     for (final TestClientReadRequest request : readRequests) {
@@ -124,15 +130,34 @@ public class BookKeeperClientRFLibrary
         @Override
         public Boolean call() throws Exception
         {
-          return readData(request);
+          return cacheDataUsingClientFileSystem(request);
         }
       };
       tasks.add(callable);
     }
 
-    final List<Future<Boolean>> results = executeConcurrentTasks(numThreads, tasks);
+    final List<Future<Boolean>> results = executeConcurrentTasks(numThreads, tasks, staggerRequests);
     final boolean didAllSucceed = didConcurrentDataDownloadSucceed(results);
     return didAllSucceed;
+  }
+
+  /**
+   * Get the cache status for blocks in a particular file.
+   *
+   * @param request The request specifying the blocks & file for which to check the status.
+   * @return A list of {@link BlockLocation}s detailing the locations of the specified blocks.
+   */
+  public List<BlockLocation> getCacheStatus(TestClientStatusRequest request) throws IOException, TException
+  {
+    try (RetryingBookkeeperClient client = createBookKeeperClient()) {
+      return client.getCacheStatus(new CacheStatusRequest(
+          getPathWithFileScheme(request.getRemotePath()),
+          request.getFileLength(),
+          request.getLastModified(),
+          request.getStartBlock(),
+          request.getEndBlock(),
+          request.getClusterType()));
+    }
   }
 
   /**
@@ -180,6 +205,20 @@ public class BookKeeperClientRFLibrary
   }
 
   /**
+   * Generate a metadata file to be used for testing situations where metadata exists without its matching cache file.
+   *
+   * @param filename  The name of the file.
+   * @throws IOException if an error occurs while writing to the specified file.
+   */
+  public String generateTestMDFile(String filename) throws IOException
+  {
+    String mdPath = CacheUtil.getMetadataFilePath(filename, conf);
+    // Certain tests require a non-empty metadata file.
+    Files.write(Paths.get(mdPath), "0101010101".getBytes());
+    return mdPath;
+  }
+
+  /**
    * Create a read request to be executed by the BookKeeper server.
    *
    * @param remotePath    The remote path location.
@@ -198,6 +237,27 @@ public class BookKeeperClientRFLibrary
                                                            int clusterType)
   {
     return new TestClientReadRequest(remotePath, readStart, readLength, fileLength, lastModified, clusterType);
+  }
+
+  /**
+   * Create a status request to be executed by the BookKeeper server.
+   *
+   * @param remotePath    The remote path location.
+   * @param fileLength    The length of the file.
+   * @param lastModified  The time at which the file was last modified.
+   * @param startBlock    The start of the block range to check.
+   * @param endBlock      The end of the block range to check.
+   * @param clusterType   The type id of cluster being used.
+   * @return The status request.
+   */
+  public TestClientStatusRequest createTestClientStatusRequest(String remotePath,
+                                                               long fileLength,
+                                                               long lastModified,
+                                                               long startBlock,
+                                                               long endBlock,
+                                                               int clusterType)
+  {
+    return new TestClientStatusRequest(remotePath, fileLength, lastModified, startBlock, endBlock, clusterType);
   }
 
   /**
@@ -259,16 +319,29 @@ public class BookKeeperClientRFLibrary
   /**
    * Execute multiple tasks concurrently.
    *
-   * @param numThreads  The number of available threads for concurrent execution.
-   * @param tasks       The tasks to execute.
-   * @param <T>         The return type of the task.
+   * @param numThreads   The number of available threads for concurrent execution.
+   * @param tasks        The tasks to execute.
+   * @param staggerTasks If true, add delay between task submissions.
+   * @param <T>          The return type of the task.
    * @return A list of results for each task executed.
    * @throws InterruptedException if task execution is interrupted.
    */
-  private <T> List<Future<T>> executeConcurrentTasks(int numThreads, List<Callable<T>> tasks) throws InterruptedException
+  private <T> List<Future<T>> executeConcurrentTasks(int numThreads, List<Callable<T>> tasks, boolean staggerTasks) throws InterruptedException
   {
     final ExecutorService service = Executors.newFixedThreadPool(numThreads);
-    return service.invokeAll(tasks);
+    List<Future<T>> futures = new ArrayList<>();
+
+    if (staggerTasks) {
+      // Necessary to preserve order of requests for certain tests.
+      for (Callable<T> task : tasks) {
+        futures.add(service.submit(task));
+        Thread.sleep(100);
+      }
+    }
+    else {
+      futures = service.invokeAll(tasks);
+    }
+    return futures;
   }
 
   /**
@@ -285,5 +358,16 @@ public class BookKeeperClientRFLibrary
       didAllSucceed &= didRead;
     }
     return didAllSucceed;
+  }
+
+  /**
+   * Add the file scheme to the provided path for proper execution with the BookKeeper server.
+   *
+   * @param path  The path to update.
+   * @return The provided path with the file scheme.
+   */
+  private String getPathWithFileScheme(String path)
+  {
+    return FILE_SCHEME + path;
   }
 }

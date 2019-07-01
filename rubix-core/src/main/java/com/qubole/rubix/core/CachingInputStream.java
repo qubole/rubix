@@ -379,24 +379,14 @@ public class CachingInputStream extends FSInputStream
 
       else if (isCached.get(idx).getLocation() == Location.CACHED) {
         log.debug(String.format("Sending cached block %d to cachedReadRequestChain", blockNum));
-        try {
-          if (directReadBuffer == null) {
-            directReadBuffer = bufferPool.getBuffer(diskReadBufferSize);
-          }
-          if (cachedReadRequestChain == null) {
-            cachedReadRequestChain = new CachedReadRequestChain(remoteFileSystem, remotePath, directReadBuffer,
-                    statistics, conf, bookKeeperFactory);
-          }
-          cachedReadRequestChain.addReadRequest(readRequest);
+        if (directReadBuffer == null) {
+          directReadBuffer = bufferPool.getBuffer(diskReadBufferSize);
         }
-        catch (IOException e) {
-          log.error("Unable to open file channel in R mode", e);
-          // reset bookkeeper client so that we take direct route
-          bookKeeperClient = null;
-          isCached = null;
-          idx--;
-          blockNum--;
+        if (cachedReadRequestChain == null) {
+          cachedReadRequestChain = new CachedReadRequestChain(remoteFileSystem, remotePath, directReadBuffer,
+                  statistics, conf, bookKeeperFactory);
         }
+        cachedReadRequestChain.addReadRequest(readRequest);
       }
       else {
         if (isCached.get(idx).getLocation() == Location.NON_LOCAL) {
@@ -450,21 +440,11 @@ public class CachingInputStream extends FSInputStream
           }
           else {
             log.debug(String.format("Sending block %d to remoteReadRequestChain", blockNum));
-            try {
-              if (affixBuffer == null) {
-                affixBuffer = new byte[blockSize];
-              }
-              if (remoteReadRequestChain == null) {
-                remoteReadRequestChain = new RemoteReadRequestChain(getParentDataInputStream(), localPath, directWriteBuffer, affixBuffer);
-              }
+            if (affixBuffer == null) {
+              affixBuffer = new byte[blockSize];
             }
-            catch (IOException e) {
-              log.error("Unable to obtain open file channel in RW mode", e);
-              // reset bookkeeper client so that we take direct route
-              bookKeeperClient = null;
-              isCached = null;
-              idx--;
-              blockNum--;
+            if (remoteReadRequestChain == null) {
+              remoteReadRequestChain = new RemoteReadRequestChain(getParentDataInputStream(), localPath, directWriteBuffer, affixBuffer);
             }
             remoteReadRequestChain.addReadRequest(readRequest);
           }
