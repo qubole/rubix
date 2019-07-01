@@ -57,6 +57,7 @@ public class TestFileDownloader
   private BookKeeper bookKeeper;
   private FileDownloader downloader;
   private MetricRegistry metrics;
+  private BookKeeperMetrics bookKeeperMetrics;
 
   @BeforeClass
   public void setUpForClass() throws Exception
@@ -73,13 +74,15 @@ public class TestFileDownloader
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     CacheConfig.setBlockSize(conf, 200);
     metrics = new MetricRegistry();
-    bookKeeper = new CoordinatorBookKeeper(conf, metrics);
+    bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
+    bookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics);
     downloader = bookKeeper.getRemoteFetchProcessorInstance().getFileDownloaderInstance();
   }
 
   @AfterMethod
   public void tearDown() throws Exception
   {
+    bookKeeperMetrics.close();
     conf.clear();
   }
 
