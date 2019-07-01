@@ -85,6 +85,7 @@ public class RemoteReadRequestChain extends ReadRequestChain
       throws IOException
   {
     log.debug(String.format("Read Request threadName: %s, Remote read Executor threadName: %s", threadName, Thread.currentThread().getName()));
+    Thread.currentThread().setName(threadName);
     checkState(isLocked, "Trying to execute Chain without locking");
 
     if (readRequests.size() == 0) {

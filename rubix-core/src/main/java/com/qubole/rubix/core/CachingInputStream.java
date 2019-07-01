@@ -99,7 +99,7 @@ public class CachingInputStream extends FSInputStream
       this.lastModified = fileInfo.lastModified;
     }
     catch (Exception ex) {
-      log.error("Could not get FileInfo for " + backendPath.toString() + " . Fetching FileStatus from remote file system");
+      log.error("Could not get FileInfo for " + backendPath.toString() + " . Fetching FileStatus from remote file system", ex);
       FileStatus fileStatus = parentFs.getFileStatus(backendPath);
       this.fileSize = fileStatus.getLen();
       this.lastModified = fileStatus.getModificationTime();
@@ -231,7 +231,7 @@ public class CachingInputStream extends FSInputStream
       throws IOException, InterruptedException, ExecutionException
 
   {
-    log.info(String.format("Got Read, currentPos: %d currentBlock: %d bufferOffset: %d length: %d of file : %s", nextReadPosition, nextReadBlock, offset, length, remotePath));
+    log.info(String.format("Got Read, currentPos: %d currentBlock: %d bufferOffset: %d length: %d of file : %s", nextReadPosition, nextReadBlock, offset, length, CacheUtil.getLocalPath(remotePath, conf)));
 
     if (nextReadPosition >= fileSize) {
       log.debug("Already at eof, returning");
