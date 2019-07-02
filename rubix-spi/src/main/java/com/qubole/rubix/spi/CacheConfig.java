@@ -91,7 +91,7 @@ public class CacheConfig
   // default values
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
   private static final int DEFAULT_SERVER_CONNECT_TIMEOUT = 1000; // ms
-  private static final int DEFAULT_SERVER_SOCKET_TIMEOUT = 3000; // ms
+  private static final int DEFAULT_SERVER_SOCKET_TIMEOUT = 6000; // ms
   private static final String DEFAULT_CACHE_METADATA_FILE_SUFFIX = "_mdfile";
   private static final String DEFAULT_DATA_CACHE_DIR_PREFIX = "/media/ephemeral";
   private static final String DEFAULT_DATA_CACHE_DIR_SUFFIX = "/fcache/";
@@ -575,6 +575,16 @@ public class CacheConfig
   public static void setRemoteFetchProcessInterval(Configuration conf, int interval)
   {
     conf.setInt(KEY_REMOTE_FETCH_PROCESS_INTERVAL, interval);
+  }
+
+  public static void setServerConnectTimeout(Configuration conf, int timeout)
+  {
+    conf.setInt(KEY_SERVER_CONNECT_TIMEOUT, timeout);
+  }
+
+  public static void setServerSocketTimeout(Configuration conf, int timeout)
+  {
+    conf.setInt(KEY_SERVER_SOCKET_TIMEOUT, timeout);
   }
 
   public static void setServerPort(Configuration conf, int serverPort)
