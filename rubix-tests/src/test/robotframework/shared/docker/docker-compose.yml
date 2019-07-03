@@ -6,9 +6,7 @@ services:
       args:
         is_master: "true"
     volumes:
-      - type: bind
-        source: ${DATADIR} # Environment variable set at start of Compose command execution
-        target: /tmp/data
+      - ${DATADIR}:/tmp/data # Environment variable set at start of Compose command execution
     ports:
       - "8900:8899"  # BookKeeperServer
       - "8800:8898"  # LocalDataTransferServer
@@ -23,9 +21,10 @@ services:
       args:
         is_master: "false"
     volumes:
-      - type: bind
-        source: ${DATADIR} # Environment variable set at start of Compose command execution
-        target: /tmp/data
+      - ${DATADIR}:/tmp/data # Environment variable set at start of Compose command execution
+#      - type: bind
+#        source: ${DATADIR} # Environment variable set at start of Compose command execution
+#        target: /tmp/data
     ports:
       - "8901:8899"  # BookKeeperServer
       - "8801:8898"  # LocalDataTransferServer
@@ -42,9 +41,7 @@ services:
       args:
         is_master: "false"
     volumes:
-      - type: bind
-        source: ${DATADIR} # Environment variable set at start of Compose command execution
-        target: /tmp/data
+      - ${DATADIR}:/tmp/data # Environment variable set at start of Compose command execution
     ports:
       - "8902:8899"  # BookKeeperServer
       - "8802:8898"  # LocalDataTransferServer
