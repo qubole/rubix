@@ -92,7 +92,7 @@ public class ContainerRequestClient
    */
   private static RequestServer getRequestServer(int port) throws RemoteException, NotBoundException
   {
-    Registry registry = LocateRegistry.getRegistry("localhost", port);
+    Registry registry = LocateRegistry.getRegistry("127.0.0.1", port);
     return (RequestServer) registry.lookup(REQUEST_SERVER_NAME);
   }
 }

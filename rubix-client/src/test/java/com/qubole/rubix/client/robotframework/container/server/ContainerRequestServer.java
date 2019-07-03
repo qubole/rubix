@@ -26,7 +26,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.thrift.shaded.transport.TTransportException;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -112,9 +114,9 @@ public class ContainerRequestServer implements RequestServer
   {
     try {
       bindServer();
-      log.debug("ContainerRequestServer bound");
+      log.debug("ContainerRequestServer bound on IP " + InetAddress.getLocalHost().getHostAddress());
     }
-    catch (RemoteException e) {
+    catch (RemoteException | UnknownHostException e) {
       log.error("Error binding server", e);
     }
   }

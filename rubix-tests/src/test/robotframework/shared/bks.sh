@@ -83,7 +83,8 @@ copy-jars-for-containers() {
 start-cluster() {
   SCRIPT_DIR=$(dirname "$0")
 
-  rm ${SCRIPT_DIR}/docker/jars/* ; mkdir -p ${SCRIPT_DIR}/docker/jars
+  rm -f ${SCRIPT_DIR}/docker/jars/*
+  mkdir -p ${SCRIPT_DIR}/docker/jars
 
   copy-jars-for-containers ${SCRIPT_DIR}
 
