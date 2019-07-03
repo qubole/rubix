@@ -45,6 +45,7 @@ Simple non-local read test case
     Generate test files  ${FILEPREFIX}  ${FILE_LENGTH}  ${NUM_TEST_FILES}  1
 
     Cache data for cluster node  ${PORT_WORKER1_REQUEST_SERVER}
+    ...  localhost
     ...  file:${TEST_FILE_3}
     ...  ${START_BLOCK}
     ...  ${END_BLOCK}
@@ -52,7 +53,7 @@ Simple non-local read test case
     ...  ${LAST_MODIFIED}
     ...  ${CLUSTER_TYPE}
 
-    Verify metric value on node  ${PORT_WORKER1_REQUEST_SERVER}  ${METRIC_NONLOCAL_REQUESTS}  ${NUM_EXPECTED_REQUESTS_NONLOCAL}
+    Verify metric value on node  localhost  ${PORT_WORKER1_REQUEST_SERVER}  ${METRIC_NONLOCAL_REQUESTS}  ${NUM_EXPECTED_REQUESTS_NONLOCAL}
 
     [Teardown]  Multi-node test teardown  ${DATADIR}
 
@@ -65,6 +66,7 @@ Simple local read test case
     Generate test files  ${FILEPREFIX}  ${FILE_LENGTH}  ${NUM_TEST_FILES}  1
 
     Cache data for cluster node  ${PORT_WORKER1_REQUEST_SERVER}
+    ...  localhost
     ...  file:${TEST_FILE_1}
     ...  ${START_BLOCK}
     ...  ${END_BLOCK}
@@ -72,6 +74,6 @@ Simple local read test case
     ...  ${LAST_MODIFIED}
     ...  ${CLUSTER_TYPE}
 
-    Verify metric value on node  ${PORT_WORKER1_REQUEST_SERVER}  ${METRIC_REMOTE_REQUESTS}  ${NUM_EXPECTED_REQUESTS_REMOTE}
+    Verify metric value on node  localhost  ${PORT_WORKER1_REQUEST_SERVER}  ${METRIC_REMOTE_REQUESTS}  ${NUM_EXPECTED_REQUESTS_REMOTE}
 
     [Teardown]  Multi-node test teardown  ${DATADIR}

@@ -35,10 +35,10 @@ public class ContainerRequestClient
    * @param port  The port on which the desired request server is exposed.
    * @return A map of metrics describing cache statistics and interactions for that node.
    */
-  public Map<String, Double> getCacheMetricsForNode(int port)
+  public Map<String, Double> getCacheMetricsForNode(String host, int port)
   {
     try {
-      final RequestServer containerServer = getRequestServer(port);
+      final RequestServer containerServer = getRequestServer(host, port);
       return containerServer.getCacheMetrics(new GetCacheMetricsRequest());
     }
     catch (RemoteException | NotBoundException e) {
@@ -61,6 +61,7 @@ public class ContainerRequestClient
    * @return True if the data was read into the cache correctly, false otherwise.
    */
   public boolean cacheDataUsingClientFileSystemForNode(
+      String host,
       int port,
       String remotePath,
       long readStart,
@@ -72,7 +73,7 @@ public class ContainerRequestClient
     ReadDataRequestParams params = new ReadDataRequestParams(remotePath, readStart, length, fileSize, lastModified, clusterType);
 
     try {
-      RequestServer containerServer = getRequestServer(port);
+      RequestServer containerServer = getRequestServer(host, port);
       return containerServer.cacheDataUsingClientFileSystem(new ReadDataWithFileSystemRequest(), params);
     }
     catch (RemoteException | NotBoundException e) {
@@ -90,9 +91,9 @@ public class ContainerRequestClient
    * @throws RemoteException if the registry could not be located or communicated with.
    * @throws NotBoundException if the registry has not been bould.
    */
-  private static RequestServer getRequestServer(int port) throws RemoteException, NotBoundException
+  private static RequestServer getRequestServer(String host, int port) throws RemoteException, NotBoundException
   {
-    Registry registry = LocateRegistry.getRegistry("127.0.0.1", port);
+    Registry registry = LocateRegistry.getRegistry(host, port);
     return (RequestServer) registry.lookup(REQUEST_SERVER_NAME);
   }
 }

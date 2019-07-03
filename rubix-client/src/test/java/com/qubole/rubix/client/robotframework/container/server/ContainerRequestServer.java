@@ -33,6 +33,7 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -78,11 +79,13 @@ public class ContainerRequestServer implements RequestServer
    *
    * @throws RemoteException if the server could not be bound.
    */
-  private static void bindServer() throws RemoteException
+  private static void bindServer(int port) throws RemoteException
   {
-    final RequestServer server = (RequestServer) UnicastRemoteObject.exportObject(new ContainerRequestServer(), SERVER_PORT);
+    final RequestServer server = (RequestServer) UnicastRemoteObject.exportObject(new ContainerRequestServer(), port);
     final Registry registry = LocateRegistry.getRegistry();
+    log.info("Bound before: " + Arrays.toString(registry.list()));
     registry.rebind("ContainerRequestServer", server);
+    log.info("Bound after: " + Arrays.toString(registry.list()));
   }
 
   /**
@@ -113,7 +116,8 @@ public class ContainerRequestServer implements RequestServer
   public static void main(String[] args)
   {
     try {
-      bindServer();
+      int port = Integer.parseInt(args[0]);
+      bindServer(port);
       log.debug("ContainerRequestServer bound on IP " + InetAddress.getLocalHost().getHostAddress());
     }
     catch (RemoteException | UnknownHostException e) {
