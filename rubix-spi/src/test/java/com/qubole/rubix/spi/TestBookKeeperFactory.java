@@ -40,6 +40,7 @@ public class TestBookKeeperFactory
   private static final int WAIT_FOR_BKS_START = 200;
 
   private final Configuration conf = new Configuration();
+  private MockBookKeeperServer server;
   private BookKeeperFactory bookKeeperFactory;
 
   @BeforeMethod
@@ -51,31 +52,80 @@ public class TestBookKeeperFactory
   @AfterMethod
   public void tearDown()
   {
+    if (server != null) {
+      stopMockServer();
+    }
     conf.clear();
   }
 
   @Test
   public void testCreateBookKeeperClient_ableToConnect() throws TException, InterruptedException
   {
-    final int socketTimeout = 500;
     final int connectTimeout = 500;
+    final int socketTimeout = 500;
 
-    MockBookKeeperServer server = startMockServer(true, NO_DELAY, NO_DELAY);
+    server = startMockServer(true, NO_DELAY, NO_DELAY);
 
     final RetryingBookkeeperClient client = createTestBookKeeperClient(socketTimeout, connectTimeout);
     assertTrue(client.isBookKeeperAlive());
 
-    stopMockServer(server);
+    stopMockServer();
+  }
+
+  @Test
+  public void testCreateBookKeeperClient_ableToConnect_startDelay() throws TException, InterruptedException
+  {
+    final int startDelay = 500;
+    final int connectTimeout = 1000;
+    final int socketTimeout = 500;
+
+    server = startMockServer(true, startDelay, NO_DELAY);
+
+    final RetryingBookkeeperClient client = createTestBookKeeperClient(socketTimeout, connectTimeout);
+    assertTrue(client.isBookKeeperAlive());
+
+    stopMockServer();
+  }
+
+  @Test
+  public void testCreateBookKeeperClient_ableToConnect_aliveCallDelay() throws TException, InterruptedException
+  {
+    final int connectTimeout = 500;
+    final int aliveCallDelay = 500;
+    final int socketTimeout = 1000;
+
+    server = startMockServer(true, NO_DELAY, aliveCallDelay);
+
+    final RetryingBookkeeperClient client = createTestBookKeeperClient(socketTimeout, connectTimeout);
+    assertTrue(client.isBookKeeperAlive());
+
+    stopMockServer();
+  }
+
+  @Test
+  public void testCreateBookKeeperClient_ableToConnect_startDelayAndAliveCallDelay() throws TException, InterruptedException
+  {
+    final int startDelay = 500;
+    final int connectTimeout = 1000;
+    final int aliveCallDelay = 500;
+    final int socketTimeout = 1000;
+
+    server = startMockServer(true, startDelay, aliveCallDelay);
+
+    final RetryingBookkeeperClient client = createTestBookKeeperClient(socketTimeout, connectTimeout);
+    assertTrue(client.isBookKeeperAlive());
+
+    stopMockServer();
   }
 
   @Test(expectedExceptions = TTransportException.class)
   public void testCreateBookKeeperClient_unableToConnect_connectTimeout() throws TException, InterruptedException
   {
     final int startDelay = 1000;
-    final int socketTimeout = 500;
     final int connectTimeout = 500;
+    final int socketTimeout = 500;
 
-    startMockServer(false, startDelay, NO_DELAY);
+    server = startMockServer(false, startDelay, NO_DELAY);
 
     createTestBookKeeperClient(socketTimeout, connectTimeout); // should throw expected exception due to connect timeout
   }
@@ -83,11 +133,25 @@ public class TestBookKeeperFactory
   @Test(expectedExceptions = TTransportException.class)
   public void testCreateBookKeeperClient_unableToConnect_socketTimeout() throws TException, InterruptedException
   {
+    final int connectTimeout = 500;
     final int aliveCallDelay = 1000;
     final int socketTimeout = 500;
-    final int connectTimeout = 500;
 
-    startMockServer(true, NO_DELAY, aliveCallDelay);
+    server = startMockServer(true, NO_DELAY, aliveCallDelay);
+
+    final RetryingBookkeeperClient client = createTestBookKeeperClient(socketTimeout, connectTimeout);
+    client.isBookKeeperAlive(); // should throw expected exception due to socket timeout
+  }
+
+  @Test(expectedExceptions = TTransportException.class)
+  public void testCreateBookKeeperClient_startDelay_unableToConnect_socketTimeout() throws TException, InterruptedException
+  {
+    final int startDelay = 500;
+    final int connectTimeout = 1000;
+    final int aliveCallDelay = 1000;
+    final int socketTimeout = 500;
+
+    server = startMockServer(true, startDelay, aliveCallDelay);
 
     final RetryingBookkeeperClient client = createTestBookKeeperClient(socketTimeout, connectTimeout);
     client.isBookKeeperAlive(); // should throw expected exception due to socket timeout
@@ -108,9 +172,10 @@ public class TestBookKeeperFactory
     return server;
   }
 
-  private void stopMockServer(MockBookKeeperServer server)
+  private void stopMockServer()
   {
     server.stopServer();
+    server = null;
   }
 
   private RetryingBookkeeperClient createTestBookKeeperClient(int socketTimeout, int connectTimeout) throws TTransportException
@@ -163,7 +228,9 @@ public class TestBookKeeperFactory
 
     void stopServer()
     {
-      server.stop();
+      if (server != null) {
+        server.stop();
+      }
     }
 
     boolean isServerUp()
