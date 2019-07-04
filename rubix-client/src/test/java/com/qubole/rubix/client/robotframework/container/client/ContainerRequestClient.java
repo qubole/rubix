@@ -18,6 +18,7 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -94,6 +95,8 @@ public class ContainerRequestClient
   private static RequestServer getRequestServer(String host, int port) throws RemoteException, NotBoundException
   {
     Registry registry = LocateRegistry.getRegistry(host, port);
+    System.out.println("Found registry!");
+    System.out.println("Bound servers: " + Arrays.toString(registry.list()));
     return (RequestServer) registry.lookup(REQUEST_SERVER_NAME);
   }
 }

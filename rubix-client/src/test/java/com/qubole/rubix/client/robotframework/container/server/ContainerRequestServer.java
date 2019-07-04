@@ -116,6 +116,7 @@ public class ContainerRequestServer implements RequestServer
   public static void main(String[] args)
   {
     try {
+      System.setProperty("java.rmi.server.hostname", "127.0.0.1");
       int port = Integer.parseInt(args[0]);
       bindServer(port);
       log.debug("ContainerRequestServer bound on IP " + InetAddress.getLocalHost().getHostAddress());
