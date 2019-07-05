@@ -6,6 +6,9 @@ services:
   - docker
 jdk:
   - openjdk7
+cache:
+  directories:
+    - $HOME/.m2
 sudo: enabled
 before_install:
   - docker pull quboleinc/hadoop_mvn_thrift
