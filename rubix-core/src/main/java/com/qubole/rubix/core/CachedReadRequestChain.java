@@ -53,7 +53,6 @@ public class CachedReadRequestChain extends ReadRequestChain
 
   public CachedReadRequestChain(FileSystem remoteFileSystem, String remotePath, ByteBuffer buffer,
                                 FileSystem.Statistics statistics, Configuration conf, BookKeeperFactory factory)
-      throws IOException
   {
     this.conf = conf;
     this.remotePath = remotePath;
@@ -65,7 +64,6 @@ public class CachedReadRequestChain extends ReadRequestChain
 
   @VisibleForTesting
   public CachedReadRequestChain(FileSystem remoteFileSystem, String remotePath, Configuration conf, BookKeeperFactory factory)
-      throws IOException
   {
     this(remoteFileSystem, remotePath, ByteBuffer.allocate(1024), null, conf, factory);
   }
