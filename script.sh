@@ -9,7 +9,7 @@ RUBIX_JARS=`ls ${PWD}/rubix-*/target/rubix-*.jar | grep -v tests`
 
 sudo cp $RUBIX_JARS $HADOOP_JARSPATH
 
-mvn clean install
+mvn clean install -rf :rubix-tests -Dincludes=local
 if [[ $? -ne 0 ]]; then
     exit 1
 fi

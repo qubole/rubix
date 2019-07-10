@@ -6,12 +6,12 @@ services:
       args:
         is_master: "true"
     volumes:
-      - ${DATADIR}:/tmp/data # Environment variable set at start of Compose command execution
-    ports:
-      - "8900:8899"  # BookKeeperServer
-      - "8800:8898"  # LocalDataTransferServer
+      - ${DATADIR}:/tmp/rubixTests # Environment variable set at start of Compose command execution
+#    ports:
+#      - "8900:8899"  # BookKeeperServer
+#      - "8800:8898"  # LocalDataTransferServer
     networks:
-      rubix-cluster:
+      default:
         ipv4_address: 172.18.8.0
   rubix-worker-1:
     depends_on:
@@ -21,17 +21,14 @@ services:
       args:
         is_master: "false"
     volumes:
-      - ${DATADIR}:/tmp/data # Environment variable set at start of Compose command execution
-#      - type: bind
-#        source: ${DATADIR} # Environment variable set at start of Compose command execution
-#        target: /tmp/data
-    ports:
-      - "8901:8899"  # BookKeeperServer
-      - "8801:8898"  # LocalDataTransferServer
-      - "8123:8123"  # ContainerRequestServer
-      - "1901:1099"  # rmiregistry
+      - ${DATADIR}:/tmp/rubixTests # Environment variable set at start of Compose command execution
+#    ports:
+#      - "8901:8899"  # BookKeeperServer
+#      - "8801:8898"  # LocalDataTransferServer
+#      - "8123:8123"  # ContainerRequestServer
+#      - "1901:1099"  # rmiregistry
     networks: 
-      rubix-cluster:
+      default:
         ipv4_address: 172.18.8.1
   rubix-worker-2:
     depends_on:
@@ -41,20 +38,24 @@ services:
       args:
         is_master: "false"
     volumes:
-      - ${DATADIR}:/tmp/data # Environment variable set at start of Compose command execution
-    ports:
-      - "8902:8899"  # BookKeeperServer
-      - "8802:8898"  # LocalDataTransferServer
+      - ${DATADIR}:/tmp/rubixTests # Environment variable set at start of Compose command execution
+#    ports:
+#      - "8902:8899"  # BookKeeperServer
+#      - "8802:8898"  # LocalDataTransferServer
 #      - "8123:8123"  # ContainerRequestServer
 #      - "1902:1099"  # rmiregistry
     networks:
-      rubix-cluster:
+      default:
         ipv4_address: 172.18.8.2
 
+#networks:
+#  rubix-cluster:
+#    driver: bridge
+#    ipam:
+#      driver: default
+#      config:
+#        - subnet: 172.18.0.0/16
 networks:
-  rubix-cluster:
-    driver: bridge
-    ipam:
-      driver: default
-      config:
-        - subnet: 172.18.0.0/16
+  default:
+    external:
+      name: network-rubix-build

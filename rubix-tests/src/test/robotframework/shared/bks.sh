@@ -76,9 +76,6 @@ copy-jars-for-containers() {
   RUBIX_CLIENT_TEST_JAR=`ls rubix-client/target/rubix-client-*-tests.jar`
   cp ${RUBIX_CLIENT_TEST_JAR} ${SCRIPT_DIR}/docker/jars/
 
-  RUBIX_MINI_CLIENT_JAR=`ls rubix-mini-client/target/rubix-mini-client-*.jar`
-  cp ${RUBIX_MINI_CLIENT_JAR} ${SCRIPT_DIR}/docker/jars/
-
   RUBIX_CORE_TEST_JAR=`ls rubix-core/target/rubix-core-*-tests.jar`
   cp ${RUBIX_CORE_TEST_JAR} ${SCRIPT_DIR}/docker/jars/rubix-core_tests.jar
 }

@@ -52,9 +52,9 @@ Stop BKS
 
 Multi-node test setup
     [Documentation]  Performs steps necessary for setting up a multi-node test case.
-    [Arguments]  ${dataDir}
-    CREATE DIRECTORY  ${dataDir}
-    Start RubiX cluster  ${dataDir}
+    [Arguments]  ${testDataDir}  ${testMountDir}
+    CREATE DIRECTORY  ${testDataDir}
+    Start RubiX cluster  ${testMountDir}
 
 Multi-node test teardown
     [Documentation]  Performs steps necessary for tearing down a multi-node test case.

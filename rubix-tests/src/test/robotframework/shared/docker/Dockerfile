@@ -14,7 +14,6 @@ COPY jars/rubix-core_tests.jar /usr/lib/rubix/lib/rubix-core-tests.jar
 COPY jars/rubix-spi-*.jar /usr/lib/rubix/lib/rubix-spi.jar
 COPY jars/rubix-hadoop2-*.jar /usr/lib/rubix/lib/rubix-hadoop2.jar
 COPY jars/rubix-client-*.jar /usr/lib/rubix/lib/rubix-client.jar
-COPY jars/rubix-mini-client-*.jar /usr/lib/rubix/lib/rubix-mini-client.jar
 
 # Setup logging
 RUN mkdir /home/logs/
