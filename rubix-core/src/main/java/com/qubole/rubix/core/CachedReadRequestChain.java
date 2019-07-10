@@ -139,7 +139,8 @@ public class CachedReadRequestChain extends ReadRequestChain
       log.info(String.format("Read %d bytes from cached file", read));
     }
     catch (Exception ex) {
-      log.error(String.format("Could not read data from cached file %s. Falling back reading from object store. ", localCachedFile, ex));
+      log.error(String.format("Could not read data from cached file %s. Falling back reading from object store. ", localCachedFile));
+      log.error("StackTrace : ", ex);
       needsInvalidation = true;
       directDataRead = readFromRemoteFileSystem();
       return directDataRead;
