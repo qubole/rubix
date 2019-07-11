@@ -66,6 +66,7 @@ public class TestThriftServerJVM extends Configured
   private static final String setCacheDirectory = "-Drubix.cache.dirprefix.list=" + testDirectoryPrefix + "dir";
   private static final String setmasterbookkeeper = "-Drubix.cluster.is-master=true";
   private static final String disableParallelWarmup = "-Drubix.cache.parallel.warmup=false";
+  private static final String setConnectTimeout = "-Drubix.network.server.connect.timeout=3000";
   private static String rubixclientJarPath;
 
   public BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
@@ -98,8 +99,8 @@ public class TestThriftServerJVM extends Configured
     /*
      * Spinning up the separate JVMs for bookKeeper and Local Data Transfer Servers
      * */
-    String[] bookKeeperStartCmd = {hadoopDirectory, "jar", bookKeeperJarPath, bookKeeperClass, setDataBlockSize, setCacheMaxDisks, setCacheDirectory, setmasterbookkeeper, disableParallelWarmup};
-    String[] localDataTransferStartCmd = {hadoopDirectory, "jar", bookKeeperJarPath, localDataTransferServerClass, setDataBlockSize, setCacheMaxDisks, setCacheDirectory, setmasterbookkeeper, disableParallelWarmup};
+    String[] bookKeeperStartCmd = {hadoopDirectory, "jar", bookKeeperJarPath, bookKeeperClass, setDataBlockSize, setCacheMaxDisks, setCacheDirectory, setmasterbookkeeper, disableParallelWarmup, setConnectTimeout};
+    String[] localDataTransferStartCmd = {hadoopDirectory, "jar", bookKeeperJarPath, localDataTransferServerClass, setDataBlockSize, setCacheMaxDisks, setCacheDirectory, setmasterbookkeeper, disableParallelWarmup, setConnectTimeout};
 
     ProcessBuilder pJVMBuilder = new ProcessBuilder();
     pJVMBuilder.redirectErrorStream(true);

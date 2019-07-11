@@ -87,6 +87,7 @@ Test cache eviction
     ...  rubix.cache.dirsuffix=${CACHE_DIR_SFX}
     ...  rubix.cache.max.disks=${CACHE_NUM_DISKS}
     ...  rubix.cache.max.size=${CACHE_MAX_SIZE}
+    ...  rubix.network.server.connect.timeout=3000
 
     @{testFileNames} =  Generate test files  ${REMOTE_PATH}  ${FILE_LENGTH}  ${NUM_TEST_FILES}
     @{requests} =  Make similar read requests
@@ -123,7 +124,7 @@ Test cache invalidation where last modified does not match
     # Setup
     Cache test setup
     ...  ${DATADIR}
-`    ...  rubix.cluster.is-master=true
+    ...  rubix.cluster.is-master=true
     ...  rubix.cache.dirprefix.list=${CACHE_DIR_PFX}
     ...  rubix.cache.dirsuffix=${CACHE_DIR_SFX}
     ...  rubix.cache.max.disks=${CACHE_NUM_DISKS}
@@ -240,6 +241,7 @@ Test cache expiry
     ...  rubix.cache.dirsuffix=${CACHE_DIR_SFX}
     ...  rubix.cache.max.disks=${CACHE_NUM_DISKS}
     ...  rubix.cache.expiration.after-write=${CACHE_EXPIRY}
+    ...  rubix.network.server.connect.timeout=3000
 
     @{testFileNames} =  Generate test files  ${REMOTE_PATH}  ${FILE_LENGTH}  ${NUM_TEST_FILES}
     @{requests} =  Make similar read requests

@@ -40,39 +40,36 @@ ${NUM_EXPECTED_REQUESTS_REMOTE}    1
 
 #####  APPLY FIXES FROM OTHER TEST #####
 
-#Simple non-local read test case
-#    [Tags]  nonlocal
-#    [Documentation]  A simple non-local read test
-#
-#    [Setup]  Multi-node test setup  ${DATADIR}
-#
-#    Generate test files  ${FILEPREFIX}  ${FILE_LENGTH}  ${NUM_TEST_FILES}  1
-#
-#    Cache data for cluster node  ${PORT_WORKER1_REQUEST_SERVER}
-#    ...  localhost
-#    ...  file:${TEST_FILE_1}
-#    ...  ${START_BLOCK}
-#    ...  ${END_BLOCK}
-#    ...  ${FILE_LENGTH}
-#    ...  ${LAST_MODIFIED}
-#    ...  ${CLUSTER_TYPE}
-#
-#    Verify metric value on node  localhost  ${PORT_WORKER1_REQUEST_SERVER}  ${METRIC_NONLOCAL_REQUESTS}  ${NUM_EXPECTED_REQUESTS_NONLOCAL}
-#
-#    [Teardown]  Multi-node test teardown  ${DATADIR}
-
-Simple local read test case
-    [Tags]  local
-    [Documentation]  A simple local read test
-
-    Log  ${EXECDIR}
-    ${crsPort} =  SET VARIABLE  1099
+Simple non-local read test case
+    [Tags]  nonlocal
+    [Documentation]  A simple non-local read test
 
     [Setup]  Multi-node test setup  ${DATADIR}  %{HOST_TEST_DATA_DIR}
 
     Generate test files  ${FILEPREFIX}  ${FILE_LENGTH}  ${NUM_TEST_FILES}  1
 
-    Cache data for cluster node  ${crsPort}
+    Cache data for cluster node  1099
+    ...  172.18.8.1
+    ...  file:${TEST_FILE_1}
+    ...  ${START_BLOCK}
+    ...  ${END_BLOCK}
+    ...  ${FILE_LENGTH}
+    ...  ${LAST_MODIFIED}
+    ...  ${CLUSTER_TYPE}
+
+    Verify metric value on node  172.18.8.1  1099  ${METRIC_NONLOCAL_REQUESTS}  ${NUM_EXPECTED_REQUESTS_NONLOCAL}
+
+    [Teardown]  Multi-node test teardown  ${DATADIR}
+
+Simple local read test case
+    [Tags]  local
+    [Documentation]  A simple local read test
+
+    [Setup]  Multi-node test setup  ${DATADIR}  %{HOST_TEST_DATA_DIR}
+
+    Generate test files  ${FILEPREFIX}  ${FILE_LENGTH}  ${NUM_TEST_FILES}  1
+
+    Cache data for cluster node  1099
     ...  172.18.8.1
     ...  file:${TEST_FILE_4}
     ...  ${START_BLOCK}
@@ -81,6 +78,6 @@ Simple local read test case
     ...  ${LAST_MODIFIED}
     ...  ${CLUSTER_TYPE}
 
-    Verify metric value on node  172.18.8.1  ${crsPort}  ${METRIC_REMOTE_REQUESTS}  ${NUM_EXPECTED_REQUESTS_REMOTE}
+    Verify metric value on node  172.18.8.1  1099  ${METRIC_REMOTE_REQUESTS}  ${NUM_EXPECTED_REQUESTS_REMOTE}
 
-#    [Teardown]  Multi-node test teardown  ${DATADIR}
+    [Teardown]  Multi-node test teardown  ${DATADIR}
