@@ -6,6 +6,9 @@ services:
   - docker
 jdk:
   - openjdk7
+cache:
+  directories:
+    - $HOME/.m2
 sudo: enabled
 before_install:
   - /bin/bash rubix_travis_before_install.sh
