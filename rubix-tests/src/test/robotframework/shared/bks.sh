@@ -86,6 +86,11 @@ start-cluster() {
   rm -f ${SCRIPT_DIR}/docker/jars/*
   mkdir -p ${SCRIPT_DIR}/docker/jars
 
+  ###
+
+  # :LINK JARS VIA DOCKER VOLUME
+
+  ###
   copy-jars-for-containers ${SCRIPT_DIR}
 
   export DATADIR=$1

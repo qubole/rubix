@@ -13,6 +13,6 @@ sudo: enabled
 before_install:
   - /bin/bash rubix_travis_before_install.sh
 install: true
-script: chmod a+x script.sh && /bin/bash rubix_travis_script.sh
+script: chmod a+x docker_build_rubix.sh && /bin/bash rubix_travis_script.sh
 env:
   - ci_env=`bash <(curl -s https://codecov.io/env)`
