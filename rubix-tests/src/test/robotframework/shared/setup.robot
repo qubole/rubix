@@ -66,7 +66,7 @@ Start RubiX cluster
     [Arguments]  ${dataDir}
     ${output} =  RUN  ${CURDIR}${/}bks.sh start-cluster ${dataDir}
     LOG  ${output}
-    SLEEP  12s  Allow time for daemons to start on cluster
+    SLEEP  15s  Allow time for daemons to start on cluster
 
 Stop RubiX cluster
     [Arguments]  ${dataDir}
