@@ -141,7 +141,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     initializeCache(conf, ticker);
     cleanupOldCacheFiles(conf);
     fetchProcessor = new RemoteFetchProcessor(this, metrics, conf);
-    fetchProcessor.startAsync();
+    // fetchProcessor.startAsync();
   }
 
   RemoteFetchProcessor getRemoteFetchProcessorInstance()
@@ -464,6 +464,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       throws TException
   {
     if (CacheConfig.isParallelWarmupEnabled(conf)) {
+      startRFP();
       log.info("Adding to the queue Path : " + remotePath + " Offste : " + offset + " Length " + length);
       fetchProcessor.addToProcessQueue(remotePath, offset, length, fileSize, lastModified);
       return true;
@@ -471,6 +472,26 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     else {
       return readDataInternal(remotePath, offset, length, fileSize, lastModified, clusterType);
     }
+  }
+
+  private static final Integer newLock = 1;
+
+  private synchronized void startRFP()
+  {
+    // if (!fetchProcessor.isRunning()) {
+    // synchronized (newLock) {
+    try {
+      if (!fetchProcessor.isRunning()) {
+        log.info("$$ Starting RFP for first request");
+        fetchProcessor.startAsync();
+        log.info("$$ RFP started!");
+      }
+    }
+    catch (IllegalStateException e) {
+      log.error("$$ RFP already started $$", e);
+    }
+    // }
+    // }
   }
 
   @Override
