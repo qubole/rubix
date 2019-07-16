@@ -94,7 +94,7 @@ start-cluster() {
   copy-jars-for-containers ${SCRIPT_DIR}
 
   export DATADIR=$1
-  docker-compose -f ${SCRIPT_DIR}/docker/docker-compose.yml up -d
+  docker-compose -f ${SCRIPT_DIR}/docker/docker-compose.yml up -d --build
 }
 
 stop-cluster() {

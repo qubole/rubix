@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-MAVEN_CMD="mvn cobertura:cobertura-integration-test"
+MAVEN_CMD="mvn clean install"
 
 RUBIX_TEST_DATA_DIR=/tmp/rubixTests
 mkdir -p ${RUBIX_TEST_DATA_DIR}
