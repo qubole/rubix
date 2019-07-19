@@ -437,6 +437,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     // Add all enabled metrics gauges
     for (Map.Entry<String, Gauge> gaugeEntry : metrics.getGauges(bookKeeperMetrics.getMetricsFilter()).entrySet()) {
       try {
+        log.info("^^ " + gaugeEntry.toString() + " ^^");
         cacheMetrics.put(gaugeEntry.getKey(), getGaugeValueAsDouble(gaugeEntry.getValue().getValue()));
       }
       catch (ClassCastException e) {
