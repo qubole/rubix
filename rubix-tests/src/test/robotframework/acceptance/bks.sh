@@ -7,6 +7,7 @@ CACHE_DIR_PREFIX_VALUE=/media/ephemeral
 CACHE_DIR_SUFFIX_VALUE=/fcache/
 CACHE_DIR_MAX_DISKS_VALUE=5
 
+#MAVEN_RUN_DIR=
 BASE_DIR=`dirname $0`
 BASE_DIR=`cd "$BASE_DIR"; pwd`
 
@@ -16,7 +17,8 @@ LOG4J_FILE=${RUN_DIR}/log4j.properties
 
 CUR_DATE=$(date '+%Y-%m-%dT%H-%M-%S')
 LOG_DIR=${RUN_DIR}/logs
-LOG_FILE=${LOG_DIR}/bks-${CUR_DATE}.log
+#LOG_FILE=${LOG_DIR}/bks-${CUR_DATE}.log
+LOG_FILE=${PWD}/rubix-tests/target/integration-test-logs/bks-${CUR_DATE}.log
 SCRIPT_LOG_FILE=${LOG_DIR}/bks-script.log
 
 HADOOP_DIR=/usr/lib/hadoop2

@@ -30,7 +30,6 @@ import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,143 +43,161 @@ import static java.nio.file.StandardWatchEventKinds.OVERFLOW;
 
 public class CacheWatcher
 {
-  private static Log log = LogFactory.getLog(CacheWatcher.class);
+  private static final Log log = LogFactory.getLog(CacheWatcher.class);
+  public static final int MAX_RETRIES = 2;
 
-  public static final WatchEvent.Kind[] watchEvents = new WatchEvent.Kind[]{ENTRY_CREATE, ENTRY_MODIFY, ENTRY_DELETE, OVERFLOW};
-
-  private WatchService watcher;
-  private Map<WatchKey, Path> watchKeys = new HashMap<>();
-  private final boolean recursive;
+  private final WatchService watcher;
+  private final Map<WatchKey, Path> watchKeys = new HashMap<>();
+  private final Configuration conf;
   private final int maxWaitTime;
-  private Configuration conf;
 
-  public CacheWatcher(Configuration conf, Path cacheDir, boolean recursive, int maxWaitTime) throws IOException
+  public CacheWatcher(Configuration conf, Path cacheDir, int maxWaitTime) throws IOException
   {
-    // System.setProperty("log4j.configuration", "file:/Users/jordanw/Development/Projects/Qubole/RubiX/log4j_cache.properties");
-    // System.out.println("Current directory: " + System.getProperty("user.dir"));
-    PropertyConfigurator.configure("/Users/jordanw/Development/Projects/Qubole/RubiX/log4j_cache.properties");
-    log.warn("=== ===  New Watcher  === ===");
+    PropertyConfigurator.configure("/Users/jordanw/Development/Projects/Qubole/RubiX/rubix-client/src/test/resources/log4j_cache.properties");
+    log.info("=======  New Watcher  =======");
 
     this.watcher = FileSystems.getDefault().newWatchService();
-    this.recursive = recursive;
     this.maxWaitTime = maxWaitTime;
     this.conf = conf;
 
-    if (recursive) {
-      log.info(String.format("Scanning %s ...", cacheDir));
-      registerAll(cacheDir);
-      log.info("Done!");
-    }
-    else {
-      register(cacheDir);
-    }
+    registerAll(cacheDir);
   }
 
-  public boolean processEvents(List<TestClientReadRequest> requests)
+  public boolean watchForCreatedCacheFiles(List<TestClientReadRequest> requests)
   {
-    Map<String, Boolean> fileCacheStatus = new HashMap<>(requests.size());
-    for (TestClientReadRequest request : requests) {
-      fileCacheStatus.put(request.getRemotePath(), false);
-    }
+    for (int retries = 0; retries < MAX_RETRIES; retries++) {
+      log.info("Watching for cache files...");
 
-    log.info(String.format("Keys registered: %s", Arrays.toString(watchKeys.entrySet().toArray())));
-
-    for (; ; ) {
       WatchKey key;
       try {
-        log.info("Starting watcher poll");
         key = watcher.poll(maxWaitTime, TimeUnit.MILLISECONDS);
-        // key = watcher.take();
         if (key == null) {
           log.error(String.format("No events! (waited %d ms)", maxWaitTime));
-          break;
+          log.info("Doing one final check");
+          return areAllFilesCached(requests);
         }
-        log.info("Got key");
       }
       catch (InterruptedException e) {
         log.error("Polling interrupted", e);
-        return false;
+        continue;
       }
 
       Path cacheDir = watchKeys.get(key);
       if (cacheDir == null) {
-        log.error("Key not recognized! Stopping watch");
-        // continue;
-        break;
+        log.error("Found an invalid key!");
+        continue;
       }
 
-      for (WatchEvent<?> event : key.pollEvents()) {
-        WatchEvent.Kind eventKind = event.kind();
-        if (eventKind == OVERFLOW) {
-          // TODO: Handle overflow
-          continue;
-        }
+      // for (WatchEvent<?> event : key.pollEvents()) {
+      //   if (event.kind() == OVERFLOW) {
+      //     log.debug("!* OVERFLOW *!");
+      //     // TODO: Handle overflow
+      //     continue;
+      //   }
 
-        @SuppressWarnings("unchecked")
-        WatchEvent<Path> pathEvent = (WatchEvent<Path>) event;
-        Path name = pathEvent.context();
-        Path child = cacheDir.resolve(name);
+        // @SuppressWarnings("unchecked")
+        // WatchEvent<Path> pathEvent = (WatchEvent<Path>) event;
 
-        // kind: CREATED; DELETED; MODIFIED
-        // CREATE: new file cached; new MD created
-        // MODIFY: # of cached bytes changed [verify]
-        // DELETE: cache file evicted, invalidated, expired
-        // String expectedCacheFile = CacheUtil.getLocalPath(expectedFile, conf);
+        // registerChildDirectories(cacheDir.resolve(pathEvent.context()));
 
-        // log.info(String.format("[%s] Path: %s", eventKind.name(), cacheDir.toString()));
-        // log.info(String.format("[%s] Child: %s", eventKind.name(), child.toString()));
-        // log.warn(String.format("-- Expected file: %s --", expectedFile));
-        // log.warn(String.format("-- Expected cache file: %s --", expectedCacheFile));
-
-        for (String requestedFile : fileCacheStatus.keySet()) {
-          String expectedCacheFile = CacheUtil.getLocalPath(requestedFile, conf);
-
-          if (Files.exists(Paths.get(expectedCacheFile))) {
-            log.warn(expectedCacheFile + " was found!");
-            fileCacheStatus.put(requestedFile, true);
-          }
-
-          boolean allFilesCached = true;
-          for (boolean cacheStatus : fileCacheStatus.values()) {
-            allFilesCached &= cacheStatus;
-          }
-          if (allFilesCached == true) {
-            log.info("All files were cached!");
-            return true;
-          }
-          else {
-            log.info("Still missing some files");
-          }
-        }
-
-        // if (child.toString().equals(expectedFile)) {
-        //   log.warn("File was found!");
-        //   return true;
-        // }
-
-        if (recursive && (eventKind == ENTRY_CREATE)) {
-          try {
-            if (Files.isDirectory(child, NOFOLLOW_LINKS)) {
-              registerAll(child);
-            }
-          }
-          catch (IOException x) {
-            // ignore to keep sample readbale
-          }
-        }
+      log.info("Checking cache files");
+      if (areAllFilesCached(requests)) {
+        return true;
       }
+      else {
+        continue;
+      }
+      // }
 
-      boolean valid = key.reset();
-      if (!valid) {
-        watchKeys.remove(key);
+      // boolean isKeyValid = key.reset();
+      // if (!isKeyValid) {
+      //   watchKeys.remove(key);
+      //   if (watchKeys.isEmpty()) {
+      //     log.warn("No more valid keys");
+      //     // no more directories to watch
+      //     return false;
+      //   }
+      // }
+    }
 
-        // all directories are inaccessible
-        if (watchKeys.isEmpty()) {
-          break;
+    log.error("Ran out of retries");
+    return false;
+  }
+
+  private String getFileStatusString(Path cacheFile)
+  {
+    if (Files.exists(cacheFile)) {
+      try {
+        return String.format("CREATED (%d B)", Files.size(cacheFile));
+      }
+      catch (IOException e) {
+        log.error(String.format("Error getting size for file: %s", cacheFile.toString()), e);
+        return "ERRORED";
+      }
+    }
+    else {
+      return "PENDING";
+    }
+  }
+
+  private boolean areAllFilesCached(List<TestClientReadRequest> requests)
+  {
+    Map<Path, Boolean> fileStatus = getCacheFileStatus(requests);
+    if (fileStatus.containsValue(false)) {
+      log.warn("Some files have not been fully cached");
+      for (Path cacheFile : fileStatus.keySet()) {
+        log.warn(String.format("* %s [%s]", cacheFile.toString(), getFileStatusString(cacheFile)));
+      }
+      return false;
+    }
+    else {
+      return true;
+    }
+  }
+
+  private Map<Path, Boolean> getCacheFileStatus(List<TestClientReadRequest> requests)
+  {
+    Map<Path, Boolean> fileCacheStatus = new HashMap<>();
+
+    for (TestClientReadRequest request : requests) {
+      Path cacheFile = Paths.get(CacheUtil.getLocalPath(request.getRemotePath(), conf));
+      int expectedSize = request.getReadLength();
+
+      if (Files.exists(cacheFile)) {
+        if (isCacheFileSizeCorrect(cacheFile, expectedSize)) {
+          log.info(String.format("File has expected size! %s", cacheFile.toString()));
+          fileCacheStatus.put(cacheFile, true);
+        }
+        else {
+          log.info(String.format("File created! %s", cacheFile.toString()));
         }
       }
     }
+
+    return fileCacheStatus;
+  }
+
+  private boolean isCacheFileSizeCorrect(Path cacheFileName, long expectedSize)
+  {
+    try {
+      return Files.size(cacheFileName) == expectedSize;
+    }
+    catch (IOException e) {
+      log.error(String.format("Error getting size for file: %s", cacheFileName), e);
+    }
     return false;
+  }
+
+  private void registerChildDirectories(Path child)
+  {
+    try {
+      if (Files.isDirectory(child, NOFOLLOW_LINKS)) {
+        registerAll(child);
+      }
+    }
+    catch (IOException e) {
+      log.error("Could not register all child directories", e);
+    }
   }
 
   private void registerAll(Path cacheParentDir) throws IOException
@@ -199,8 +216,12 @@ public class CacheWatcher
 
   private void register(Path cacheDir) throws IOException
   {
-    WatchKey cacheDirKey = cacheDir.register(watcher, watchEvents, SensitivityWatchEventModifier.HIGH);
-    log.info("* Registered " + cacheDir);
+    WatchKey cacheDirKey = cacheDir.register(
+        watcher,
+        new WatchEvent.Kind[]{ENTRY_CREATE, ENTRY_MODIFY, ENTRY_DELETE, OVERFLOW},
+        SensitivityWatchEventModifier.HIGH);
+
     watchKeys.put(cacheDirKey, cacheDir);
+    log.debug("* Registered " + cacheDir);
   }
 }
