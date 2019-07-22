@@ -47,8 +47,6 @@ public class BookKeeperClientRFLibrary
   private final Configuration conf = new Configuration();
   private static final String FILE_SCHEME = "file:";
 
-  private String cacheDir;
-
   /**
    * Read data from a given file into the BookKeeper cache using the BookKeeper Thrift API.
    *
@@ -66,72 +64,6 @@ public class BookKeeperClientRFLibrary
           readRequest.getLastModified(),
           readRequest.getClusterType());
     }
-  }
-
-  // /**
-  //  * Read data from a given file into the BookKeeper cache using the BookKeeper Thrift API.
-  //  *
-  //  * @param readRequest The read request to execute.
-  //  * @return True if the data was read into the cache correctly, false otherwise.
-  //  */
-  // public boolean cacheDataUsingBookKeeperServerCallWithWatcher(TestClientReadRequest readRequest) throws IOException, TException, ExecutionException, InterruptedException
-  // {
-  //   // Future<Boolean> watcherResult = startWatcher(cacheDir, readRequest.getRemotePath(), 5000);
-  //   try (RetryingBookkeeperClient client = createBookKeeperClient()) {
-  //     boolean dataRead = client.readData(
-  //         getPathWithFileScheme(readRequest.getRemotePath()),
-  //         readRequest.getReadStart(),
-  //         readRequest.getReadLength(),
-  //         readRequest.getFileLength(),
-  //         readRequest.getLastModified(),
-  //         readRequest.getClusterType());
-  //
-  //     // boolean didCache = watcherResult.get();
-  //     // return didCache;
-  //     return dataRead;
-  //   }
-  // }
-
-  public boolean waitForCacheWatcher(final String cacheDir, final int maxWaitTime, final List<TestClientReadRequest> requests) throws ExecutionException, InterruptedException
-  {
-    Future<Boolean> watcherResult = startWatcher(cacheDir, requests, maxWaitTime);
-    boolean didCache = watcherResult.get();
-    System.out.println("Cached? " + didCache);
-    return didCache;
-  }
-
-  private Future<Boolean> startWatcher(final String cacheDir, final List<TestClientReadRequest> requests, final int maxWaitTime)
-  {
-    final ExecutorService service = Executors.newSingleThreadExecutor();
-
-    return service.submit(new Callable<Boolean>()
-    {
-      @Override
-      public Boolean call() throws Exception
-      {
-        CacheWatcher watcher = new CacheWatcher(conf, Paths.get(cacheDir), true, maxWaitTime);
-        return watcher.processEvents(requests);
-      }
-    });
-  }
-
-  public void startCacheWatcher(final String cacheDir, final int maxWaitTime) throws IOException
-  {
-    new Thread()
-    {
-      @Override
-      public void run()
-      {
-        CacheWatcher watcher = null;
-        try {
-          watcher = new CacheWatcher(conf, Paths.get(cacheDir), true, maxWaitTime);
-        }
-        catch (IOException e) {
-          e.printStackTrace();
-        }
-        // watcher.processEvents();
-      }
-    }.start();
   }
 
   /**
@@ -266,29 +198,11 @@ public class BookKeeperClientRFLibrary
    * @param size      The size of the file in bytes.
    * @throws IOException if an error occurs while writing to the specified file.
    */
-  public boolean generateTestFile(String filename, long size) throws IOException, ExecutionException, InterruptedException
+  public void generateTestFile(String filename, long size) throws IOException
   {
-    // Future<Boolean> watcherFuture = startWatcher("/tmp/watcherTest", filename);
     String content = generateContent(size);
     Files.write(Paths.get(filename), content.getBytes());
-    // boolean didGenerate = watcherFuture.get();
-    return true;
   }
-
-  // private Future<Boolean> startWatcher(final String cacheDir, final String fileName)
-  // {
-  //   final ExecutorService service = Executors.newSingleThreadExecutor();
-  //
-  //   return service.submit(new Callable<Boolean>()
-  //   {
-  //     @Override
-  //     public Boolean call() throws Exception
-  //     {
-  //       CacheWatcher watcher = new CacheWatcher(conf, Paths.get(cacheDir), true,);
-  //       return watcher.processEvents(fileName);
-  //     }
-  //   });
-  // }
 
   /**
    * Generate a metadata file to be used for testing situations where metadata exists without its matching cache file.
@@ -375,9 +289,6 @@ public class BookKeeperClientRFLibrary
     for (final Map.Entry<String, String> option : configurationOptions.entrySet()) {
       conf.set(option.getKey(), option.getValue());
     }
-
-    cacheDir = CacheUtil.getCacheDiskPathsMap(conf).get(0) + "/fcache";
-    System.err.println("%$ Cache dir set to " + cacheDir);
   }
 
   /**

@@ -154,8 +154,7 @@ Concurrently execute read requests using client file system
     SHOULD BE TRUE  ${didReadAll}
 
 Cache data for cluster node
-    [Arguments]  ${port}
-    ...          ${host}
+    [Arguments]  ${host}
     ...          ${fileName}
     ...          ${startBlock}
     ...          ${endBlock}
@@ -164,7 +163,6 @@ Cache data for cluster node
     ...          ${clusterType}
     ${didRead} =  cache Data Using Client File System For Node
     ...  ${host}
-    ...  ${port}
     ...  ${fileName}
     ...  ${startBlock}
     ...  ${endBlock}
@@ -198,8 +196,8 @@ Verify metric value
     SHOULD BE EQUAL AS NUMBERS  &{metrics}[${metricName}]  ${expectedValue}
 
 Verify metric value on node
-    [Arguments]  ${host}  ${port}  ${metricName}  ${expectedValue}
-    &{metrics} =  get Cache Metrics For Node  ${host}  ${port}
+    [Arguments]  ${host}  ${metricName}  ${expectedValue}
+    &{metrics} =  get Cache Metrics For Node  ${host}
     LOG MANY  &{metrics}
     SHOULD NOT BE EMPTY  ${metrics}
     SHOULD BE EQUAL AS NUMBERS  &{metrics}[${metricName}]  ${expectedValue}

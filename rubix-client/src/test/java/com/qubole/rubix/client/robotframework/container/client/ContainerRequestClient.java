@@ -24,6 +24,8 @@ import java.util.Map;
 public class ContainerRequestClient
 {
   private static final String REQUEST_SERVER_NAME = "ContainerRequestServer";
+  private static final int REGISTRY_PORT = 1099;
+  private static final String FILE_SCHEME = "file:";
 
   public ContainerRequestClient()
   {
@@ -32,13 +34,13 @@ public class ContainerRequestClient
   /**
    * Get the current cache metrics from the BookKeeper server on a particular node.
    *
-   * @param port  The port on which the desired request server is exposed.
+   * @param host  The hostname of the container to connect to.
    * @return A map of metrics describing cache statistics and interactions for that node.
    */
-  public Map<String, Double> getCacheMetricsForNode(String host, int port)
+  public Map<String, Double> getCacheMetricsForNode(String host)
   {
     try {
-      final RequestServer containerServer = getRequestServer(host, port);
+      final RequestServer containerServer = getRequestServer(host);
       return containerServer.getCacheMetrics(new GetCacheMetricsRequest());
     }
     catch (RemoteException | NotBoundException e) {
@@ -51,7 +53,7 @@ public class ContainerRequestClient
   /**
    * Read data from a given file into the BookKeeper cache using a client caching file system.
    *
-   * @param port  The port on which the desired request server is exposed.
+   * @param host  The hostname of the container to connect to.
    * @param remotePath  The remote path location.
    * @param readStart  The block to start reading from.
    * @param length  The amount of data to read.
@@ -62,7 +64,6 @@ public class ContainerRequestClient
    */
   public boolean cacheDataUsingClientFileSystemForNode(
       String host,
-      int port,
       String remotePath,
       long readStart,
       int length,
@@ -70,10 +71,16 @@ public class ContainerRequestClient
       long lastModified,
       int clusterType)
   {
-    ReadDataRequestParams params = new ReadDataRequestParams(remotePath, readStart, length, fileSize, lastModified, clusterType);
+    ReadDataRequestParams params = new ReadDataRequestParams(
+        getPathWithFileScheme(remotePath),
+        readStart,
+        length,
+        fileSize,
+        lastModified,
+        clusterType);
 
     try {
-      RequestServer containerServer = getRequestServer(host, port);
+      RequestServer containerServer = getRequestServer(host);
       return containerServer.cacheDataUsingClientFileSystem(new ReadDataWithFileSystemRequest(), params);
     }
     catch (RemoteException | NotBoundException e) {
@@ -86,14 +93,25 @@ public class ContainerRequestClient
   /**
    * Locates a {@link RequestServer} for executing requests on a particular container.
    *
-   * @param port  The port on which the desired request server is exposed.
+   * @param host  The hostname for the container to connect to.
    * @return The {@link RequestServer} used for executing requests.
    * @throws RemoteException if the registry could not be located or communicated with.
    * @throws NotBoundException if the registry has not been bould.
    */
-  private static RequestServer getRequestServer(String host, int port) throws RemoteException, NotBoundException
+  private static RequestServer getRequestServer(String host) throws RemoteException, NotBoundException
   {
-    Registry registry = LocateRegistry.getRegistry(host, port);
+    Registry registry = LocateRegistry.getRegistry(host, REGISTRY_PORT);
     return (RequestServer) registry.lookup(REQUEST_SERVER_NAME);
+  }
+
+  /**
+   * Add the file scheme to the provided path for proper execution with the BookKeeper server.
+   *
+   * @param path  The path to update.
+   * @return The provided path with the file scheme.
+   */
+  private String getPathWithFileScheme(String path)
+  {
+    return FILE_SCHEME + path;
   }
 }

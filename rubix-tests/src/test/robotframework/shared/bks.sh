@@ -67,31 +67,35 @@ setup-disks() {
   done
 }
 
-copy-jars-for-containers() {
-  SCRIPT_DIR=$1
+copy-jars-for-container-volume() {
+#  SCRIPT_DIR=$1
+  JAR_DIR=$1
 
   RUBIX_JARS=`ls rubix-*/target/rubix-*.jar | grep -E -v 'tests|client|rpm|presto'`
-  cp ${RUBIX_JARS} ${SCRIPT_DIR}/docker/jars/
+  cp ${RUBIX_JARS} ${JAR_DIR}
 
   RUBIX_CLIENT_TEST_JAR=`ls rubix-client/target/rubix-client-*-tests.jar`
-  cp ${RUBIX_CLIENT_TEST_JAR} ${SCRIPT_DIR}/docker/jars/
+  cp ${RUBIX_CLIENT_TEST_JAR} ${JAR_DIR}
 
   RUBIX_CORE_TEST_JAR=`ls rubix-core/target/rubix-core-*-tests.jar`
-  cp ${RUBIX_CORE_TEST_JAR} ${SCRIPT_DIR}/docker/jars/rubix-core_tests.jar
+  cp ${RUBIX_CORE_TEST_JAR} ${JAR_DIR}/rubix-core_tests.jar
 }
 
 start-cluster() {
   SCRIPT_DIR=$(dirname "$0")
-
-  rm -f ${SCRIPT_DIR}/docker/jars/*
-  mkdir -p ${SCRIPT_DIR}/docker/jars
+  # TODO change when changing to volume
+  export JAR_DIR=${PWD}/rubix-tests/src/test/robotframework/shared/docker/jars
+  echo "Starting cluster -- jars: ${JAR_DIR}"
+  rm -f ${JAR_DIR}
+  mkdir -p ${JAR_DIR}
 
   ###
 
   # :LINK JARS VIA DOCKER VOLUME
 
   ###
-  copy-jars-for-containers ${SCRIPT_DIR}
+  echo "Jars in ${JAR_DIR}: `ls ${JAR_DIR}`"
+  copy-jars-for-container-volume ${JAR_DIR}
 
   export DATADIR=$1
   docker-compose -f ${SCRIPT_DIR}/docker/docker-compose.yml up -d --build

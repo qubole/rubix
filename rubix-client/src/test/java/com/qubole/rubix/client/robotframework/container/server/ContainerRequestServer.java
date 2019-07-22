@@ -51,7 +51,7 @@ public class ContainerRequestServer implements RequestServer
   public Map<String, Double> getCacheMetrics(GetCacheMetricsRequest request) throws RemoteException
   {
     try (RetryingBookkeeperClient client = createBookKeeperClient()) {
-      return request.execute(client, null);
+      return request.execute(client);
     }
     catch (IOException | TTransportException e) {
       log.error("Error getting cache metrics", e);
@@ -69,18 +69,6 @@ public class ContainerRequestServer implements RequestServer
       log.error("Error caching data using CachingFileSystem", e);
     }
     return false;
-  }
-
-  /**
-   * Binds an RMI server to the registry for executing RubiX requests.
-   *
-   * @throws RemoteException if the server could not be bound.
-   */
-  private static void bindServer() throws RemoteException
-  {
-    final RequestServer server = (RequestServer) UnicastRemoteObject.exportObject(new ContainerRequestServer(), SERVER_PORT);
-    final Registry registry = LocateRegistry.getRegistry();
-    registry.rebind("ContainerRequestServer", server);
   }
 
   /**
@@ -106,6 +94,18 @@ public class ContainerRequestServer implements RequestServer
     final MockCachingFileSystem mockFS = new MockCachingFileSystem();
     mockFS.initialize(URI.create(remotePath), conf);
     return mockFS.open(new Path(remotePath), readLength);
+  }
+
+  /**
+   * Binds an RMI server to the registry for executing RubiX requests.
+   *
+   * @throws RemoteException if the server could not be bound.
+   */
+  private static void bindServer() throws RemoteException
+  {
+    final RequestServer server = (RequestServer) UnicastRemoteObject.exportObject(new ContainerRequestServer(), SERVER_PORT);
+    final Registry registry = LocateRegistry.getRegistry();
+    registry.rebind("ContainerRequestServer", server);
   }
 
   public static void main(String[] args)

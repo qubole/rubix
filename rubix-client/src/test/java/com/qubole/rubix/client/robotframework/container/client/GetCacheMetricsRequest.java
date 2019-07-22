@@ -23,7 +23,7 @@ public class GetCacheMetricsRequest implements Serializable
 {
   public static final long serialVersionUID = 126L;
 
-  public Map<String, Double> execute(RetryingBookkeeperClient client, Void params)
+  public Map<String, Double> execute(RetryingBookkeeperClient client)
   {
     try {
       return client.getCacheMetrics();
