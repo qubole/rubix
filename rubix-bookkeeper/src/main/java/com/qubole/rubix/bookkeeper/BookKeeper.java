@@ -141,7 +141,6 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     initializeCache(conf, ticker);
     cleanupOldCacheFiles(conf);
     fetchProcessor = new RemoteFetchProcessor(this, metrics, conf);
-    // fetchProcessor.startAsync();
   }
 
   RemoteFetchProcessor getRemoteFetchProcessorInstance()
@@ -437,7 +436,6 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     // Add all enabled metrics gauges
     for (Map.Entry<String, Gauge> gaugeEntry : metrics.getGauges(bookKeeperMetrics.getMetricsFilter()).entrySet()) {
       try {
-        log.info("^^ " + gaugeEntry.toString() + " ^^");
         cacheMetrics.put(gaugeEntry.getKey(), getGaugeValueAsDouble(gaugeEntry.getValue().getValue()));
       }
       catch (ClassCastException e) {
@@ -465,7 +463,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       throws TException
   {
     if (CacheConfig.isParallelWarmupEnabled(conf)) {
-      startRFP();
+      startRemoteFetchProcessor();
       log.info("Adding to the queue Path : " + remotePath + " Offste : " + offset + " Length " + length);
       fetchProcessor.addToProcessQueue(remotePath, offset, length, fileSize, lastModified);
       return true;
@@ -475,24 +473,16 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     }
   }
 
-  private static final Integer newLock = 1;
-
-  private synchronized void startRFP()
+  private synchronized void startRemoteFetchProcessor()
   {
-    // if (!fetchProcessor.isRunning()) {
-    // synchronized (newLock) {
     try {
       if (!fetchProcessor.isRunning()) {
-        log.info("$$ Starting RFP for first request");
         fetchProcessor.startAsync();
-        log.info("$$ RFP started!");
       }
     }
     catch (IllegalStateException e) {
-      log.error("$$ RFP already started $$", e);
+      log.error("RemoteFetchProcessor has already started");
     }
-    // }
-    // }
   }
 
   @Override

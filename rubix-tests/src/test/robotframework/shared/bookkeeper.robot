@@ -7,26 +7,11 @@ Library  com.qubole.rubix.client.robotframework.container.client.ContainerReques
 
 ## Generation ##
 
-Start watcher
-    [Arguments]  ${cacheDir}
-    start Cache Watcher  ${cacheDir}
-
-Wait for cache
-    [Arguments]  ${cacheDir}  ${maxWaitTime}  @{requests}
-    ${didCache} =  wait For Cache Watcher  ${cacheDir}  ${maxWaitTime}  @{requests}
-    [Return]  ${didCache}
-
 Generate single test file
     [Documentation]  Generate a test file with the given name and length.
     [Arguments]  ${fileName}  ${fileLength}
     generate Test File  ${fileName}  ${fileLength}
     [Return]  ${fileName}
-
-Generate single test file - watched
-    [Documentation]  Generate a test file with the given name and length.
-    [Arguments]  ${fileName}  ${fileLength}
-    ${generated} =  generate Test File  ${fileName}  ${fileLength}
-    [Return]  ${generated}
 
 Generate test files
     [Documentation]  Generate similar test files with the given file prefix and length.
@@ -187,6 +172,11 @@ Cache data for cluster node
     ...  ${lastModified}
     ...  ${clusterType}
     SHOULD BE TRUE  ${didRead}
+
+Wait for cache
+    [Arguments]  ${cacheDir}  ${maxWaitTime}  @{requests}
+    ${didCache} =  watch Cache  ${cacheDir}  ${maxWaitTime}  @{requests}
+    [Return]  ${didCache}
 
 ## Verification ##
 

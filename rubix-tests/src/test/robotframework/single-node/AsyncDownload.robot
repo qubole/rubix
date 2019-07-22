@@ -54,17 +54,6 @@ Async caching
     Execute read request using client file system                    runConcurrently=${false}
     Concurrently execute read requests using client file system      runConcurrently=${true}
 
-#Simple cache watcher test
-#    [Tags]  watcher
-#    # Setup
-#    Start watcher  /tmp/watcherTest/
-#    SLEEP  5s
-#    ${generated} =  Generate single test file - watched  /tmp/watcherTest/testFile1234  ${FILE_LENGTH}
-#    Should be true  ${generated}
-
-#    Remove file  /tmp/watcherTest/testFile1234
-#    SLEEP  5s
-
 Async caching - Some requests delayed
     [Documentation]  Verify that asynchronous caching only downloads files queued outside of the delay period.
     [Tags]  async
@@ -127,11 +116,9 @@ Test async caching
 
     Verify metric value  ${METRIC_ASYNC_QUEUE_SIZE}  ${NUM_TEST_FILES}
 
-    ${waitTime} =  EVALUATE  ${ASYNC_PROCESS_INTERVAL} * ${NUM_TEST_FILES} + ${WATCHER_DELAY}
-
-    ${didCache} =  Wait for cache  ${CACHE_DIR}  ${waitTime}  ${requests}
+    ${maxWaitTime} =  EVALUATE  ${ASYNC_PROCESS_INTERVAL} * ${NUM_TEST_FILES} + ${WATCHER_DELAY}
+    ${didCache} =  Wait for cache  ${CACHE_DIR}  ${maxWaitTime}  ${requests}
     SHOULD BE TRUE  ${didCache}
-#    SLEEP  ${waitTime}ms  Wait for queued requests to finish
 
     Verify async metrics
     ...  queueSize=0
@@ -220,9 +207,8 @@ Test async caching with some requests delayed
     ...  totalRequests=${numTotalFiles}
     ...  downloadedMB=0
 
-#    SLEEP  ${ASYNC_PROCESS_DELAY_SOME_DELAYED}ms  Wait for first-pass files to process
-    ${waitTime} =  EVALUATE  ${ASYNC_PROCESS_DELAY_SOME_DELAYED} + ${WATCHER_DELAY}
-    ${didCache} =  Wait for cache  ${CACHE_DIR}  ${waitTime}  ${requestsFirstPass}
+    ${maxWaitTime} =  EVALUATE  ${ASYNC_PROCESS_DELAY_SOME_DELAYED} + ${WATCHER_DELAY}
+    ${didCache} =  Wait for cache  ${CACHE_DIR}  ${maxWaitTime}  ${requestsFirstPass}
     SHOULD BE TRUE  ${didCache}
 
     Verify async metrics
@@ -231,9 +217,8 @@ Test async caching with some requests delayed
     ...  totalRequests=${numTotalFiles}
     ...  downloadedMB=${numFilesFirstPass}
 
-#    SLEEP  ${ASYNC_PROCESS_INTERVAL_SOME_DELAYED}ms  Wait another interval for remaining files to process
-    ${waitTime} =  EVALUATE  ${ASYNC_PROCESS_INTERVAL_SOME_DELAYED} + ${WATCHER_DELAY}
-    ${didCache} =  Wait for cache  ${CACHE_DIR}  ${waitTime}  ${requestsFirstPass}
+    ${maxWaitTime} =  EVALUATE  ${ASYNC_PROCESS_INTERVAL_SOME_DELAYED} + ${WATCHER_DELAY}
+    ${didCache} =  Wait for cache  ${CACHE_DIR}  ${maxWaitTime}  ${requestsSecondPass}
     SHOULD BE TRUE  ${didCache}
 
     Verify async metrics
@@ -246,6 +231,7 @@ Test async caching with some requests delayed
     ...  ${CACHE_DIR_SFX}
     ...  ${CACHE_NUM_DISKS}
     ...  expectedCacheSize=${numTotalFiles}
+
     [Teardown]  Cache test teardown  ${DATADIR}
 
 Test async caching with request 1 file date before request 2
@@ -297,9 +283,8 @@ Test async caching with request 1 file date before request 2
     ${totalRequests} =  GET LENGTH  ${requests}
     Verify metric value  ${METRIC_ASYNC_QUEUE_SIZE}  ${totalRequests}
 
-#    SLEEP  ${waitTime}ms  Wait for queued requests to finish
-    ${waitTime} =  EVALUATE  ${ASYNC_PROCESS_INTERVAL} + ${WATCHER_DELAY}
-    ${didCache} =  Wait for cache  ${CACHE_DIR}  ${waitTime}  ${requests}
+    ${maxWaitTime} =  EVALUATE  ${ASYNC_PROCESS_INTERVAL} + ${WATCHER_DELAY}
+    ${didCache} =  Wait for cache  ${CACHE_DIR}  ${maxWaitTime}  ${requests}
     SHOULD BE TRUE  ${didCache}
 
     Verify async metrics
@@ -365,9 +350,8 @@ Test async caching with request 1 file date after request 2
     ${totalRequests} =  GET LENGTH  ${requests}
     Verify metric value  ${METRIC_ASYNC_QUEUE_SIZE}  ${totalRequests}
 
-#    SLEEP  ${waitTime}ms  Wait for queued requests to finish
-    ${waitTime} =  EVALUATE  ${ASYNC_PROCESS_INTERVAL} + ${WATCHER_DELAY}
-    ${didCache} =  Wait for cache  ${CACHE_DIR}  ${waitTime}  ${requests}
+    ${maxWaitTime} =  EVALUATE  ${ASYNC_PROCESS_INTERVAL} + ${WATCHER_DELAY}
+    ${didCache} =  Wait for cache  ${CACHE_DIR}  ${maxWaitTime}  ${requests}
     SHOULD BE TRUE  ${didCache}
 
     Verify async metrics

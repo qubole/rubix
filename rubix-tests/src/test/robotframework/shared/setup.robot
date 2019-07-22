@@ -40,7 +40,7 @@ Start BKS
     [Arguments]  &{options}
     ${optionArgs} =  Get options argument  &{options}
     RUN  ${CURDIR}${/}bks.sh start-bks ${optionArgs}
-    SLEEP  2s
+    SLEEP  3s
 
 Stop BKS
     [Documentation]  Shuts down the BookKeeper server used for the test.
