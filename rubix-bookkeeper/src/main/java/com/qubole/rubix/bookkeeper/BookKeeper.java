@@ -141,7 +141,6 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     initializeCache(conf, ticker);
     cleanupOldCacheFiles(conf);
     fetchProcessor = new RemoteFetchProcessor(this, metrics, conf);
-    fetchProcessor.startAsync();
   }
 
   RemoteFetchProcessor getRemoteFetchProcessorInstance()
@@ -437,7 +436,6 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     // Add all enabled metrics gauges
     for (Map.Entry<String, Gauge> gaugeEntry : metrics.getGauges(bookKeeperMetrics.getMetricsFilter()).entrySet()) {
       try {
-        log.info("^^ " + gaugeEntry.toString() + " ^^");
         cacheMetrics.put(gaugeEntry.getKey(), getGaugeValueAsDouble(gaugeEntry.getValue().getValue()));
       }
       catch (ClassCastException e) {
@@ -465,12 +463,25 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       throws TException
   {
     if (CacheConfig.isParallelWarmupEnabled(conf)) {
+      startRemoteFetchProcessor();
       log.info("Adding to the queue Path : " + remotePath + " Offste : " + offset + " Length " + length);
       fetchProcessor.addToProcessQueue(remotePath, offset, length, fileSize, lastModified);
       return true;
     }
     else {
       return readDataInternal(remotePath, offset, length, fileSize, lastModified, clusterType);
+    }
+  }
+
+  private synchronized void startRemoteFetchProcessor()
+  {
+    try {
+      if (!fetchProcessor.isRunning()) {
+        fetchProcessor.startAsync();
+      }
+    }
+    catch (IllegalStateException e) {
+      log.error("RemoteFetchProcessor has already started");
     }
   }
 

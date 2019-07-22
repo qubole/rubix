@@ -53,7 +53,7 @@ public class CacheWatcher
 
   public CacheWatcher(Configuration conf, Path cacheDir, int maxWaitTime) throws IOException
   {
-    PropertyConfigurator.configure("/Users/jordanw/Development/Projects/Qubole/RubiX/rubix-client/src/test/resources/log4j_cache.properties");
+    PropertyConfigurator.configure("rubix-client/src/test/resources/log4j_cache.properties");
     log.info("=======  New Watcher  =======");
 
     this.watcher = FileSystems.getDefault().newWatchService();
@@ -63,9 +63,9 @@ public class CacheWatcher
     registerAll(cacheDir);
   }
 
-  public boolean watchForCreatedCacheFiles(List<TestClientReadRequest> requests)
+  public boolean watchForCacheFiles(List<TestClientReadRequest> requests)
   {
-    for (int retries = 0; retries < MAX_RETRIES; retries++) {
+    for (int retries = 0; retries < MAX_RETRIES; ) {
       log.info("Watching for cache files...");
 
       WatchKey key;
@@ -79,26 +79,17 @@ public class CacheWatcher
       }
       catch (InterruptedException e) {
         log.error("Polling interrupted", e);
+        log.info("Retrying...");
+        retries++;
         continue;
       }
 
       Path cacheDir = watchKeys.get(key);
       if (cacheDir == null) {
         log.error("Found an invalid key!");
+        log.info("Retrying...");
         continue;
       }
-
-      // for (WatchEvent<?> event : key.pollEvents()) {
-      //   if (event.kind() == OVERFLOW) {
-      //     log.debug("!* OVERFLOW *!");
-      //     // TODO: Handle overflow
-      //     continue;
-      //   }
-
-        // @SuppressWarnings("unchecked")
-        // WatchEvent<Path> pathEvent = (WatchEvent<Path>) event;
-
-        // registerChildDirectories(cacheDir.resolve(pathEvent.context()));
 
       log.info("Checking cache files");
       if (areAllFilesCached(requests)) {
@@ -107,17 +98,6 @@ public class CacheWatcher
       else {
         continue;
       }
-      // }
-
-      // boolean isKeyValid = key.reset();
-      // if (!isKeyValid) {
-      //   watchKeys.remove(key);
-      //   if (watchKeys.isEmpty()) {
-      //     log.warn("No more valid keys");
-      //     // no more directories to watch
-      //     return false;
-      //   }
-      // }
     }
 
     log.error("Ran out of retries");

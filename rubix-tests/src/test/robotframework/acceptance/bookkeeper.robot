@@ -6,15 +6,6 @@ Library  com.qubole.rubix.client.robotframework.BookKeeperClientRFLibrary
 
 ## Generation ##
 
-Start watcher
-    [Arguments]  ${cacheDir}
-    start Cache Watcher  ${cacheDir}
-
-Wait for cache
-    [Arguments]  ${cacheDir}  ${maxWaitTime}  @{requests}
-    ${didCache} =  wait For Cache Watcher  ${cacheDir}  ${maxWaitTime}  @{requests}
-    [Return]  ${didCache}
-
 Generate single test file
     [Documentation]  Generate a test file with the given name and length.
     [Arguments]  ${fileName}  ${fileLength}
@@ -160,6 +151,11 @@ Concurrently execute read requests using client file system
     [Arguments]  ${numThreads}  ${readRequests}  ${staggerRequests}
     ${didReadAll} =  concurrently Cache Data Using Client File System  ${numThreads}  ${staggerRequests}  @{readRequests}
     SHOULD BE TRUE  ${didReadAll}
+
+Wait for cache
+    [Arguments]  ${cacheDir}  ${maxWaitTime}  @{requests}
+    ${didCache} =  watch Cache  ${cacheDir}  ${maxWaitTime}  @{requests}
+    [Return]  ${didCache}
 
 ## Verification ##
 

@@ -7,7 +7,6 @@ CACHE_DIR_PREFIX_VALUE=/media/ephemeral
 CACHE_DIR_SUFFIX_VALUE=/fcache/
 CACHE_DIR_MAX_DISKS_VALUE=5
 
-#MAVEN_RUN_DIR=
 BASE_DIR=`dirname $0`
 BASE_DIR=`cd "$BASE_DIR"; pwd`
 

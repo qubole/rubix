@@ -19,8 +19,6 @@ import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
@@ -45,8 +43,6 @@ import java.util.concurrent.Future;
 
 public class BookKeeperClientRFLibrary
 {
-  private static final Log log = LogFactory.getLog(BookKeeperClientRFLibrary.class);
-
   private final BookKeeperFactory factory = new BookKeeperFactory();
   private final Configuration conf = new Configuration();
   private static final String FILE_SCHEME = "file:";
@@ -202,7 +198,7 @@ public class BookKeeperClientRFLibrary
    * @param size      The size of the file in bytes.
    * @throws IOException if an error occurs while writing to the specified file.
    */
-  public void generateTestFile(String filename, long size) throws IOException, ExecutionException, InterruptedException
+  public void generateTestFile(String filename, long size) throws IOException
   {
     String content = generateContent(size);
     Files.write(Paths.get(filename), content.getBytes());
@@ -364,15 +360,32 @@ public class BookKeeperClientRFLibrary
     return didAllSucceed;
   }
 
-  public boolean waitForCacheWatcher(final String cacheDir, final int maxWaitTime, final List<TestClientReadRequest> requests) throws ExecutionException, InterruptedException
+  /**
+   * Watch the cache directory for changes and verify state of cached files.
+   *
+   * @param cacheDir     The directory to watch.
+   * @param maxWaitTime  The maximum amount of time to wait for file events.
+   * @param requests     The read requests describing the files to be watched for.
+   * @return True if all expected files have been
+   * @throws ExecutionException
+   * @throws InterruptedException
+   */
+  public boolean watchCache(final String cacheDir, final int maxWaitTime, final List<TestClientReadRequest> requests) throws ExecutionException, InterruptedException
   {
-    log.warn("$ waiting for wache catcher $");
-    Future<Boolean> watcherResult = startWatcher(cacheDir, requests, maxWaitTime);
+    Future<Boolean> watcherResult = startCacheWatcher(cacheDir, requests, maxWaitTime);
     boolean didCache = watcherResult.get();
     return didCache;
   }
 
-  private Future<Boolean> startWatcher(final String cacheDir, final List<TestClientReadRequest> requests, final int maxWaitTime)
+  /**
+   * Watch the cache directory for changes and verify state of cached files.
+   *
+   * @param cacheDir     The directory to watch.
+   * @param maxWaitTime  The maximum amount of time to wait for file events.
+   * @param requests     The read requests describing the files to be watched for.
+   * @return The {@link Future} for the result of the cache watcher.
+   */
+  private Future<Boolean> startCacheWatcher(final String cacheDir, final List<TestClientReadRequest> requests, final int maxWaitTime)
   {
     return Executors.newSingleThreadExecutor().submit(new Callable<Boolean>()
     {
@@ -380,7 +393,7 @@ public class BookKeeperClientRFLibrary
       public Boolean call() throws Exception
       {
         CacheWatcher watcher = new CacheWatcher(conf, Paths.get(cacheDir), maxWaitTime);
-        return watcher.watchForCreatedCacheFiles(requests);
+        return watcher.watchForCacheFiles(requests);
       }
     });
   }
