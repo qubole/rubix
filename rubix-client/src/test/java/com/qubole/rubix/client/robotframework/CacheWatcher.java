@@ -43,7 +43,7 @@ import static java.nio.file.StandardWatchEventKinds.OVERFLOW;
 public class CacheWatcher
 {
   private static final Log log = LogFactory.getLog(CacheWatcher.class);
-  public static final int MAX_RETRIES = 2;
+  private static final int MAX_RETRIES = 2;
 
   private final WatchService watcher;
   private final Map<WatchKey, Path> watchKeys = new HashMap<>();
@@ -52,7 +52,7 @@ public class CacheWatcher
 
   public CacheWatcher(Configuration conf, Path cacheDir, int maxWaitTime) throws IOException
   {
-    PropertyConfigurator.configure("rubix-client/src/test/resources/log4j_cache.properties");
+    PropertyConfigurator.configure("rubix-client/src/test/resources/log4j.properties");
     log.info("=======  New Watcher  =======");
 
     this.watcher = FileSystems.getDefault().newWatchService();

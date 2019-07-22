@@ -16,7 +16,6 @@ LOG4J_FILE=${RUN_DIR}/log4j.properties
 
 CUR_DATE=$(date '+%Y-%m-%dT%H-%M-%S')
 LOG_DIR=${RUN_DIR}/logs
-#LOG_FILE=${LOG_DIR}/bks-${CUR_DATE}.log
 LOG_FILE=${PWD}/rubix-tests/target/integration-test-logs/bks-${CUR_DATE}.log
 SCRIPT_LOG_FILE=${LOG_DIR}/bks-script.log
 
