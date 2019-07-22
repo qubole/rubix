@@ -35,7 +35,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
@@ -104,22 +103,6 @@ public class CacheWatcher
     return false;
   }
 
-  private String getFileStatusString(Path cacheFile)
-  {
-    if (Files.exists(cacheFile)) {
-      try {
-        return String.format("CREATED (%d B)", Files.size(cacheFile));
-      }
-      catch (IOException e) {
-        log.error(String.format("Error getting size for file: %s", cacheFile.toString()), e);
-        return "ERRORED";
-      }
-    }
-    else {
-      return "PENDING";
-    }
-  }
-
   private boolean areAllFilesCached(List<TestClientReadRequest> requests)
   {
     Map<Path, Boolean> fileStatus = getCacheFileStatus(requests);
@@ -168,15 +151,19 @@ public class CacheWatcher
     return false;
   }
 
-  private void registerChildDirectories(Path child)
+  private String getFileStatusString(Path cacheFile)
   {
-    try {
-      if (Files.isDirectory(child, NOFOLLOW_LINKS)) {
-        registerAll(child);
+    if (Files.exists(cacheFile)) {
+      try {
+        return String.format("CREATED (%d B)", Files.size(cacheFile));
+      }
+      catch (IOException e) {
+        log.error(String.format("Error getting size for file: %s", cacheFile.toString()), e);
+        return "ERRORED";
       }
     }
-    catch (IOException e) {
-      log.error("Could not register all child directories", e);
+    else {
+      return "PENDING";
     }
   }
 
