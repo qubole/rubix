@@ -15,5 +15,6 @@ before_install:
 install: true
 script: chmod a+x docker_build_rubix.sh && /bin/bash rubix_run_build.sh mvn clean install
 env:
-  - TRAVIS_ENV=`bash <(curl -s https://codecov.io/env)`
-  - RUBIX_DOCKER_NETWORK_NAME=network-rubix-build
+  global:
+    - TRAVIS_ENV=`bash <(curl -s https://codecov.io/env)`
+    - RUBIX_DOCKER_NETWORK_NAME=network-rubix-build
