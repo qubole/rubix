@@ -89,6 +89,8 @@ public class CacheConfig
   private static final String KEY_CLUSTER_NODE_REFRESH_TIME = "rubix.cluster.node.refresh.time";
   private static final String KEY_WORKER_NODEINFO_EXPIRY_PERIOD = "rubix.worker.nodeinfo.expiry.period";
   private static final String KEY_RUBIX_CLUSTER_TYPE = "rubix.cluster.type";
+  private static final String KEY_RUBIX_WORKER_NODELIST_FETCH_MAX_RETRIES = "rubix.worker.nodelist.fetch.max-retries";
+  private static final String KEY_RUBIX_WORKER_NODELIST_FETCH_WAIT_INTERVAL = "rubix.worker.nodelist.fetch.wait.interval";
 
   // default values
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
@@ -151,6 +153,8 @@ public class CacheConfig
   private static final int DEFAULT_CLUSTER_NODE_REFRESH_TIME = 300; //seconds
   private static final long DEFAULT_MAX_CACHE_SIZE = 0;
   private static final int DEFAULT_RUBIX_CLUSTER_TYPE = ClusterType.TEST_CLUSTER_MANAGER.ordinal();
+  private static final int DEFAULT_RUBIX_WORKER_NODELIST_FETCH_MAX_RETRIES = 10;
+  private static final int DEFAULT_RUBIX_WORKER_NODELIST_FETCH_WAIT_INTERVAL = 30000; //msec
 
   private CacheConfig()
   {
@@ -466,6 +470,16 @@ public class CacheConfig
     return conf.getInt(KEY_CLUSTER_NODE_REFRESH_TIME, DEFAULT_CLUSTER_NODE_REFRESH_TIME);
   }
 
+  public static int getClusterNodesFetchRetryCount(Configuration conf)
+  {
+    return conf.getInt(KEY_RUBIX_WORKER_NODELIST_FETCH_MAX_RETRIES, DEFAULT_RUBIX_WORKER_NODELIST_FETCH_MAX_RETRIES);
+  }
+
+  public static int getClusterNodesFetchWaitInterval(Configuration conf)
+  {
+    return conf.getInt(KEY_RUBIX_WORKER_NODELIST_FETCH_WAIT_INTERVAL, DEFAULT_RUBIX_WORKER_NODELIST_FETCH_WAIT_INTERVAL);
+  }
+
   public static void setBlockSize(Configuration conf, int blockSize)
   {
     conf.setInt(KEY_BLOCK_SIZE, blockSize);
@@ -706,5 +720,15 @@ public class CacheConfig
   public static void setClusterNodeRefreshTime(Configuration conf, int refreshTime)
   {
     conf.setInt(KEY_CLUSTER_NODE_REFRESH_TIME, refreshTime);
+  }
+
+  public static void setClusterNodesFetchRetryCount(Configuration conf, int maxRetries)
+  {
+    conf.setInt(KEY_RUBIX_WORKER_NODELIST_FETCH_MAX_RETRIES, maxRetries);
+  }
+
+  public static void setClusterNodesFetchWaitInterval(Configuration conf, int waitInterval)
+  {
+    conf.setInt(KEY_RUBIX_WORKER_NODELIST_FETCH_WAIT_INTERVAL, waitInterval);
   }
 }
