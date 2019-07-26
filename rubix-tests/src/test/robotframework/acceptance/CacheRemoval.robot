@@ -95,7 +95,6 @@ Test cache eviction
     ...  ${END_BLOCK}
     ...  ${FILE_LENGTH}
     ...  ${LAST_MODIFIED}
-    ...  ${CLUSTER_TYPE}
 
     RUN KEYWORD IF  ${runConcurrently}
     ...  Execute concurrent requests
@@ -135,7 +134,6 @@ Test cache invalidation where last modified does not match
     ...  ${END_BLOCK}
     ...  ${FILE_LENGTH}
     ...  ${LAST_MODIFIED_JAN_1_2018}
-    ...  ${CLUSTER_TYPE}
 
     RUN KEYWORD IF  ${runConcurrently}
     ...  Execute concurrent requests
@@ -248,7 +246,6 @@ Test cache expiry
     ...  ${END_BLOCK}
     ...  ${FILE_LENGTH}
     ...  ${LAST_MODIFIED}
-    ...  ${CLUSTER_TYPE}
 
     RUN KEYWORD IF  ${runConcurrently}
     ...  Execute concurrent requests
