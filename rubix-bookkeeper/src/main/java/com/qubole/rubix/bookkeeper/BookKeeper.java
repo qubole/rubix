@@ -342,6 +342,9 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   {
     ImmutableMap.Builder<String, Double> cacheMetrics = ImmutableMap.builder();
 
+    // Clean up cache to resolve any pending changes.
+    fileMetadataCache.cleanUp();
+
     // Add all enabled metrics gauges
     for (Map.Entry<String, Gauge> gaugeEntry : metrics.getGauges(bookKeeperMetrics.getMetricsFilter()).entrySet()) {
       try {
@@ -694,6 +697,9 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     }
     else if (gaugeValue instanceof Integer) {
       return ((Integer) gaugeValue).doubleValue();
+    }
+    else if (Double.isNaN((double) gaugeValue)) {
+      return Double.NaN;
     }
     else {
       throw new ClassCastException("Could not cast gauge metric value type to Double");

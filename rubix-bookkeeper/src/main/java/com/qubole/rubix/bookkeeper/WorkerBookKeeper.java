@@ -27,13 +27,16 @@ import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import com.qubole.rubix.spi.thrift.ClusterNode;
 import com.qubole.rubix.spi.thrift.HeartbeatStatus;
+import com.qubole.rubix.spi.thrift.NodeState;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
@@ -78,7 +81,31 @@ public class WorkerBookKeeper extends BookKeeper
   {
     startHeartbeatService(conf, metrics, factory);
     initializeNodeStateCache(conf, ticker);
-    setCurrentNodeName();
+    int errorCount = 0;
+    int waitInterval = CacheConfig.getClusterNodesFetchWaitInterval(conf);
+    int maxRetries = CacheConfig.getClusterNodesFetchRetryCount(conf);
+
+    // Retry logic to fetch the list of nodes. This is needed as when the worker bookkeeper started, the nodes
+    // in the cluster might not have registered with the master node. We will wait for some time to get that started.
+    while (nodeName == null || nodeName.isEmpty()) {
+      try {
+        setCurrentNodeName();
+      }
+      catch (WorkerInitializationException ex) {
+        errorCount++;
+        if (errorCount < maxRetries) {
+          try {
+            Thread.sleep(waitInterval);
+          }
+          catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+          }
+        }
+        else {
+          throw ex;
+        }
+      }
+    }
   }
 
   void setCurrentNodeName() throws WorkerInitializationException
@@ -102,10 +129,18 @@ public class WorkerBookKeeper extends BookKeeper
         nodeName = nodeList.get(0).nodeUrl;
         return;
       }
-      if (nodeList.indexOf(nodeHostName) >= 0) {
+
+      Set<String> nodeSet = new HashSet<>();
+      for (ClusterNode node : nodeList) {
+        if (node.nodeState == NodeState.ACTIVE) {
+          nodeSet.add(node.nodeUrl);
+        }
+      }
+
+      if (nodeSet.contains(nodeHostName)) {
         nodeName = nodeHostName;
       }
-      else if (nodeList.indexOf(nodeHostAddress) >= 0) {
+      else if (nodeSet.contains(nodeHostAddress)) {
         nodeName = nodeHostAddress;
       }
       else {

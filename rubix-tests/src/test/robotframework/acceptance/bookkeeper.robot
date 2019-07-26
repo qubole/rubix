@@ -25,6 +25,11 @@ Generate test files
     \  APPEND TO LIST  ${testFileNames}  ${fileName}
     [Return]  @{testFileNames}
 
+Generate MD file
+    [Arguments]  ${fileName}
+    ${mdFile} =  generate Test MD File  ${fileName}
+    FILE SHOULD EXIST  ${mdFile}
+
 Make read request
     [Documentation]  Create a read request used to cache data for the provided file.
     [Arguments]  ${fileName}
@@ -33,11 +38,27 @@ Make read request
     ...          ${fileLength}
     ...          ${lastModified}
     ${request} =  create Test Client Read Request
-    ...  file://${fileName}
+    ...  ${fileName}
     ...  ${startBlock}
     ...  ${endBlock}
     ...  ${fileLength}
     ...  ${lastModified}
+    [Return]  ${request}
+
+Make status request
+    [Arguments]  ${fileName}
+    ...          ${fileLength}
+    ...          ${lastModified}
+    ...          ${startBlock}
+    ...          ${endBlock}
+    ...          ${clusterType}
+    ${request} =  create Test Client Status Request
+    ...  ${fileName}
+    ...  ${fileLength}
+    ...  ${lastModified}
+    ...  ${startBlock}
+    ...  ${endBlock}
+    ...  ${clusterType}
     [Return]  ${request}
 
 Make similar read requests
@@ -49,13 +70,31 @@ Make similar read requests
     ...          ${lastModified}
     @{requests} =  CREATE LIST
     :FOR  ${fileName}  IN  @{fileNames}
-    \   ${request} =  create Test Client Read Request
-    ...  file://${fileName}
+    \  ${request} =  create Test Client Read Request
+    ...  ${fileName}
     ...  ${startBlock}
     ...  ${endBlock}
     ...  ${fileLength}
     ...  ${lastModified}
-    \   APPEND TO LIST  ${requests}    ${request}
+    \  APPEND TO LIST  ${requests}  ${request}
+    [Return]  @{requests}
+
+Make similar status requests
+    [Arguments]  ${fileNames}
+    ...          ${startBlock}
+    ...          ${endBlock}
+    ...          ${fileLength}
+    ...          ${lastModified}
+    ...          ${clusterType}
+    @{requests} =  CREATE LIST
+    :FOR  ${fileName}  IN  @{fileNames}
+    \  ${request} =  create Test Client Status Request
+    ...  ${fileName}
+    ...  ${fileLength}
+    ...  ${lastModified}
+    ...  ${startBlock}
+    ...  ${endBlock}
+    \  APPEND TO LIST  ${requests}  ${request}
     [Return]  @{requests}
 
 ## Execution ##
@@ -76,6 +115,13 @@ Execute sequential requests
     [Arguments]  ${executionKeyword}  ${requests}
     :FOR  ${request}  IN  @{requests}
     \  RUN KEYWORD  ${executionKeyword}  ${request}
+
+Get status for blocks
+    [Documentation]  Fetch the cache status for the blocks of the file specified in the status request.
+    [Arguments]  ${statusRequest}
+    @{locations} =  get Cache Status  ${statusRequest}
+    SHOULD NOT BE EMPTY  ${locations}
+    [Return]  ${locations}
 
 Execute read request using BookKeeper server call
     [Documentation]  Execute the read request by directly calling the BookKeeper server.
