@@ -26,6 +26,10 @@ RUN mkdir /etc/service/crs
 COPY start-crs.sh /etc/service/crs/run
 RUN chmod +x /etc/service/crs/run
 
+#RUN mkdir /etc/service/ctd
+#COPY start-ctd.sh /etc/service/ctd/run
+#RUN chmod +x /etc/service/ctd/run
+
 ### BOOKKEEPER ###
 
 RUN mkdir /etc/service/bks

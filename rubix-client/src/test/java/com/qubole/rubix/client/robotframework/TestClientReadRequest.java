@@ -14,7 +14,9 @@ package com.qubole.rubix.client.robotframework;
 
 import com.qubole.rubix.spi.ClusterType;
 
-public class TestClientReadRequest
+import java.io.Serializable;
+
+public class TestClientReadRequest implements Serializable
 {
   private final String remotePath;
   private final long readStart;

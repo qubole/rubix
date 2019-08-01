@@ -12,7 +12,15 @@
  */
 package com.qubole.rubix.client.robotframework.container.client;
 
+import com.google.common.collect.Lists;
+import com.qubole.rubix.client.robotframework.TestClientReadRequest;
 import com.qubole.rubix.client.robotframework.container.server.RequestServer;
+import com.qubole.rubix.client.robotframework.testdriver.CoordinatorRemote;
+import com.qubole.rubix.client.robotframework.testdriver.CoordinatorTestDriver;
+import com.qubole.rubix.client.robotframework.testdriver.Job;
+import com.qubole.rubix.client.robotframework.testdriver.Task;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
@@ -23,12 +31,50 @@ import java.util.Map;
 
 public class ContainerRequestClient
 {
+  private static final Log log = LogFactory.getLog(ContainerRequestClient.class);
+
   private static final String REQUEST_SERVER_NAME = "ContainerRequestServer";
   private static final int REGISTRY_PORT = 1099;
   private static final String FILE_SCHEME = "file:";
 
   public ContainerRequestClient()
   {
+  }
+
+  public Job makeJob(String remotePath, int startBlock, int endBlock, long fileLength, long lastModified, int clusterType)
+  {
+    Task task = new Task(new TestClientReadRequest(remotePath, startBlock, endBlock, fileLength, lastModified, clusterType));
+    return new Job(Lists.newArrayList(task));
+  }
+
+  public boolean runRubixJob(String host, Job job)
+  {
+    try {
+      final CoordinatorRemote coordinator = getDriverServer(host);
+      if (coordinator == null) {
+        System.out.println("Null CTD");
+        return false;
+      }
+      return coordinator.executeJob(job);
+    }
+    catch (RemoteException | NotBoundException e) {
+      System.err.println("ContainerRequestClient exception:");
+      e.printStackTrace();
+    }
+    return false;
+  }
+
+  private static CoordinatorRemote getDriverServer(String host) throws RemoteException, NotBoundException
+  {
+    Registry registry = LocateRegistry.getRegistry(host, REGISTRY_PORT);
+    try {
+      return (CoordinatorRemote) registry.lookup(CoordinatorTestDriver.SERVER_NAME);
+    }
+    catch (ClassCastException e) {
+      System.err.println("ContainerRequestClient exception:");
+      e.printStackTrace();
+    }
+    return null;
   }
 
   /**

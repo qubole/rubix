@@ -221,6 +221,31 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   }
 
   @Override
+  public List<String> getClusterNodes() throws TException
+  {
+    int clusterType = TEST_CLUSTER_MANAGER.ordinal();
+    try {
+      initializeClusterManager(clusterType);
+    }
+    catch (ClusterManagerInitilizationException ex) {
+      log.error("Not able to initialize ClusterManager for cluster type : " +
+          ClusterType.findByValue(clusterType) + " with Exception : " + ex);
+      return null;
+    }
+    if (nodeName == null) {
+      log.error("Node name is null for Cluster Type" + ClusterType.findByValue(clusterType));
+      return null;
+    }
+
+    if (currentNodeIndex == -1 || nodes == null) {
+      log.error("Initialization not done");
+      return null;
+    }
+
+    return clusterManager.getNodes();
+  }
+
+  @Override
   public List<BlockLocation> getCacheStatus(CacheStatusRequest request) throws TException
   {
     try {

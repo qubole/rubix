@@ -9,6 +9,7 @@ Library         com.qubole.rubix.client.robotframework.container.client.Containe
 ${WORKINGDIR}  ${/}tmp${/}rubix${/}tests${/}NonLocalRead
 ${DATADIR}     ${WORKINGDIR}${/}data${/}
 
+${HOSTNAME_MASTER}   172.18.8.0
 ${HOSTNAME_WORKER1}  172.18.8.1
 ${HOSTNAME_WORKER2}  172.18.8.2
 
@@ -32,6 +33,27 @@ ${NUM_EXPECTED_REQUESTS_NONLOCAL}  1
 ${NUM_EXPECTED_REQUESTS_REMOTE}    1
 
 *** Test Cases ***
+Simple driver test case
+    [Tags]  driver
+
+    [Setup]  Multi-node test setup  ${DATADIR}
+
+    Generate test files  ${FILEPREFIX}  ${FILE_LENGTH}  1
+
+    ${job} =  make Job
+    ...  ${TEST_FILE_1}
+    ...  ${START_BLOCK}
+    ...  ${END_BLOCK}
+    ...  ${FILE_LENGTH}
+    ...  ${LAST_MODIFIED}
+    ...  ${CLUSTER_TYPE}
+
+    ${didRun} =  run Rubix Job  ${HOSTNAME_MASTER}  ${job}
+    SHOULD BE TRUE  ${didRun}
+
+#    Verify metric value on node  ${HOSTNAME_MASTER}  ${METRIC_NONLOCAL_REQUESTS}  ${NUM_EXPECTED_REQUESTS_NONLOCAL}
+
+#    [Teardown]  Multi-node test teardown  ${DATADIR}
 
 Simple non-local read test case
     [Tags]  nonlocal
