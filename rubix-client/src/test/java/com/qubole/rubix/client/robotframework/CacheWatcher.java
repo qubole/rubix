@@ -87,6 +87,7 @@ public class CacheWatcher
       if (cacheDir == null) {
         log.error("Found an invalid key!");
         log.info("Retrying...");
+        retries++;
         continue;
       }
 

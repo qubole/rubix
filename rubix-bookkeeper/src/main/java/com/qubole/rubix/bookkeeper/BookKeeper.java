@@ -26,6 +26,7 @@ import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.cache.Weigher;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.Service;
 import com.qubole.rubix.bookkeeper.utils.DiskUtils;
 import com.qubole.rubix.bookkeeper.validation.CachingValidator;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
@@ -140,7 +141,12 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     initializeMetrics();
     initializeCache(conf, ticker);
     cleanupOldCacheFiles(conf);
-    fetchProcessor = new RemoteFetchProcessor(this, metrics, conf);
+    if (CacheConfig.isParallelWarmupEnabled(conf)) {
+      fetchProcessor = new RemoteFetchProcessor(this, metrics, conf);
+    }
+    else {
+      fetchProcessor = null;
+    }
   }
 
   RemoteFetchProcessor getRemoteFetchProcessorInstance()
@@ -475,13 +481,8 @@ public abstract class BookKeeper implements BookKeeperService.Iface
 
   private synchronized void startRemoteFetchProcessor()
   {
-    try {
-      if (!fetchProcessor.isRunning()) {
-        fetchProcessor.startAsync();
-      }
-    }
-    catch (IllegalStateException e) {
-      log.error("RemoteFetchProcessor has already started");
+    if (fetchProcessor.state() == Service.State.NEW) {
+      fetchProcessor.startAsync();
     }
   }
 

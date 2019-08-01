@@ -116,7 +116,7 @@ Test async caching
 
     Verify metric value  ${METRIC_ASYNC_QUEUE_SIZE}  ${NUM_TEST_FILES}
 
-    ${maxWaitTime} =  EVALUATE  ${ASYNC_PROCESS_INTERVAL} * ${NUM_TEST_FILES} + ${WATCHER_DELAY}
+    ${maxWaitTime} =  EVALUATE  ${ASYNC_PROCESS_INTERVAL} + ${WATCHER_DELAY}
     ${didCache} =  Wait for cache  ${CACHE_DIR}  ${maxWaitTime}  ${requests}
     SHOULD BE TRUE  ${didCache}
 
