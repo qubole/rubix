@@ -109,7 +109,7 @@ public class DiskUtils
       }
     }
     catch (Exception e) {
-      log.error("Exception while calculating the size of the folder " + dirname.toString(), e);
+      log.error(String.format("Exception while calculating the size of the folder %s with exception : %s", dirname.toString(), e.toString()));
     }
     return NumberUtils.toLong(output.toString().split("\\s+")[0]) / 1024;
   }
