@@ -103,7 +103,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   private List<String> nodes;
   int currentNodeIndex = -1;
   static long splitSize;
-  private final RemoteFetchProcessor fetchProcessor;
+  private RemoteFetchProcessor fetchProcessor;
   private final Ticker ticker;
   private static long totalAvailableForCache;
 
@@ -141,11 +141,10 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     initializeMetrics();
     initializeCache(conf, ticker);
     cleanupOldCacheFiles(conf);
+
+    fetchProcessor = null;
     if (CacheConfig.isParallelWarmupEnabled(conf)) {
       fetchProcessor = new RemoteFetchProcessor(this, metrics, conf);
-    }
-    else {
-      fetchProcessor = null;
     }
   }
 
