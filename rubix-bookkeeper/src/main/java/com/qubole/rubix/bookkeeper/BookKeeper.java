@@ -26,6 +26,7 @@ import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.cache.Weigher;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.Service;
 import com.qubole.rubix.bookkeeper.utils.DiskUtils;
 import com.qubole.rubix.bookkeeper.validation.CachingValidator;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
@@ -102,7 +103,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   private List<String> nodes;
   int currentNodeIndex = -1;
   static long splitSize;
-  private final RemoteFetchProcessor fetchProcessor;
+  private RemoteFetchProcessor fetchProcessor;
   private final Ticker ticker;
   private static long totalAvailableForCache;
 
@@ -140,8 +141,11 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     initializeMetrics();
     initializeCache(conf, ticker);
     cleanupOldCacheFiles(conf);
-    fetchProcessor = new RemoteFetchProcessor(this, metrics, conf);
-    fetchProcessor.startAsync();
+
+    fetchProcessor = null;
+    if (CacheConfig.isParallelWarmupEnabled(conf)) {
+      fetchProcessor = new RemoteFetchProcessor(this, metrics, conf);
+    }
   }
 
   RemoteFetchProcessor getRemoteFetchProcessorInstance()
@@ -464,12 +468,20 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       throws TException
   {
     if (CacheConfig.isParallelWarmupEnabled(conf)) {
+      startRemoteFetchProcessor();
       log.info("Adding to the queue Path : " + remotePath + " Offste : " + offset + " Length " + length);
       fetchProcessor.addToProcessQueue(remotePath, offset, length, fileSize, lastModified);
       return true;
     }
     else {
       return readDataInternal(remotePath, offset, length, fileSize, lastModified, clusterType);
+    }
+  }
+
+  private synchronized void startRemoteFetchProcessor()
+  {
+    if (fetchProcessor.state() == Service.State.NEW) {
+      fetchProcessor.startAsync();
     }
   }
 

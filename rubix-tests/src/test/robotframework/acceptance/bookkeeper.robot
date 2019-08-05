@@ -152,6 +152,11 @@ Concurrently execute read requests using client file system
     ${didReadAll} =  concurrently Cache Data Using Client File System  ${numThreads}  ${staggerRequests}  @{readRequests}
     SHOULD BE TRUE  ${didReadAll}
 
+Wait for cache
+    [Arguments]  ${cacheDir}  ${maxWaitTime}  @{requests}
+    ${didCache} =  watch Cache  ${cacheDir}  ${maxWaitTime}  @{requests}
+    [Return]  ${didCache}
+
 ## Verification ##
 
 Verify cache directory size
