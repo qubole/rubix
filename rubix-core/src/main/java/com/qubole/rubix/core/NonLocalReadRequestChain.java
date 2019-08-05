@@ -13,8 +13,12 @@
 package com.qubole.rubix.core;
 
 import com.google.common.base.Throwables;
+import com.qubole.rubix.spi.BookKeeperFactory;
+import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.DataTransferClientHelper;
 import com.qubole.rubix.spi.DataTransferHeader;
+import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -192,5 +196,46 @@ public class NonLocalReadRequestChain extends ReadRequestChain
     inputStream.close();
     directReadChain = null;
     return (totalRead + directRead);
+  }
+
+  @Override
+  public void updateCacheStatus(String remotePath, long fileSize, long lastModified, int blockSize, Configuration conf)
+  {
+    if (CacheConfig.isDummyModeEnabled(conf)) {
+      RetryingBookkeeperClient bookKeeperClient = null;
+      try {
+        bookKeeperClient = new BookKeeperFactory().createBookKeeperClient(remoteNodeName, conf);
+        for (ReadRequest readRequest : readRequests) {
+          long startBlock = toBlock(readRequest.getBackendReadStart());
+          long endBlock = toBlock(readRequest.getBackendReadEnd() - 1) + 1;
+          // getCacheStatus() call required to create mdfiles before blocks are set as cached
+          CacheStatusRequest request = new CacheStatusRequest(remotePath, fileSize, lastModified, startBlock, endBlock, clusterType);
+          bookKeeperClient.getCacheStatus(request);
+          bookKeeperClient.setAllCached(remotePath, fileSize, lastModified, startBlock, endBlock);
+        }
+      }
+      catch (Exception e) {
+        if (strictMode) {
+          throw Throwables.propagate(e);
+        }
+        log.error("Dummy Mode: Could not update Cache Status for Non-Local Read Request " + Throwables.getStackTraceAsString(e));
+      }
+      finally {
+        try {
+          if (bookKeeperClient != null) {
+            bookKeeperClient.close();
+          }
+        }
+        catch (IOException ex) {
+          log.error("Dummy Mode: Could not close bookkeeper client. Exception: " + ex.toString());
+        }
+      }
+    }
+  }
+
+  private long toBlock(long pos)
+  {
+    long blockSize = CacheConfig.getBlockSize(conf);
+    return pos / blockSize;
   }
 }
