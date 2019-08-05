@@ -171,4 +171,15 @@ public class NonLocalRequestChain extends ReadRequestChain
 
     return nonLocalReadBytes;
   }
+
+  @Override
+  public void updateCacheStatus(String remotePath, long fileSize, long lastModified, int blockSize, Configuration conf)
+  {
+    if (CacheConfig.isDummyModeEnabled(conf)) {
+      if (remoteFetchRequestChain == null || remoteFetchRequestChain.getReadRequests().isEmpty()) {
+        return;
+      }
+      remoteFetchRequestChain.updateCacheStatus(remotePath, fileSize, lastModified, blockSize, conf);
+    }
+  }
 }
