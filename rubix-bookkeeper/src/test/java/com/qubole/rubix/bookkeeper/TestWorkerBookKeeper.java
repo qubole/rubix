@@ -14,7 +14,6 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Ticker;
 import com.google.common.testing.FakeTicker;
 import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
@@ -162,7 +161,7 @@ public class TestWorkerBookKeeper
 
       CacheConfig.setWorkerNodeInfoExpiryPeriod(conf, 100);
       try (final BookKeeperMetrics workerMetrics = new BookKeeperMetrics(conf, new MetricRegistry())) {
-        final WorkerBookKeeper workerBookKeeper = new WorkerBookKeeper(conf, workerMetrics, ticker, bookKeeperFactory);
+        final WorkerBookKeeper workerBookKeeper = new MockWorkerBookKeeper(conf, workerMetrics, ticker, bookKeeperFactory);
         String hostName = workerBookKeeper.getOwnerNodeForPath("remotepath");
 
         assertTrue(hostName.equals(testLocalhost), "HostName is not correct from the coordinator");
@@ -229,26 +228,6 @@ public class TestWorkerBookKeeper
       }
 
       assertTrue(unknownLocations == TEST_END_BLOCK - TEST_START_BLOCK, " All the block locations should be unknown");
-    }
-  }
-
-  private class MockWorkerBookKeeper extends WorkerBookKeeper
-  {
-    public MockWorkerBookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics, Ticker ticker, BookKeeperFactory factory) throws BookKeeperInitializationException
-    {
-      super(conf, bookKeeperMetrics, ticker, factory);
-    }
-
-    @Override
-    void startHeartbeatService(Configuration conf, MetricRegistry metrics, BookKeeperFactory factory)
-    {
-      return;
-    }
-
-    @Override
-    void setCurrentNodeName()
-    {
-      nodeName = "localhost";
     }
   }
 }

@@ -39,9 +39,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
-import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER_MULTINODE;
-
 public class WorkerBookKeeper extends BookKeeper
 {
   private static Log log = LogFactory.getLog(WorkerBookKeeper.class);
@@ -125,11 +122,6 @@ public class WorkerBookKeeper extends BookKeeper
     List<ClusterNode> nodeList = getClusterNodes();
 
     if (nodeList != null && nodeList.size() > 0) {
-      if (clusterType == TEST_CLUSTER_MANAGER.ordinal() || clusterType == TEST_CLUSTER_MANAGER_MULTINODE.ordinal()) {
-        nodeName = nodeList.get(0).nodeUrl;
-        return;
-      }
-
       Set<String> nodeSet = new HashSet<>();
       for (ClusterNode node : nodeList) {
         if (node.nodeState == NodeState.ACTIVE) {

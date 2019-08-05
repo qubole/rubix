@@ -201,7 +201,6 @@ Test cache invalidation during async download where MD exists but file does not
     ...  ${END_BLOCK}
     ...  ${FILE_LENGTH}
     ...  ${LAST_MODIFIED_JAN_1_2018}
-    ...  ${CLUSTER_TYPE}
     @{requests} =  CREATE LIST  ${request}
 
     RUN KEYWORD IF  ${runConcurrently}
