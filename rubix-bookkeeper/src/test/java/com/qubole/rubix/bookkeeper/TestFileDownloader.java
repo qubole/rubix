@@ -72,6 +72,7 @@ public class TestFileDownloader
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     CacheConfig.setBlockSize(conf, 200);
+    CacheConfig.setIsParallelWarmupEnabled(conf, true);
     metrics = new MetricRegistry();
     bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
     bookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics);
