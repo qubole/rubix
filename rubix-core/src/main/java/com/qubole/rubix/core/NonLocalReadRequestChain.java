@@ -84,6 +84,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
   public Integer call()
       throws Exception
   {
+    log.debug(String.format("Read Request threadName: %s, Non Local read Executor threadName: %s", threadName, Thread.currentThread().getName()));
     Thread.currentThread().setName(threadName);
     if (readRequests.size() == 0) {
       return 0;

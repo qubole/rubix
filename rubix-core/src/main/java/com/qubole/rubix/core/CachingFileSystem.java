@@ -295,7 +295,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
       }
     }
     catch (ExecutionException e) {
-      log.info("Could not find whether node is Master");
+      log.info("Could not find whether node is Master : ", e);
       return fs.getFileBlockLocations(file, start, len);
     }
 
