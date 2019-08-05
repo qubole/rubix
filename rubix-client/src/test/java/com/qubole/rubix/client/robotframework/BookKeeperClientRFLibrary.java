@@ -359,6 +359,44 @@ public class BookKeeperClientRFLibrary
   }
 
   /**
+   * Watch the cache directory for changes and verify state of cached files.
+   *
+   * @param cacheDir     The directory to watch.
+   * @param maxWaitTime  The maximum amount of time to wait for file events.
+   * @param requests     The read requests describing the files to be watched for.
+   * @return True if all expected files have been
+   * @throws ExecutionException
+   * @throws InterruptedException
+   */
+  public boolean watchCache(final String cacheDir, final int maxWaitTime, final List<TestClientReadRequest> requests) throws ExecutionException, InterruptedException
+  {
+    Future<Boolean> watcherResult = startCacheWatcher(cacheDir, requests, maxWaitTime);
+    boolean didCache = watcherResult.get();
+    return didCache;
+  }
+
+  /**
+   * Watch the cache directory for changes and verify state of cached files.
+   *
+   * @param cacheDir     The directory to watch.
+   * @param maxWaitTime  The maximum amount of time to wait for file events.
+   * @param requests     The read requests describing the files to be watched for.
+   * @return The {@link Future} for the result of the cache watcher.
+   */
+  private Future<Boolean> startCacheWatcher(final String cacheDir, final List<TestClientReadRequest> requests, final int maxWaitTime)
+  {
+    return Executors.newSingleThreadExecutor().submit(new Callable<Boolean>()
+    {
+      @Override
+      public Boolean call() throws Exception
+      {
+        CacheWatcher watcher = new CacheWatcher(conf, Paths.get(cacheDir), maxWaitTime);
+        return watcher.watchForCacheFiles(requests);
+      }
+    });
+  }
+
+  /**
    * Add the file scheme to the provided path for proper execution with the BookKeeper server.
    *
    * @param path  The path to update.

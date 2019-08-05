@@ -14,6 +14,8 @@ ${CACHE_DIR_PFX}    ${WORKINGDIR}${/}
 ${CACHE_DIR_SFX}    /fcache/
 ${CACHE_NUM_DISKS}  1
 
+${CACHE_DIR}        ${CACHE_DIR_PFX}0${CACHE_DIR_SFX}
+
 # Metrics
 ${METRIC_ASYNC_QUEUE_SIZE}          rubix.bookkeeper.gauge.async_queue_size
 ${METRIC_ASYNC_PROCESSED_REQUESTS}  rubix.bookkeeper.count.processed_async_request
@@ -39,6 +41,8 @@ ${ASYNC_PROCESS_INTERVAL}               2500
 ${ASYNC_PROCESS_DELAY}                  10
 ${ASYNC_PROCESS_INTERVAL_SOME_DELAYED}  4000
 ${ASYNC_PROCESS_DELAY_SOME_DELAYED}     2000
+
+${WATCHER_DELAY}    5000
 
 *** Test Cases ***
 Async caching
@@ -111,8 +115,9 @@ Test async caching
 
     Verify metric value  ${METRIC_ASYNC_QUEUE_SIZE}  ${NUM_TEST_FILES}
 
-    ${waitTime} =  EVALUATE  ${ASYNC_PROCESS_INTERVAL} * ${NUM_TEST_FILES}
-    SLEEP  ${waitTime}ms  Wait for queued requests to finish
+    ${maxWaitTime} =  EVALUATE  ${ASYNC_PROCESS_INTERVAL} + ${WATCHER_DELAY}
+    ${didCache} =  Wait for cache  ${CACHE_DIR}  ${maxWaitTime}  ${requests}
+    SHOULD BE TRUE  ${didCache}
 
     Verify async metrics
     ...  queueSize=0
@@ -149,7 +154,7 @@ Test async caching with some requests delayed
     ${numTotalFiles} =  EVALUATE  ${numFilesFirstPass} + ${numFilesSecondPass}
 
     @{testFilesFirstPass} =  Generate test files  ${DATADIR}${/}firstPass  ${FILE_LENGTH}  ${numFilesFirstPass}
-    @{requests} =  Make similar read requests
+    @{requestsFirstPass} =  Make similar read requests
     ...  ${testFilesFirstPass}
     ...  ${START_BLOCK}
     ...  ${END_BLOCK}
@@ -160,11 +165,11 @@ Test async caching with some requests delayed
     ...  Execute concurrent requests
     ...  ${executionKeyword}
     ...  ${NUM_CONCURRENT_THREADS}
-    ...  ${requests}
+    ...  ${requestsFirstPass}
     ...  ELSE
     ...  Execute sequential requests
     ...  ${executionKeyword}
-    ...  ${requests}
+    ...  ${requestsFirstPass}
 
     Verify async metrics
     ...  queueSize=${numFilesFirstPass}
@@ -176,7 +181,7 @@ Test async caching with some requests delayed
     SLEEP  ${delayForSecondPass}ms  Hold for second set so next files are postponed due to process delay
 
     @{testFilesSecondPass} =  Generate test files  ${DATADIR}${/}secondPass  ${FILE_LENGTH}  ${numFilesSecondPass}
-    @{requests} =  Make similar read requests
+    @{requestsSecondPass} =  Make similar read requests
     ...  ${testFilesSecondPass}
     ...  ${START_BLOCK}
     ...  ${END_BLOCK}
@@ -187,11 +192,11 @@ Test async caching with some requests delayed
     ...  Execute concurrent requests
     ...  ${executionKeyword}
     ...  ${NUM_CONCURRENT_THREADS}
-    ...  ${requests}
+    ...  ${requestsSecondPass}
     ...  ELSE
     ...  Execute sequential requests
     ...  ${executionKeyword}
-    ...  ${requests}
+    ...  ${requestsSecondPass}
 
     Verify async metrics
     ...  queueSize=${numTotalFiles}
@@ -199,7 +204,9 @@ Test async caching with some requests delayed
     ...  totalRequests=${numTotalFiles}
     ...  downloadedMB=0
 
-    SLEEP  ${ASYNC_PROCESS_DELAY_SOME_DELAYED}ms  Wait for first-pass files to process
+    ${maxWaitTime} =  EVALUATE  ${ASYNC_PROCESS_DELAY_SOME_DELAYED} + ${WATCHER_DELAY}
+    ${didCache} =  Wait for cache  ${CACHE_DIR}  ${maxWaitTime}  ${requestsFirstPass}
+    SHOULD BE TRUE  ${didCache}
 
     Verify async metrics
     ...  queueSize=${numFilesSecondPass}
@@ -207,7 +214,9 @@ Test async caching with some requests delayed
     ...  totalRequests=${numTotalFiles}
     ...  downloadedMB=${numFilesFirstPass}
 
-    SLEEP  ${ASYNC_PROCESS_INTERVAL_SOME_DELAYED}ms  Wait another interval for remaining files to process
+    ${maxWaitTime} =  EVALUATE  ${ASYNC_PROCESS_INTERVAL_SOME_DELAYED} + ${WATCHER_DELAY}
+    ${didCache} =  Wait for cache  ${CACHE_DIR}  ${maxWaitTime}  ${requestsSecondPass}
+    SHOULD BE TRUE  ${didCache}
 
     Verify async metrics
     ...  queueSize=0
@@ -219,6 +228,7 @@ Test async caching with some requests delayed
     ...  ${CACHE_DIR_SFX}
     ...  ${CACHE_NUM_DISKS}
     ...  expectedCacheSize=${numTotalFiles}
+
     [Teardown]  Cache test teardown  ${DATADIR}
 
 Test async caching with request 1 file date before request 2
@@ -268,8 +278,9 @@ Test async caching with request 1 file date before request 2
     ${totalRequests} =  GET LENGTH  ${requests}
     Verify metric value  ${METRIC_ASYNC_QUEUE_SIZE}  ${totalRequests}
 
-    ${waitTime} =  EVALUATE  ${ASYNC_PROCESS_INTERVAL} * ${totalRequests} * 6
-    SLEEP  ${waitTime}ms  Wait for queued requests to finish
+    ${maxWaitTime} =  EVALUATE  ${ASYNC_PROCESS_INTERVAL} + ${WATCHER_DELAY}
+    ${didCache} =  Wait for cache  ${CACHE_DIR}  ${maxWaitTime}  ${requests}
+    SHOULD BE TRUE  ${didCache}
 
     Verify async metrics
     ...  queueSize=0
@@ -332,8 +343,9 @@ Test async caching with request 1 file date after request 2
     ${totalRequests} =  GET LENGTH  ${requests}
     Verify metric value  ${METRIC_ASYNC_QUEUE_SIZE}  ${totalRequests}
 
-    ${waitTime} =  EVALUATE  ${ASYNC_PROCESS_INTERVAL} * ${totalRequests} * 6
-    SLEEP  ${waitTime}ms  Wait for queued requests to finish
+    ${maxWaitTime} =  EVALUATE  ${ASYNC_PROCESS_INTERVAL} + ${WATCHER_DELAY}
+    ${didCache} =  Wait for cache  ${CACHE_DIR}  ${maxWaitTime}  ${requests}
+    SHOULD BE TRUE  ${didCache}
 
     Verify async metrics
     ...  queueSize=0

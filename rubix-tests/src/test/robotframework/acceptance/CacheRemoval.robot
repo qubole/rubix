@@ -122,7 +122,7 @@ Test cache invalidation where last modified does not match
     # Setup
     Cache test setup
     ...  ${DATADIR}
-`    ...  rubix.cluster.is-master=true
+    ...  rubix.cluster.is-master=true
     ...  rubix.cache.dirprefix.list=${CACHE_DIR_PFX}
     ...  rubix.cache.dirsuffix=${CACHE_DIR_SFX}
     ...  rubix.cache.max.disks=${CACHE_NUM_DISKS}

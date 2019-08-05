@@ -26,6 +26,7 @@ import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.cache.Weigher;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.Service;
 import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
 import com.qubole.rubix.bookkeeper.utils.ConsistentHashUtil;
 import com.qubole.rubix.bookkeeper.utils.DiskUtils;
@@ -92,7 +93,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   protected final Configuration conf;
 
   static long splitSize;
-  private final RemoteFetchProcessor fetchProcessor;
+  private RemoteFetchProcessor fetchProcessor;
   private final Ticker ticker;
   private static long totalAvailableForCache;
 
@@ -133,8 +134,10 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     setupCacheDirectory(conf);
     initializeMetrics();
     initializeCache(conf, ticker);
-    fetchProcessor = new RemoteFetchProcessor(this, metrics, conf);
-    fetchProcessor.startAsync();
+    fetchProcessor = null;
+    if (CacheConfig.isParallelWarmupEnabled(conf)) {
+      fetchProcessor = new RemoteFetchProcessor(this, metrics, conf);
+    }
   }
 
   private void setupCacheDirectory(Configuration conf) throws BookKeeperInitializationException
@@ -375,6 +378,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       throws TException
   {
     if (CacheConfig.isParallelWarmupEnabled(conf)) {
+      startRemoteFetchProcessor();
       log.info("Adding to the queue Path : " + readDataRequest.getRemotePath() +
           " Offset : " + readDataRequest.getReadStart() + " Length " + readDataRequest.getReadLength());
       fetchProcessor.addToProcessQueue(readDataRequest.getRemotePath(), readDataRequest.getReadStart(),
@@ -383,6 +387,13 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     }
     else {
       return readDataInternal(readDataRequest);
+    }
+  }
+
+  private synchronized void startRemoteFetchProcessor()
+  {
+    if (fetchProcessor.state() == Service.State.NEW) {
+      fetchProcessor.startAsync();
     }
   }
 
