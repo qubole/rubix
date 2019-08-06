@@ -48,6 +48,7 @@ public class DirectReadRequestChain extends ReadRequestChain
   @Override
   public Integer call() throws IOException
   {
+    log.debug(String.format("Read Request threadName: %s, Direct read Executor threadName: %s", threadName, Thread.currentThread().getName()));
     Thread.currentThread().setName(threadName);
     long startTime = System.currentTimeMillis();
 
