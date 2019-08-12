@@ -12,6 +12,7 @@ build-rubix-jars-for-tests() {
 
 upload-coverage-results() {
     echo "=== Running tests with coverage ==="
+    # "cobertura-integration-test" goal needed for shading JARs
     mvn cobertura:cobertura-integration-test -Pno-integration-tests
     echo "=== Uploading code coverage results to Codecov ==="
     bash <(curl -s https://codecov.io/bash)
