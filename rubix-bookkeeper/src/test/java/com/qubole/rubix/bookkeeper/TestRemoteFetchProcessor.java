@@ -69,6 +69,7 @@ public class TestRemoteFetchProcessor
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     CacheConfig.setRemoteFetchProcessInterval(conf, TEST_REMOTE_FETCH_PROCESS_INTERVAL);
+    CacheConfig.setIsParallelWarmupEnabled(conf, true);
     metrics = new MetricRegistry();
     bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
     bookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics);

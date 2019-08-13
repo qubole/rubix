@@ -78,6 +78,7 @@ public class CachedReadRequestChain extends ReadRequestChain
   {
     // TODO: any exception here should not cause workload to fail
     // rather should be retried and eventually read from backend
+    log.debug(String.format("Read Request threadName: %s, Cached read Executor threadName: %s", threadName, Thread.currentThread().getName()));
     Thread.currentThread().setName(threadName);
 
     if (readRequests.size() == 0) {
@@ -136,7 +137,7 @@ public class CachedReadRequestChain extends ReadRequestChain
       log.info(String.format("Read %d bytes from cached file", read));
     }
     catch (Exception ex) {
-      log.error(String.format("Could not read data from cached file %s. Falling back reading from object store.", localCachedFile));
+      log.error(String.format("Fall back to read from object store for %s .Could not read data from cached file : ", localCachedFile, ex));
       needsInvalidation = true;
       directDataRead = readFromRemoteFileSystem();
       return directDataRead;

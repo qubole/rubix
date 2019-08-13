@@ -29,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 public class CacheConfig
 {
   public static final String RUBIX_SCHEME = "rubix";
+  public static final int READ_SERVICE_THREAD_POOL_SIZE = 100;
 
   private static final String KEY_BLOCK_SIZE = "rubix.cache.block.size";
   private static final String KEY_CACHE_ENABLED = "rubix.cache.enabled";
@@ -87,6 +88,7 @@ public class CacheConfig
   private static final String KEY_MAX_CACHE_SIZE = "rubix.cache.max.size";
   private static final String KEY_CACHE_FILE_SPLIT_SIZE = "rubix.cache.filesplit.size";
   private static final String KEY_CLUSTER_NODE_REFRESH_TIME = "rubix.cluster.node.refresh.time";
+  private static final String KEY_DUMMY_MODE = "rubix.cache.dummy.mode";
 
   // default values
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
@@ -147,6 +149,7 @@ public class CacheConfig
   private static final long DEFAULT_MAX_CACHE_SIZE = 0;
   private static final long DEFAULT_CACHE_FILE_SPLIT_SIZE = 256 * 1024 * 1024;
   private static final int DEFAULT_CLUSTER_NODE_REFRESH_TIME = 300; //seconds
+  private static final boolean DEFAULT_DUMMY_MODE = false;
 
   private CacheConfig()
   {
@@ -452,6 +455,11 @@ public class CacheConfig
     return conf.getInt(KEY_CLUSTER_NODE_REFRESH_TIME, DEFAULT_CLUSTER_NODE_REFRESH_TIME);
   }
 
+  public static boolean isDummyModeEnabled(Configuration conf)
+  {
+    return conf.getBoolean(KEY_DUMMY_MODE, DEFAULT_DUMMY_MODE);
+  }
+
   public static void setBlockSize(Configuration conf, int blockSize)
   {
     conf.setInt(KEY_BLOCK_SIZE, blockSize);
@@ -680,5 +688,10 @@ public class CacheConfig
   public static void setClusterNodeRefreshTime(Configuration conf, int refreshTime)
   {
     conf.setInt(KEY_CLUSTER_NODE_REFRESH_TIME, refreshTime);
+  }
+
+  public static void setDummyMode(Configuration conf, boolean dummyMode)
+  {
+    conf.setBoolean(KEY_DUMMY_MODE, dummyMode);
   }
 }

@@ -11,4 +11,4 @@ docker run -it --rm \
 --volume "/tmp/rubix:/tmp/rubix" \
 --workdir /usr/src/rubix \
 ${TRAVIS_ENV} \
-rubix-build /bin/bash -c "./docker_build_rubix.sh ${MAVEN_CMD}"
+quboleinc/hadoop_mvn_thrift /bin/bash -c "./docker_build_rubix.sh ${MAVEN_CMD}"
