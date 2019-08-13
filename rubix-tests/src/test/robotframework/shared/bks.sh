@@ -67,7 +67,35 @@ setup-disks() {
   done
 }
 
-start() {
+copy-jars-for-container-volume() {
+  JAR_DIR=/tmp/rubix/jars
+
+  rm -rf ${JAR_DIR}
+  mkdir -p ${JAR_DIR}
+
+  RUBIX_JARS=$(ls rubix-*/target/rubix-*.jar | grep -E -v 'tests|client|rpm|presto')
+  cp ${RUBIX_JARS} ${JAR_DIR}
+
+  RUBIX_CLIENT_TEST_JAR=$(ls rubix-client/target/rubix-client-*-tests.jar)
+  cp ${RUBIX_CLIENT_TEST_JAR} ${JAR_DIR}
+
+  RUBIX_CORE_TEST_JAR=$(ls rubix-core/target/rubix-core-*-tests.jar)
+  cp ${RUBIX_CORE_TEST_JAR} ${JAR_DIR}/rubix-core_tests.jar
+}
+
+start-cluster() {
+  copy-jars-for-container-volume
+
+  SCRIPT_DIR=$(dirname "$0")
+  docker-compose -f ${SCRIPT_DIR}/docker/docker-compose.yml up -d --build
+}
+
+stop-cluster() {
+  SCRIPT_DIR=$(dirname "$0")
+  docker-compose -f ${SCRIPT_DIR}/docker/docker-compose.yml down -t 1
+}
+
+start-bks() {
   BKS_OPTIONS=$@
   set-cache-options ${BKS_OPTIONS}
 
@@ -89,7 +117,7 @@ start() {
   sleep 1
 }
 
-stop() {
+stop-bks() {
   BKS_OPTIONS=$@
   set-cache-options ${BKS_OPTIONS}
 
@@ -109,8 +137,10 @@ stop() {
 
 cmd=$1
 case "$cmd" in
-  start) shift ; start $@;;
-  stop) shift ; stop $@;;
+  start-bks) shift ; start-bks $@;;
+  stop-bks) shift ; stop-bks $@;;
+  start-cluster) shift ; start-cluster;;
+  stop-cluster) shift ; stop-cluster;;
 esac
 
 exit 0;

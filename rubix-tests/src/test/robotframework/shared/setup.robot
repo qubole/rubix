@@ -39,14 +39,37 @@ Start BKS
     [Documentation]  Starts a BookKeeper server with the supplied options.
     [Arguments]  &{options}
     ${optionArgs} =  Get options argument  &{options}
-    RUN  ${CURDIR}${/}bks.sh start ${optionArgs}
+    RUN  ${CURDIR}${/}bks.sh start-bks ${optionArgs}
     SLEEP  3s
 
 Stop BKS
     [Documentation]  Shuts down the BookKeeper server used for the test.
     [Arguments]  &{options}
     ${optionArgs} =  Get options argument  &{options}
-    RUN  ${CURDIR}${/}bks.sh stop ${optionArgs}
+    RUN  ${CURDIR}${/}bks.sh stop-bks ${optionArgs}
+
+## Multi-Node Test Setup/Teardown ##
+
+Multi-node test setup
+    [Documentation]  Performs steps necessary for setting up a multi-node test case.
+    [Arguments]  ${dataDir}
+    CREATE DIRECTORY  ${dataDir}
+    Start RubiX cluster
+
+Multi-node test teardown
+    [Documentation]  Performs steps necessary for tearing down a multi-node test case.
+    [Arguments]  ${dataDir}
+    Stop RubiX cluster
+    REMOVE DIRECTORY  ${dataDir}  recursive=${True}
+
+Start RubiX cluster
+    ${output} =  RUN  ${CURDIR}${/}bks.sh start-cluster
+    LOG  ${output}
+    SLEEP  15s  Allow time for daemons to start on cluster
+
+Stop RubiX cluster
+    ${output} =  RUN  ${CURDIR}${/}bks.sh stop-cluster
+    LOG  ${output}
 
 Get options argument
     [Documentation]  Get an argument string for configuration options to be specified when starting the BookKeeper server.

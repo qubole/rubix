@@ -63,6 +63,23 @@
         </dependency>
     </dependencies>
 
+    <profiles>
+        <profile>
+            <id>no-integration-tests</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.robotframework</groupId>
+                        <artifactId>robotframework-maven-plugin</artifactId>
+                        <configuration>
+                            <skipTests>true</skipTests>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
     <build>
         <plugins>
             <plugin>
@@ -111,6 +128,8 @@
                     </execution>
                 </executions>
                 <configuration>
+                    <name>Integration</name>
+                    <testCasesDirectory>${project.basedir}/src/test/robotframework</testCasesDirectory>
                     <extraPathDirectories>
                         <extraPathDirectory>../rubix-client/target/rubix-client-${project.version}-tests.jar</extraPathDirectory>
                     </extraPathDirectories>
