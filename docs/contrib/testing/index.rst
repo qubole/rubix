@@ -11,3 +11,4 @@ This section provides contribution guidelines specific to testing.
    :titlesonly:
 
    robotframework.md
+   multinode.md

@@ -4,17 +4,24 @@
 [![codecov](https://codecov.io/gh/qubole/rubix/branch/master/graph/badge.svg)](https://codecov.io/gh/qubole/rubix)
 
 
-RubiX is a light-weight data caching framework that can be used by Big-Data engines. RubiX uses local disks to provide
-the best I/O bandwidth to the Big Data Engines. RubiX is useful in shared storage architectures where the data
-execution engine is separate from storage. For example, on public clouds like AWS or Microsoft Azure, data is stored
-in cloud store and the engine accesses the data over a network. Similarly in data centers [Presto](https://prestosql.io)
-runs on a separate cluster from HDFS and accesses data over the network.
+RubiX is a lightweight data caching framework for use with Hadoop-based data engines. 
 
-RubiX can be extended to support any engine that accesses data using Hadoop FileSystem interface via plugins. 
-There are plugins to access data on AWS S3, Microsoft Azure Blob Store and HDFS. RubiX can be extended to be 
-used with any other storage systems including other cloud stores
+Check the [User & Developer Manual](https://rubix.readthedocs.io/en/latest/index.html) for more information on use cases and getting started with RubiX. 
 
-Check the [User and Developer manual](http://rubix.readthedocs.io/en/latest/index.html) for more more information on getting started. 
+## Requirements
+
+* Java 7
+* Docker (Engine: 18.06.0+) 
+
+## Building RubiX
+
+To build the project, use the provided Maven wrapper:
+
+    ./mvnw clean install
+
+To run integration tests:
+
+    ./mvnw clean install -DrunITs
 
 ## Supported Engines and Cloud Stores
 
@@ -23,21 +30,21 @@ Check the [User and Developer manual](http://rubix.readthedocs.io/en/latest/inde
 - Any engine using hadoop-2 e.g. Hive can utilize RubiX. Amazon S3 is supported
 
 ## Resources
-[Documentation](http://rubix.readthedocs.io/en/latest/index.html)  
-[Getting Started Guide](http://rubix.readthedocs.io/en/latest/install/getting_started.html)  
-[User Group (Google)](https://groups.google.com/forum/#!forum/rubix-users)
 
-### Talks
-[Talk on Rubix at Strata 2017](https://www.slideshare.net/shubhamtagra/rubix-78333181)
+### For Users
+- [Documentation](https://rubix.readthedocs.io/en/latest/index.html)
+- [Getting Started Guide](https://rubix.readthedocs.io/en/latest/install/getting_started.html)  
+- [User Group (Google)](https://groups.google.com/forum/#!forum/rubix-users)
 
-### Blog Posts
+### For Developers
+- [Contribution Guidelines](https://rubix.readthedocs.io/en/latest/contrib/index.html)  
+- [Slack Channel](https://join.slack.com/t/rubix-cache/signup?x=x-348094509318-348094608182)  
+The channel is restricted to a few domains. Send an email on the user group or contact us through Github issues.
+We will add you to the slack channel.
+
+### Talks & Blog Posts
+- [Talk on Rubix at Strata 2017 (slides)](https://www.slideshare.net/shubhamtagra/rubix-78333181)
 - [RubiX Introduction](https://www.qubole.com/blog/rubix-fast-cache-access-for-big-data-analytics-on-cloud-storage/)
 - [RubiX on EMR](https://www.qubole.com/blog/caching-emr-using-rubix-performance-benchmark-benefits/)
 - [Spark with RubiX](https://www.qubole.com/blog/increase-apache-spark-performance-with-rubix-distributed-cache/)
 
-
-### Developers
-[Slack Channel](https://join.slack.com/t/rubix-cache/signup?x=x-348094509318-348094608182)
-
-The channel is restricted to a few domains. Send an email on the user group or contact us through Github issues.
-We will add you to the slack channel.

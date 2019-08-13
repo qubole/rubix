@@ -3,6 +3,11 @@
 For more detailed info regarding Robot Framework and its capabilities, 
 read the [Robot Framework user guide](http://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html).
 
+### Quick Notes
+
+* To run tests with a specific tag: `./mvnw ... -Dincludes=<comma-separated list of tags>`
+* To run a specific test: `./mvnw ... -Dtests='<test name with spaces removed>'` (case-insensitive)
+* Logs will be generated in `rubix-tests/src/target/integration-test-logs`.
 
 ## Test Suites
 
