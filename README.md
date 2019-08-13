@@ -6,7 +6,7 @@
 
 RubiX is a lightweight data caching framework for use with Hadoop-based data engines. 
 
-Check the [User & Developer Manual](https://rubix.readthedocs.io/en/latest/index.html) for more information on use cases and getting started with RubiX. 
+Check the [User and Developer Manual](https://rubix.readthedocs.io/en/latest/index.html) for more information on use cases and getting started with RubiX. 
 
 ## Requirements
 
