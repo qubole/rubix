@@ -484,7 +484,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
             remoteReadRequestChain.updateCacheStatus(remotePath, fileSize, lastModified, blockSize, conf);
           }
           else {
-            log.error("Not able to download requested bytes. Not updating the cache for block " + startBlock);
+            log.error("Not able to download requested bytes. Not updating the cache for block " + blockNum);
             return false;
           }
         }
