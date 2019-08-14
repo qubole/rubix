@@ -54,7 +54,7 @@ public class CoordinatorBookKeeper extends BookKeeper
   private final boolean isValidationEnabled;
   private static Integer lock = 1;
   protected ClusterManager clusterManager;
-  int clusterType;
+  private int clusterType;
 
   public CoordinatorBookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics) throws BookKeeperInitializationException
   {

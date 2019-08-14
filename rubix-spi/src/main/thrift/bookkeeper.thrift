@@ -4,15 +4,15 @@ typedef i64 long
 typedef i32 int
 
 enum Location {
-CACHED,
-LOCAL,
-NON_LOCAL,
-UNKNOWN
+    CACHED,
+    LOCAL,
+    NON_LOCAL,
+    UNKNOWN
 }
 
 enum NodeState {
-ACTIVE,
-INACTIVE
+    ACTIVE,
+    INACTIVE
 }
 
 struct ClusterNode {

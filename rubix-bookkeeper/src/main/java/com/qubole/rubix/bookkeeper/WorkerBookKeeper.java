@@ -48,11 +48,10 @@ public class WorkerBookKeeper extends BookKeeper
   private LoadingCache<String, List<ClusterNode>> nodeStateMap;
   private HeartbeatService heartbeatService;
   private BookKeeperFactory bookKeeperFactory;
-  private RetryingBookkeeperClient coordinatorClient;
   // The hostname of the master node.
   private String masterHostname;
   private int clusterType;
-  RetryingBookkeeperClient client;
+  private RetryingBookkeeperClient client;
 
   public WorkerBookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics) throws BookKeeperInitializationException
   {
