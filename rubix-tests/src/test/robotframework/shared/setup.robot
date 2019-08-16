@@ -65,7 +65,7 @@ Multi-node test teardown
 Start RubiX cluster
     ${output} =  RUN  ${CURDIR}${/}bks.sh start-cluster
     LOG  ${output}
-    SLEEP  15s  Allow time for daemons to start on cluster
+    SLEEP  18s  Allow time for daemons to start on cluster
 
 Stop RubiX cluster
     ${output} =  RUN  ${CURDIR}${/}bks.sh stop-cluster

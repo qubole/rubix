@@ -24,7 +24,7 @@ public class DockerTestClusterManager extends ClusterManager
   @Override
   public List<String> getNodes()
   {
-    return Lists.newArrayList("172.18.8.1", "172.18.8.2");
+    return Lists.newArrayList("172.18.8.1", "172.18.8.2", "172.18.8.3");
   }
 
   @Override

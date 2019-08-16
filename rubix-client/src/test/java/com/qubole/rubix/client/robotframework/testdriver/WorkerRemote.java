@@ -12,10 +12,20 @@
  */
 package com.qubole.rubix.client.robotframework.testdriver;
 
+import com.qubole.rubix.client.robotframework.TestClientReadRequest;
+
 import java.rmi.Remote;
 import java.rmi.RemoteException;
+import java.util.List;
+import java.util.Map;
 
 public interface WorkerRemote extends Remote
 {
   boolean executeTask(Task task) throws RemoteException;
+
+  boolean preCacheFile(TestClientReadRequest request) throws RemoteException;
+
+  void getCacheMetrics() throws RemoteException;
+
+  Map<String, Double> getTestMetrics(List<String> metricsKeys) throws RemoteException;
 }

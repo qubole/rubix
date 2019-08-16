@@ -18,4 +18,6 @@ import java.rmi.RemoteException;
 public interface CoordinatorRemote extends Remote
 {
   boolean executeJob(Job job) throws RemoteException;
+
+  boolean verifyJob(Job job) throws RemoteException;
 }

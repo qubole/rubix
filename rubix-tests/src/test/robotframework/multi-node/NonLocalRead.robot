@@ -33,15 +33,35 @@ ${NUM_EXPECTED_REQUESTS_NONLOCAL}  1
 ${NUM_EXPECTED_REQUESTS_REMOTE}    1
 
 *** Test Cases ***
-Simple driver test case
+Templated driver test case
+    [Template]  Test coordinator driver
     [Tags]  driver
+    #       R  C  NL
+    3  100  1  0  0
+#    3  100  2  2  1
+#    3  100  0  1  0
+#    3  100  0  0  1
+#    3  100  1  1  0
+#    3  100  1  0  1
+#    3  100  0  1  1
 
-    [Setup]  Multi-node test setup  ${DATADIR}
+*** Keywords ***
+Test coordinator driver
+    [Arguments]  ${numWorkers}
+    ...          ${numTasks}
+    ...          ${remoteRatio}
+    ...          ${cacheRatio}
+    ...          ${nonlocalRatio}
 
-    Generate test files  ${FILEPREFIX}  ${FILE_LENGTH}  1
+    # [Setup]
+    Multi-node test setup  ${DATADIR}
+
+    @{fileNames} =  Generate test files  ${FILEPREFIX}  ${FILE_LENGTH}  ${numTasks}
 
     ${job} =  make Job
-    ...  ${TEST_FILE_1}
+    ...  ${numTasks}
+    ...  ${remoteRatio}  ${cacheRatio}  ${nonlocalRatio}
+    ...  ${fileNames}
     ...  ${START_BLOCK}
     ...  ${END_BLOCK}
     ...  ${FILE_LENGTH}
@@ -50,49 +70,5 @@ Simple driver test case
 
     ${didRun} =  run Rubix Job  ${HOSTNAME_MASTER}  ${job}
     SHOULD BE TRUE  ${didRun}
-
-#    Verify metric value on node  ${HOSTNAME_MASTER}  ${METRIC_NONLOCAL_REQUESTS}  ${NUM_EXPECTED_REQUESTS_NONLOCAL}
-
-#    [Teardown]  Multi-node test teardown  ${DATADIR}
-
-Simple non-local read test case
-    [Tags]  nonlocal
-    [Documentation]  A simple non-local read test
-
-    [Setup]  Multi-node test setup  ${DATADIR}
-
-    Generate test files  ${FILEPREFIX}  ${FILE_LENGTH}  ${NUM_TEST_FILES}
-
-    Cache data for cluster node
-    ...  ${HOSTNAME_WORKER1}
-    ...  ${TEST_FILE_1}
-    ...  ${START_BLOCK}
-    ...  ${END_BLOCK}
-    ...  ${FILE_LENGTH}
-    ...  ${LAST_MODIFIED}
-    ...  ${CLUSTER_TYPE}
-
-    Verify metric value on node  ${HOSTNAME_WORKER1}  ${METRIC_NONLOCAL_REQUESTS}  ${NUM_EXPECTED_REQUESTS_NONLOCAL}
-
-    [Teardown]  Multi-node test teardown  ${DATADIR}
-
-Simple local read test case
-    [Tags]  local
-    [Documentation]  A simple local read test
-
-    [Setup]  Multi-node test setup  ${DATADIR}
-
-    Generate test files  ${FILEPREFIX}  ${FILE_LENGTH}  ${NUM_TEST_FILES}
-
-    Cache data for cluster node
-    ...  ${HOSTNAME_WORKER1}
-    ...  ${TEST_FILE_2}
-    ...  ${START_BLOCK}
-    ...  ${END_BLOCK}
-    ...  ${FILE_LENGTH}
-    ...  ${LAST_MODIFIED}
-    ...  ${CLUSTER_TYPE}
-
-    Verify metric value on node  ${HOSTNAME_WORKER1}  ${METRIC_REMOTE_REQUESTS}  ${NUM_EXPECTED_REQUESTS_REMOTE}
 
     [Teardown]  Multi-node test teardown  ${DATADIR}

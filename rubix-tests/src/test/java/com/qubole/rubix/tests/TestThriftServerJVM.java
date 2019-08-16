@@ -98,7 +98,7 @@ public class TestThriftServerJVM extends Configured
     /*
      * Spinning up the separate JVMs for bookKeeper and Local Data Transfer Servers
      * */
-    String[] bookKeeperStartCmd = {hadoopDirectory, "jar", bookKeeperJarPath, bookKeeperClass, setDataBlockSize, setCacheMaxDisks, setCacheDirectory, setmasterbookkeeper, disableParallelWarmup};
+    String[] bookKeeperStartCmd = {hadoopDirectory, "jar", bookKeeperJarPath, bookKeeperClass, setDataBlockSize, setCacheMaxDisks, setCacheDirectory, setmasterbookkeeper, disableParallelWarmup, "-Drubix.network.server.connect.timeout=5000"};
     String[] localDataTransferStartCmd = {hadoopDirectory, "jar", bookKeeperJarPath, localDataTransferServerClass, setDataBlockSize, setCacheMaxDisks, setCacheDirectory, setmasterbookkeeper, disableParallelWarmup};
 
     ProcessBuilder pJVMBuilder = new ProcessBuilder();

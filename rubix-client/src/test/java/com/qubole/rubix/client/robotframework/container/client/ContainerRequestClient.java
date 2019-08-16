@@ -12,7 +12,6 @@
  */
 package com.qubole.rubix.client.robotframework.container.client;
 
-import com.google.common.collect.Lists;
 import com.qubole.rubix.client.robotframework.TestClientReadRequest;
 import com.qubole.rubix.client.robotframework.container.server.RequestServer;
 import com.qubole.rubix.client.robotframework.testdriver.CoordinatorRemote;
@@ -26,8 +25,8 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ContainerRequestClient
 {
@@ -41,10 +40,19 @@ public class ContainerRequestClient
   {
   }
 
-  public Job makeJob(String remotePath, int startBlock, int endBlock, long fileLength, long lastModified, int clusterType)
+  public Job makeJob(
+      int numTasks,
+      int cacheRequestRatio,
+      int remoteRequestRatio,
+      int nonLocalRequestRatio,
+      List<String> fileNames, int startBlock, int endBlock, long fileLength, long lastModified, int clusterType)
   {
-    Task task = new Task(new TestClientReadRequest(remotePath, startBlock, endBlock, fileLength, lastModified, clusterType));
-    return new Job(Lists.newArrayList(task));
+    List<Task> tasks = new ArrayList<>();
+    for (String fileName : fileNames) {
+      Task task = new Task(new TestClientReadRequest(fileName, startBlock, endBlock, fileLength, lastModified, clusterType));
+      tasks.add(task);
+    }
+    return new Job(tasks, cacheRequestRatio, remoteRequestRatio, nonLocalRequestRatio);
   }
 
   public boolean runRubixJob(String host, Job job)
@@ -76,65 +84,65 @@ public class ContainerRequestClient
     }
     return null;
   }
-
-  /**
-   * Get the current cache metrics from the BookKeeper server on a particular node.
-   *
-   * @param host  The hostname of the container to connect to.
-   * @return A map of metrics describing cache statistics and interactions for that node.
-   */
-  public Map<String, Double> getCacheMetricsForNode(String host)
-  {
-    try {
-      final RequestServer containerServer = getRequestServer(host);
-      return containerServer.getCacheMetrics(new GetCacheMetricsRequest());
-    }
-    catch (RemoteException | NotBoundException e) {
-      System.err.println("ContainerRequestClient exception:");
-      e.printStackTrace();
-    }
-    return new HashMap<>();
-  }
-
-  /**
-   * Read data from a given file into the BookKeeper cache using a client caching file system.
-   *
-   * @param host  The hostname of the container to connect to.
-   * @param remotePath  The remote path location.
-   * @param readStart  The block to start reading from.
-   * @param length  The amount of data to read.
-   * @param fileSize  The length of the file.
-   * @param lastModified  The time at which the file was last modified.
-   * @param clusterType  The type id of cluster being used.
-   * @return True if the data was read into the cache correctly, false otherwise.
-   */
-  public boolean cacheDataUsingClientFileSystemForNode(
-      String host,
-      String remotePath,
-      long readStart,
-      int length,
-      long fileSize,
-      long lastModified,
-      int clusterType)
-  {
-    ReadDataRequestParams params = new ReadDataRequestParams(
-        getPathWithFileScheme(remotePath),
-        readStart,
-        length,
-        fileSize,
-        lastModified,
-        clusterType);
-
-    try {
-      RequestServer containerServer = getRequestServer(host);
-      return containerServer.cacheDataUsingClientFileSystem(new ReadDataWithFileSystemRequest(), params);
-    }
-    catch (RemoteException | NotBoundException e) {
-      System.err.println("ContainerRequestClient exception:");
-      e.printStackTrace();
-    }
-    return false;
-  }
+  //
+  // /**
+  //  * Get the current cache metrics from the BookKeeper server on a particular node.
+  //  *
+  //  * @param host  The hostname of the container to connect to.
+  //  * @return A map of metrics describing cache statistics and interactions for that node.
+  //  */
+  // public Map<String, Double> getCacheMetricsForNode(String host)
+  // {
+  //   try {
+  //     final RequestServer containerServer = getRequestServer(host);
+  //     return containerServer.getCacheMetrics(new GetCacheMetricsRequest());
+  //   }
+  //   catch (RemoteException | NotBoundException e) {
+  //     System.err.println("ContainerRequestClient exception:");
+  //     e.printStackTrace();
+  //   }
+  //   return new HashMap<>();
+  // }
+  //
+  // /**
+  //  * Read data from a given file into the BookKeeper cache using a client caching file system.
+  //  *
+  //  * @param host  The hostname of the container to connect to.
+  //  * @param remotePath  The remote path location.
+  //  * @param readStart  The block to start reading from.
+  //  * @param length  The amount of data to read.
+  //  * @param fileSize  The length of the file.
+  //  * @param lastModified  The time at which the file was last modified.
+  //  * @param clusterType  The type id of cluster being used.
+  //  * @return True if the data was read into the cache correctly, false otherwise.
+  //  */
+  // public boolean cacheDataUsingClientFileSystemForNode(
+  //     String host,
+  //     String remotePath,
+  //     long readStart,
+  //     int length,
+  //     long fileSize,
+  //     long lastModified,
+  //     int clusterType)
+  // {
+  //   ReadDataRequestParams params = new ReadDataRequestParams(
+  //       getPathWithFileScheme(remotePath),
+  //       readStart,
+  //       length,
+  //       fileSize,
+  //       lastModified,
+  //       clusterType);
+  //
+  //   try {
+  //     RequestServer containerServer = getRequestServer(host);
+  //     return containerServer.cacheDataUsingClientFileSystem(new ReadDataWithFileSystemRequest(), params);
+  //   }
+  //   catch (RemoteException | NotBoundException e) {
+  //     System.err.println("ContainerRequestClient exception:");
+  //     e.printStackTrace();
+  //   }
+  //   return false;
+  // }
 
   /**
    * Locates a {@link RequestServer} for executing requests on a particular container.

@@ -59,6 +59,20 @@ public class RetryingBookkeeperClient extends BookKeeperService.Client implement
   }
 
   @Override
+  public List<String> getClusterNodes() throws TException
+  {
+    return retryConnection(new Callable<List<String>>()
+    {
+      @Override
+      public List<String> call()
+          throws TException
+      {
+        return RetryingBookkeeperClient.super.getClusterNodes();
+      }
+    });
+  }
+
+  @Override
   public void setAllCached(final String remotePath, final long fileLength, final long lastModified,
                            final long startBlock, final long endBlock) throws TException
   {

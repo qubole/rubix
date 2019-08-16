@@ -37,6 +37,19 @@ services:
     networks:
       default:
         ipv4_address: 172.18.8.2
+  rubix-worker-3:
+    depends_on:
+      - rubix-master
+    build:
+      context: .
+      args:
+        is_master: "false"
+    volumes:
+      - /tmp/rubix/tests:/tmp/rubix/tests
+      - /tmp/rubix/jars:/usr/lib/rubix/lib
+    networks:
+      default:
+        ipv4_address: 172.18.8.3
 
 networks:
   default:

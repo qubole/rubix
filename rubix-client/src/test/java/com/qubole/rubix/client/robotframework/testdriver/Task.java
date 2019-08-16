@@ -25,6 +25,11 @@ public class Task implements Serializable
     this.request = request;
   }
 
+  public TestClientReadRequest getRequest()
+  {
+    return request;
+  }
+
   @Override
   public String toString()
   {

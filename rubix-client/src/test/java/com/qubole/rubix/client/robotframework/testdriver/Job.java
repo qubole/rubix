@@ -18,10 +18,23 @@ import java.util.List;
 public class Job implements Serializable
 {
   private List<Task> tasks;
+  private int cacheRequestRatio;
+  private int remoteRequestRatio;
+  private int nonLocalRequestRatio;
+  private final int ratioScale;
 
-  public Job(List<Task> tasks)
+  public Job(List<Task> tasks, int cacheRequestRatio, int remoteRequestRatio, int nonLocalRequestRatio)
   {
+    int ratioSum = cacheRequestRatio + remoteRequestRatio + nonLocalRequestRatio;
+    if (tasks.size() % (cacheRequestRatio + remoteRequestRatio + nonLocalRequestRatio) != 0) {
+      throw new ArithmeticException("Task count should be a multiple of the sum of the request ratios.");
+    }
     this.tasks = tasks;
+    this.cacheRequestRatio = cacheRequestRatio;
+    this.remoteRequestRatio = remoteRequestRatio;
+    this.nonLocalRequestRatio = nonLocalRequestRatio;
+
+    this.ratioScale = tasks.size() / ratioSum;
   }
 
   public List<Task> getTasks()
@@ -29,9 +42,44 @@ public class Job implements Serializable
     return tasks;
   }
 
+  public int getCacheRequestRatio()
+  {
+    return cacheRequestRatio;
+  }
+
+  public int getNumCacheRequests()
+  {
+    return cacheRequestRatio * ratioScale;
+  }
+
+  public int getRemoteRequestRatio()
+  {
+    return remoteRequestRatio;
+  }
+
+  public int getNumRemoteRequests()
+  {
+    return remoteRequestRatio * ratioScale;
+  }
+
+  public int getNonLocalRequestRatio()
+  {
+    return nonLocalRequestRatio;
+  }
+
+  public int getNumNonLocalRequests()
+  {
+    return nonLocalRequestRatio * ratioScale;
+  }
+
   @Override
   public String toString()
   {
-    return String.format("RubiX Job (Tasks: %s)", tasks.toString());
+    return String.format(
+        "[Ratio] %dC : %dR : %dNL\nRubiX Job (Tasks: %s)",
+        cacheRequestRatio,
+        remoteRequestRatio,
+        nonLocalRequestRatio,
+        tasks.toString());
   }
 }
