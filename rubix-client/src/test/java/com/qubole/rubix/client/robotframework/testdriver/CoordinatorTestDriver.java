@@ -14,9 +14,9 @@ package com.qubole.rubix.client.robotframework.testdriver;
 
 import com.google.common.collect.Iterables;
 import com.qubole.rubix.client.robotframework.TestClientReadRequest;
-import com.qubole.rubix.client.robotframework.container.server.RequestServer;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.thrift.Location;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -54,15 +54,15 @@ public class CoordinatorTestDriver implements CoordinatorRemote
   private static final int MAX_THREADS = 10;
   private static final int SERVER_PORT = 8300;
 
-  private List<String> clusterNodes;
-  private Map<String, WorkerRemote> workerDriverMap = new HashMap<>();
   private BookKeeperFactory factory = new BookKeeperFactory();
   private Configuration conf = new Configuration();
+  private List<String> workerHostnames;
+  private Map<String, WorkerRemote> workerDriverMap = new HashMap<>();
 
   @Override
   public boolean executeJob(Job job) throws RemoteException
   {
-    initializeWorkerReferences();
+    initializeReferencesToWorkerDrivers();
 
     Map<String, List<Task>> workerTaskMap = scheduleTasks(job);
     try {
@@ -75,11 +75,38 @@ public class CoordinatorTestDriver implements CoordinatorRemote
     return false;
   }
 
+  private void initializeReferencesToWorkerDrivers()
+  {
+    try (RetryingBookkeeperClient client = factory.createBookKeeperClient(conf)) {
+      workerHostnames = client.getClusterNodes();
+      for (String hostname : workerHostnames) {
+        WorkerRemote workerDriver = getWorkerTestDriverForNode(hostname);
+        workerDriverMap.put(hostname, workerDriver);
+      }
+    }
+    catch (TException | IOException | NotBoundException e) {
+      log.error("Error initializing worker driver references", e);
+    }
+    log.info("Number of workers: " + workerDriverMap.size());
+  }
+
   @Override
   public boolean verifyJob(Job job) throws RemoteException
   {
     printWorkerMetrics();
     return verifyMetrics(job);
+  }
+
+  private void printWorkerMetrics()
+  {
+    try {
+      for (WorkerRemote worker : workerDriverMap.values()) {
+        worker.logCacheMetrics();
+      }
+    }
+    catch (RemoteException e) {
+      log.error("Error printing cache metrics on worker nodes", e);
+    }
   }
 
   private boolean verifyMetrics(Job job)
@@ -100,7 +127,7 @@ public class CoordinatorTestDriver implements CoordinatorRemote
         totalRemoteRequestCount += workerMetrics.get(REMOTE_REQUEST_COUNT.getMetricName());
         totalCacheRequestCount += workerMetrics.get(CACHE_REQUEST_COUNT.getMetricName());
         totalNonlocalRequestCount += workerMetrics.get(NONLOCAL_REQUEST_COUNT.getMetricName());
-        // totalCacheSize += workerMetrics.get(CACHE_SIZE_GAUGE.getMetricName());
+        totalCacheSize += workerMetrics.get(CACHE_SIZE_GAUGE.getMetricName());
       }
       log.info(String.format(
           "@ Verification: %d RR, %d CR, %d NLR, %d cache size @",
@@ -113,41 +140,12 @@ public class CoordinatorTestDriver implements CoordinatorRemote
       log.error("Error fetching test metrics from node xxx", e);
     }
 
-    boolean expectedState = true;
-    expectedState &= (totalRemoteRequestCount == job.getNumRemoteRequests());
-    expectedState &= (totalCacheRequestCount == job.getNumCacheRequests());
-    expectedState &= (totalNonlocalRequestCount == job.getNumNonLocalRequests());
-    return expectedState;
-  }
-
-  private void printWorkerMetrics()
-  {
-    log.info(String.format("~ Printing metrics on workers (worker count: %d) ~", workerDriverMap.size()));
-    try {
-      for (WorkerRemote worker : workerDriverMap.values()) {
-        worker.getCacheMetrics();
-      }
-      log.info("~ Finished printing ~");
-    }
-    catch (RemoteException e) {
-      log.error("Error printing cache metrics on worker nodes", e);
-    }
-  }
-
-  private void initializeWorkerReferences()
-  {
-    try (RetryingBookkeeperClient client = factory.createBookKeeperClient(conf)) {
-      clusterNodes = client.getClusterNodes();
-      log.warn(String.format("## Cluster nodes: %s ##", Arrays.toString(clusterNodes.toArray())));
-      for (String node : clusterNodes) {
-        WorkerRemote workerDriver = getWorkerTestDriverForNode(node);
-        workerDriverMap.put(node, workerDriver);
-      }
-    }
-    catch (TException | IOException | NotBoundException e) {
-      log.error("Error initializing worker driver references", e);
-    }
-    log.info("Number of workers: " + workerDriverMap.size());
+    boolean isVerified = true;
+    isVerified &= (totalRemoteRequestCount == job.getNumRemoteRequests());
+    isVerified &= (totalCacheRequestCount == job.getNumCacheRequests());
+    isVerified &= (totalNonlocalRequestCount == job.getNumNonLocalRequests());
+    isVerified &= (totalCacheSize == job.getNumCacheRequests());
+    return isVerified;
   }
 
   private Map<String, List<Task>> scheduleTasks(Job job)
@@ -176,16 +174,21 @@ public class CoordinatorTestDriver implements CoordinatorRemote
     scheduleCacheRequests(cachedRequests, workerTaskMap);
     scheduleNonlocalRequests(nonlocalRequests, workerTaskMap);
 
-    log.info(String.format("Processed #s: %d R    %d C    %d NL", remoteRequests.size(), cachedRequests.size(), nonlocalRequests.size()));
+    // log.info(String.format("Processed #s: %d R    %d C    %d NL", remoteRequests.size(), cachedRequests.size(), nonlocalRequests.size()));
 
     return workerTaskMap;
+  }
+
+  private void scheduleRequests(Location requestType, List<Task> requests, Map<String, List<Task>> workerTaskMap)
+  {
   }
 
   private void scheduleRemoteRequests(List<Task> remoteRequests, Map<String, List<Task>> workerTaskMap)
   {
     for (Task task : remoteRequests) {
       TestClientReadRequest request = task.getRequest();
-      String expectedHostName = ConsistentHashUtil.getHashedNodeForKey(clusterNodes, request.getRemotePath() + "0" + request.getFileLength());
+      String expectedHostName = ConsistentHashUtil.getHashedNodeForKey(
+          workerHostnames, getHashUtilKey(request.getRemotePath(), request.getFileLength()));
       addTaskForWorker(expectedHostName, task, workerTaskMap);
     }
   }
@@ -194,7 +197,8 @@ public class CoordinatorTestDriver implements CoordinatorRemote
   {
     for (Task task : cachedRequests) {
       TestClientReadRequest request = task.getRequest();
-      String expectedHostName = ConsistentHashUtil.getHashedNodeForKey(clusterNodes, request.getRemotePath() + "0" + request.getFileLength());
+      String expectedHostName = ConsistentHashUtil.getHashedNodeForKey(
+          workerHostnames, getHashUtilKey(request.getRemotePath(), request.getFileLength()));
       preCacheFileOnWorker(expectedHostName, task);
       addTaskForWorker(expectedHostName, task, workerTaskMap);
     }
@@ -203,15 +207,16 @@ public class CoordinatorTestDriver implements CoordinatorRemote
   private void scheduleNonlocalRequests(List<Task> nonlocalRequests, Map<String, List<Task>> workerTaskMap)
   {
     for (Task task : nonlocalRequests) {
-      String fileName = task.getRequest().getRemotePath();
-      String nonlocalHostName = getOtherHostname(ConsistentHashUtil.getHashedNodeForKey(clusterNodes, fileName + "0" + task.getRequest().getFileLength()));
+      TestClientReadRequest request = task.getRequest();
+      String nonlocalHostName = getOtherHostname(ConsistentHashUtil.getHashedNodeForKey(
+          workerHostnames, getHashUtilKey(request.getRemotePath(), request.getFileLength())));
       addTaskForWorker(nonlocalHostName, task, workerTaskMap);
     }
   }
 
   private String getOtherHostname(String unwantedHostname)
   {
-    Set<String> workerHostnames = new HashSet<>(clusterNodes);
+    Set<String> workerHostnames = new HashSet<>(this.workerHostnames);
     workerHostnames.remove(unwantedHostname);
     int randomHostnameIndex = new Random().nextInt(workerHostnames.size());
     return Iterables.get(workerHostnames, randomHostnameIndex);
@@ -279,10 +284,10 @@ public class CoordinatorTestDriver implements CoordinatorRemote
   }
 
   /**
-   * Locates a {@link RequestServer} for executing requests on a particular container.
+   * Locates a {@link WorkerTestDriver} for executing requests on a particular container.
    *
    * @param host The hostname for the container to connect to.
-   * @return The {@link RequestServer} used for executing requests.
+   * @return The {@link WorkerTestDriver} used for executing requests.
    * @throws RemoteException   if the registry could not be located or communicated with.
    * @throws NotBoundException if the registry has not been bould.
    */
@@ -290,6 +295,11 @@ public class CoordinatorTestDriver implements CoordinatorRemote
   {
     Registry registry = LocateRegistry.getRegistry(host, Registry.REGISTRY_PORT);
     return (WorkerRemote) registry.lookup(WorkerTestDriver.SERVER_NAME);
+  }
+
+  private static String getHashUtilKey(String fileName, long fileLength)
+  {
+    return fileName + "0" + fileLength;
   }
 
   public static void main(String[] args)

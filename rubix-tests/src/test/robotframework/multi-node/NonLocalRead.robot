@@ -37,13 +37,13 @@ Templated driver test case
     [Template]  Test coordinator driver
     [Tags]  driver
     #       R  C  NL
-    3  100  1  0  0
-#    3  100  2  2  1
-#    3  100  0  1  0
-#    3  100  0  0  1
-#    3  100  1  1  0
-#    3  100  1  0  1
-#    3  100  0  1  1
+    3  100  1  0  0     # all remote
+    3  100  0  1  0     # all cached
+    3  100  0  0  1     # all non-local
+    3  100  1  1  0     # 1/2 remote, 1/2 cached
+    3  100  1  0  1     # 1/2 remote, 1/2 non-local
+    3  100  0  1  1     # 1/2 cached, 1/2 non-local
+    3  99  1  1  1      # even split
 
 *** Keywords ***
 Test coordinator driver
@@ -70,5 +70,8 @@ Test coordinator driver
 
     ${didRun} =  run Rubix Job  ${HOSTNAME_MASTER}  ${job}
     SHOULD BE TRUE  ${didRun}
+
+    ${verified} =  verify Rubix Job  ${HOSTNAME_MASTER}  ${job}
+    SHOULD BE TRUE  ${verified}
 
     [Teardown]  Multi-node test teardown  ${DATADIR}

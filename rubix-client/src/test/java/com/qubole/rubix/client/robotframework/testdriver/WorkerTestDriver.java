@@ -31,8 +31,10 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.CACHE_REQUEST_COUNT;
+import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.CACHE_SIZE_GAUGE;
 import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.NONLOCAL_REQUEST_COUNT;
 import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.REMOTE_REQUEST_COUNT;
 
@@ -44,9 +46,9 @@ public class WorkerTestDriver implements WorkerRemote
 
   private BookKeeperFactory factory = new BookKeeperFactory();
   private Configuration conf = new Configuration();
-  private int remoteRequests;
-  private int cacheRequests;
-  private int nonlocalRequests;
+  private AtomicInteger remoteRequests = new AtomicInteger();
+  private AtomicInteger cacheRequests = new AtomicInteger();
+  private AtomicInteger nonlocalRequests = new AtomicInteger();
 
   @Override
   public boolean executeTask(Task task) throws RemoteException
@@ -64,16 +66,13 @@ public class WorkerTestDriver implements WorkerRemote
       Location fileStatus = status.get(0).getLocation();
       switch (fileStatus) {
         case LOCAL:
-          // log.info(String.format("=== %s : REMOTE ===", request.getRemotePath()));
-          remoteRequests++;
+          remoteRequests.getAndIncrement();
           break;
         case CACHED:
-          // log.info(String.format("=== %s : CACHED ===", request.getRemotePath()));
-          cacheRequests++;
+          cacheRequests.getAndIncrement();
           break;
         case NON_LOCAL:
-          // log.info(String.format("=== %s : NON_LOCAL ===", request.getRemotePath()));
-          nonlocalRequests++;
+          nonlocalRequests.getAndIncrement();
           break;
       }
       return true;
@@ -103,20 +102,30 @@ public class WorkerTestDriver implements WorkerRemote
   }
 
   @Override
-  public void getCacheMetrics() throws RemoteException
+  public void logCacheMetrics() throws RemoteException
   {
-    log.info(String.format("# of cache requests: %d", cacheRequests));
-    log.info(String.format("# of remote requests: %d", remoteRequests));
-    log.info(String.format("# of nonlocal requests: %d", nonlocalRequests));
+    log.info(String.format("# of cache requests: %d", cacheRequests.get()));
+    log.info(String.format("# of remote requests: %d", remoteRequests.get()));
+    log.info(String.format("# of nonlocal requests: %d", nonlocalRequests.get()));
   }
 
   @Override
   public Map<String, Double> getTestMetrics(List<String> metricsKeys) throws RemoteException
   {
     Map<String, Double> testMetrics = new HashMap<>();
-    testMetrics.put(REMOTE_REQUEST_COUNT.getMetricName(), (double) remoteRequests);
-    testMetrics.put(CACHE_REQUEST_COUNT.getMetricName(), (double) cacheRequests);
-    testMetrics.put(NONLOCAL_REQUEST_COUNT.getMetricName(), (double) nonlocalRequests);
+    testMetrics.put(REMOTE_REQUEST_COUNT.getMetricName(), (double) remoteRequests.get());
+    testMetrics.put(CACHE_REQUEST_COUNT.getMetricName(), (double) cacheRequests.get());
+    testMetrics.put(NONLOCAL_REQUEST_COUNT.getMetricName(), (double) nonlocalRequests.get());
+
+    try (RetryingBookkeeperClient client = factory.createBookKeeperClient(conf)) {
+      Map<String, Double> metrics = client.getCacheMetrics();
+
+      testMetrics.put(CACHE_SIZE_GAUGE.getMetricName(), metrics.get(CACHE_SIZE_GAUGE.getMetricName()));
+    }
+    catch (TException | IOException e) {
+      log.error("Error fetching BookKeeper metrics", e);
+    }
+
     return testMetrics;
   }
 

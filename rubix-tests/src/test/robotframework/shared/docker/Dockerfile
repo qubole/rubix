@@ -10,7 +10,8 @@ CMD ["/sbin/my_init"]
 RUN mkdir /home/logs/
 COPY logging/log4j_bks.properties \
     logging/log4j_lds.properties \
-    logging/log4j_crs.properties \
+    logging/log4j_ctd.properties \
+    logging/log4j_wtd.properties \
     /home/props/
 
 ####################
@@ -22,13 +23,9 @@ ENV IS_CLUSTER_MASTER=$is_master
 
 ### CONTAINER REQUESTS ###
 
-RUN mkdir /etc/service/crs
-COPY start-crs.sh /etc/service/crs/run
-RUN chmod +x /etc/service/crs/run
-
-#RUN mkdir /etc/service/ctd
-#COPY start-ctd.sh /etc/service/ctd/run
-#RUN chmod +x /etc/service/ctd/run
+RUN mkdir /etc/service/td
+COPY start-td.sh /etc/service/td/run
+RUN chmod +x /etc/service/td/run
 
 ### BOOKKEEPER ###
 

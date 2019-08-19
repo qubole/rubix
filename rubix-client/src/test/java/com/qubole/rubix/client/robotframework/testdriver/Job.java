@@ -23,15 +23,15 @@ public class Job implements Serializable
   private int nonLocalRequestRatio;
   private final int ratioScale;
 
-  public Job(List<Task> tasks, int cacheRequestRatio, int remoteRequestRatio, int nonLocalRequestRatio)
+  public Job(List<Task> tasks, int remoteRequestRatio, int cacheRequestRatio, int nonLocalRequestRatio)
   {
-    int ratioSum = cacheRequestRatio + remoteRequestRatio + nonLocalRequestRatio;
-    if (tasks.size() % (cacheRequestRatio + remoteRequestRatio + nonLocalRequestRatio) != 0) {
+    int ratioSum = remoteRequestRatio + cacheRequestRatio + nonLocalRequestRatio;
+    if (tasks.size() % (remoteRequestRatio + cacheRequestRatio + nonLocalRequestRatio) != 0) {
       throw new ArithmeticException("Task count should be a multiple of the sum of the request ratios.");
     }
     this.tasks = tasks;
-    this.cacheRequestRatio = cacheRequestRatio;
     this.remoteRequestRatio = remoteRequestRatio;
+    this.cacheRequestRatio = cacheRequestRatio;
     this.nonLocalRequestRatio = nonLocalRequestRatio;
 
     this.ratioScale = tasks.size() / ratioSum;
@@ -42,16 +42,6 @@ public class Job implements Serializable
     return tasks;
   }
 
-  public int getCacheRequestRatio()
-  {
-    return cacheRequestRatio;
-  }
-
-  public int getNumCacheRequests()
-  {
-    return cacheRequestRatio * ratioScale;
-  }
-
   public int getRemoteRequestRatio()
   {
     return remoteRequestRatio;
@@ -60,6 +50,16 @@ public class Job implements Serializable
   public int getNumRemoteRequests()
   {
     return remoteRequestRatio * ratioScale;
+  }
+
+  public int getCacheRequestRatio()
+  {
+    return cacheRequestRatio;
+  }
+
+  public int getNumCacheRequests()
+  {
+    return cacheRequestRatio * ratioScale;
   }
 
   public int getNonLocalRequestRatio()
@@ -76,9 +76,9 @@ public class Job implements Serializable
   public String toString()
   {
     return String.format(
-        "[Ratio] %dC : %dR : %dNL\nRubiX Job (Tasks: %s)",
-        cacheRequestRatio,
+        "[Ratio] %dR : %dC : %dNL\nRubiX Job (Tasks: %s)",
         remoteRequestRatio,
+        cacheRequestRatio,
         nonLocalRequestRatio,
         tasks.toString());
   }
