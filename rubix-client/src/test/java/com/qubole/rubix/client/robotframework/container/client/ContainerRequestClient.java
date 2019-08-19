@@ -31,7 +31,6 @@ public class ContainerRequestClient
 {
   private static final Log log = LogFactory.getLog(ContainerRequestClient.class);
 
-  private static final String REQUEST_SERVER_NAME = "ContainerRequestServer";
   private static final int REGISTRY_PORT = 1099;
   private static final String FILE_SCHEME = "file:";
 
@@ -40,7 +39,6 @@ public class ContainerRequestClient
   }
 
   public Job makeJob(
-      int numTasks,
       int cacheRequestRatio,
       int remoteRequestRatio,
       int nonLocalRequestRatio,
@@ -62,10 +60,6 @@ public class ContainerRequestClient
   {
     try {
       final CoordinatorRemote coordinator = getDriverServer(host);
-      // if (coordinator == null) {
-      //   System.out.println("Null CTD");
-      //   return false;
-      // }
       return coordinator.executeJob(job);
     }
     catch (RemoteException | NotBoundException e) {
@@ -79,10 +73,6 @@ public class ContainerRequestClient
   {
     try {
       final CoordinatorRemote coordinator = getDriverServer(host);
-      // if (coordinator == null) {
-      //   System.out.println("Null CTD");
-      //   return false;
-      // }
       return coordinator.verifyJob(job);
     }
     catch (RemoteException | NotBoundException e) {
@@ -95,14 +85,7 @@ public class ContainerRequestClient
   private static CoordinatorRemote getDriverServer(String host) throws RemoteException, NotBoundException
   {
     Registry registry = LocateRegistry.getRegistry(host, REGISTRY_PORT);
-    // try {
     return (CoordinatorRemote) registry.lookup(CoordinatorTestDriver.SERVER_NAME);
-    // }
-    // catch (ClassCastException e) {
-    //   System.err.println("ContainerRequestClient exception:");
-    //   e.printStackTrace();
-    // }
-    // return null;
   }
 
   /**

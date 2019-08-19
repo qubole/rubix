@@ -25,7 +25,5 @@ public interface WorkerRemote extends Remote
 
   boolean preCacheFile(TestClientReadRequest request) throws RemoteException;
 
-  void logCacheMetrics() throws RemoteException;
-
   Map<String, Double> getTestMetrics(List<String> metricsKeys) throws RemoteException;
 }

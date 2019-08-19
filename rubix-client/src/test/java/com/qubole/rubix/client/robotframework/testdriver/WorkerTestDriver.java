@@ -102,14 +102,6 @@ public class WorkerTestDriver implements WorkerRemote
   }
 
   @Override
-  public void logCacheMetrics() throws RemoteException
-  {
-    log.info(String.format("# of cache requests: %d", cacheRequests.get()));
-    log.info(String.format("# of remote requests: %d", remoteRequests.get()));
-    log.info(String.format("# of nonlocal requests: %d", nonlocalRequests.get()));
-  }
-
-  @Override
   public Map<String, Double> getTestMetrics(List<String> metricsKeys) throws RemoteException
   {
     Map<String, Double> testMetrics = new HashMap<>();

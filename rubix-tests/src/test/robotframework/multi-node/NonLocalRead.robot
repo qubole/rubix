@@ -59,7 +59,6 @@ Test coordinator driver
     @{fileNames} =  Generate test files  ${FILEPREFIX}  ${FILE_LENGTH}  ${numTasks}
 
     ${job} =  make Job
-    ...  ${numTasks}
     ...  ${remoteRatio}  ${cacheRatio}  ${nonlocalRatio}
     ...  ${fileNames}
     ...  ${START_BLOCK}

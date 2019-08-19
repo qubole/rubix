@@ -71,7 +71,6 @@ public class CoordinatorTestDriver implements CoordinatorRemote
     catch (InterruptedException | ExecutionException e) {
       log.error("Error executing tasks on worker nodes", e);
     }
-
     return false;
   }
 
@@ -87,26 +86,121 @@ public class CoordinatorTestDriver implements CoordinatorRemote
     catch (TException | IOException | NotBoundException e) {
       log.error("Error initializing worker driver references", e);
     }
-    log.info("Number of workers: " + workerDriverMap.size());
+  }
+
+  private Map<String, List<Task>> scheduleTasks(Job job)
+  {
+    // Task scheduling is done by taking 3 slices of the Job's task list,
+    // as shown below, to ensure the correct amount of each type of request is executed.
+    //
+    // # of tasks:      10
+    // Ratio:        3 1 1
+    // Scaled ratio: 6 2 2
+    // 0 1 2 3 4 5 6 7 8 9
+    // |_________| |_| |_|
+    //      R       C   NL
+
+    int remoteStart = 0;
+    int remoteEnd = job.getNumRemoteRequests();
+    List<Task> remoteRequests = job.getTasks().subList(remoteStart, remoteEnd);
+
+    int cacheStart = remoteEnd;
+    int cacheEnd = remoteEnd + job.getNumCacheRequests();
+    List<Task> cachedRequests = job.getTasks().subList(cacheStart, cacheEnd);
+
+    int nonlocalStart = cacheEnd;
+    int nonlocalEnd = cacheEnd + job.getNumNonLocalRequests();
+    List<Task> nonlocalRequests = job.getTasks().subList(nonlocalStart, nonlocalEnd);
+
+    Map<String, List<Task>> workerTaskMap = new HashMap<>();
+    scheduleRequests(Location.LOCAL, remoteRequests, workerTaskMap);
+    scheduleRequests(Location.CACHED, cachedRequests, workerTaskMap);
+    scheduleRequests(Location.NON_LOCAL, nonlocalRequests, workerTaskMap);
+
+    return workerTaskMap;
+  }
+
+  private void scheduleRequests(Location requestType, List<Task> tasks, Map<String, List<Task>> workerTaskMap)
+  {
+    for (Task task : tasks) {
+      TestClientReadRequest request = task.getRequest();
+
+      String requestTargetHostname = ConsistentHashUtil.getHashedNodeForKey(
+          workerHostnames, getHashUtilKey(request.getRemotePath(), request.getFileLength()));
+      if (requestType == Location.NON_LOCAL) {
+        requestTargetHostname = getNonlocalHostname(requestTargetHostname);
+      }
+      else if (requestType == Location.CACHED) {
+        preCacheFileOnWorker(requestTargetHostname, task);
+      }
+
+      addTaskForWorker(requestTargetHostname, task, workerTaskMap);
+    }
+  }
+
+  private String getNonlocalHostname(String unwantedHostname)
+  {
+    Set<String> workerHostnames = new HashSet<>(this.workerHostnames);
+    workerHostnames.remove(unwantedHostname);
+    int randomHostnameIndex = new Random().nextInt(workerHostnames.size());
+    return Iterables.get(workerHostnames, randomHostnameIndex);
+  }
+
+  private void preCacheFileOnWorker(String workerHostname, Task task)
+  {
+    try {
+      workerDriverMap.get(workerHostname).preCacheFile(task.getRequest());
+    }
+    catch (RemoteException e) {
+      log.error(String.format("Error pre-caching file %s on worker %s", task.getRequest().getRemotePath(), workerHostname));
+    }
+  }
+
+  private void addTaskForWorker(String workerHostname, Task task, Map<String, List<Task>> workerTaskMap)
+  {
+    List<Task> workerTasks = workerTaskMap.get(workerHostname);
+    if (workerTasks == null) {
+      workerTasks = new ArrayList<>();
+      workerTaskMap.put(workerHostname, workerTasks);
+    }
+    workerTasks.add(task);
+  }
+
+  private boolean executeWorkerTasks(Map<String, List<Task>> workerTaskMap) throws InterruptedException, ExecutionException
+  {
+    final ExecutorService service = Executors.newFixedThreadPool(MAX_THREADS);
+    final List<Callable<Boolean>> callables = new ArrayList<>();
+
+    for (Map.Entry<String, List<Task>> tasks : workerTaskMap.entrySet()) {
+      final String workerHostname = tasks.getKey();
+      List<Task> workerTasks = tasks.getValue();
+
+      for (final Task task : workerTasks) {
+        callables.add(new Callable<Boolean>()
+        {
+          @Override
+          public Boolean call() throws Exception
+          {
+            WorkerRemote worker = workerDriverMap.get(workerHostname);
+            return worker.executeTask(task);
+          }
+        });
+      }
+    }
+
+    List<Future<Boolean>> taskResults = service.invokeAll(callables);
+    boolean didAllSucceed = true;
+    for (final Future<Boolean> result : taskResults) {
+      final Boolean didRead = result.get();
+      didAllSucceed &= didRead;
+    }
+    return didAllSucceed;
   }
 
   @Override
   public boolean verifyJob(Job job) throws RemoteException
   {
-    printWorkerMetrics();
     return verifyMetrics(job);
-  }
-
-  private void printWorkerMetrics()
-  {
-    try {
-      for (WorkerRemote worker : workerDriverMap.values()) {
-        worker.logCacheMetrics();
-      }
-    }
-    catch (RemoteException e) {
-      log.error("Error printing cache metrics on worker nodes", e);
-    }
   }
 
   private boolean verifyMetrics(Job job)
@@ -148,148 +242,13 @@ public class CoordinatorTestDriver implements CoordinatorRemote
     return isVerified;
   }
 
-  private Map<String, List<Task>> scheduleTasks(Job job)
-  {
-    Map<String, List<Task>> workerTaskMap = new HashMap<>();
-
-    // Ratio:        2 1 2
-    // Scaled ratio: 4 2 4
-    // 0 1 2 3 4 5 6 7 8 9
-    // |_____| |_| |_____|
-    //    R     C     NL
-
-    int remoteStart = 0;
-    int remoteEnd = job.getNumRemoteRequests();
-    List<Task> remoteRequests = job.getTasks().subList(remoteStart, remoteEnd);
-
-    int cacheStart = remoteEnd;
-    int cacheEnd = remoteEnd + job.getNumCacheRequests();
-    List<Task> cachedRequests = job.getTasks().subList(cacheStart, cacheEnd);
-
-    int nonlocalStart = cacheEnd;
-    int nonlocalEnd = cacheEnd + job.getNumNonLocalRequests();
-    List<Task> nonlocalRequests = job.getTasks().subList(nonlocalStart, nonlocalEnd);
-
-    scheduleRemoteRequests(remoteRequests, workerTaskMap);
-    scheduleCacheRequests(cachedRequests, workerTaskMap);
-    scheduleNonlocalRequests(nonlocalRequests, workerTaskMap);
-
-    // log.info(String.format("Processed #s: %d R    %d C    %d NL", remoteRequests.size(), cachedRequests.size(), nonlocalRequests.size()));
-
-    return workerTaskMap;
-  }
-
-  private void scheduleRequests(Location requestType, List<Task> requests, Map<String, List<Task>> workerTaskMap)
-  {
-  }
-
-  private void scheduleRemoteRequests(List<Task> remoteRequests, Map<String, List<Task>> workerTaskMap)
-  {
-    for (Task task : remoteRequests) {
-      TestClientReadRequest request = task.getRequest();
-      String expectedHostName = ConsistentHashUtil.getHashedNodeForKey(
-          workerHostnames, getHashUtilKey(request.getRemotePath(), request.getFileLength()));
-      addTaskForWorker(expectedHostName, task, workerTaskMap);
-    }
-  }
-
-  private void scheduleCacheRequests(List<Task> cachedRequests, Map<String, List<Task>> workerTaskMap)
-  {
-    for (Task task : cachedRequests) {
-      TestClientReadRequest request = task.getRequest();
-      String expectedHostName = ConsistentHashUtil.getHashedNodeForKey(
-          workerHostnames, getHashUtilKey(request.getRemotePath(), request.getFileLength()));
-      preCacheFileOnWorker(expectedHostName, task);
-      addTaskForWorker(expectedHostName, task, workerTaskMap);
-    }
-  }
-
-  private void scheduleNonlocalRequests(List<Task> nonlocalRequests, Map<String, List<Task>> workerTaskMap)
-  {
-    for (Task task : nonlocalRequests) {
-      TestClientReadRequest request = task.getRequest();
-      String nonlocalHostName = getOtherHostname(ConsistentHashUtil.getHashedNodeForKey(
-          workerHostnames, getHashUtilKey(request.getRemotePath(), request.getFileLength())));
-      addTaskForWorker(nonlocalHostName, task, workerTaskMap);
-    }
-  }
-
-  private String getOtherHostname(String unwantedHostname)
-  {
-    Set<String> workerHostnames = new HashSet<>(this.workerHostnames);
-    workerHostnames.remove(unwantedHostname);
-    int randomHostnameIndex = new Random().nextInt(workerHostnames.size());
-    return Iterables.get(workerHostnames, randomHostnameIndex);
-  }
-
-  private void preCacheFileOnWorker(String workerHostname, Task task)
-  {
-    try {
-      log.warn(String.format("Pre-caching file %s on worker %s", task.getRequest().getRemotePath(), workerHostname));
-      workerDriverMap.get(workerHostname).preCacheFile(task.getRequest());
-    }
-    catch (RemoteException e) {
-      log.error(String.format("Error pre-caching file %s on worker %s", task.getRequest().getRemotePath(), workerHostname));
-    }
-  }
-
-  private void addTaskForWorker(String workerHostname, Task task, Map<String, List<Task>> workerTaskMap)
-  {
-    List<Task> workerTasks = workerTaskMap.get(workerHostname);
-    if (workerTasks == null) {
-      workerTasks = new ArrayList<>();
-      workerTaskMap.put(workerHostname, workerTasks);
-    }
-    workerTasks.add(task);
-  }
-
-  private boolean executeWorkerTasks(Map<String, List<Task>> taskMap) throws InterruptedException, ExecutionException
-  {
-    final ExecutorService service = Executors.newFixedThreadPool(MAX_THREADS);
-    final List<Callable<Boolean>> callables = new ArrayList<>();
-
-    for (Map.Entry<String, List<Task>> tasks : taskMap.entrySet()) {
-      final String workerHostname = tasks.getKey();
-      List<Task> workerTasks = tasks.getValue();
-
-      log.info(String.format("=#= Worker %s : %d tasks =#=", workerHostname, workerTasks.size()));
-
-      for (final Task task : workerTasks) {
-        callables.add(new Callable<Boolean>()
-        {
-          @Override
-          public Boolean call() throws Exception
-          {
-            WorkerRemote worker = workerDriverMap.get(workerHostname);
-            return worker.executeTask(task);
-          }
-        });
-      }
-    }
-
-    List<Future<Boolean>> taskResults = service.invokeAll(callables);
-    boolean didAllSucceed = true;
-    for (final Future<Boolean> result : taskResults) {
-      final Boolean didRead = result.get();
-      didAllSucceed &= didRead;
-    }
-    return didAllSucceed;
-  }
-
-  private static void bindServer() throws RemoteException
-  {
-    final CoordinatorRemote server = (CoordinatorRemote) UnicastRemoteObject.exportObject(new CoordinatorTestDriver(), SERVER_PORT);
-    final Registry registry = LocateRegistry.getRegistry();
-    registry.rebind(CoordinatorTestDriver.SERVER_NAME, server);
-  }
-
   /**
-   * Locates a {@link WorkerTestDriver} for executing requests on a particular container.
+   * Locates a {@link WorkerTestDriver} for executing request tasks on a particular worker.
    *
-   * @param host The hostname for the container to connect to.
+   * @param host The hostname for the worker node to connect to.
    * @return The {@link WorkerTestDriver} used for executing requests.
    * @throws RemoteException   if the registry could not be located or communicated with.
-   * @throws NotBoundException if the registry has not been bould.
+   * @throws NotBoundException if the registry has not been bound.
    */
   private static WorkerRemote getWorkerTestDriverForNode(String host) throws RemoteException, NotBoundException
   {
@@ -300,6 +259,13 @@ public class CoordinatorTestDriver implements CoordinatorRemote
   private static String getHashUtilKey(String fileName, long fileLength)
   {
     return fileName + "0" + fileLength;
+  }
+
+  private static void bindServer() throws RemoteException
+  {
+    final CoordinatorRemote server = (CoordinatorRemote) UnicastRemoteObject.exportObject(new CoordinatorTestDriver(), SERVER_PORT);
+    final Registry registry = LocateRegistry.getRegistry();
+    registry.rebind(CoordinatorTestDriver.SERVER_NAME, server);
   }
 
   public static void main(String[] args)
