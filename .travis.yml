@@ -1,6 +1,7 @@
 branches:
   only:
     - master
+    - multi-node-phase-2
 language: java
 services:
   - docker
