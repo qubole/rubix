@@ -23,7 +23,7 @@ HADOOP_DIR=/usr/lib/hadoop2
 HADOOP_JAR_DIR=${HADOOP_DIR}/share/hadoop/tools/lib
 
 DOCKER_COMPOSE_YML=${BASE_DIR}/docker/docker-compose.yml
-CLUSTER_NODE_IPS=${BASE_DIR}/docker/cluster_node_ips
+CLUSTER_NODE_IPS=/tmp/rubix/tests/cluster_node_ips
 CREATE_DOCKER_COMPOSE_PY=${BASE_DIR}/docker/create_docker_compose.py
 
 setup-log4j() {
@@ -98,7 +98,7 @@ start-cluster() {
 
 stop-cluster() {
   docker-compose -f ${DOCKER_COMPOSE_YML} down -t 1
-  rm ${DOCKER_COMPOSE_YML}
+#  rm ${DOCKER_COMPOSE_YML}
   rm ${CLUSTER_NODE_IPS}
 }
 
