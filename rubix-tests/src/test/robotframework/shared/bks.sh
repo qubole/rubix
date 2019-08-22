@@ -89,7 +89,7 @@ copy-jars-for-container-volume() {
 
 start-cluster() {
   numberOfWorkers=$1
-  python ${CREATE_DOCKER_COMPOSE_PY} ${numberOfWorkers} ${BASE_DIR}
+  python ${CREATE_DOCKER_COMPOSE_PY} ${numberOfWorkers} ${BASE_DIR} ${CLUSTER_NODE_IPS}
 
   copy-jars-for-container-volume
 
@@ -98,7 +98,7 @@ start-cluster() {
 
 stop-cluster() {
   docker-compose -f ${DOCKER_COMPOSE_YML} down -t 1
-#  rm ${DOCKER_COMPOSE_YML}
+  rm ${DOCKER_COMPOSE_YML}
   rm ${CLUSTER_NODE_IPS}
 }
 
