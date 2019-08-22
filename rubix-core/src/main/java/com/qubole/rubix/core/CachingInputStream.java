@@ -45,7 +45,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 
 import static com.google.common.base.Preconditions.checkState;
 
@@ -61,16 +60,7 @@ public class CachingInputStream extends FSInputStream
   int blockSize;
   private CachingFileSystemStats statsMbean;
 
-  static ListeningExecutorService readService = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(CacheConfig.READ_SERVICE_THREAD_POOL_SIZE, new ThreadFactory()
-  {
-    public Thread newThread(Runnable r)
-    {
-      Thread t = Executors.defaultThreadFactory().newThread(r);
-      t.setName("rubix-read-service-thread-id-" + Thread.currentThread().getId());
-      t.setDaemon(true);
-      return t;
-    }
-  }));
+  static ListeningExecutorService readService = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(CacheConfig.READ_SERVICE_THREAD_POOL_SIZE));
   private static final Log log = LogFactory.getLog(CachingInputStream.class);
 
   private String remotePath;
@@ -295,6 +285,7 @@ public class CachingInputStream extends FSInputStream
         updateCacheAndStats(readRequestChains);
       }
     });
+
     log.info(String.format("Read %d bytes", sizeRead));
     if (sizeRead > 0) {
       nextReadPosition += sizeRead;
