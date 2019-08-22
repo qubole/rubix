@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -49,7 +50,16 @@ public class Hadoop2ClusterManagerV2 extends ClusterManager
   {
     super.initialize(conf);
     yconf = new YarnConfiguration(conf);
-    ExecutorService executor = Executors.newSingleThreadExecutor();
+    ExecutorService executor = Executors.newSingleThreadExecutor(new ThreadFactory()
+    {
+      public Thread newThread(Runnable r)
+      {
+        Thread t = Executors.defaultThreadFactory().newThread(r);
+        t.setName("rubix-get-nodes-thread");
+        t.setDaemon(true);
+        return t;
+      }
+    });
 
     nodesCache = CacheBuilder.newBuilder()
         .refreshAfterWrite(getNodeRefreshTime(), TimeUnit.SECONDS)
