@@ -117,7 +117,7 @@ Test async caching
     Verify metric value  ${METRIC_ASYNC_QUEUE_SIZE}  ${NUM_TEST_FILES}
 
     ${maxWaitTime} =  EVALUATE  ${ASYNC_PROCESS_INTERVAL} + ${WATCHER_DELAY}
-    ${didCache} =  Wait for cache  ${CACHE_DIR}  ${maxWaitTime}  ${requests}
+    ${didCache} =  Wait for cache file creation  ${CACHE_DIR}  ${maxWaitTime}  ${requests}
     SHOULD BE TRUE  ${didCache}
 
     Verify async metrics
@@ -208,7 +208,7 @@ Test async caching with some requests delayed
     ...  downloadedMB=0
 
     ${maxWaitTime} =  EVALUATE  ${ASYNC_PROCESS_DELAY_SOME_DELAYED} + ${WATCHER_DELAY}
-    ${didCache} =  Wait for cache  ${CACHE_DIR}  ${maxWaitTime}  ${requestsFirstPass}
+    ${didCache} =  Wait for cache file creation  ${CACHE_DIR}  ${maxWaitTime}  ${requestsFirstPass}
     SHOULD BE TRUE  ${didCache}
 
     Verify async metrics
@@ -218,7 +218,7 @@ Test async caching with some requests delayed
     ...  downloadedMB=${numFilesFirstPass}
 
     ${maxWaitTime} =  EVALUATE  ${ASYNC_PROCESS_INTERVAL_SOME_DELAYED} + ${WATCHER_DELAY}
-    ${didCache} =  Wait for cache  ${CACHE_DIR}  ${maxWaitTime}  ${requestsSecondPass}
+    ${didCache} =  Wait for cache file creation  ${CACHE_DIR}  ${maxWaitTime}  ${requestsSecondPass}
     SHOULD BE TRUE  ${didCache}
 
     Verify async metrics
@@ -284,7 +284,7 @@ Test async caching with request 1 file date before request 2
     Verify metric value  ${METRIC_ASYNC_QUEUE_SIZE}  ${totalRequests}
 
     ${maxWaitTime} =  EVALUATE  ${ASYNC_PROCESS_INTERVAL} + ${WATCHER_DELAY}
-    ${didCache} =  Wait for cache  ${CACHE_DIR}  ${maxWaitTime}  ${requests}
+    ${didCache} =  Wait for cache file creation  ${CACHE_DIR}  ${maxWaitTime}  ${requests}
     SHOULD BE TRUE  ${didCache}
 
     Verify async metrics
@@ -351,7 +351,7 @@ Test async caching with request 1 file date after request 2
     Verify metric value  ${METRIC_ASYNC_QUEUE_SIZE}  ${totalRequests}
 
     ${maxWaitTime} =  EVALUATE  ${ASYNC_PROCESS_INTERVAL} + ${WATCHER_DELAY}
-    ${didCache} =  Wait for cache  ${CACHE_DIR}  ${maxWaitTime}  ${requests}
+    ${didCache} =  Wait for cache file creation  ${CACHE_DIR}  ${maxWaitTime}  ${requests}
     SHOULD BE TRUE  ${didCache}
 
     Verify async metrics

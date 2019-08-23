@@ -62,10 +62,58 @@ public class CacheWatcher
     registerAll(cacheDir);
   }
 
-  public boolean watchForCacheFiles(List<TestClientReadRequest> requests)
+  public boolean watchForCacheFileRemoval(List<TestClientReadRequest> requests)
   {
     for (int retries = 0; retries < MAX_RETRIES; ) {
-      log.info("Watching for cache files...");
+      log.info("Watching for cache file removal...");
+
+      WatchKey key;
+      try {
+        key = watcher.poll(maxWaitTime, TimeUnit.MILLISECONDS);
+        if (key == null) {
+          log.error(String.format("No events! (waited %d ms)", maxWaitTime));
+          log.info("Doing one final check");
+          return areAllFilesRemoved(requests);
+        }
+      }
+      catch (InterruptedException e) {
+        log.error("Polling interrupted", e);
+        log.info("Retrying...");
+        retries++;
+        continue;
+      }
+
+      Path cacheDir = watchKeys.get(key);
+      if (cacheDir == null) {
+        log.error("Found an invalid key!");
+        log.info("Retrying...");
+        retries++;
+        continue;
+      }
+
+      for (WatchEvent<?> e : key.pollEvents()) {
+        WatchEvent<Path> event = castEvent(e);
+
+        if (event.kind() == ENTRY_DELETE) {
+          log.info("Checking that cache files were removed");
+          if (areAllFilesRemoved(requests)) {
+            return true;
+          }
+          else {
+            continue;
+          }
+        }
+      }
+    }
+
+    log.error("Ran out of retries");
+    return false;
+  }
+
+  public boolean watchForCacheFileCreation(List<TestClientReadRequest> requests)
+  {
+    for (int retries = 0; retries < MAX_RETRIES; ) {
+      log.info("Watching for cache file creation...");
 
       WatchKey key;
       try {
@@ -91,12 +139,18 @@ public class CacheWatcher
         continue;
       }
 
-      log.info("Checking cache files");
-      if (areAllFilesCached(requests)) {
-        return true;
-      }
-      else {
-        continue;
+      for (WatchEvent<?> e : key.pollEvents()) {
+        WatchEvent<Path> event = castEvent(e);
+
+        if (event.kind() == ENTRY_CREATE || event.kind() == ENTRY_MODIFY) {
+          log.info("Checking that files were cached");
+          if (areAllFilesCached(requests)) {
+            return true;
+          }
+          else {
+            continue;
+          }
+        }
       }
     }
 
@@ -111,6 +165,21 @@ public class CacheWatcher
       log.warn("Some files have not been fully cached");
       for (Path cacheFile : fileStatus.keySet()) {
         log.warn(String.format("* %s [%s]", cacheFile.toString(), getFileStatusString(cacheFile)));
+      }
+      return false;
+    }
+    else {
+      return true;
+    }
+  }
+
+  private boolean areAllFilesRemoved(List<TestClientReadRequest> requests)
+  {
+    Map<Path, Boolean> fileStatus = getCacheFileRemovalStatus(requests);
+    if (fileStatus.containsValue(false)) {
+      log.warn("Some files have not been removed");
+      for (Path cacheFile : fileStatus.keySet()) {
+        log.warn(String.format("* %s", cacheFile.toString()));
       }
       return false;
     }
@@ -135,6 +204,22 @@ public class CacheWatcher
         else {
           log.info(String.format("File created! %s", cacheFile.toString()));
         }
+      }
+    }
+
+    return fileCacheStatus;
+  }
+
+  private Map<Path, Boolean> getCacheFileRemovalStatus(List<TestClientReadRequest> requests)
+  {
+    Map<Path, Boolean> fileCacheStatus = new HashMap<>();
+
+    for (TestClientReadRequest request : requests) {
+      Path cacheFile = Paths.get(CacheUtil.getLocalPath(request.getRemotePath(), conf));
+
+      if (!Files.exists(cacheFile)) {
+        log.info(String.format("File removed! %s", cacheFile.toString()));
+        fileCacheStatus.put(cacheFile, true);
       }
     }
 
@@ -191,5 +276,11 @@ public class CacheWatcher
 
     watchKeys.put(cacheDirKey, cacheDir);
     log.debug("* Registered " + cacheDir);
+  }
+
+  @SuppressWarnings("unchecked")
+  private <T> WatchEvent<T> castEvent(WatchEvent<?> event)
+  {
+    return (WatchEvent<T>) event;
   }
 }

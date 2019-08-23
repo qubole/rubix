@@ -26,6 +26,7 @@ import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.cache.Weigher;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.AbstractScheduledService;
 import com.google.common.util.concurrent.Service;
 import com.qubole.rubix.bookkeeper.utils.DiskUtils;
 import com.qubole.rubix.bookkeeper.validation.CachingValidator;
@@ -633,6 +634,26 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         .expireAfterWrite(CacheConfig.getCacheDataExpirationAfterWrite(conf), TimeUnit.MILLISECONDS)
         .removalListener(new CacheRemovalListener())
         .build();
+
+    // Regularly cleans up the metadata cache for more reliable reporting of the MD cache state when queried.
+    AbstractScheduledService mdCacheCleanupService = new AbstractScheduledService()
+    {
+      @Override
+      protected void runOneIteration() throws Exception
+      {
+        fileMetadataCache.cleanUp();
+      }
+
+      @Override
+      protected Scheduler scheduler()
+      {
+        return Scheduler.newFixedDelaySchedule(
+            CacheConfig.getMdInternalCacheCleanupInterval(conf),
+            CacheConfig.getMdInternalCacheCleanupInterval(conf),
+            TimeUnit.MILLISECONDS);
+      }
+    };
+    mdCacheCleanupService.startAsync();
   }
 
   public FileMetadata getEntry(String key, Callable<FileMetadata> callable) throws ExecutionException

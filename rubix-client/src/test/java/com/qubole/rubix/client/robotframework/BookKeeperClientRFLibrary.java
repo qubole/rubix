@@ -370,9 +370,17 @@ public class BookKeeperClientRFLibrary
    * @throws ExecutionException
    * @throws InterruptedException
    */
-  public boolean watchCache(final String cacheDir, final int maxWaitTime, final List<TestClientReadRequest> requests) throws ExecutionException, InterruptedException
+  public boolean watchCacheForCreation(final String cacheDir, final int maxWaitTime, final List<TestClientReadRequest> requests) throws ExecutionException, InterruptedException
   {
-    Future<Boolean> watcherResult = startCacheWatcher(cacheDir, requests, maxWaitTime);
+    Future<Boolean> watcherResult = Executors.newSingleThreadExecutor().submit(new Callable<Boolean>()
+    {
+      @Override
+      public Boolean call() throws Exception
+      {
+        CacheWatcher watcher = new CacheWatcher(conf, Paths.get(cacheDir), maxWaitTime);
+        return watcher.watchForCacheFileCreation(requests);
+      }
+    });
     boolean didCache = watcherResult.get();
     return didCache;
   }
@@ -383,19 +391,23 @@ public class BookKeeperClientRFLibrary
    * @param cacheDir     The directory to watch.
    * @param maxWaitTime  The maximum amount of time to wait for file events.
    * @param requests     The read requests describing the files to be watched for.
-   * @return The {@link Future} for the result of the cache watcher.
+   * @return True if all expected files have been
+   * @throws ExecutionException
+   * @throws InterruptedException
    */
-  private Future<Boolean> startCacheWatcher(final String cacheDir, final List<TestClientReadRequest> requests, final int maxWaitTime)
+  public boolean watchCacheForRemoval(final String cacheDir, final int maxWaitTime, final List<TestClientReadRequest> requests) throws ExecutionException, InterruptedException
   {
-    return Executors.newSingleThreadExecutor().submit(new Callable<Boolean>()
+    Future<Boolean> watcherResult = Executors.newSingleThreadExecutor().submit(new Callable<Boolean>()
     {
       @Override
       public Boolean call() throws Exception
       {
         CacheWatcher watcher = new CacheWatcher(conf, Paths.get(cacheDir), maxWaitTime);
-        return watcher.watchForCacheFiles(requests);
+        return watcher.watchForCacheFileRemoval(requests);
       }
     });
+    boolean didCache = watcherResult.get();
+    return didCache;
   }
 
   /**

@@ -89,6 +89,7 @@ public class CacheConfig
   private static final String KEY_CACHE_FILE_SPLIT_SIZE = "rubix.cache.filesplit.size";
   private static final String KEY_CLUSTER_NODE_REFRESH_TIME = "rubix.cluster.node.refresh.time";
   private static final String KEY_DUMMY_MODE = "rubix.cache.dummy.mode";
+  private static final String KEY_MD_INTERNAL_CACHE_CLEANUP_INTERVAL = "rubix.metadata.internal-cache.cleanup.interval";
 
   // default values
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
@@ -150,6 +151,7 @@ public class CacheConfig
   private static final long DEFAULT_CACHE_FILE_SPLIT_SIZE = 256 * 1024 * 1024;
   private static final int DEFAULT_CLUSTER_NODE_REFRESH_TIME = 300; //seconds
   private static final boolean DEFAULT_DUMMY_MODE = false;
+  private static final int DEFAULT_MD_INTERNAL_CACHE_CLEANUP_INTERVAL = 30000; //ms
 
   private CacheConfig()
   {
@@ -278,6 +280,11 @@ public class CacheConfig
   public static int getMaxRetries(Configuration conf)
   {
     return conf.getInt(KEY_MAX_RETRIES, DEFAULT_MAX_RETRIES);
+  }
+
+  public static int getMdInternalCacheCleanupInterval(Configuration conf)
+  {
+    return conf.getInt(KEY_MD_INTERNAL_CACHE_CLEANUP_INTERVAL, DEFAULT_MD_INTERNAL_CACHE_CLEANUP_INTERVAL);
   }
 
   public static String getMetricsReporters(Configuration conf)

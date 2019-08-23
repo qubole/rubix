@@ -171,9 +171,14 @@ Cache data for cluster node
     ...  ${clusterType}
     SHOULD BE TRUE  ${didRead}
 
-Wait for cache
+Wait for cache file creation
     [Arguments]  ${cacheDir}  ${maxWaitTime}  @{requests}
-    ${didCache} =  watch Cache  ${cacheDir}  ${maxWaitTime}  @{requests}
+    ${didCache} =  watch Cache For Creation  ${cacheDir}  ${maxWaitTime}  @{requests}
+    [Return]  ${didCache}
+
+Wait for cache file removal
+    [Arguments]  ${cacheDir}  ${maxWaitTime}  @{requests}
+    ${didCache} =  watch Cache For Removal  ${cacheDir}  ${maxWaitTime}  @{requests}
     [Return]  ${didCache}
 
 ## Verification ##

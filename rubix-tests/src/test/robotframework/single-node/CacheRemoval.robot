@@ -15,6 +15,8 @@ ${CACHE_DIR_SFX}    /fcache/
 ${CACHE_NUM_DISKS}  1
 ${CACHE_MAX_SIZE}   2   # MB
 
+${CACHE_DIR}        ${CACHE_DIR_PFX}0${CACHE_DIR_SFX}
+
 # Metrics
 ${METRIC_EVICTION}      rubix.bookkeeper.count.cache_eviction
 ${METRIC_EXPIRY}        rubix.bookkeeper.count.cache_expiry
@@ -40,6 +42,8 @@ ${NUM_EXPECTED_EVICTIONS}   3
 ${CACHE_EXPIRY}             1000
 ${ASYNC_PROCESS_INTERVAL}   500
 ${ASYNC_PROCESS_DELAY}      1
+
+${WATCHER_DELAY}    5000
 
 *** Test Cases ***
 Cache eviction
@@ -217,8 +221,9 @@ Test cache invalidation during async download where MD exists but file does not
     ...  ${executionKeyword}
     ...  ${requests}
 
-    ${waitTime} =  EVALUATE  ${ASYNC_PROCESS_INTERVAL} * 4
-    SLEEP  ${waitTime}ms  Wait for async request to process.
+    ${maxWaitTime} =  EVALUATE  ${ASYNC_PROCESS_INTERVAL} + ${WATCHER_DELAY}
+    ${didCache} =  Wait for cache file creation  ${CACHE_DIR}  ${maxWaitTime}  ${requests}
+    SHOULD BE TRUE  ${didCache}
 
     Verify metric value  ${METRIC_INVALIDATION}  1
     Verify cache directory size
@@ -241,6 +246,7 @@ Test cache expiry
     ...  rubix.cache.dirsuffix=${CACHE_DIR_SFX}
     ...  rubix.cache.max.disks=${CACHE_NUM_DISKS}
     ...  rubix.cache.expiration.after-write=${CACHE_EXPIRY}
+    ...  rubix.metadata.internal-cache.cleanup.interval=1000
     ...  rubix.network.server.connect.timeout=3000
 
     @{testFileNames} =  Generate test files  ${REMOTE_PATH}  ${FILE_LENGTH}  ${NUM_TEST_FILES}
@@ -269,7 +275,9 @@ Test cache expiry
     ...  ${CACHE_NUM_DISKS}
     ...  expectedCacheSize=${NUM_TEST_FILES}
 
-    SLEEP  ${CACHE_EXPIRY}ms
+    ${maxWaitTime} =  EVALUATE  ${CACHE_EXPIRY} + ${WATCHER_DELAY}
+    ${didCache} =  Wait for cache file removal  ${CACHE_DIR}  ${maxWaitTime}  ${requests}
+    SHOULD BE TRUE  ${didCache}
 
     Verify metric value  ${METRIC_EXPIRY}  ${NUM_TEST_FILES}
     Verify cache directory size
