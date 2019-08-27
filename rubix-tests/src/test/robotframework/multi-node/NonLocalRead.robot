@@ -3,6 +3,7 @@ Documentation   RubiX Multi-Node Integration Tests
 Resource        ..${/}shared${/}setup.robot
 Resource        ..${/}shared${/}bookkeeper.robot
 Library         com.qubole.rubix.client.robotframework.container.client.ContainerRequestClient
+Library         com.qubole.rubix.client.robotframework.testdriver.WorkerTestDriver
 
 *** Variables ***
 # Cache settings
@@ -20,6 +21,7 @@ ${FILEPREFIX}  ${DATADIR}${/}testFile
 ${TEST_FILE_1}  ${DATADIR}${/}testFile0
 ${TEST_FILE_2}  ${DATADIR}${/}testFile1
 
+${REMOTE_PATH}      ${DATADIR}${/}rubixIntegrationTestFile
 ${FILE_LENGTH}    1048576
 ${LAST_MODIFIED}  1514764800
 ${START_BLOCK}    0
@@ -44,6 +46,27 @@ Templated driver test case
     3  100  1  0  1     # 1/2 remote, 1/2 non-local
     3  100  0  1  1     # 1/2 cached, 1/2 non-local
     3  99  1  1  1      # even split
+
+Testing Worker Test Driver
+    [Tags]  workertestdriver
+    # [Setup]
+    Multi-node test setup  ${DATADIR}
+
+    ${fileName} =  Generate single test file  ${REMOTE_PATH}  ${FILE_LENGTH}
+
+    ${Taskobject} =  create Task
+    ...  ${REMOTE_PATH}
+    ...  ${START_BLOCK}
+    ...  ${END_BLOCK}
+    ...  ${FILE_LENGTH}
+    ...  ${LAST_MODIFIED}
+    ...  ${CLUSTER_TYPE}
+
+    ${verified} =  execute Task  ${Taskobject}
+
+    SHOULD BE TRUE  ${verified}
+
+    [Teardown]  Multi-node test teardown  ${DATADIR}
 
 *** Keywords ***
 Test coordinator driver

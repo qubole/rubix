@@ -13,17 +13,18 @@
 package com.qubole.rubix.client.robotframework.testdriver;
 
 import com.qubole.rubix.client.robotframework.TestClientReadRequest;
+import com.qubole.rubix.core.MockCachingFileSystem;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
-import com.qubole.rubix.spi.thrift.BlockLocation;
-import com.qubole.rubix.spi.thrift.CacheStatusRequest;
-import com.qubole.rubix.spi.thrift.Location;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.Path;
 import org.apache.thrift.shaded.TException;
 
 import java.io.IOException;
+import java.net.URI;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -31,12 +32,6 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.CACHE_REQUEST_COUNT;
-import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.CACHE_SIZE_GAUGE;
-import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.NONLOCAL_REQUEST_COUNT;
-import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.REMOTE_REQUEST_COUNT;
 
 public class WorkerTestDriver implements WorkerRemote
 {
@@ -46,39 +41,32 @@ public class WorkerTestDriver implements WorkerRemote
 
   private BookKeeperFactory factory = new BookKeeperFactory();
   private Configuration conf = new Configuration();
-  private AtomicInteger remoteRequests = new AtomicInteger();
-  private AtomicInteger cacheRequests = new AtomicInteger();
-  private AtomicInteger nonlocalRequests = new AtomicInteger();
+
+  public Task createTask(String remotePath,
+                               long readStart,
+                               int readLength,
+                               long fileLength,
+                               long lastModified,
+                               int clusterType)
+  {
+    return new Task(new TestClientReadRequest(remotePath, readStart, readLength, fileLength, lastModified, clusterType));
+  }
 
   @Override
   public boolean executeTask(Task task) throws RemoteException
   {
-    try (RetryingBookkeeperClient client = factory.createBookKeeperClient(conf)) {
-      TestClientReadRequest request = task.getRequest();
-      List<BlockLocation> status = client.getCacheStatus(new CacheStatusRequest(
-          request.getRemotePath(),
-          request.getFileLength(),
-          request.getLastModified(),
-          request.getReadStart(),
-          request.getReadLength(),
-          request.getClusterType()));
-
-      Location fileStatus = status.get(0).getLocation();
-      switch (fileStatus) {
-        case LOCAL:
-          remoteRequests.getAndIncrement();
-          break;
-        case CACHED:
-          cacheRequests.getAndIncrement();
-          break;
-        case NON_LOCAL:
-          nonlocalRequests.getAndIncrement();
-          break;
+    TestClientReadRequest testClientReadRequest = task.getRequest();
+    String remotePath = "file://" + testClientReadRequest.getRemotePath();
+    try {
+      FSDataInputStream fsstream = createFSInputStream(remotePath, (int) testClientReadRequest.getFileLength());
+      byte[] buffer = new byte[testClientReadRequest.getReadLength()];
+      int nread = fsstream.read(buffer, (int) testClientReadRequest.getReadStart(), testClientReadRequest.getReadLength());
+      if (nread == testClientReadRequest.getReadLength()) {
+        return true;
       }
-      return true;
     }
-    catch (TException | IOException e) {
-      log.error(String.format("Error executing task %s", task.toString()), e);
+    catch (Exception ex) {
+      log.info("Error while creating FSDataInputStream" + ex);
     }
     return false;
   }
@@ -105,20 +93,24 @@ public class WorkerTestDriver implements WorkerRemote
   public Map<String, Double> getTestMetrics(List<String> metricsKeys) throws RemoteException
   {
     Map<String, Double> testMetrics = new HashMap<>();
-    testMetrics.put(REMOTE_REQUEST_COUNT.getMetricName(), (double) remoteRequests.get());
-    testMetrics.put(CACHE_REQUEST_COUNT.getMetricName(), (double) cacheRequests.get());
-    testMetrics.put(NONLOCAL_REQUEST_COUNT.getMetricName(), (double) nonlocalRequests.get());
-
     try (RetryingBookkeeperClient client = factory.createBookKeeperClient(conf)) {
       Map<String, Double> metrics = client.getCacheMetrics();
-
-      testMetrics.put(CACHE_SIZE_GAUGE.getMetricName(), metrics.get(CACHE_SIZE_GAUGE.getMetricName()));
+      for (String metricName : metricsKeys) {
+        testMetrics.put(metricName, metrics.get(metricName));
+        log.info(String.format("Key: %s and Value: %d", metricName, metrics.get(metricName)));
+      }
     }
     catch (TException | IOException e) {
       log.error("Error fetching BookKeeper metrics", e);
     }
-
     return testMetrics;
+  }
+
+  private FSDataInputStream createFSInputStream(String remotePath, int readLength) throws IOException
+  {
+    final MockCachingFileSystem mockFS = new MockCachingFileSystem();
+    mockFS.initialize(URI.create(remotePath), conf);
+    return mockFS.open(new Path(remotePath), readLength);
   }
 
   /**
