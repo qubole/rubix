@@ -88,10 +88,10 @@ public class CacheConfig
   private static final String KEY_MAX_CACHE_SIZE = "rubix.cache.max.size";
   private static final String KEY_CACHE_FILE_SPLIT_SIZE = "rubix.cache.filesplit.size";
   private static final String KEY_CLUSTER_NODE_REFRESH_TIME = "rubix.cluster.node.refresh.time";
-  private static final String KEY_WORKER_NODEINFO_EXPIRY_PERIOD = "rubix.worker.nodeinfo.expiry.period";
+  private static final String KEY_WORKER_NODEINFO_EXPIRY_PERIOD = "rubix.cluster.workerinfo.expiry.period";
   private static final String KEY_RUBIX_CLUSTER_TYPE = "rubix.cluster.type";
-  private static final String KEY_RUBIX_WORKER_NODELIST_FETCH_MAX_RETRIES = "rubix.worker.nodelist.fetch.max-retries";
-  private static final String KEY_RUBIX_WORKER_NODELIST_FETCH_WAIT_INTERVAL = "rubix.worker.nodelist.fetch.wait.interval";
+  private static final String KEY_RUBIX_WORKER_NODELIST_FETCH_MAX_RETRIES = "rubix.cluster.worker.nodelist.fetch.max-retries";
+  private static final String KEY_RUBIX_WORKER_NODELIST_FETCH_WAIT_INTERVAL = "rubix.cluster.worker.nodelist.fetch.wait.interval";
   private static final String KEY_DUMMY_MODE = "rubix.cache.dummy.mode";
 
   // default values
