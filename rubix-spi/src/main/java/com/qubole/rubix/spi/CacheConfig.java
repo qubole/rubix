@@ -89,6 +89,7 @@ public class CacheConfig
   private static final String KEY_CACHE_FILE_SPLIT_SIZE = "rubix.cache.filesplit.size";
   private static final String KEY_CLUSTER_NODE_REFRESH_TIME = "rubix.cluster.node.refresh.time";
   private static final String KEY_DUMMY_MODE = "rubix.cache.dummy.mode";
+  private static final String KEY_MD_INTERNAL_CACHE_CLEANUP_ENABLED = "rubix.metadata.internal-cache.cleanup.enabled";
   private static final String KEY_MD_INTERNAL_CACHE_CLEANUP_INTERVAL = "rubix.metadata.internal-cache.cleanup.interval";
 
   // default values
@@ -151,6 +152,7 @@ public class CacheConfig
   private static final long DEFAULT_CACHE_FILE_SPLIT_SIZE = 256 * 1024 * 1024;
   private static final int DEFAULT_CLUSTER_NODE_REFRESH_TIME = 300; //seconds
   private static final boolean DEFAULT_DUMMY_MODE = false;
+  private static final boolean DEFAULT_MD_INTERNAL_CACHE_CLEANUP_ENABLED = false;
   private static final int DEFAULT_MD_INTERNAL_CACHE_CLEANUP_INTERVAL = 30000; //ms
 
   private CacheConfig()
@@ -385,6 +387,11 @@ public class CacheConfig
   public static boolean areJvmMetricsEnabled(Configuration conf)
   {
     return conf.getBoolean(KEY_METRICS_JVM_ENABLED, DEFAULT_METRICS_JVM_ENABLED);
+  }
+
+  public static boolean isMdInternalCacheCleanupEnabled(Configuration conf)
+  {
+    return conf.getBoolean(KEY_MD_INTERNAL_CACHE_CLEANUP_ENABLED, DEFAULT_MD_INTERNAL_CACHE_CLEANUP_ENABLED);
   }
 
   public static boolean isOnMaster(Configuration conf)

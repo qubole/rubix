@@ -246,6 +246,7 @@ Test cache expiry
     ...  rubix.cache.dirsuffix=${CACHE_DIR_SFX}
     ...  rubix.cache.max.disks=${CACHE_NUM_DISKS}
     ...  rubix.cache.expiration.after-write=${CACHE_EXPIRY}
+    ...  rubix.metadata.internal-cache.cleanup.enabled=true
     ...  rubix.metadata.internal-cache.cleanup.interval=1000
     ...  rubix.network.server.connect.timeout=3000
 

@@ -635,25 +635,27 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         .removalListener(new CacheRemovalListener())
         .build();
 
-    // Regularly cleans up the metadata cache for more reliable reporting of the MD cache state when queried.
-    AbstractScheduledService mdCacheCleanupService = new AbstractScheduledService()
-    {
-      @Override
-      protected void runOneIteration() throws Exception
+    if (CacheConfig.isMdInternalCacheCleanupEnabled(conf)) {
+      // Regularly cleans up the metadata cache for more reliable reporting of the MD cache state when queried.
+      AbstractScheduledService mdCacheCleanupService = new AbstractScheduledService()
       {
-        fileMetadataCache.cleanUp();
-      }
+        @Override
+        protected void runOneIteration() throws Exception
+        {
+          fileMetadataCache.cleanUp();
+        }
 
-      @Override
-      protected Scheduler scheduler()
-      {
-        return Scheduler.newFixedDelaySchedule(
-            CacheConfig.getMdInternalCacheCleanupInterval(conf),
-            CacheConfig.getMdInternalCacheCleanupInterval(conf),
-            TimeUnit.MILLISECONDS);
-      }
-    };
-    mdCacheCleanupService.startAsync();
+        @Override
+        protected Scheduler scheduler()
+        {
+          return Scheduler.newFixedDelaySchedule(
+              CacheConfig.getMdInternalCacheCleanupInterval(conf),
+              CacheConfig.getMdInternalCacheCleanupInterval(conf),
+              TimeUnit.MILLISECONDS);
+        }
+      };
+      mdCacheCleanupService.startAsync();
+    }
   }
 
   public FileMetadata getEntry(String key, Callable<FileMetadata> callable) throws ExecutionException
