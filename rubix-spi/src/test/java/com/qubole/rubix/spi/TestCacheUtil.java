@@ -113,8 +113,7 @@ public class TestCacheUtil
     createCacheDirectoriesForTest(conf);
 
     int diskCount = CacheUtil.getCacheDiskCount(conf);
-    // Wrong "expected" value to trigger test failure for Travis build
-    assertEquals(diskCount, maxDisks + 1, "Sizes don't match!");
+    assertEquals(diskCount, maxDisks, "Sizes don't match!");
   }
 
   @Test
