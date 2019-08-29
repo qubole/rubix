@@ -13,7 +13,7 @@ sudo: enabled
 before_install:
   - /bin/bash rubix_setup_build.sh
 install: true
-script: chmod a+x docker_build_rubix.sh && /bin/bash rubix_run_build.sh mvn integration-test -Pintegration-tests -rf :rubix-tests
+script: chmod a+x docker_build_rubix.sh && /bin/bash rubix_run_build.sh mvn integration-test -Pintegration-tests
 env:
   global:
     - TRAVIS_ENV=`bash <(curl -s https://codecov.io/env)`
