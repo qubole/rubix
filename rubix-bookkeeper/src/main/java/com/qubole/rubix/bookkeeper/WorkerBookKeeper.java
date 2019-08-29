@@ -144,14 +144,14 @@ public class WorkerBookKeeper extends BookKeeper
       }
       else {
         String errorMessage = String.format("Could not find nodeHostName=%s nodeHostAddress=%s among cluster nodes=%s  " +
-            "provide by master bookkeeper", nodeHostName, nodeHostAddress, nodeList);
+            "provided by master bookkeeper", nodeHostName, nodeHostAddress, nodeList);
         log.error(errorMessage);
         throw new WorkerInitializationException(errorMessage);
       }
     }
     else {
       String errorMessage = String.format("Could not find nodeHostName=%s nodeHostAddress=%s among cluster nodes=%s  " +
-              "provide by master bookkeeper", nodeHostName, nodeHostAddress, nodeList);
+              "provided by master bookkeeper", nodeHostName, nodeHostAddress, nodeList);
       log.error(errorMessage);
       throw new WorkerInitializationException(errorMessage);
     }
