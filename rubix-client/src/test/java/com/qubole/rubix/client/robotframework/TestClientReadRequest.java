@@ -72,7 +72,7 @@ public class TestClientReadRequest
   public String toString()
   {
     return String.format(
-        "Request for file %s [%s-%s] (%sB / LM: %s) {Cluster type: %s}",
+        "Read request for file %s [%s-%s] (%sB / LM: %s) {Cluster type: %s}",
         remotePath,
         readStart,
         readLength,

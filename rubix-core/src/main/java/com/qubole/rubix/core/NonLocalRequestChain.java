@@ -105,7 +105,13 @@ public class NonLocalRequestChain extends ReadRequestChain
 
   public ReadRequestChainStats getStats()
   {
-    return new ReadRequestChainStats().setRemoteReads(requests);
+    if (nonLocalReadRequestChain != null) {
+      return new ReadRequestChainStats().setNonLocalReads(nonLocalReadRequestChain.requests);
+    }
+    else {
+      // TODO: ReadRequestChainStats could collect number of direct reads from here
+      return new ReadRequestChainStats();
+    }
   }
 
   public void addReadRequest(ReadRequest readRequest)
@@ -143,6 +149,7 @@ public class NonLocalRequestChain extends ReadRequestChain
   @Override
   public Integer call() throws Exception
   {
+    log.debug(String.format("Read Request threadName: %s, NonLocal Executor threadName: %s", threadName, Thread.currentThread().getName()));
     Thread.currentThread().setName(threadName);
     checkState(isLocked, "Trying to execute Chain without locking");
     long startTime = System.currentTimeMillis();
@@ -164,5 +171,16 @@ public class NonLocalRequestChain extends ReadRequestChain
     log.debug("NonLocalRequest took : " + (System.currentTimeMillis() - startTime) + " msecs ");
 
     return nonLocalReadBytes;
+  }
+
+  @Override
+  public void updateCacheStatus(String remotePath, long fileSize, long lastModified, int blockSize, Configuration conf)
+  {
+    if (CacheConfig.isDummyModeEnabled(conf)) {
+      if (remoteFetchRequestChain == null || remoteFetchRequestChain.getReadRequests().isEmpty()) {
+        return;
+      }
+      remoteFetchRequestChain.updateCacheStatus(remotePath, fileSize, lastModified, blockSize, conf);
+    }
   }
 }

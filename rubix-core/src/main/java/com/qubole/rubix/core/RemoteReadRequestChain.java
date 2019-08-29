@@ -54,7 +54,6 @@ public class RemoteReadRequestChain extends ReadRequestChain
   private String localFile;
 
   public RemoteReadRequestChain(FSDataInputStream inputStream, String localfile, ByteBuffer directBuffer, byte[] affixBuffer)
-      throws IOException
   {
     this(inputStream,
         localfile,
@@ -64,7 +63,6 @@ public class RemoteReadRequestChain extends ReadRequestChain
   }
 
   public RemoteReadRequestChain(FSDataInputStream inputStream, String localfile, ByteBuffer directBuffer, byte[] affixBuffer, BookKeeperFactory bookKeeperFactory)
-      throws IOException
   {
     this.inputStream = inputStream;
     this.directBuffer = directBuffer;
@@ -76,7 +74,6 @@ public class RemoteReadRequestChain extends ReadRequestChain
 
   @VisibleForTesting
   public RemoteReadRequestChain(FSDataInputStream inputStream, String fileName)
-      throws IOException
   {
     this(inputStream, fileName, ByteBuffer.allocate(100), new byte[100]);
   }
@@ -84,6 +81,7 @@ public class RemoteReadRequestChain extends ReadRequestChain
   public Integer call()
       throws IOException
   {
+    log.debug(String.format("Read Request threadName: %s, Remote read Executor threadName: %s", threadName, Thread.currentThread().getName()));
     Thread.currentThread().setName(threadName);
     checkState(isLocked, "Trying to execute Chain without locking");
 
@@ -162,7 +160,7 @@ public class RemoteReadRequestChain extends ReadRequestChain
   private int copyIntoCache(FileChannel fileChannel, byte[] destBuffer, int destBufferOffset, int length, long cacheReadStart)
       throws IOException
   {
-    log.info(String.format("Trying to copy [%d - %d] bytes into cache from destination buffer offset %d into localFile %s", cacheReadStart, cacheReadStart + length, destBufferOffset, localFile));
+    log.info(String.format("Trying to copy [%d - %d] bytes into cache with offset %d into localFile %s", cacheReadStart, cacheReadStart + length, destBufferOffset, localFile));
     long start = System.nanoTime();
     int leftToWrite = length;
     int writtenSoFar = 0;

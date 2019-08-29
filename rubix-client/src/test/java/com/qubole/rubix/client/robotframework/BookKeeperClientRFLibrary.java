@@ -14,7 +14,10 @@ package com.qubole.rubix.client.robotframework;
 
 import com.qubole.rubix.core.MockCachingFileSystem;
 import com.qubole.rubix.spi.BookKeeperFactory;
+import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.thrift.BlockLocation;
+import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -42,6 +45,7 @@ public class BookKeeperClientRFLibrary
 {
   private final BookKeeperFactory factory = new BookKeeperFactory();
   private final Configuration conf = new Configuration();
+  private static final String FILE_SCHEME = "file:";
 
   /**
    * Read data from a given file into the BookKeeper cache using the BookKeeper Thrift API.
@@ -53,7 +57,7 @@ public class BookKeeperClientRFLibrary
   {
     try (RetryingBookkeeperClient client = createBookKeeperClient()) {
       return client.readData(
-          readRequest.getRemotePath(),
+          getPathWithFileScheme(readRequest.getRemotePath()),
           readRequest.getReadStart(),
           readRequest.getReadLength(),
           readRequest.getFileLength(),
@@ -99,7 +103,7 @@ public class BookKeeperClientRFLibrary
    */
   public boolean cacheDataUsingClientFileSystem(TestClientReadRequest readRequest) throws IOException, TException, URISyntaxException
   {
-    try (FSDataInputStream inputStream = createFSInputStream(readRequest.getRemotePath(), readRequest.getReadLength())) {
+    try (FSDataInputStream inputStream = createFSInputStream(getPathWithFileScheme(readRequest.getRemotePath()), readRequest.getReadLength())) {
       final int readSize = inputStream.read(
           new byte[readRequest.getReadLength()],
           (int) readRequest.getReadStart(),
@@ -135,6 +139,25 @@ public class BookKeeperClientRFLibrary
     final List<Future<Boolean>> results = executeConcurrentTasks(numThreads, tasks, staggerRequests);
     final boolean didAllSucceed = didConcurrentDataDownloadSucceed(results);
     return didAllSucceed;
+  }
+
+  /**
+   * Get the cache status for blocks in a particular file.
+   *
+   * @param request The request specifying the blocks & file for which to check the status.
+   * @return A list of {@link BlockLocation}s detailing the locations of the specified blocks.
+   */
+  public List<BlockLocation> getCacheStatus(TestClientStatusRequest request) throws IOException, TException
+  {
+    try (RetryingBookkeeperClient client = createBookKeeperClient()) {
+      return client.getCacheStatus(new CacheStatusRequest(
+          getPathWithFileScheme(request.getRemotePath()),
+          request.getFileLength(),
+          request.getLastModified(),
+          request.getStartBlock(),
+          request.getEndBlock(),
+          request.getClusterType()));
+    }
   }
 
   /**
@@ -182,6 +205,20 @@ public class BookKeeperClientRFLibrary
   }
 
   /**
+   * Generate a metadata file to be used for testing situations where metadata exists without its matching cache file.
+   *
+   * @param filename  The name of the file.
+   * @throws IOException if an error occurs while writing to the specified file.
+   */
+  public String generateTestMDFile(String filename) throws IOException
+  {
+    String mdPath = CacheUtil.getMetadataFilePath(filename, conf);
+    // Certain tests require a non-empty metadata file.
+    Files.write(Paths.get(mdPath), "0101010101".getBytes());
+    return mdPath;
+  }
+
+  /**
    * Create a read request to be executed by the BookKeeper server.
    *
    * @param remotePath    The remote path location.
@@ -200,6 +237,27 @@ public class BookKeeperClientRFLibrary
                                                            int clusterType)
   {
     return new TestClientReadRequest(remotePath, readStart, readLength, fileLength, lastModified, clusterType);
+  }
+
+  /**
+   * Create a status request to be executed by the BookKeeper server.
+   *
+   * @param remotePath    The remote path location.
+   * @param fileLength    The length of the file.
+   * @param lastModified  The time at which the file was last modified.
+   * @param startBlock    The start of the block range to check.
+   * @param endBlock      The end of the block range to check.
+   * @param clusterType   The type id of cluster being used.
+   * @return The status request.
+   */
+  public TestClientStatusRequest createTestClientStatusRequest(String remotePath,
+                                                               long fileLength,
+                                                               long lastModified,
+                                                               long startBlock,
+                                                               long endBlock,
+                                                               int clusterType)
+  {
+    return new TestClientStatusRequest(remotePath, fileLength, lastModified, startBlock, endBlock, clusterType);
   }
 
   /**
@@ -300,5 +358,54 @@ public class BookKeeperClientRFLibrary
       didAllSucceed &= didRead;
     }
     return didAllSucceed;
+  }
+
+  /**
+   * Watch the cache directory for changes and verify state of cached files.
+   *
+   * @param cacheDir     The directory to watch.
+   * @param maxWaitTime  The maximum amount of time to wait for file events.
+   * @param requests     The read requests describing the files to be watched for.
+   * @return True if all expected files have been
+   * @throws ExecutionException
+   * @throws InterruptedException
+   */
+  public boolean watchCache(final String cacheDir, final int maxWaitTime, final List<TestClientReadRequest> requests) throws ExecutionException, InterruptedException
+  {
+    Future<Boolean> watcherResult = startCacheWatcher(cacheDir, requests, maxWaitTime);
+    boolean didCache = watcherResult.get();
+    return didCache;
+  }
+
+  /**
+   * Watch the cache directory for changes and verify state of cached files.
+   *
+   * @param cacheDir     The directory to watch.
+   * @param maxWaitTime  The maximum amount of time to wait for file events.
+   * @param requests     The read requests describing the files to be watched for.
+   * @return The {@link Future} for the result of the cache watcher.
+   */
+  private Future<Boolean> startCacheWatcher(final String cacheDir, final List<TestClientReadRequest> requests, final int maxWaitTime)
+  {
+    return Executors.newSingleThreadExecutor().submit(new Callable<Boolean>()
+    {
+      @Override
+      public Boolean call() throws Exception
+      {
+        CacheWatcher watcher = new CacheWatcher(conf, Paths.get(cacheDir), maxWaitTime);
+        return watcher.watchForCacheFiles(requests);
+      }
+    });
+  }
+
+  /**
+   * Add the file scheme to the provided path for proper execution with the BookKeeper server.
+   *
+   * @param path  The path to update.
+   * @return The provided path with the file scheme.
+   */
+  private String getPathWithFileScheme(String path)
+  {
+    return FILE_SCHEME + path;
   }
 }

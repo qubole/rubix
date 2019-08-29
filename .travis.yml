@@ -6,10 +6,15 @@ services:
   - docker
 jdk:
   - openjdk7
+cache:
+  directories:
+    - $HOME/.m2
 sudo: enabled
 before_install:
-  - docker pull quboleinc/hadoop_mvn_thrift
+  - /bin/bash rubix_setup_build.sh
 install: true
-script: docker run -it --rm -v "$PWD":/usr/src/rubix -v "$HOME/.m2":/root/.m2 $ci_env -w /usr/src/rubix quboleinc/hadoop_mvn_thrift /bin/bash script.sh
+script: chmod a+x docker_build_rubix.sh && /bin/bash rubix_run_build.sh mvn integration-test -Pintegration-tests
 env:
-  - ci_env=`bash <(curl -s https://codecov.io/env)`
+  global:
+    - TRAVIS_ENV=`bash <(curl -s https://codecov.io/env)`
+    - RUBIX_DOCKER_NETWORK_NAME=network-rubix-build
