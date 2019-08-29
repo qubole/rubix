@@ -13,6 +13,7 @@
 package com.qubole.rubix.presto;
 
 import com.qubole.rubix.spi.ClusterManager;
+import com.qubole.rubix.spi.thrift.ClusterNode;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
@@ -50,11 +51,11 @@ public class TestClusterManager
     log.info("STARTED SERVER");
 
     ClusterManager clusterManager = getPrestoClusterManager();
-    List<String> nodes = clusterManager.getNodes();
+    List<ClusterNode> nodes = clusterManager.getNodes();
     log.info("Got nodes: " + nodes);
 
     assertTrue(nodes.size() == 2, "Should only have two nodes");
-    assertTrue(nodes.get(0).equals("192.168.1.3") && nodes.get(1).equals("192.168.2.252"), "Wrong nodes data");
+    assertTrue(nodes.get(0).nodeUrl.equals("192.168.2.252") && nodes.get(1).nodeUrl.equals("192.168.1.3"), "Wrong nodes data");
 
     server.stop(0);
   }
@@ -71,11 +72,11 @@ public class TestClusterManager
     log.info("STARTED SERVER");
 
     ClusterManager clusterManager = getPrestoClusterManager();
-    List<String> nodes = clusterManager.getNodes();
+    List<ClusterNode> nodes = clusterManager.getNodes();
     log.info("Got nodes: " + nodes);
 
     assertTrue(nodes.size() == 1, "Should have added localhost in list");
-    assertTrue(nodes.get(0).equals(InetAddress.getLocalHost().getHostAddress()), "Not added right hostname");
+    assertTrue(nodes.get(0).nodeUrl.equals(InetAddress.getLocalHost().getHostAddress()), "Not added right hostname");
     server.stop(0);
   }
 
@@ -91,11 +92,11 @@ public class TestClusterManager
     log.info("STARTED SERVER");
 
     ClusterManager clusterManager = getPrestoClusterManager();
-    List<String> nodes = clusterManager.getNodes();
+    List<ClusterNode> nodes = clusterManager.getNodes();
     log.info("Got nodes: " + nodes);
 
     assertTrue(nodes.size() == 1, "Should only have two nodes");
-    assertTrue(nodes.get(0).equals("192.168.2.252"), "Wrong nodes data");
+    assertTrue(nodes.get(0).nodeUrl.equals("192.168.2.252"), "Wrong nodes data");
 
     server.stop(0);
   }

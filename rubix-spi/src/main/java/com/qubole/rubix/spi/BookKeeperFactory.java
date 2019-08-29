@@ -13,6 +13,8 @@
 package com.qubole.rubix.spi;
 
 import com.qubole.rubix.spi.thrift.BookKeeperService;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
@@ -24,6 +26,7 @@ import org.apache.thrift.transport.TTransportException;
 public class BookKeeperFactory
 {
   BookKeeperService.Iface bookKeeper;
+  private static Log log = LogFactory.getLog(BookKeeperFactory.class.getName());
 
   public BookKeeperFactory()
   {
@@ -43,6 +46,32 @@ public class BookKeeperFactory
     transport.open();
     RetryingBookkeeperClient retryingBookkeeperClient = new RetryingBookkeeperClient(transport, CacheConfig.getMaxRetries(conf));
     return retryingBookkeeperClient;
+  }
+
+  public RetryingBookkeeperClient createBookKeeperClient(String host, Configuration conf, int maxRetries,
+                                                         long retryInterval, boolean throwException)
+  {
+    for (int failedStarts = 1; failedStarts <= maxRetries; failedStarts++) {
+      try {
+        return this.createBookKeeperClient(host, conf);
+      }
+      catch (TTransportException e) {
+        log.warn(String.format("Could not create bookkeeper client [%d/%d attempts]", failedStarts, maxRetries));
+      }
+      try {
+        Thread.sleep(retryInterval);
+      }
+      catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+    }
+
+    log.fatal("Ran out of retries to create bookkeeper client.");
+    if (throwException) {
+      throw new RuntimeException("Could not create bookkeeper client");
+    }
+
+    return null;
   }
 
   public RetryingBookkeeperClient createBookKeeperClient(Configuration conf) throws TTransportException

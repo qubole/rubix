@@ -15,6 +15,7 @@ package com.qubole.rubix.hadoop2;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
+import com.qubole.rubix.spi.thrift.ClusterNode;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -64,13 +65,13 @@ public class TestHadoop2ClusterManager
   public void testGetNodes_multipleWorkers()
       throws IOException
   {
-    final List<String> nodeHostnames = TestHadoop2ClusterManagerUtil.getNodeHostnamesFromCluster(
+    final List<ClusterNode> nodeHostnames = TestHadoop2ClusterManagerUtil.getNodeHostnamesFromCluster(
         TestHadoop2ClusterManagerUtil.CLUSTER_NODES_ENDPOINT,
         worker.new MultipleRunningWorkers(), conf, ClusterType.HADOOP2_CLUSTER_MANAGER);
 
     assertTrue(nodeHostnames.size() == 2, "Should only have two nodes");
-    assertTrue(nodeHostnames.get(0).equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_1) &&
-        nodeHostnames.get(1).equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_2), "Wrong nodes data");
+    assertTrue(nodeHostnames.get(0).nodeUrl.equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_2) &&
+        nodeHostnames.get(1).nodeUrl.equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_1), "Wrong nodes data");
   }
 
   @Test
@@ -80,12 +81,12 @@ public class TestHadoop2ClusterManager
   public void testGetNodes_oneWorker()
       throws IOException
   {
-    final List<String> nodeHostnames = TestHadoop2ClusterManagerUtil.getNodeHostnamesFromCluster(
+    final List<ClusterNode> nodeHostnames = TestHadoop2ClusterManagerUtil.getNodeHostnamesFromCluster(
         TestHadoop2ClusterManagerUtil.CLUSTER_NODES_ENDPOINT,
         worker.new OneRunningWorker(), conf, ClusterType.HADOOP2_CLUSTER_MANAGER);
 
     assertTrue(nodeHostnames.size() == 1, "Should only have one node");
-    assertTrue(nodeHostnames.get(0).equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_1));
+    assertTrue(nodeHostnames.get(0).nodeUrl.equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_1));
   }
 
   @Test
@@ -95,13 +96,13 @@ public class TestHadoop2ClusterManager
   public void testGetNodes_oneNewWorker()
       throws IOException
   {
-    final List<String> nodeHostnames = TestHadoop2ClusterManagerUtil.getNodeHostnamesFromCluster(
+    final List<ClusterNode> nodeHostnames = TestHadoop2ClusterManagerUtil.getNodeHostnamesFromCluster(
         TestHadoop2ClusterManagerUtil.CLUSTER_NODES_ENDPOINT,
         worker.new MultipleWorkersOneNew(), conf, ClusterType.HADOOP2_CLUSTER_MANAGER);
 
     assertTrue(nodeHostnames.size() == 2, "Should only have two nodes");
-    assertTrue(nodeHostnames.get(0).equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_1) &&
-        nodeHostnames.get(1).equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_2), "Wrong nodes data");
+    assertTrue(nodeHostnames.get(0).nodeUrl.equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_2) &&
+        nodeHostnames.get(1).nodeUrl.equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_1), "Wrong nodes data");
   }
 
   @Test
@@ -111,13 +112,13 @@ public class TestHadoop2ClusterManager
   public void testGetNodes_oneRebootedWorker()
       throws IOException
   {
-    final List<String> nodeHostnames = TestHadoop2ClusterManagerUtil.getNodeHostnamesFromCluster(
+    final List<ClusterNode> nodeHostnames = TestHadoop2ClusterManagerUtil.getNodeHostnamesFromCluster(
         TestHadoop2ClusterManagerUtil.CLUSTER_NODES_ENDPOINT,
         worker.new MultipleWorkersOneRebooted(), conf, ClusterType.HADOOP2_CLUSTER_MANAGER);
 
     assertTrue(nodeHostnames.size() == 2, "Should only have two nodes");
-    assertTrue(nodeHostnames.get(0).equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_1) &&
-        nodeHostnames.get(1).equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_2), "Wrong nodes data");
+    assertTrue(nodeHostnames.get(0).nodeUrl.equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_2) &&
+        nodeHostnames.get(1).nodeUrl.equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_1), "Wrong nodes data");
   }
 
   @Test
@@ -127,12 +128,12 @@ public class TestHadoop2ClusterManager
   public void testMasterOnlyCluster()
       throws IOException
   {
-    final List<String> nodeHostnames = TestHadoop2ClusterManagerUtil.getNodeHostnamesFromCluster(
+    final List<ClusterNode> nodeHostnames = TestHadoop2ClusterManagerUtil.getNodeHostnamesFromCluster(
         TestHadoop2ClusterManagerUtil.CLUSTER_NODES_ENDPOINT,
         worker.new NoWorkers(), conf, ClusterType.HADOOP2_CLUSTER_MANAGER);
 
     assertTrue(nodeHostnames.size() == 1, "Should have added localhost in list");
-    assertTrue(nodeHostnames.get(0).equals(InetAddress.getLocalHost().getHostAddress()), "Not added right hostname");
+    assertTrue(nodeHostnames.get(0).nodeUrl.equals(InetAddress.getLocalHost().getHostAddress()), "Not added right hostname");
   }
 
   @Test
@@ -142,12 +143,12 @@ public class TestHadoop2ClusterManager
   public void testUnhealthyNodeCluster_decommissioned()
       throws IOException
   {
-    final List<String> nodeHostnames = TestHadoop2ClusterManagerUtil.getNodeHostnamesFromCluster(
+    final List<ClusterNode> nodeHostnames = TestHadoop2ClusterManagerUtil.getNodeHostnamesFromCluster(
         TestHadoop2ClusterManagerUtil.CLUSTER_NODES_ENDPOINT,
         worker.new MultipleWorkersOneDecommissioned(), conf, ClusterType.HADOOP2_CLUSTER_MANAGER);
 
     assertTrue(nodeHostnames.size() == 1, "Should only have one node");
-    assertTrue(nodeHostnames.get(0).equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_2), "Wrong nodes data");
+    assertTrue(nodeHostnames.get(0).nodeUrl.equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_2), "Wrong nodes data");
   }
 
   @Test
@@ -157,12 +158,12 @@ public class TestHadoop2ClusterManager
   public void testUnhealthyNodeCluster_decommissioning()
       throws IOException
   {
-    final List<String> nodeHostnames = TestHadoop2ClusterManagerUtil.getNodeHostnamesFromCluster(
+    final List<ClusterNode> nodeHostnames = TestHadoop2ClusterManagerUtil.getNodeHostnamesFromCluster(
         TestHadoop2ClusterManagerUtil.CLUSTER_NODES_ENDPOINT,
         worker.new MultipleWorkersOneDecommissioning(), conf, ClusterType.HADOOP2_CLUSTER_MANAGER);
 
     assertTrue(nodeHostnames.size() == 1, "Should only have one node");
-    assertTrue(nodeHostnames.get(0).equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_2), "Wrong nodes data");
+    assertTrue(nodeHostnames.get(0).nodeUrl.equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_2), "Wrong nodes data");
   }
 
   @Test
@@ -172,12 +173,12 @@ public class TestHadoop2ClusterManager
   public void testUnhealthyNodeCluster_lost()
       throws IOException
   {
-    final List<String> nodeHostnames = TestHadoop2ClusterManagerUtil.getNodeHostnamesFromCluster(
+    final List<ClusterNode> nodeHostnames = TestHadoop2ClusterManagerUtil.getNodeHostnamesFromCluster(
         TestHadoop2ClusterManagerUtil.CLUSTER_NODES_ENDPOINT,
         worker.new MultipleWorkersOneLost(), conf, ClusterType.HADOOP2_CLUSTER_MANAGER);
 
     assertTrue(nodeHostnames.size() == 1, "Should only have one node");
-    assertTrue(nodeHostnames.get(0).equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_2), "Wrong nodes data");
+    assertTrue(nodeHostnames.get(0).nodeUrl.equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_2), "Wrong nodes data");
   }
 
   @Test
@@ -187,24 +188,11 @@ public class TestHadoop2ClusterManager
   public void testUnhealthyNodeCluster_unhealthy()
       throws IOException
   {
-    final List<String> nodeHostnames = TestHadoop2ClusterManagerUtil.getNodeHostnamesFromCluster(
+    final List<ClusterNode> nodeHostnames = TestHadoop2ClusterManagerUtil.getNodeHostnamesFromCluster(
         TestHadoop2ClusterManagerUtil.CLUSTER_NODES_ENDPOINT,
         worker.new MultipleWorkersOneUnhealthy(), conf, ClusterType.HADOOP2_CLUSTER_MANAGER);
 
     assertTrue(nodeHostnames.size() == 1, "Should only have one node");
-    assertTrue(nodeHostnames.get(0).equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_2), "Wrong nodes data");
-  }
-
-  @Test
-  public void testClusterIndex()
-      throws IOException
-  {
-    final List<String> nodeHostnames = TestHadoop2ClusterManagerUtil.getNodeHostnamesFromCluster(
-        TestHadoop2ClusterManagerUtil.CLUSTER_NODES_ENDPOINT,
-        worker.new MultipleWorkersOneNew(), conf, ClusterType.HADOOP2_CLUSTER_MANAGER);
-    ClusterManager manager = TestHadoop2ClusterManagerUtil.getClusterManagerInstance(ClusterType.HADOOP2_CLUSTER_MANAGER, conf);
-    int index = manager.getNodeIndex(nodeHostnames.size(), "1");
-
-    assertTrue(index == 1, "Consistent Hasing logic returned wrong node index");
+    assertTrue(nodeHostnames.get(0).nodeUrl.equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_2), "Wrong nodes data");
   }
 }

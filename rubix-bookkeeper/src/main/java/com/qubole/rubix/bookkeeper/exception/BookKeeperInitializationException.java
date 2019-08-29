@@ -10,29 +10,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-package com.qubole.rubix.core;
 
-/**
- * Created by Abhishek on 6/13/18.
- */
-public class ClusterManagerInitilizationException extends Exception
+package com.qubole.rubix.bookkeeper.exception;
+
+public class BookKeeperInitializationException extends Exception
 {
-  public ClusterManagerInitilizationException()
+  public BookKeeperInitializationException()
   {
     super();
   }
 
-  public ClusterManagerInitilizationException(String message)
+  public BookKeeperInitializationException(String message)
   {
     super(message);
   }
 
-  public ClusterManagerInitilizationException(Throwable cause)
+  public BookKeeperInitializationException(Throwable cause)
   {
     super(cause);
   }
 
-  public ClusterManagerInitilizationException(String message, Throwable cause)
+  public BookKeeperInitializationException(String message, Throwable cause)
   {
     super(message, cause);
   }
