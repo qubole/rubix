@@ -14,7 +14,7 @@ upload-coverage-results() {
     echo "=== Running tests with coverage ==="
     # "cobertura-integration-test" goal needed for shading JARs
     # if run on CI, integration tests will have been run before this
-    mvn cobertura:cobertura-integration-test -Pno-integration-tests
+    mvn cobertura:cobertura-integration-test
     echo "=== Uploading code coverage results to Codecov ==="
     bash <(curl -s https://codecov.io/bash)
 }

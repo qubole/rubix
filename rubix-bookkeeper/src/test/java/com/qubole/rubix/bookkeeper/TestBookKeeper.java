@@ -14,38 +14,43 @@ package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.testing.FakeTicker;
+import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
+import com.qubole.rubix.bookkeeper.exception.CoordinatorInitializationException;
 import com.qubole.rubix.bookkeeper.utils.DiskUtils;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.common.utils.DataGen;
 import com.qubole.rubix.common.utils.TestUtil;
-import com.qubole.rubix.core.ClusterManagerInitilizationException;
-import com.qubole.rubix.core.utils.DummyClusterManager;
-import com.qubole.rubix.hadoop2.Hadoop2ClusterManager;
-import com.qubole.rubix.presto.PrestoClusterManager;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
+import com.qubole.rubix.spi.thrift.ClusterNode;
 import com.qubole.rubix.spi.thrift.FileInfo;
+import com.qubole.rubix.spi.thrift.NodeState;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.thrift.shaded.TException;
+import org.mockito.Mockito;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 
 /**
  * Created by Abhishek on 6/15/18.
@@ -72,7 +77,7 @@ public class TestBookKeeper
   private BookKeeper bookKeeper;
 
   @BeforeMethod
-  public void setUp() throws IOException
+  public void setUp() throws IOException, BookKeeperInitializationException
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     CacheConfig.setBlockSize(conf, TEST_BLOCK_SIZE);
@@ -82,7 +87,6 @@ public class TestBookKeeper
     metrics = new MetricRegistry();
     bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
     bookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics);
-    bookKeeper.clusterManager = null;
   }
 
   @AfterMethod
@@ -92,16 +96,6 @@ public class TestBookKeeper
 
     bookKeeperMetrics.close();
     conf.clear();
-  }
-
-  @Test
-  public void testGetDummyClusterManagerValidInstance() throws Exception
-  {
-    ClusterType type = ClusterType.TEST_CLUSTER_MANAGER;
-    ClusterManager manager = bookKeeper.getClusterManagerInstance(type, conf);
-
-    assertTrue(manager instanceof DummyClusterManager, " Didn't initialize the correct cluster manager class." +
-        " Expected : " + DummyClusterManager.class + " Got : " + manager.getClass());
   }
 
   @Test
@@ -169,53 +163,6 @@ public class TestBookKeeper
 
     localFileInputStream.close();
     backendFileInputStream.close();
-  }
-
-  @Test(expectedExceptions = ClusterManagerInitilizationException.class)
-  public void testGetDummyClusterManagerInValidInstance() throws Exception
-  {
-    ClusterType type = ClusterType.TEST_CLUSTER_MANAGER;
-    CacheConfig.setDummyClusterManager(conf, TEST_DNE_CLUSTER_MANAGER);
-
-    ClusterManager manager = bookKeeper.getClusterManagerInstance(type, conf);
-  }
-
-  @Test
-  public void testGetHadoop2ClusterManagerValidInstance() throws Exception
-  {
-    ClusterType type = ClusterType.HADOOP2_CLUSTER_MANAGER;
-    ClusterManager manager = bookKeeper.getClusterManagerInstance(type, conf);
-
-    assertTrue(manager instanceof Hadoop2ClusterManager, " Didn't initialize the correct cluster manager class." +
-        " Expected : " + Hadoop2ClusterManager.class + " Got : " + manager.getClass());
-  }
-
-  @Test(expectedExceptions = ClusterManagerInitilizationException.class)
-  public void testGetHadoop2ClusterManagerInValidInstance() throws Exception
-  {
-    ClusterType type = ClusterType.HADOOP2_CLUSTER_MANAGER;
-    CacheConfig.setHadoopClusterManager(conf, TEST_DNE_CLUSTER_MANAGER);
-
-    ClusterManager manager = bookKeeper.getClusterManagerInstance(type, conf);
-  }
-
-  @Test
-  public void testGetPrestoClusterManagerValidInstance() throws Exception
-  {
-    ClusterType type = ClusterType.PRESTO_CLUSTER_MANAGER;
-    ClusterManager manager = bookKeeper.getClusterManagerInstance(type, conf);
-
-    assertTrue(manager instanceof PrestoClusterManager, " Didn't initialize the correct cluster manager class." +
-        " Expected : " + PrestoClusterManager.class + " Got : " + manager.getClass());
-  }
-
-  @Test(expectedExceptions = ClusterManagerInitilizationException.class)
-  public void testGetPrestoClusterManagerInValidInstance() throws Exception
-  {
-    ClusterType type = ClusterType.PRESTO_CLUSTER_MANAGER;
-    CacheConfig.setPrestoClusterManager(conf, TEST_DNE_CLUSTER_MANAGER);
-
-    ClusterManager manager = bookKeeper.getClusterManagerInstance(type, conf);
   }
 
   @Test
@@ -388,21 +335,80 @@ public class TestBookKeeper
    * @throws TException when file metadata cannot be fetched or refreshed.
    */
   @Test
-  public void verifyNonlocalRequestMetricIsReported() throws TException
+  public void verifyNonlocalRequestMetricIsReported() throws TException, BookKeeperInitializationException, IOException
   {
     final long totalRequests = TEST_END_BLOCK - TEST_START_BLOCK;
 
-    assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.NONLOCAL_REQUEST_COUNT.getMetricName()).getCount(), 0);
-    assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.CACHE_REQUEST_COUNT.getMetricName()).getCount(), 0);
+    metrics = new MetricRegistry();
+    bookKeeperMetrics.close();
+    try (BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, metrics)) {
+      CoordinatorBookKeeper coordinatorBookKeeper = new MockCoordinatorBookkeeper(conf, bookKeeperMetrics);
+      final CoordinatorBookKeeper spyBookKeeper = Mockito.spy(coordinatorBookKeeper);
 
-    CacheStatusRequest request = new CacheStatusRequest(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
-        TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER_MULTINODE.ordinal());
-    request.setIncrMetrics(true);
+      assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.NONLOCAL_REQUEST_COUNT.getMetricName()).getCount(), 0);
+      assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.CACHE_REQUEST_COUNT.getMetricName()).getCount(), 0);
 
-    bookKeeper.getCacheStatus(request);
+      try {
+        Mockito.when(spyBookKeeper.getClusterManagerInstance(ClusterType.TEST_CLUSTER_MANAGER, conf)).thenReturn(
+            new ClusterManager() {
+              @Override
+              public List<ClusterNode> getNodes()
+              {
+                List<ClusterNode> nodes = new ArrayList<>();
+                String hostName = "";
+                try {
+                  hostName = InetAddress.getLocalHost().getCanonicalHostName();
+                }
+                catch (UnknownHostException e) {
+                  hostName = "localhost";
+                }
+
+                nodes.add(new ClusterNode((hostName + "_copy1"), NodeState.ACTIVE));
+                nodes.add(new ClusterNode((hostName + "_copy2"), NodeState.ACTIVE));
+                return nodes;
+              }
+            });
+      }
+      catch (CoordinatorInitializationException ex) {
+        fail("Not able to initialize Cluster Manager");
+      }
+
+      CacheStatusRequest request = new CacheStatusRequest(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
+          TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER_MULTINODE.ordinal());
+      request.setIncrMetrics(true);
+      spyBookKeeper.getCacheStatus(request);
+    }
 
     assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.NONLOCAL_REQUEST_COUNT.getMetricName()).getCount(), totalRequests);
     assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.CACHE_REQUEST_COUNT.getMetricName()).getCount(), 0);
+  }
+
+  private class MockCoordinatorBookkeeper extends CoordinatorBookKeeper
+  {
+    public MockCoordinatorBookkeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics) throws BookKeeperInitializationException
+    {
+      super(conf, bookKeeperMetrics);
+    }
+
+    @Override
+    protected ClusterManager getClusterManager()
+    {
+      try {
+        initializeClusterManager();
+      }
+      catch (CoordinatorInitializationException ex) {
+      }
+
+      return this.clusterManager;
+    }
+
+    @Override
+    protected void initializeClusterManager() throws CoordinatorInitializationException
+    {
+      ClusterManager manager = getClusterManagerInstance(ClusterType.TEST_CLUSTER_MANAGER, conf);
+      manager.initialize(conf);
+      this.clusterManager = manager;
+    }
   }
 
   /**
@@ -411,7 +417,7 @@ public class TestBookKeeper
    * @throws IOException if an I/O error occurs when interacting with the cache.
    */
   @Test
-  public void verifyCacheSizeMetricIsReported() throws IOException, TException
+  public void verifyCacheSizeMetricIsReported() throws IOException, TException, BookKeeperInitializationException
   {
     final String remotePathWithScheme = "file://" + TEST_REMOTE_PATH;
     final int readOffset = 0;
@@ -432,10 +438,10 @@ public class TestBookKeeper
    * Verify that the metric representing total cache evictions is correctly registered & incremented.
    *
    * @throws TException when file metadata cannot be fetched or refreshed.
-   * @throws FileNotFoundException when cache directories cannot be created.
+   * @throws BookKeeperInitializationException when cache directories cannot be created.
    */
   @Test
-  public void verifyCacheExpiryMetricIsReported() throws TException, IOException
+  public void verifyCacheEvictionMetricIsReported() throws TException, BookKeeperInitializationException, IOException
   {
     final FakeTicker ticker = new FakeTicker();
     CacheConfig.setCacheDataExpirationAfterWrite(conf, 1000);

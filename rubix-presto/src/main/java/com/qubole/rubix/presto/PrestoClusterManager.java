@@ -17,12 +17,13 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import com.qubole.rubix.common.utils.ClusterUtil;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
+import com.qubole.rubix.spi.thrift.ClusterNode;
+import com.qubole.rubix.spi.thrift.NodeState;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -36,11 +37,9 @@ import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
-import java.util.Collections;
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -51,10 +50,9 @@ import java.util.concurrent.TimeUnit;
  */
 public class PrestoClusterManager extends ClusterManager
 {
-  private boolean isMaster = true;
   private int serverPort = 8081;
   private String serverAddress = "localhost";
-  static LoadingCache<String, List<String>> nodesCache;
+  static LoadingCache<String, List<ClusterNode>> nodesCache;
 
   private Log log = LogFactory.getLog(PrestoClusterManager.class);
 
@@ -72,18 +70,12 @@ public class PrestoClusterManager extends ClusterManager
     ExecutorService executor = Executors.newSingleThreadExecutor();
     nodesCache = CacheBuilder.newBuilder()
         .refreshAfterWrite(getNodeRefreshTime(), TimeUnit.SECONDS)
-        .build(CacheLoader.asyncReloading(new CacheLoader<String, List<String>>()
+        .build(CacheLoader.asyncReloading(new CacheLoader<String, List<ClusterNode>>()
         {
           @Override
-          public List<String> load(String s)
+          public List<ClusterNode> load(String s)
               throws Exception
           {
-            if (!isMaster) {
-              // First time all nodes start assuming themselves as master and down the line figure out their role
-              // Next time onwards, only master will be fetching the list of nodes
-              return ImmutableList.of();
-            }
-
             try {
               URL allNodesRequest = getNodeUrl();
               URL failedNodesRequest = getFailedNodeUrl();
@@ -98,7 +90,6 @@ public class PrestoClusterManager extends ClusterManager
               StringBuffer failedResponse = new StringBuffer();
               try {
                 if (allNodesResponseCode == HttpURLConnection.HTTP_OK) {
-                  isMaster = true;
                   BufferedReader in = new BufferedReader(new InputStreamReader(allHttpCon.getInputStream()));
                   String inputLine = "";
                   try {
@@ -115,7 +106,6 @@ public class PrestoClusterManager extends ClusterManager
                 }
                 else {
                   log.info(String.format("v1/node failed with code: setting this node as worker "));
-                  isMaster = false;
                   return ImmutableList.of();
                 }
               }
@@ -165,7 +155,7 @@ public class PrestoClusterManager extends ClusterManager
               if (allNodes.isEmpty()) {
                 // Empty result set => server up and only master node running, return localhost has the only node
                 // Do not need to consider failed nodes list as 1node cluster and server is up since it replied to allNodesRequest
-                return ImmutableList.of(InetAddress.getLocalHost().getHostAddress());
+                return ImmutableList.of(new ClusterNode(InetAddress.getLocalHost().getHostAddress(), NodeState.ACTIVE));
               }
 
               if (failedNodes.isEmpty()) {
@@ -175,18 +165,17 @@ public class PrestoClusterManager extends ClusterManager
               // keep only the healthy nodes
               allNodes.removeAll(failedNodes);
 
-              Set<String> hosts = new HashSet<String>();
+              List<ClusterNode> hosts = new ArrayList<>();
 
               for (Stats node : allNodes) {
-                hosts.add(node.getUri().getHost());
+                hosts.add(new ClusterNode(node.getUri().getHost(), NodeState.ACTIVE));
               }
               if (hosts.isEmpty()) {
                 // case of master only cluster
-                hosts.add(InetAddress.getLocalHost().getHostAddress());
+                hosts.add(new ClusterNode(InetAddress.getLocalHost().getHostAddress(), NodeState.ACTIVE));
               }
-              List<String> hostList = Lists.newArrayList(hosts.toArray(new String[0]));
-              Collections.sort(hostList);
-              return hostList;
+
+              return hosts;
             }
             catch (IOException e) {
               throw Throwables.propagate(e);
@@ -195,21 +184,12 @@ public class PrestoClusterManager extends ClusterManager
         }, executor));
   }
 
-  @Override
-  public boolean isMaster()
-      throws ExecutionException
-  {
-    // issue get on nodesSupplier to ensure that isMaster is set correctly
-    nodesCache.get("nodeList");
-    return isMaster;
-  }
-
   /*
    * This returns list of worker nodes when there are worker nodes in the cluster
    * If it is a single node cluster, it will return localhost information
    */
   @Override
-  public List<String> getNodes()
+  public List<ClusterNode> getNodes()
   {
     try {
       return nodesCache.get("nodeList");
@@ -218,18 +198,6 @@ public class PrestoClusterManager extends ClusterManager
       log.info("Error fetching node list : ", e);
     }
     return null;
-  }
-
-  @Override
-  public Integer getNextRunningNodeIndex(int startIndex)
-  {
-    return startIndex;
-  }
-
-  @Override
-  public Integer getPreviousRunningNodeIndex(int startIndex)
-  {
-    return startIndex;
   }
 
   @Override

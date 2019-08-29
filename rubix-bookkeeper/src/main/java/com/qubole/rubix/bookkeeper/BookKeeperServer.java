@@ -12,12 +12,14 @@
  */
 package com.qubole.rubix.bookkeeper;
 
+import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.jvm.CachedThreadStatesGaugeSet;
 import com.codahale.metrics.jvm.GarbageCollectorMetricSet;
 import com.codahale.metrics.jvm.MemoryUsageGaugeSet;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
+import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.thrift.BookKeeperService;
@@ -33,7 +35,6 @@ import org.apache.thrift.shaded.transport.TServerSocket;
 import org.apache.thrift.shaded.transport.TServerTransport;
 import org.apache.thrift.shaded.transport.TTransportException;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
@@ -45,7 +46,6 @@ import static com.qubole.rubix.spi.CacheConfig.getServerPort;
  */
 public class BookKeeperServer extends Configured implements Tool
 {
-  public BookKeeper bookKeeper;
   public BookKeeperService.Processor processor;
 
   // Registry for gathering & storing necessary metrics
@@ -84,24 +84,38 @@ public class BookKeeperServer extends Configured implements Tool
 
   public void startServer(Configuration conf, MetricRegistry metricsRegistry)
   {
-    metrics = metricsRegistry;
-    bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
-
+    BookKeeper localBookKeeper;
+    this.metrics = metricsRegistry;
+    this.bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
     registerMetrics(conf);
 
     try {
       if (CacheConfig.isOnMaster(conf)) {
-        bookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics);
+        localBookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics);
       }
       else {
-        bookKeeper = new WorkerBookKeeper(conf, bookKeeperMetrics);
+        localBookKeeper = new WorkerBookKeeper(conf, bookKeeperMetrics);
       }
     }
-    catch (FileNotFoundException e) {
-      log.error("Cache directories could not be created", e);
+    catch (BookKeeperInitializationException e) {
+      log.error("Could not start BookKeeper daemon. Exception: ", e);
       return;
     }
 
+    startThriftServer(conf, localBookKeeper);
+  }
+
+  void startServer(Configuration conf, BookKeeper bookKeeper, BookKeeperMetrics bookKeeperMetrics)
+  {
+    this.metrics = bookKeeperMetrics.getMetricsRegistry();
+    this.bookKeeperMetrics = bookKeeperMetrics;
+    registerMetrics(conf);
+
+    startThriftServer(conf, bookKeeper);
+  }
+
+  private void startThriftServer(Configuration conf, BookKeeper bookKeeper)
+  {
     processor = new BookKeeperService.Processor(bookKeeper);
     log.info("Starting BookKeeperServer on port " + getServerPort(conf));
     try {
@@ -138,11 +152,13 @@ public class BookKeeperServer extends Configured implements Tool
       log.error("Metrics reporters could not be closed", e);
     }
     server.stop();
+    log.debug("Stopped BookKeeperServer");
   }
 
   protected void removeMetrics()
   {
-    metrics.removeMatching(bookKeeperMetrics.getMetricsFilter());
+    MetricFilter filter = bookKeeperMetrics.getMetricsFilter();
+    metrics.removeMatching(filter);
   }
 
   @VisibleForTesting
