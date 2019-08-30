@@ -19,10 +19,10 @@ git fetch upstream
 
 * Run tests in the RubiX root directory.
 ```
-./mvnw test
+mvn test
 ```
 
 * To run integration tests as well:
 ```
-./mvnw integration-test -DrunITs
+./mvnw integration-test -Pintegration-tests
 ```

@@ -4,24 +4,45 @@
 [![codecov](https://codecov.io/gh/qubole/rubix/branch/master/graph/badge.svg)](https://codecov.io/gh/qubole/rubix)
 
 
-RubiX is a lightweight data caching framework for use with Hadoop-based data engines. 
+RubiX is a lightweight data caching framework for use with Hadoop-based data engines. RubiX uses local disks to provide
+the best I/O bandwidth to the Big Data Engines. RubiX is useful in shared storage architectures where the data
+execution engine is separate from storage. For example, on public clouds like AWS or Microsoft Azure, data is stored
+in cloud store and the engine accesses the data over a network. Similarly in data centers [Presto](https://prestosql.io)
+runs on a separate cluster from HDFS and accesses data over the network.
+
+RubiX can be extended to support any engine that accesses data in cloud stores using Hadoop FileSystem interface via plugins.
+There are plugins to access data on AWS S3, Microsoft Azure Blob Store, Google Cloud Storage and HDFS. RubiX can be extended to be
+used with any other storage systems including other cloud stores.
 
 Check the [User and Developer Manual](https://rubix.readthedocs.io/en/latest/index.html) for more information on use cases and getting started with RubiX. 
 
 ## Requirements
 
 * Java 7
+
+For running integration tests:
 * Docker (Engine: 18.06.0+) 
+  * [Getting Started with Docker](https://docs.docker.com/get-started/)
+  * If the above guide does not work, check out 
+  [A complete one-by-one guide to install Docker on your Mac OS using Homebrew](https://medium.com/@yutafujii_59175/a-complete-one-by-one-guide-to-install-docker-on-your-mac-os-using-homebrew-e818eb4cfc3)
 
 ## Building RubiX
 
-To build the project, use the provided Maven wrapper:
+To build the project:
 
-    ./mvnw clean install
+    mvn clean install
 
-To run integration tests:
+To run integration tests, use the following profiles:
+* `-Psingle-node-integration-tests`: single-node tests 
+* `-Pmulti-node-integration-tests`: multi-node tests
+    * requires Docker & Maven wrapper `./mvnw`
+* `-Pintegration-tests`: all integration tests
+    * requires Docker & Maven wrapper `./mvnw`
+    
+Example:
 
-    ./mvnw clean install -DrunITs
+    mvn clean install -Psingle-node-integration-tests
+    ./mvnw clean install -Pintegration-tests
 
 ## Supported Engines and Cloud Stores
 
@@ -47,4 +68,4 @@ We will add you to the slack channel.
 - [RubiX Introduction](https://www.qubole.com/blog/rubix-fast-cache-access-for-big-data-analytics-on-cloud-storage/)
 - [RubiX on EMR](https://www.qubole.com/blog/caching-emr-using-rubix-performance-benchmark-benefits/)
 - [Spark with RubiX](https://www.qubole.com/blog/increase-apache-spark-performance-with-rubix-distributed-cache/)
-
+- [Presto Scheduler for RubiX Improves Cache Reads](https://www.qubole.com/blog/presto-rubix-scheduler-improves-cache-reads/)

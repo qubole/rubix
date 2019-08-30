@@ -5,9 +5,20 @@ read the [Robot Framework user guide](http://robotframework.org/robotframework/l
 
 ### Quick Notes
 
-* To run tests with a specific tag: `./mvnw ... -Dincludes=<comma-separated list of tags>`
-* To run a specific test: `./mvnw ... -Dtests=<test name with spaces removed>` (case-insensitive)
-* Logs will be generated in `rubix-tests/src/target/integration-test-logs`.
+1. You can control which tests are executed using the following Maven properties:
+    * By tag: `mvn ... -Dincludes=<comma-separated list of tags>`
+    * By name: `mvn ... -Dtests=<test name with spaces removed>` (case-insensitive)
+        * Example: "Simple non-local test" becomes "-Dtests=simplenon-localtest"
+    * By suite: `mvn ... -Dsuites=<comma-separated list of suites>`
+        * Every .robot file counts as a test suite, as well as the test folder structure
+        * Ex: in `rubix-tests/src/test/robotframework`
+            * `./single-node/CacheRemoval.robot`
+            * `./single-node/AsyncDownload.robot`
+                * `… -Dsuites=CacheRemoval` runs the tests in CacheRemoval.robot
+                * `… -Dsuites=single-node` runs all the tests in that folder (CacheRemoval.robot AND AsyncDownload.robot)
+
+
+2. Logs for single-node integration tests are generated in `rubix-tests/src/target/integration-test-logs`.
 
 ## Test Suites
 

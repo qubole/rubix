@@ -2,7 +2,7 @@
 
 MAVEN_CMD="mvn $@"
 
-if [[ "$*" == *-Pintegration-tests* ]]
+if [[ "$*" == *-P*integration-tests* ]]
 then
     export RUBIX_DOCKER_NETWORK_NAME=network-rubix-build
     source ./rubix_setup_build.sh

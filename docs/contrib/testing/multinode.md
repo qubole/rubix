@@ -5,14 +5,20 @@ Since RubiX is used as part of a cluster of nodes, we also need a way to run tes
 To accomplish this, we run a set of interconnected Docker containers to mimic a cluster and its state,
 and Robot Framework to execute tests with this cluster.
 
+## Debugging
+* To check the state of cluster nodes after running a test:
+  1. Comment the **\[Teardown\]** line for the test.
+  2. Run the test.
+  3. In your shell, `docker exec -it <container-name> /bin/bash` to run a shell on the node you want to check.
+  * Logs for daemons are available in `/home/logs`.    
+  * **NOTE** this should only be done for a single test at a time. Keeping the cluster nodes
+      alive for multiple tests will likely cause unwanted behaviour, such as incorrect cache interactions.
+
 ## Robot Framework
 
 When creating multi-node integration tests:
-* use the **Multi-node test setup**/**Multi-node test teardown** keywords for setup/teardown. 
-* test data must be generated in `/tmp/rubix/tests/`, so it is available for use by the cluster nodes. 
-* to check the state of cluster nodes after running a test, comment the **\[Teardown\]** line
-  and use `docker exec -it <container-name> /bin/bash` to run a shell on the node you want to check.
-    * Logs for daemons will be available in `/home/logs` on the node.
+1. Use the **Multi-node test setup**/**Multi-node test teardown** keywords for setup/teardown. 
+2. Test data must be generated in `/tmp/rubix/tests/`, so it is available for use by the cluster nodes.
 
 ## Docker
 
