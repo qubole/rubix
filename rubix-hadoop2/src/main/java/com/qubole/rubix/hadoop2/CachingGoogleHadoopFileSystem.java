@@ -16,8 +16,6 @@ package com.qubole.rubix.hadoop2;
 import com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem;
 import com.qubole.rubix.core.CachingFileSystem;
 import com.qubole.rubix.spi.ClusterType;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
 import java.io.IOException;
@@ -28,7 +26,6 @@ import java.net.URI;
  */
 public class CachingGoogleHadoopFileSystem extends CachingFileSystem<GoogleHadoopFileSystem>
 {
-  private static final Log LOG = LogFactory.getLog(CachingGoogleHadoopFileSystem.class);
   private static final String SCHEME = "gs";
 
   public CachingGoogleHadoopFileSystem() throws IOException
