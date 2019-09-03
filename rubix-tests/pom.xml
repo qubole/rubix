@@ -3,7 +3,7 @@
     <parent>
         <groupId>com.qubole.rubix</groupId>
         <artifactId>rubix-root</artifactId>
-        <version>0.3.4</version>
+        <version>0.3.5</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -20,14 +20,14 @@
             <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-core</artifactId>
             <scope>test</scope>
-            <version>0.3.4</version>
+            <version>0.3.5</version>
         </dependency>
         <dependency>
             <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-core</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
-            <version>0.3.4</version>
+            <version>0.3.5</version>
         </dependency>
         <dependency>
             <groupId>com.qubole.rubix</groupId>
