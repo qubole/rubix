@@ -10,35 +10,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-package com.qubole.rubix.hadoop2;
 
+package com.qubole.rubix.presto;
+
+import com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem;
 import com.qubole.rubix.core.CachingFileSystem;
 import com.qubole.rubix.spi.ClusterType;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 
 import java.io.IOException;
 import java.net.URI;
 
 /**
- * Created by Abhishek on 12/19/17.
+ * Created by Kamesh Vankayala 06/19/2019
  */
-
-public class CachingNativeAzureFileSystem extends CachingFileSystem<NativeAzureFileSystem>
+public class CachingPrestoGoogleHadoopFileSystem extends CachingFileSystem<GoogleHadoopFileSystem>
 {
-  private static final Log LOG = LogFactory.getLog(CachingNativeAzureFileSystem.class);
-  private static final String SCHEME = "wasb";
+  private static final String SCHEME = "gs";
 
-  public CachingNativeAzureFileSystem() throws IOException
+  public CachingPrestoGoogleHadoopFileSystem()
   {
     super();
   }
 
+  @Override
   public void initialize(URI uri, Configuration conf) throws IOException
   {
-    setClusterType(ClusterType.HADOOP2_CLUSTER_MANAGER);
+    setClusterType(ClusterType.PRESTO_CLUSTER_MANAGER);
     super.initialize(uri, conf);
   }
 

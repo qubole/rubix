@@ -16,11 +16,10 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.Lists;
 import com.qubole.rubix.bookkeeper.BookKeeper;
 import com.qubole.rubix.bookkeeper.CoordinatorBookKeeper;
+import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.common.utils.TestUtil;
-import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
-import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.Location;
@@ -28,13 +27,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.shaded.TException;
-import org.apache.thrift.shaded.transport.TSocket;
-import org.mockito.ArgumentMatchers;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -82,10 +78,10 @@ public class TestCachingValidator
    * Verify that the behavior of the BookKeeper caching flow is correct.
    *
    * @throws TException when file metadata cannot be fetched or refreshed.
-   * @throws FileNotFoundException when cache directories cannot be created.
+   * @throws BookKeeperInitializationException when cache directories cannot be created.
    */
   @Test
-  public void testValidateCachingBehavior() throws TException, IOException
+  public void testValidateCachingBehavior() throws TException, BookKeeperInitializationException, IOException
   {
     try (BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, new MetricRegistry())) {
       checkValidator(new CoordinatorBookKeeper(conf, bookKeeperMetrics), true);
@@ -168,10 +164,10 @@ public class TestCachingValidator
    * Verify that cache metrics are not affected during cache behavior validation.
    *
    * @throws TException when file metadata cannot be fetched or refreshed.
-   * @throws FileNotFoundException when cache directories cannot be created.
+   * @throws BookKeeperInitializationException when cache directories cannot be created.
    */
   @Test
-  public void testValidateCachingBehavior_verifyOtherMetricsUnaffected() throws TException, IOException
+  public void testValidateCachingBehavior_verifyOtherMetricsUnaffected() throws TException, BookKeeperInitializationException, IOException
   {
     final MetricRegistry metrics = new MetricRegistry();
 
@@ -195,12 +191,6 @@ public class TestCachingValidator
    */
   private void checkValidator(BookKeeper bookKeeper, boolean expectedResult) throws TException
   {
-    final BookKeeperFactory bookKeeperFactory = mock(BookKeeperFactory.class);
-    when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
-        new RetryingBookkeeperClient(
-            new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getServerConnectTimeout(conf)),
-            CacheConfig.getMaxRetries(conf)));
-
     CachingValidator validator = new CachingValidator(conf, bookKeeper, Executors.newSingleThreadScheduledExecutor());
     assertEquals(validator.validateCachingBehavior(), expectedResult);
   }
