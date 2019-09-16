@@ -35,13 +35,10 @@ worker_str = """{}:
 no_of_workers =  sys.argv[1]
 path = sys.argv[2]
 cluster_node_ips_path = sys.argv[3]
-docker_compose_yml = open(path+'/docker/docker-compose.yml',"w")
-cluster_node_ips = open(cluster_node_ips_path,"w")
-docker_compose_yml.write(master_str)
-for i in range(0, int(no_of_workers)):
-    service_name = "  rubix-worker-{}".format(str(i + 1))
-    ipv_address = "172.18.8.{}".format(str(i + 1))
-    cluster_node_ips.write(ipv_address + "\n")
-    docker_compose_yml.write(worker_str.format(service_name, ipv_address+"\n"))
-docker_compose_yml.close()
-cluster_node_ips.close()
+with open(path+'/docker/docker-compose.yml',"w") as docker_compose_yml, open(cluster_node_ips_path,"w") as cluster_node_ips:
+    docker_compose_yml.write(master_str)
+    for i in range(0, int(no_of_workers)):
+        service_name = "  rubix-worker-{}".format(str(i + 1))
+        ipv_address = "172.18.8.{}".format(str(i + 1))
+        cluster_node_ips.write(ipv_address + "\n")
+        docker_compose_yml.write(worker_str.format(service_name, ipv_address+"\n"))
