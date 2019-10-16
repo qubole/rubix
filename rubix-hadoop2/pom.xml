@@ -3,7 +3,7 @@
     <parent>
         <groupId>com.qubole.rubix</groupId>
         <artifactId>rubix-root</artifactId>
-        <version>0.3.4</version>
+        <version>0.3.6-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -14,6 +14,14 @@
         <main.basedir>${project.parent.basedir}</main.basedir>
     </properties>
     <dependencies>
+
+        <dependency>
+            <groupId>com.google.cloud.bigdataoss</groupId>
+            <!-- Cloud Storage: -->
+            <artifactId>gcs-connector</artifactId>
+            <version>hadoop2-1.9.17</version>
+            <scope>provided</scope>
+        </dependency>
 
         <dependency>
             <groupId>org.apache.hadoop</groupId>

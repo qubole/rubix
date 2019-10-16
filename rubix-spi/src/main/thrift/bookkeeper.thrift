@@ -4,15 +4,15 @@ typedef i64 long
 typedef i32 int
 
 enum Location {
-CACHED,
-LOCAL,
-NON_LOCAL,
-UNKNOWN
+    CACHED,
+    LOCAL,
+    NON_LOCAL,
+    UNKNOWN
 }
 
 enum NodeState {
-ACTIVE,
-INACTIVE
+    ACTIVE,
+    INACTIVE
 }
 
 struct ClusterNode {
@@ -26,8 +26,8 @@ struct BlockLocation {
 }
 
 struct FileInfo {
-		1: required long fileSize;
-		2: required long lastModified;
+	1: required long fileSize;
+	2: required long lastModified;
 }
 
 struct HeartbeatStatus {
@@ -36,20 +36,20 @@ struct HeartbeatStatus {
 }
 
 struct CacheStatusRequest {
-		1: required string remotePath;
-		2: required long fileLength;
-		3: required long lastModified;
-		4: required long startBlock;
-		5: required long endBlock;
-		6: optional bool incrMetrics = false;
+	1: required string remotePath;
+	2: required long fileLength;
+	3: required long lastModified;
+	4: required long startBlock;
+	5: required long endBlock;
+	6: optional bool incrMetrics = false;
 }
 
 struct ReadDataRequest {
-        1: required string remotePath;
-        2: required long readStart;
-        3: required long readLength;
-        4: required long fileSize;
-        5: required long lastModified;
+    1: required string remotePath;
+    2: required long readStart;
+    3: required long readLength;
+    4: required long fileSize;
+    5: required long lastModified;
 }
 
 service BookKeeperService

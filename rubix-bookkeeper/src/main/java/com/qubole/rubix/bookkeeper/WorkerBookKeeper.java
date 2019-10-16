@@ -45,10 +45,8 @@ public class WorkerBookKeeper extends BookKeeper
   private LoadingCache<String, List<ClusterNode>> nodeStateMap;
   private HeartbeatService heartbeatService;
   private BookKeeperFactory bookKeeperFactory;
-  private RetryingBookkeeperClient coordinatorClient;
   // The hostname of the master node.
   private String masterHostname;
-  private int clusterType;
   RetryingBookkeeperClient client;
 
   public WorkerBookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics) throws BookKeeperInitializationException
@@ -68,7 +66,6 @@ public class WorkerBookKeeper extends BookKeeper
     super(conf, bookKeeperMetrics, ticker);
     this.bookKeeperFactory = factory;
     this.masterHostname = ClusterUtil.getMasterHostname(conf);
-    this.clusterType = CacheConfig.getClusterType(conf);
 
     initializeWorker(conf, metrics, ticker, factory);
   }
@@ -137,14 +134,14 @@ public class WorkerBookKeeper extends BookKeeper
       }
       else {
         String errorMessage = String.format("Could not find nodeHostName=%s nodeHostAddress=%s among cluster nodes=%s  " +
-            "provide by master bookkeeper", nodeHostName, nodeHostAddress, nodeList);
+            "provided by master bookkeeper", nodeHostName, nodeHostAddress, nodeList);
         log.error(errorMessage);
         throw new WorkerInitializationException(errorMessage);
       }
     }
     else {
       String errorMessage = String.format("Could not find nodeHostName=%s nodeHostAddress=%s among cluster nodes=%s  " +
-              "provide by master bookkeeper", nodeHostName, nodeHostAddress, nodeList);
+              "provided by master bookkeeper", nodeHostName, nodeHostAddress, nodeList);
       log.error(errorMessage);
       throw new WorkerInitializationException(errorMessage);
     }

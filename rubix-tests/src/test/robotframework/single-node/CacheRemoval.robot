@@ -1,9 +1,9 @@
 *** Settings ***
-Documentation       RubiX Cache Removal Integration Tests
-Resource            setup.robot
-Resource            bookkeeper.robot
-Suite Setup         Create Cache Parent Directories     ${CACHE_DIR_PFX}    ${CACHE_NUM_DISKS}
-Suite Teardown      Remove Cache Parent Directories     ${CACHE_DIR_PFX}    ${CACHE_NUM_DISKS}
+Documentation   RubiX Cache Removal Integration Tests
+Resource        ..${/}shared${/}setup.robot
+Resource        ..${/}shared${/}bookkeeper.robot
+Suite Setup     Create Cache Parent Directories  ${CACHE_DIR_PFX}  ${CACHE_NUM_DISKS}
+Suite Teardown  Remove Cache Parent Directories  ${CACHE_DIR_PFX}  ${CACHE_NUM_DISKS}
 
 *** Variables ***
 # Cache settings
@@ -87,6 +87,7 @@ Test cache eviction
     ...  rubix.cache.dirsuffix=${CACHE_DIR_SFX}
     ...  rubix.cache.max.disks=${CACHE_NUM_DISKS}
     ...  rubix.cache.max.size=${CACHE_MAX_SIZE}
+    ...  rubix.network.server.connect.timeout=3000
 
     @{testFileNames} =  Generate test files  ${REMOTE_PATH}  ${FILE_LENGTH}  ${NUM_TEST_FILES}
     @{requests} =  Make similar read requests
@@ -237,6 +238,7 @@ Test cache expiry
     ...  rubix.cache.dirsuffix=${CACHE_DIR_SFX}
     ...  rubix.cache.max.disks=${CACHE_NUM_DISKS}
     ...  rubix.cache.expiration.after-write=${CACHE_EXPIRY}
+    ...  rubix.network.server.connect.timeout=3000
 
     @{testFileNames} =  Generate test files  ${REMOTE_PATH}  ${FILE_LENGTH}  ${NUM_TEST_FILES}
     @{requests} =  Make similar read requests

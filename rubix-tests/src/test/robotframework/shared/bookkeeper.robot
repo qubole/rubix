@@ -1,6 +1,7 @@
 *** Settings ***
 Library  Collections
 Library  com.qubole.rubix.client.robotframework.BookKeeperClientRFLibrary
+Library  com.qubole.rubix.client.robotframework.container.client.ContainerRequestClient
 
 *** Keywords ***
 
@@ -147,6 +148,24 @@ Concurrently execute read requests using client file system
     ${didReadAll} =  concurrently Cache Data Using Client File System  ${numThreads}  ${staggerRequests}  @{readRequests}
     SHOULD BE TRUE  ${didReadAll}
 
+Cache data for cluster node
+    [Arguments]  ${host}
+    ...          ${fileName}
+    ...          ${startBlock}
+    ...          ${endBlock}
+    ...          ${fileLength}
+    ...          ${lastModified}
+    ...          ${clusterType}
+    ${didRead} =  cache Data Using Client File System For Node
+    ...  ${host}
+    ...  ${fileName}
+    ...  ${startBlock}
+    ...  ${endBlock}
+    ...  ${fileLength}
+    ...  ${lastModified}
+    ...  ${clusterType}
+    SHOULD BE TRUE  ${didRead}
+
 Wait for cache
     [Arguments]  ${cacheDir}  ${maxWaitTime}  @{requests}
     ${didCache} =  watch Cache  ${cacheDir}  ${maxWaitTime}  @{requests}
@@ -167,6 +186,13 @@ Verify metric value
     [Documentation]  Verify that the BookKeeper server is reporting the expected metric value.
     [Arguments]  ${metricName}  ${expectedValue}
     &{metrics} =  get Cache Metrics
+    LOG MANY  &{metrics}
+    SHOULD NOT BE EMPTY  ${metrics}
+    SHOULD BE EQUAL AS NUMBERS  &{metrics}[${metricName}]  ${expectedValue}
+
+Verify metric value on node
+    [Arguments]  ${host}  ${metricName}  ${expectedValue}
+    &{metrics} =  get Cache Metrics For Node  ${host}
     LOG MANY  &{metrics}
     SHOULD NOT BE EMPTY  ${metrics}
     SHOULD BE EQUAL AS NUMBERS  &{metrics}[${metricName}]  ${expectedValue}
