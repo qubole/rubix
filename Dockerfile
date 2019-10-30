@@ -76,3 +76,7 @@ RUN set -x \
     && chmod +x /usr/local/bin/docker-compose
 
 RUN mkdir -p /media/ephemeral0
+
+RUN apt-get install -yqq python
+
+RUN apt-get -yqq install python-pip

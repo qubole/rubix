@@ -37,7 +37,7 @@ Simple non-local read test case
     [Tags]  nonlocal
     [Documentation]  A simple non-local read test
 
-    [Setup]  Multi-node test setup  ${DATADIR}
+    [Setup]  Multi-node test setup  ${DATADIR}  3
 
     Generate test files  ${FILEPREFIX}  ${FILE_LENGTH}  ${NUM_TEST_FILES}
 
@@ -58,7 +58,7 @@ Simple local read test case
     [Tags]  local
     [Documentation]  A simple local read test
 
-    [Setup]  Multi-node test setup  ${DATADIR}
+    [Setup]  Multi-node test setup  ${DATADIR}  3
 
     Generate test files  ${FILEPREFIX}  ${FILE_LENGTH}  ${NUM_TEST_FILES}
 

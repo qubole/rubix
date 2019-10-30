@@ -22,6 +22,10 @@ SCRIPT_LOG_FILE=${LOG_DIR}/bks-script.log
 HADOOP_DIR=/usr/lib/hadoop2
 HADOOP_JAR_DIR=${HADOOP_DIR}/share/hadoop/tools/lib
 
+DOCKER_COMPOSE_YML=${BASE_DIR}/docker/docker-compose.yml
+CLUSTER_NODE_IPS=/tmp/rubix/tests/cluster_node_ips
+CREATE_DOCKER_COMPOSE_PY=${BASE_DIR}/docker/create_docker_compose.py
+
 setup-log4j() {
 (cat << EOF
 
@@ -84,15 +88,18 @@ copy-jars-for-container-volume() {
 }
 
 start-cluster() {
+  numberOfWorkers=$1
+  python ${CREATE_DOCKER_COMPOSE_PY} ${numberOfWorkers} ${BASE_DIR} ${CLUSTER_NODE_IPS}
+
   copy-jars-for-container-volume
 
-  SCRIPT_DIR=$(dirname "$0")
-  docker-compose -f ${SCRIPT_DIR}/docker/docker-compose.yml up -d --build
+  docker-compose -f ${DOCKER_COMPOSE_YML} up -d --build
 }
 
 stop-cluster() {
-  SCRIPT_DIR=$(dirname "$0")
-  docker-compose -f ${SCRIPT_DIR}/docker/docker-compose.yml down -t 1
+  docker-compose -f ${DOCKER_COMPOSE_YML} down -t 1
+  rm ${DOCKER_COMPOSE_YML}
+  rm ${CLUSTER_NODE_IPS}
 }
 
 start-bks() {
@@ -139,7 +146,7 @@ cmd=$1
 case "$cmd" in
   start-bks) shift ; start-bks $@;;
   stop-bks) shift ; stop-bks $@;;
-  start-cluster) shift ; start-cluster;;
+  start-cluster) shift ; start-cluster $@;;
   stop-cluster) shift ; stop-cluster;;
 esac
 
