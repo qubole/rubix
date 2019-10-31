@@ -26,6 +26,7 @@ import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.thrift.ClusterNode;
+import com.qubole.rubix.spi.thrift.HeartbeatRequest;
 import com.qubole.rubix.spi.thrift.HeartbeatStatus;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -138,8 +139,10 @@ public class CoordinatorBookKeeper extends BookKeeper
   }
 
   @Override
-  public void handleHeartbeat(String workerHostname, HeartbeatStatus heartbeatStatus)
+  public void handleHeartbeat(HeartbeatRequest request)
   {
+    String workerHostname = request.getWorkerHostname();
+    HeartbeatStatus heartbeatStatus = request.getHeartbeatStatus();
     liveWorkerCache.put(workerHostname, true);
     log.debug("Received heartbeat from " + workerHostname);
 

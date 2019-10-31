@@ -24,6 +24,7 @@ import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.thrift.ClusterNode;
+import com.qubole.rubix.spi.thrift.HeartbeatRequest;
 import com.qubole.rubix.spi.thrift.HeartbeatStatus;
 import com.qubole.rubix.spi.thrift.NodeState;
 import org.apache.commons.logging.Log;
@@ -101,8 +102,8 @@ public class TestCoordinatorBookKeeper
 
     try (BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, metrics)) {
       final CoordinatorBookKeeper coordinatorBookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics);
-      coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER1, TEST_STATUS_ALL_VALIDATED);
-      coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER2, TEST_STATUS_ALL_VALIDATED);
+      coordinatorBookKeeper.handleHeartbeat(new HeartbeatRequest(TEST_HOSTNAME_WORKER1, TEST_STATUS_ALL_VALIDATED));
+      coordinatorBookKeeper.handleHeartbeat(new HeartbeatRequest(TEST_HOSTNAME_WORKER2, TEST_STATUS_ALL_VALIDATED));
 
       long workerCount = (long) metrics.getGauges().get(BookKeeperMetrics.HealthMetric.LIVE_WORKER_GAUGE.getMetricName()).getValue();
       long cachingValidatedCount = (long) metrics.getGauges().get(BookKeeperMetrics.HealthMetric.CACHING_VALIDATED_WORKER_GAUGE.getMetricName()).getValue();
@@ -131,8 +132,8 @@ public class TestCoordinatorBookKeeper
       final Gauge cachingValidatedWorkerGauge = metrics.getGauges().get(BookKeeperMetrics.HealthMetric.CACHING_VALIDATED_WORKER_GAUGE.getMetricName());
       final Gauge fileValidatedWorkerGauge = metrics.getGauges().get(BookKeeperMetrics.HealthMetric.FILE_VALIDATED_WORKER_GAUGE.getMetricName());
 
-      coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER1, TEST_STATUS_ALL_VALIDATED);
-      coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER2, TEST_STATUS_ALL_VALIDATED);
+      coordinatorBookKeeper.handleHeartbeat(new HeartbeatRequest(TEST_HOSTNAME_WORKER1, TEST_STATUS_ALL_VALIDATED));
+      coordinatorBookKeeper.handleHeartbeat(new HeartbeatRequest(TEST_HOSTNAME_WORKER2, TEST_STATUS_ALL_VALIDATED));
 
       long workerCount = (long) liveWorkerGauge.getValue();
       long cachingValidationCount = (long) cachingValidatedWorkerGauge.getValue();
@@ -142,7 +143,7 @@ public class TestCoordinatorBookKeeper
       assertEquals(fileValidationCount, 2, "Incorrect number of workers have been validated");
 
       ticker.advance(healthStatusExpiry, TimeUnit.MILLISECONDS);
-      coordinatorBookKeeper.handleHeartbeat(TEST_HOSTNAME_WORKER1, TEST_STATUS_ALL_VALIDATED);
+      coordinatorBookKeeper.handleHeartbeat(new HeartbeatRequest(TEST_HOSTNAME_WORKER1, TEST_STATUS_ALL_VALIDATED));
 
       workerCount = (long) liveWorkerGauge.getValue();
       cachingValidationCount = (long) cachingValidatedWorkerGauge.getValue();

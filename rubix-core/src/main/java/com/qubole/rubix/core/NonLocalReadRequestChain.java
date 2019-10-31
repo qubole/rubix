@@ -19,6 +19,7 @@ import com.qubole.rubix.spi.DataTransferClientHelper;
 import com.qubole.rubix.spi.DataTransferHeader;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
+import com.qubole.rubix.spi.thrift.SetCachedRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -210,7 +211,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
           // getCacheStatus() call required to create mdfiles before blocks are set as cached
           CacheStatusRequest request = new CacheStatusRequest(remotePath, fileSize, lastModified, startBlock, endBlock);
           bookKeeperClient.getCacheStatus(request);
-          bookKeeperClient.setAllCached(remotePath, fileSize, lastModified, startBlock, endBlock);
+          bookKeeperClient.setAllCached(new SetCachedRequest(remotePath, fileSize, lastModified, startBlock, endBlock));
         }
       }
       catch (Exception e) {

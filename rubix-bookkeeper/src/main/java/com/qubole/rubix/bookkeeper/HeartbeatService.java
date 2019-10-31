@@ -24,6 +24,7 @@ import com.qubole.rubix.common.utils.ClusterUtil;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.thrift.HeartbeatRequest;
 import com.qubole.rubix.spi.thrift.HeartbeatStatus;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -127,7 +128,7 @@ public class HeartbeatService extends AbstractScheduledService
           : new HeartbeatStatus();
 
       log.debug(String.format("Sending heartbeat to %s", masterHostname));
-      bookkeeperClient.handleHeartbeat(InetAddress.getLocalHost().getCanonicalHostName(), status);
+      bookkeeperClient.handleHeartbeat(new HeartbeatRequest(InetAddress.getLocalHost().getCanonicalHostName(), status));
     }
     catch (IOException e) {
       log.error("Could not send heartbeat", e);

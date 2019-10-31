@@ -26,7 +26,7 @@ import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import com.qubole.rubix.spi.thrift.ClusterNode;
-import com.qubole.rubix.spi.thrift.HeartbeatStatus;
+import com.qubole.rubix.spi.thrift.HeartbeatRequest;
 import com.qubole.rubix.spi.thrift.NodeState;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -166,7 +166,7 @@ public class WorkerBookKeeper extends BookKeeper
   }
 
   @Override
-  public void handleHeartbeat(String workerHostname, HeartbeatStatus request)
+  public void handleHeartbeat(HeartbeatRequest request)
   {
     throw new UnsupportedOperationException("Worker node should not handle heartbeat");
   }

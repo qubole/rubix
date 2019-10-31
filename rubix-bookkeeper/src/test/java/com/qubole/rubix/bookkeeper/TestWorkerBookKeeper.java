@@ -24,6 +24,7 @@ import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.ClusterNode;
+import com.qubole.rubix.spi.thrift.HeartbeatRequest;
 import com.qubole.rubix.spi.thrift.HeartbeatStatus;
 import com.qubole.rubix.spi.thrift.Location;
 import com.qubole.rubix.spi.thrift.NodeState;
@@ -114,7 +115,7 @@ public class TestWorkerBookKeeper
     CacheConfig.setMetricsReporters(conf, "");
     try (BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, new MetricRegistry())) {
       final WorkerBookKeeper workerBookKeeper = new WorkerBookKeeper(conf, bookKeeperMetrics);
-      workerBookKeeper.handleHeartbeat("", new HeartbeatStatus());
+      workerBookKeeper.handleHeartbeat(new HeartbeatRequest("", new HeartbeatStatus()));
     }
   }
 
