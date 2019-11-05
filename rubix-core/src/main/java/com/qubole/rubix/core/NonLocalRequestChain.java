@@ -38,7 +38,6 @@ public class NonLocalRequestChain extends ReadRequestChain
   Configuration conf;
   FileSystem remoteFileSystem;
   String remoteFilePath;
-  int clusterType;
   int blockSize;
   boolean strictMode;
   BookKeeperFactory bookKeeperFactory;
@@ -55,7 +54,7 @@ public class NonLocalRequestChain extends ReadRequestChain
   int directRead;
 
   public NonLocalRequestChain(String remoteNodeName, long fileSize, long lastModified, Configuration conf,
-                              FileSystem remoteFileSystem, String remoteFilePath, int clusterType,
+                              FileSystem remoteFileSystem, String remoteFilePath,
                               boolean strictMode, FileSystem.Statistics statistics, long startBlock,
                               long endBlock)
   {
@@ -65,7 +64,6 @@ public class NonLocalRequestChain extends ReadRequestChain
     this.remoteFilePath = remoteFilePath;
     this.fileSize = fileSize;
     this.conf = conf;
-    this.clusterType = clusterType;
     this.strictMode = strictMode;
     this.statistics = statistics;
     this.startBlockForCacheStatus = startBlock;
@@ -79,8 +77,7 @@ public class NonLocalRequestChain extends ReadRequestChain
       log.info(" Trying to getCacheStatus from : " + remoteNodeName + " for file : " + remoteFilePath
               + " StartBlock : " + startBlock + " EndBlock : " + endBlock);
 
-      CacheStatusRequest request = new CacheStatusRequest(remoteFilePath, fileSize, lastModified, startBlock,
-          endBlock, clusterType);
+      CacheStatusRequest request = new CacheStatusRequest(remoteFilePath, fileSize, lastModified, startBlock, endBlock);
       isCached = bookKeeperClient.getCacheStatus(request);
       log.info("Cache Status : " + isCached);
     }
@@ -122,7 +119,7 @@ public class NonLocalRequestChain extends ReadRequestChain
       needDirectReadRequest = false;
       if (nonLocalReadRequestChain == null) {
         nonLocalReadRequestChain = new NonLocalReadRequestChain(remoteNodeName, fileSize, lastModified, conf,
-            remoteFileSystem, remoteFilePath, clusterType, strictMode, statistics);
+            remoteFileSystem, remoteFilePath, strictMode, statistics);
       }
       nonLocalReadRequestChain.addReadRequest(readRequest);
     }
@@ -130,7 +127,7 @@ public class NonLocalRequestChain extends ReadRequestChain
       needDirectReadRequest = true;
       if (remoteFetchRequestChain == null) {
         remoteFetchRequestChain = new RemoteFetchRequestChain(remoteFilePath, remoteFileSystem, remoteNodeName,
-            conf, lastModified, fileSize, clusterType);
+            conf, lastModified, fileSize);
       }
       remoteFetchRequestChain.addReadRequest(readRequest);
     }

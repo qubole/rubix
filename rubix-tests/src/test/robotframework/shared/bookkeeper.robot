@@ -38,14 +38,12 @@ Make read request
     ...          ${endBlock}
     ...          ${fileLength}
     ...          ${lastModified}
-    ...          ${clusterType}
     ${request} =  create Test Client Read Request
     ...  ${fileName}
     ...  ${startBlock}
     ...  ${endBlock}
     ...  ${fileLength}
     ...  ${lastModified}
-    ...  ${clusterType}
     [Return]  ${request}
 
 Make status request
@@ -71,7 +69,6 @@ Make similar read requests
     ...          ${endBlock}
     ...          ${fileLength}
     ...          ${lastModified}
-    ...          ${clusterType}
     @{requests} =  CREATE LIST
     :FOR  ${fileName}  IN  @{fileNames}
     \  ${request} =  create Test Client Read Request
@@ -80,7 +77,6 @@ Make similar read requests
     ...  ${endBlock}
     ...  ${fileLength}
     ...  ${lastModified}
-    ...  ${clusterType}
     \  APPEND TO LIST  ${requests}  ${request}
     [Return]  @{requests}
 
@@ -99,7 +95,6 @@ Make similar status requests
     ...  ${lastModified}
     ...  ${startBlock}
     ...  ${endBlock}
-    ...  ${clusterType}
     \  APPEND TO LIST  ${requests}  ${request}
     [Return]  @{requests}
 

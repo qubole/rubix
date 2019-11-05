@@ -22,6 +22,7 @@ import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.Location;
+import com.qubole.rubix.spi.thrift.ReadDataRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -114,7 +115,7 @@ public class CachingValidator extends AbstractScheduledService
     final long fileLastModified = tempFile.lastModified();
 
     CacheStatusRequest request = new CacheStatusRequest(VALIDATOR_TEST_FILE_PATH_WITH_SCHEME, fileLength,
-        fileLastModified, VALIDATOR_START_BLOCK, VALIDATOR_END_BLOCK, VALIDATOR_CLUSTER_TYPE);
+        fileLastModified, VALIDATOR_START_BLOCK, VALIDATOR_END_BLOCK);
 
     try {
       List<BlockLocation> locations = bookKeeper.getCacheStatus(request);
@@ -123,12 +124,12 @@ public class CachingValidator extends AbstractScheduledService
       }
 
       final boolean dataRead = bookKeeper.readData(
-          VALIDATOR_TEST_FILE_PATH_WITH_SCHEME,
-          VALIDATOR_READ_OFFSET,
-          Ints.checkedCast(readSize),
-          fileLength,
-          fileLastModified,
-          VALIDATOR_CLUSTER_TYPE);
+          new ReadDataRequest(
+              VALIDATOR_TEST_FILE_PATH_WITH_SCHEME,
+              VALIDATOR_READ_OFFSET,
+              Ints.checkedCast(readSize),
+              fileLength,
+              fileLastModified));
       if (!dataRead) {
         return false;
       }

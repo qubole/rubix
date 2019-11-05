@@ -26,7 +26,7 @@ import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import com.qubole.rubix.spi.thrift.ClusterNode;
-import com.qubole.rubix.spi.thrift.HeartbeatStatus;
+import com.qubole.rubix.spi.thrift.HeartbeatRequest;
 import com.qubole.rubix.spi.thrift.NodeState;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -39,9 +39,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
-import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER_MULTINODE;
-
 public class WorkerBookKeeper extends BookKeeper
 {
   private static Log log = LogFactory.getLog(WorkerBookKeeper.class);
@@ -50,7 +47,6 @@ public class WorkerBookKeeper extends BookKeeper
   private BookKeeperFactory bookKeeperFactory;
   // The hostname of the master node.
   private String masterHostname;
-  private int clusterType;
   private RetryingBookkeeperClient client;
 
   public WorkerBookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics) throws BookKeeperInitializationException
@@ -70,7 +66,6 @@ public class WorkerBookKeeper extends BookKeeper
     super(conf, bookKeeperMetrics, ticker);
     this.bookKeeperFactory = factory;
     this.masterHostname = ClusterUtil.getMasterHostname(conf);
-    this.clusterType = CacheConfig.getClusterType(conf);
 
     initializeWorker(conf, metrics, ticker, factory);
   }
@@ -124,11 +119,6 @@ public class WorkerBookKeeper extends BookKeeper
     List<ClusterNode> nodeList = getClusterNodes();
 
     if (nodeList != null && nodeList.size() > 0) {
-      if (clusterType == TEST_CLUSTER_MANAGER.ordinal() || clusterType == TEST_CLUSTER_MANAGER_MULTINODE.ordinal()) {
-        nodeName = nodeList.get(0).nodeUrl;
-        return;
-      }
-
       Set<String> nodeSet = new HashSet<>();
       for (ClusterNode node : nodeList) {
         if (node.nodeState == NodeState.ACTIVE) {
@@ -176,7 +166,7 @@ public class WorkerBookKeeper extends BookKeeper
   }
 
   @Override
-  public void handleHeartbeat(String workerHostname, HeartbeatStatus request)
+  public void handleHeartbeat(HeartbeatRequest request)
   {
     throw new UnsupportedOperationException("Worker node should not handle heartbeat");
   }

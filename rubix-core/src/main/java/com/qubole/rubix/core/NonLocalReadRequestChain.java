@@ -19,6 +19,7 @@ import com.qubole.rubix.spi.DataTransferClientHelper;
 import com.qubole.rubix.spi.DataTransferHeader;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
+import com.qubole.rubix.spi.thrift.SetCachedRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -49,7 +50,6 @@ public class NonLocalReadRequestChain extends ReadRequestChain
   int totalRead;
   int directRead;
   FileSystem remoteFileSystem;
-  int clusterType;
   public boolean strictMode;
   FileSystem.Statistics statistics;
 
@@ -58,7 +58,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
   private static final Log log = LogFactory.getLog(NonLocalReadRequestChain.class);
 
   public NonLocalReadRequestChain(String remoteLocation, long fileSize, long lastModified, Configuration conf,
-                                  FileSystem remoteFileSystem, String remotePath, int clusterType,
+                                  FileSystem remoteFileSystem, String remotePath,
                                   boolean strictMode, FileSystem.Statistics statistics)
   {
     this.remoteNodeName = remoteLocation;
@@ -67,7 +67,6 @@ public class NonLocalReadRequestChain extends ReadRequestChain
     this.filePath = remotePath;
     this.fileSize = fileSize;
     this.conf = conf;
-    this.clusterType = clusterType;
     this.strictMode = strictMode;
     this.statistics = statistics;
   }
@@ -120,7 +119,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
         ReadableByteChannel wrappedChannel = Channels.newChannel(inStream);
 
         ByteBuffer buf = DataTransferClientHelper.writeHeaders(conf, new DataTransferHeader(readRequest.getActualReadStart(),
-            readRequest.getActualReadLength(), fileSize, lastModified, clusterType, filePath));
+            readRequest.getActualReadLength(), fileSize, lastModified, filePath));
 
         dataTransferClient.write(buf);
         int bytesread = 0;
@@ -210,9 +209,9 @@ public class NonLocalReadRequestChain extends ReadRequestChain
           long startBlock = toBlock(readRequest.getBackendReadStart());
           long endBlock = toBlock(readRequest.getBackendReadEnd() - 1) + 1;
           // getCacheStatus() call required to create mdfiles before blocks are set as cached
-          CacheStatusRequest request = new CacheStatusRequest(remotePath, fileSize, lastModified, startBlock, endBlock, clusterType);
+          CacheStatusRequest request = new CacheStatusRequest(remotePath, fileSize, lastModified, startBlock, endBlock);
           bookKeeperClient.getCacheStatus(request);
-          bookKeeperClient.setAllCached(remotePath, fileSize, lastModified, startBlock, endBlock);
+          bookKeeperClient.setAllCached(new SetCachedRequest(remotePath, fileSize, lastModified, startBlock, endBlock));
         }
       }
       catch (Exception e) {

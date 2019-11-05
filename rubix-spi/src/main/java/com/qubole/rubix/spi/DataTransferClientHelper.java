@@ -58,7 +58,6 @@ public class DataTransferClientHelper
     buf.putInt(header.getReadLength());
     buf.putLong(header.getFileSize());
     buf.putLong(header.getLastModified());
-    buf.putInt(header.getClusterType());
     buf.flip();
     return buf;
   }
@@ -69,6 +68,6 @@ public class DataTransferClientHelper
     dataInfo.get(fileBytes);
     String remotePath = new String(fileBytes);
     return new DataTransferHeader(dataInfo.getLong(), dataInfo.getInt(), dataInfo.getLong(),
-        dataInfo.getLong(), dataInfo.getInt(), remotePath);
+        dataInfo.getLong(), remotePath);
   }
 }

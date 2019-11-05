@@ -20,7 +20,6 @@ import com.qubole.rubix.common.utils.DataGen;
 import com.qubole.rubix.common.utils.TestUtil;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
-import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.Location;
@@ -134,8 +133,7 @@ public class TestFileDownloader
     final Path backendPath = new Path("file:///" + TEST_BACKEND_FILE_NAME);
     final ConcurrentMap<String, DownloadRequestContext> contextMap = new ConcurrentHashMap<>();
 
-    CacheStatusRequest request = new CacheStatusRequest(backendPath.toString(), file.length(), 1000, 0, 5,
-        ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+    CacheStatusRequest request = new CacheStatusRequest(backendPath.toString(), file.length(), 1000, 0, 5);
 
     List<BlockLocation> cacheStatus = bookKeeper.getCacheStatus(request);
 

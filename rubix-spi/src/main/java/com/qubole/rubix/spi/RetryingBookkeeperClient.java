@@ -19,7 +19,8 @@ package com.qubole.rubix.spi;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.BookKeeperService;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
-import com.qubole.rubix.spi.thrift.HeartbeatStatus;
+import com.qubole.rubix.spi.thrift.HeartbeatRequest;
+import com.qubole.rubix.spi.thrift.SetCachedRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.thrift.TException;
@@ -59,8 +60,7 @@ public class RetryingBookkeeperClient extends BookKeeperService.Client implement
   }
 
   @Override
-  public void setAllCached(final String remotePath, final long fileLength, final long lastModified,
-                           final long startBlock, final long endBlock) throws TException
+  public void setAllCached(final SetCachedRequest request) throws TException
   {
     retryConnection(new Callable<Void>()
     {
@@ -68,21 +68,21 @@ public class RetryingBookkeeperClient extends BookKeeperService.Client implement
       public Void call()
           throws Exception
       {
-        RetryingBookkeeperClient.super.setAllCached(remotePath, fileLength, lastModified, startBlock, endBlock);
+        RetryingBookkeeperClient.super.setAllCached(request);
         return null;
       }
     });
   }
 
   @Override
-  public void handleHeartbeat(final String workerHostname, final HeartbeatStatus heartbeatStatus) throws TException
+  public void handleHeartbeat(final HeartbeatRequest request) throws TException
   {
     retryConnection(new Callable<Void>()
     {
       @Override
       public Void call() throws Exception
       {
-        RetryingBookkeeperClient.super.handleHeartbeat(workerHostname, heartbeatStatus);
+        RetryingBookkeeperClient.super.handleHeartbeat(request);
         return null;
       }
     });

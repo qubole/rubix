@@ -14,18 +14,17 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Ticker;
 import com.google.common.testing.FakeTicker;
 import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.common.utils.TestUtil;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
-import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.ClusterNode;
+import com.qubole.rubix.spi.thrift.HeartbeatRequest;
 import com.qubole.rubix.spi.thrift.HeartbeatStatus;
 import com.qubole.rubix.spi.thrift.Location;
 import com.qubole.rubix.spi.thrift.NodeState;
@@ -116,7 +115,7 @@ public class TestWorkerBookKeeper
     CacheConfig.setMetricsReporters(conf, "");
     try (BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, new MetricRegistry())) {
       final WorkerBookKeeper workerBookKeeper = new WorkerBookKeeper(conf, bookKeeperMetrics);
-      workerBookKeeper.handleHeartbeat("", new HeartbeatStatus());
+      workerBookKeeper.handleHeartbeat(new HeartbeatRequest("", new HeartbeatStatus()));
     }
   }
 
@@ -163,7 +162,7 @@ public class TestWorkerBookKeeper
 
       CacheConfig.setWorkerNodeInfoExpiryPeriod(conf, 100);
       try (final BookKeeperMetrics workerMetrics = new BookKeeperMetrics(conf, new MetricRegistry())) {
-        final WorkerBookKeeper workerBookKeeper = new WorkerBookKeeper(conf, workerMetrics, ticker, bookKeeperFactory);
+        final WorkerBookKeeper workerBookKeeper = new MockWorkerBookKeeper(conf, workerMetrics, ticker, bookKeeperFactory);
         String hostName = workerBookKeeper.getOwnerNodeForPath("remotepath");
 
         assertTrue(hostName.equals(testLocalhost), "HostName is not correct from the coordinator");
@@ -218,7 +217,7 @@ public class TestWorkerBookKeeper
       assertNull(hostName, "HostName should be null as Cooordinator is down");
 
       CacheStatusRequest request = new CacheStatusRequest(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
-          TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+          TEST_START_BLOCK, TEST_END_BLOCK);
       List<BlockLocation> locations = workerBookKeeper.getCacheStatus(request);
 
       assertTrue(locations.size() == TEST_END_BLOCK - TEST_START_BLOCK, " Not all block locations are returned");
@@ -230,26 +229,6 @@ public class TestWorkerBookKeeper
       }
 
       assertTrue(unknownLocations == TEST_END_BLOCK - TEST_START_BLOCK, " All the block locations should be unknown");
-    }
-  }
-
-  private class MockWorkerBookKeeper extends WorkerBookKeeper
-  {
-    public MockWorkerBookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics, Ticker ticker, BookKeeperFactory factory) throws BookKeeperInitializationException
-    {
-      super(conf, bookKeeperMetrics, ticker, factory);
-    }
-
-    @Override
-    void startHeartbeatService(Configuration conf, MetricRegistry metrics, BookKeeperFactory factory)
-    {
-      return;
-    }
-
-    @Override
-    void setCurrentNodeName()
-    {
-      nodeName = "localhost";
     }
   }
 }

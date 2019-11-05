@@ -15,6 +15,7 @@ package com.qubole.rubix.spi;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.BookKeeperService;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
+import com.qubole.rubix.spi.thrift.SetCachedRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.thrift.TException;
@@ -44,10 +45,10 @@ public class LocalBookKeeperClient extends RetryingBookkeeperClient
   }
 
   @Override
-  public void setAllCached(final String remotePath, final long fileLength, final long lastModified, final long startBlock, final long endBlock)
+  public void setAllCached(SetCachedRequest request)
       throws TException
   {
-    bookKeeper.setAllCached(remotePath, fileLength, lastModified, startBlock, endBlock);
+    bookKeeper.setAllCached(request);
   }
 
   @Override

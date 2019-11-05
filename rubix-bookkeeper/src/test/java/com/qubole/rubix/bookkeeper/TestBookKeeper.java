@@ -28,6 +28,8 @@ import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.ClusterNode;
 import com.qubole.rubix.spi.thrift.FileInfo;
 import com.qubole.rubix.spi.thrift.NodeState;
+import com.qubole.rubix.spi.thrift.ReadDataRequest;
+import com.qubole.rubix.spi.thrift.SetCachedRequest;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -126,7 +128,8 @@ public class TestBookKeeper
     int holeSize = 5242880;
     int expectedSparseFileSize;
 
-    bookKeeper.readData(remotePathWithScheme, offset, (int) downloadSize, fileSize, TEST_LAST_MODIFIED, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+    ReadDataRequest readDataRequest = new ReadDataRequest(remotePathWithScheme, offset, (int) downloadSize, fileSize, TEST_LAST_MODIFIED);
+    bookKeeper.readData(readDataRequest);
     verifyDownloadedData(backendFileName, offset, downloadSize);
     expectedSparseFileSize = (int) DiskUtils.bytesToMB(downloadSize);
 
@@ -135,7 +138,8 @@ public class TestBookKeeper
       // Read from 38th block to 40th block
 
       offset = offset + (int) downloadSize + holeSize; //36MB
-      bookKeeper.readData(remotePathWithScheme, offset, (int) downloadSize, fileSize, TEST_LAST_MODIFIED, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+      readDataRequest = new ReadDataRequest(remotePathWithScheme, offset, (int) downloadSize, fileSize, TEST_LAST_MODIFIED);
+      bookKeeper.readData(readDataRequest);
       verifyDownloadedData(backendFileName, offset, downloadSize);
       expectedSparseFileSize = (int) DiskUtils.bytesToMB(2 * downloadSize);
     }
@@ -262,7 +266,7 @@ public class TestBookKeeper
     assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.TOTAL_REQUEST_COUNT.getMetricName()).getCount(), 0);
 
     CacheStatusRequest request = new CacheStatusRequest(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
-        TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+        TEST_START_BLOCK, TEST_END_BLOCK);
     request.setIncrMetrics(true);
 
     bookKeeper.getCacheStatus(request);
@@ -278,7 +282,7 @@ public class TestBookKeeper
     assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.TOTAL_REQUEST_COUNT.getMetricName()).getCount(), 0);
 
     CacheStatusRequest request = new CacheStatusRequest(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
-        TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+        TEST_START_BLOCK, TEST_END_BLOCK);
 
     bookKeeper.getCacheStatus(request);
 
@@ -298,7 +302,7 @@ public class TestBookKeeper
     assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.REMOTE_REQUEST_COUNT.getMetricName()).getCount(), 0);
 
     CacheStatusRequest request = new CacheStatusRequest(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
-        TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+        TEST_START_BLOCK, TEST_END_BLOCK);
     request.setIncrMetrics(true);
 
     bookKeeper.getCacheStatus(request);
@@ -319,11 +323,13 @@ public class TestBookKeeper
     assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.CACHE_REQUEST_COUNT.getMetricName()).getCount(), 0);
 
     CacheStatusRequest request = new CacheStatusRequest(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
-        TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+        TEST_START_BLOCK, TEST_END_BLOCK);
     request.setIncrMetrics(true);
 
     bookKeeper.getCacheStatus(request);
-    bookKeeper.setAllCached(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, TEST_START_BLOCK, TEST_END_BLOCK);
+    SetCachedRequest setCachedRequest = new SetCachedRequest(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
+        TEST_START_BLOCK, TEST_END_BLOCK);
+    bookKeeper.setAllCached(setCachedRequest);
     bookKeeper.getCacheStatus(request);
 
     assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.CACHE_REQUEST_COUNT.getMetricName()).getCount(), totalRequests);
@@ -374,7 +380,7 @@ public class TestBookKeeper
       }
 
       CacheStatusRequest request = new CacheStatusRequest(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
-          TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER_MULTINODE.ordinal());
+          TEST_START_BLOCK, TEST_END_BLOCK);
       request.setIncrMetrics(true);
       spyBookKeeper.getCacheStatus(request);
     }
@@ -427,7 +433,8 @@ public class TestBookKeeper
     assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.CACHE_SIZE_GAUGE.getMetricName()).getValue(), 0);
 
     DataGen.populateFile(TEST_REMOTE_PATH);
-    bookKeeper.readData(remotePathWithScheme, readOffset, readLength, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+    ReadDataRequest readDataRequest = new ReadDataRequest(remotePathWithScheme, readOffset, readLength, TEST_FILE_LENGTH, TEST_LAST_MODIFIED);
+    bookKeeper.readData(readDataRequest);
 
     final long mdSize = FileUtils.sizeOf(new File(CacheUtil.getMetadataFilePath(TEST_REMOTE_PATH, conf)));
     final int totalCacheSize = (int) DiskUtils.bytesToMB(readLength + mdSize);
@@ -451,14 +458,11 @@ public class TestBookKeeper
     bookKeeperMetrics.close();
     try (BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, metrics)) {
       bookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics, ticker);
-
       assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.CACHE_EXPIRY_COUNT.getMetricName()).getCount(), 0);
-
       CacheStatusRequest request = new CacheStatusRequest(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
-          TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+          TEST_START_BLOCK, TEST_END_BLOCK);
       request.setIncrMetrics(true);
       bookKeeper.getCacheStatus(request);
-
       ticker.advance(30000, TimeUnit.MILLISECONDS);
       bookKeeper.fileMetadataCache.cleanUp();
 
@@ -478,14 +482,17 @@ public class TestBookKeeper
     assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.CACHE_MISS_RATE_GAUGE.getMetricName()).getValue(), Double.NaN);
 
     CacheStatusRequest request = new CacheStatusRequest(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
-        TEST_START_BLOCK, TEST_END_BLOCK, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+        TEST_START_BLOCK, TEST_END_BLOCK);
     request.setIncrMetrics(true);
     bookKeeper.getCacheStatus(request);
 
     assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.CACHE_HIT_RATE_GAUGE.getMetricName()).getValue(), 0.0);
     assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.CACHE_MISS_RATE_GAUGE.getMetricName()).getValue(), 1.0);
 
-    bookKeeper.setAllCached(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, TEST_START_BLOCK, TEST_END_BLOCK);
+    SetCachedRequest setCachedRequest = new SetCachedRequest(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
+        TEST_START_BLOCK, TEST_END_BLOCK);
+
+    bookKeeper.setAllCached(setCachedRequest);
     bookKeeper.getCacheStatus(request);
 
     assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.CACHE_HIT_RATE_GAUGE.getMetricName()).getValue(), 0.5);

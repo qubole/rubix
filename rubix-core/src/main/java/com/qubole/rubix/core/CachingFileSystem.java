@@ -15,7 +15,6 @@ package com.qubole.rubix.core;
 import com.google.common.base.Throwables;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
-import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -48,7 +47,6 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
 {
   private static final Log log = LogFactory.getLog(CachingFileSystem.class);
   protected T fs;
-  private static ClusterType clusterType;
 
   private boolean cacheSkipped;
   private boolean isRubixSchemeUsed;
@@ -86,11 +84,6 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
 
   public abstract String getScheme();
 
-  public void setClusterType(ClusterType clusterType)
-  {
-    this.clusterType = clusterType;
-  }
-
   @Override
   public void initialize(URI uri, Configuration conf) throws IOException
   {
@@ -127,14 +120,14 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
       return new FSDataInputStream(
               new BufferedFSInputStream(
                       new DummyModeCachingInputStream(this, originalPath, this.getConf(), statsMBean,
-                              clusterType, bookKeeperFactory, fs, bufferSize, statistics),
+                              bookKeeperFactory, fs, bufferSize, statistics),
                       CacheConfig.getBlockSize(getConf())));
     }
 
     return new FSDataInputStream(
         new BufferedFSInputStream(
             new CachingInputStream(this, originalPath, this.getConf(), statsMBean,
-                clusterType, bookKeeperFactory, fs, bufferSize, statistics),
+                bookKeeperFactory, fs, bufferSize, statistics),
             CacheConfig.getBlockSize(getConf())));
   }
 

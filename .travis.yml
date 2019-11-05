@@ -2,6 +2,7 @@ branches:
   only:
     - master
 language: java
+dist: trusty
 services:
   - docker
 jdk:

@@ -13,6 +13,7 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.testing.FakeTicker;
 import com.qubole.rubix.common.metrics.MetricsReporter;
 import com.qubole.rubix.common.utils.TestUtil;
 import com.qubole.rubix.spi.CacheConfig;
@@ -143,8 +144,8 @@ public class TestBookKeeperServer extends BaseServerTest
   public void testValidationMetricsEnabled() throws InterruptedException, MalformedObjectNameException
   {
     CacheConfig.setMetricsReporters(conf, "");
-    startServer(ServerType.COORDINATOR_BOOKKEEPER, conf, new MetricRegistry());
-    super.testValidationMetrics(ServerType.MOCK_WORKER_BOOKKEEPER, conf, metrics, true);
+    startServer(ServerType.COORDINATOR_BOOKKEEPER, conf, new MetricRegistry(), new FakeTicker());
+    super.testValidationMetrics(ServerType.MOCK_WORKER_BOOKKEEPER_WITH_HEARTBEAT, conf, metrics, true);
     stopBookKeeperServer();
   }
 
@@ -155,7 +156,7 @@ public class TestBookKeeperServer extends BaseServerTest
   public void testValidationMetricsNotEnabled() throws InterruptedException, MalformedObjectNameException
   {
     CacheConfig.setMetricsReporters(conf, "");
-    startServer(ServerType.COORDINATOR_BOOKKEEPER, conf, new MetricRegistry());
+    startServer(ServerType.COORDINATOR_BOOKKEEPER, conf, new MetricRegistry(), new FakeTicker());
     super.testValidationMetrics(ServerType.MOCK_WORKER_BOOKKEEPER, conf, metrics, false);
     stopBookKeeperServer();
   }

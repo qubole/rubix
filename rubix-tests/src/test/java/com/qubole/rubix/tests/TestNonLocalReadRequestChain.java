@@ -28,11 +28,11 @@ import com.qubole.rubix.core.ReadRequest;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
-import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.Location;
+import com.qubole.rubix.spi.thrift.ReadDataRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -138,8 +138,7 @@ public class TestNonLocalReadRequestChain
     MockCachingFileSystem fs = new MockCachingFileSystem();
     fs.initialize(backendPath.toUri(), conf);
     NonLocalReadRequestChain requestChain = new NonLocalReadRequestChain("localhost", backendFile.length(),
-        backendFile.lastModified(), conf, fs, backendPath.toString(),
-        ClusterType.TEST_CLUSTER_MANAGER.ordinal(), false, null);
+        backendFile.lastModified(), conf, fs, backendPath.toString(), false, null);
 
     return requestChain;
   }
@@ -332,11 +331,10 @@ public class TestNonLocalReadRequestChain
     int endBlock = length / CacheConfig.getBlockSize(conf);
     BookKeeperFactory factory = new BookKeeperFactory();
     RetryingBookkeeperClient client = factory.createBookKeeperClient("localhost", conf);
-    client.readData(backendPath.toString(), 0, length, backendFile.length(),
-        backendFile.lastModified(), ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+    client.readData(new ReadDataRequest(backendPath.toString(), 0, length, backendFile.length(), backendFile.lastModified()));
 
     CacheStatusRequest request = new CacheStatusRequest(backendPath.toString(), backendFile.length(), backendFile.lastModified(),
-        0, endBlock, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+        0, endBlock);
     List<BlockLocation> blockLocations = client.getCacheStatus(request);
 
     for (BlockLocation location : blockLocations) {

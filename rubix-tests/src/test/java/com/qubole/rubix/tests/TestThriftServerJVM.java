@@ -21,6 +21,7 @@ import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.Location;
+import com.qubole.rubix.spi.thrift.ReadDataRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -162,13 +163,15 @@ public class TestThriftServerJVM extends Configured
     RetryingBookkeeperClient client;
     client = bookKeeperFactory.createBookKeeperClient(host, conf);
 
-    CacheStatusRequest request = new CacheStatusRequest(backendPath.toString(), file.length(), file.lastModified(), 0, lastBlock, 3);
+    CacheStatusRequest request = new CacheStatusRequest(backendPath.toString(), file.length(), file.lastModified(), 0, lastBlock);
     result = client.getCacheStatus(request);
 
     assertTrue(result.get(0).getLocation() == Location.LOCAL, "File already cached, before readData call");
     log.info(" Value of Result : " + result);
     log.info("Downloading file from path : " + file.toString());
-    boolean dataDownloaded = client.readData(backendPath.toString(), 0, (int) readSize, file.length(), file.lastModified(), 3);
+    boolean dataDownloaded = client.readData(new ReadDataRequest(backendPath.toString(), 0, (int) readSize,
+        file.length(), file.lastModified()));
+
     assertTrue(dataDownloaded == true, "readData() function call failed. File not downloaded properly");
 
     result = client.getCacheStatus(request);
