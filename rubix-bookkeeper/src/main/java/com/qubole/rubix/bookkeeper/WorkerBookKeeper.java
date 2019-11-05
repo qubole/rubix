@@ -47,7 +47,7 @@ public class WorkerBookKeeper extends BookKeeper
   private BookKeeperFactory bookKeeperFactory;
   // The hostname of the master node.
   private String masterHostname;
-  RetryingBookkeeperClient client;
+  private RetryingBookkeeperClient client;
 
   public WorkerBookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics) throws BookKeeperInitializationException
   {
