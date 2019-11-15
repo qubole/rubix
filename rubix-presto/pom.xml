@@ -42,7 +42,7 @@
         </dependency>
 
         <dependency>
-            <groupId>com.facebook.presto</groupId>
+            <groupId>io.prestosql</groupId>
             <artifactId>presto-hive</artifactId>
             <version>${dep.presto.version}</version>
             <scope>provided</scope>

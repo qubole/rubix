@@ -108,7 +108,7 @@ public class CachingInputStream extends FSInputStream
       this.lastModified = fileInfo.lastModified;
     }
     catch (Exception ex) {
-      log.error(String.format("Could not get FileInfo for %s. Fetching FileStatus from remote file system :", backendPath.toString(), ex.toString()));
+      log.error(String.format("Could not get FileInfo for %s. Fetching FileStatus from remote file system :", backendPath.toString()), ex);
       FileStatus fileStatus = parentFs.getFileStatus(backendPath);
       this.fileSize = fileStatus.getLen();
       this.lastModified = fileStatus.getModificationTime();
@@ -238,7 +238,7 @@ public class CachingInputStream extends FSInputStream
       throws IOException, InterruptedException, ExecutionException
 
   {
-    log.info(String.format("Got Read, currentPos: %d currentBlock: %d bufferOffset: %d length: %d of file : %s", nextReadPosition, nextReadBlock, offset, length, CacheUtil.getLocalPath(remotePath, conf)));
+    log.debug(String.format("Got Read, currentPos: %d currentBlock: %d bufferOffset: %d length: %d of file : %s", nextReadPosition, nextReadBlock, offset, length, CacheUtil.getLocalPath(remotePath, conf)));
 
     if (nextReadPosition >= fileSize) {
       log.debug("Already at eof, returning");
@@ -292,7 +292,7 @@ public class CachingInputStream extends FSInputStream
       }
     });
 
-    log.info(String.format("Read %d bytes", sizeRead));
+    log.debug(String.format("Read %d bytes", sizeRead));
     if (sizeRead > 0) {
       nextReadPosition += sizeRead;
       setNextReadBlock();
@@ -341,7 +341,7 @@ public class CachingInputStream extends FSInputStream
       if (strictMode) {
         throw Throwables.propagate(e);
       }
-      log.info("Could not get cache status from server " + Throwables.getStackTraceAsString(e));
+      log.debug("Could not get cache status from server ", e);
     }
 
     int idx = 0;
@@ -402,7 +402,7 @@ public class CachingInputStream extends FSInputStream
               NonLocalRequestChain nonLocalRequestChain =
                   new NonLocalRequestChain(remoteLocation, fileSize, lastModified,
                       conf, remoteFileSystem, remotePath, strictMode,
-                      statistics, nextReadBlock, endBlock);
+                      statistics, nextReadBlock, endBlock, new BookKeeperFactory());
               nonLocalAsyncRequests.put(remoteLocation, nonLocalRequestChain);
             }
             nonLocalAsyncRequests.get(remoteLocation).addReadRequest(readRequest);
@@ -436,7 +436,7 @@ public class CachingInputStream extends FSInputStream
 
             if (remoteFetchRequestChain == null) {
               remoteFetchRequestChain = new RemoteFetchRequestChain(remotePath, remoteFileSystem,
-                  "localhost", conf, lastModified, fileSize);
+                  "localhost", conf, lastModified, fileSize, bookKeeperFactory);
             }
 
             directReadRequestChain.addReadRequest(readRequest);
@@ -448,7 +448,7 @@ public class CachingInputStream extends FSInputStream
               affixBuffer = new byte[blockSize];
             }
             if (remoteReadRequestChain == null) {
-              remoteReadRequestChain = new RemoteReadRequestChain(getParentDataInputStream(), localPath, directWriteBuffer, affixBuffer);
+              remoteReadRequestChain = new RemoteReadRequestChain(getParentDataInputStream(), localPath, directWriteBuffer, affixBuffer, bookKeeperFactory);
             }
             remoteReadRequestChain.addReadRequest(readRequest);
           }

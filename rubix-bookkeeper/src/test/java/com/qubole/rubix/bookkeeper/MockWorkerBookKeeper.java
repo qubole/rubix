@@ -35,7 +35,7 @@ public class MockWorkerBookKeeper extends WorkerBookKeeper
   }
 
   @Override
-  void setCurrentNodeName()
+  void setCurrentNodeName(Configuration conf)
   {
     nodeName = "localhost";
   }

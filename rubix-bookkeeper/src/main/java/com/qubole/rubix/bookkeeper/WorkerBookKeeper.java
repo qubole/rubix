@@ -64,7 +64,13 @@ public class WorkerBookKeeper extends BookKeeper
       throws BookKeeperInitializationException
   {
     super(conf, bookKeeperMetrics, ticker);
-    this.bookKeeperFactory = factory;
+    if (factory == null) {
+      this.bookKeeperFactory = new BookKeeperFactory(this);
+    }
+    else {
+      this.bookKeeperFactory = factory;
+    }
+
     this.masterHostname = ClusterUtil.getMasterHostname(conf);
 
     initializeWorker(conf, metrics, ticker, factory);
@@ -83,7 +89,7 @@ public class WorkerBookKeeper extends BookKeeper
     // in the cluster might not have registered with the master node. We will wait for some time to get that started.
     while (nodeName == null || nodeName.isEmpty()) {
       try {
-        setCurrentNodeName();
+        setCurrentNodeName(conf);
       }
       catch (WorkerInitializationException ex) {
         errorCount++;
@@ -102,14 +108,20 @@ public class WorkerBookKeeper extends BookKeeper
     }
   }
 
-  void setCurrentNodeName() throws WorkerInitializationException
+  void setCurrentNodeName(Configuration conf) throws WorkerInitializationException
   {
     String nodeHostName;
     String nodeHostAddress;
+    // If the node hostname is already set, honor that value.
+    // In case of embedded mode, the engine might have set this value.
+    if (CacheConfig.getCurrentNodeHostName(conf) != null) {
+      nodeName = CacheConfig.getCurrentNodeHostName(conf);
+      return;
+    }
     try {
       nodeHostName = InetAddress.getLocalHost().getCanonicalHostName();
       nodeHostAddress = InetAddress.getLocalHost().getHostAddress();
-      log.info(" HostName : " + nodeHostName + " HostAddress : " + nodeHostAddress);
+      log.debug(" HostName : " + nodeHostName + " HostAddress : " + nodeHostAddress);
     }
     catch (UnknownHostException e) {
       log.warn("Could not get nodeName", e);
@@ -160,7 +172,16 @@ public class WorkerBookKeeper extends BookKeeper
             if (client == null) {
               client = createBookKeeperClientWithRetry(bookKeeperFactory, masterHostname, conf);
             }
-            return client.getClusterNodes();
+            try {
+              return client.getClusterNodes();
+            }
+            catch (Exception e) {
+              client.close();
+              throw e;
+            }
+            finally {
+              client = null;
+            }
           }
         });
   }
@@ -189,8 +210,10 @@ public class WorkerBookKeeper extends BookKeeper
    */
   void startHeartbeatService(Configuration conf, MetricRegistry metrics, BookKeeperFactory factory)
   {
-    this.heartbeatService = new HeartbeatService(conf, metrics, factory, this);
-    heartbeatService.startAsync();
+    if (CacheConfig.isHeartbeatEnabled(conf) || !CacheConfig.isEmbeddedModeEnabled(conf)) {
+      this.heartbeatService = new HeartbeatService(conf, metrics, factory, this);
+      heartbeatService.startAsync();
+    }
   }
 
   /**

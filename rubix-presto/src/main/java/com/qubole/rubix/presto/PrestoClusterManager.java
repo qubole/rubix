@@ -105,7 +105,7 @@ public class PrestoClusterManager extends ClusterManager
                   }
                 }
                 else {
-                  log.info(String.format("v1/node failed with code: setting this node as worker "));
+                  log.warn(String.format("v1/node failed with code: setting this node as worker "));
                   return ImmutableList.of();
                 }
               }
@@ -195,7 +195,7 @@ public class PrestoClusterManager extends ClusterManager
       return nodesCache.get("nodeList");
     }
     catch (ExecutionException e) {
-      log.info("Error fetching node list : ", e);
+      log.warn("Error fetching node list : ", e);
     }
     return null;
   }
@@ -204,6 +204,11 @@ public class PrestoClusterManager extends ClusterManager
   public ClusterType getClusterType()
   {
     return ClusterType.PRESTO_CLUSTER_MANAGER;
+  }
+
+  public static void setPrestoServerPort(Configuration conf, int port)
+  {
+    conf.setInt(serverPortConf, port);
   }
 
   private URL getNodeUrl()

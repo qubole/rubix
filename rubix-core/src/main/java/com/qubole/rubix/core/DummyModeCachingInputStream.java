@@ -82,7 +82,7 @@ public class DummyModeCachingInputStream extends CachingInputStream
           throw Throwables.propagate(e);
         }
         catch (TTransportException e) {
-          log.info("Could not create bookkeeper client");
+          log.warn("Could not create bookkeeper client", e);
           throw Throwables.propagate(e);
         }
       }

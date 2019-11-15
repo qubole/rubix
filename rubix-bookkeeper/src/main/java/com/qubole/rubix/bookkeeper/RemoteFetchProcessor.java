@@ -33,13 +33,11 @@ import java.util.concurrent.TimeUnit;
 
 public class RemoteFetchProcessor extends AbstractScheduledService
 {
-  private Configuration conf;
   private Queue<FetchRequest> processQueue;
   private FileDownloader downloader;
   private MetricRegistry metrics;
   private Counter totalDownloadRequests;
   private Counter processedRequests;
-  private BookKeeper bookKeeper;
 
   int processThreadInitalDelay;
   int processThreadInterval;
@@ -49,8 +47,19 @@ public class RemoteFetchProcessor extends AbstractScheduledService
 
   public RemoteFetchProcessor(BookKeeper bookKeeper, MetricRegistry metrics, Configuration conf)
   {
-    this.conf = conf;
-    this.bookKeeper = bookKeeper;
+    // Initializing a new Config object so that it doesn't interfere with the existing one
+    conf = new Configuration(conf);
+
+    // Disabling FileSystem level cache for all the schemes.
+    conf.setBoolean("fs.s3.impl.disable.cache", false);
+    conf.setBoolean("fs.s3n.impl.disable.cache", false);
+    conf.setBoolean("fs.s3a.impl.disable.cache", false);
+    conf.setBoolean("fs.wasb.impl.disable.cache", false);
+    conf.setBoolean("fs.gs.impl.disable.cache", false);
+
+    // Disable Rubix caching for cases we instantiate CachingFS objects to prevent loops
+    CacheConfig.setCacheDataEnabled(conf, false);
+
     this.processQueue = new ConcurrentLinkedQueue<FetchRequest>();
     this.metrics = metrics;
     this.downloader = new FileDownloader(bookKeeper, metrics, conf);

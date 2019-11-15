@@ -79,7 +79,7 @@ public class BookKeeperMetrics implements AutoCloseable
               .filter(metricsFilter)
               .build();
 
-          log.info("Reporting metrics to JMX");
+          log.debug("Reporting metrics to JMX");
           jmxReporter.start();
           reporters.add(jmxReporter);
           break;
@@ -93,7 +93,7 @@ public class BookKeeperMetrics implements AutoCloseable
               .filter(metricsFilter)
               .build(CacheConfig.getStatsDMetricsHost(conf), CacheConfig.getStatsDMetricsPort(conf));
 
-          log.info(String.format("Reporting metrics to StatsD [%s:%d]", CacheConfig.getStatsDMetricsHost(conf), CacheConfig.getStatsDMetricsPort(conf)));
+          log.debug(String.format("Reporting metrics to StatsD [%s:%d]", CacheConfig.getStatsDMetricsHost(conf), CacheConfig.getStatsDMetricsPort(conf)));
           statsDReporter.start(CacheConfig.getMetricsReportingInterval(conf), TimeUnit.MILLISECONDS);
           reporters.add(statsDReporter);
           break;
@@ -101,7 +101,7 @@ public class BookKeeperMetrics implements AutoCloseable
           if (!CacheConfig.isOnMaster(conf)) {
             CacheConfig.setGangliaMetricsHost(conf, ClusterUtil.getMasterHostname(conf));
           }
-          log.info(String.format("Reporting metrics to Ganglia [%s:%s]", CacheConfig.getGangliaMetricsHost(conf), CacheConfig.getGangliaMetricsPort(conf)));
+          log.debug(String.format("Reporting metrics to Ganglia [%s:%s]", CacheConfig.getGangliaMetricsHost(conf), CacheConfig.getGangliaMetricsPort(conf)));
           final GMetric ganglia = new GMetric(CacheConfig.getGangliaMetricsHost(conf), CacheConfig.getGangliaMetricsPort(conf), GMetric.UDPAddressingMode.MULTICAST, 1);
           final GangliaReporter gangliaReporter = GangliaReporter.forRegistry(metrics)
                   .convertRatesTo(TimeUnit.SECONDS)

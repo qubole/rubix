@@ -93,6 +93,13 @@ public class CacheConfig
   private static final String KEY_RUBIX_WORKER_NODELIST_FETCH_MAX_RETRIES = "rubix.cluster.worker.nodelist.fetch.max-retries";
   private static final String KEY_RUBIX_WORKER_NODELIST_FETCH_WAIT_INTERVAL = "rubix.cluster.worker.nodelist.fetch.wait.interval";
   private static final String KEY_DUMMY_MODE = "rubix.cache.dummy.mode";
+  private static final String KEY_EMBEDDED_MODE = "rubix.cluster.embedded.mode";
+  private static final String KEY_HEARTBEAT_ENABLED = "rubix.cluster.heartbeat.enabled";
+
+  // Internal Configurations used in RubiX
+  private static final String KEY_YARN_RESOURCEMANAGER_ADDRESS = "yarn.resourcemanager.address";
+  private static final String KEY_RUBIX_CLUSTER_MASTER_HOSTNAME = "master.hostname";
+  private static final String KEY_RUBIX_CURRENT_NODE_HOSTNAME = "current.node.hostname";
 
   // default values
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
@@ -158,6 +165,8 @@ public class CacheConfig
   private static final int DEFAULT_RUBIX_CLUSTER_TYPE = ClusterType.TEST_CLUSTER_MANAGER.ordinal();
   private static final int DEFAULT_RUBIX_WORKER_NODELIST_FETCH_MAX_RETRIES = 10;
   private static final int DEFAULT_RUBIX_WORKER_NODELIST_FETCH_WAIT_INTERVAL = 30000; //msec
+  private static final boolean DEFAULT_EMBEDDED_MODE = false;
+  private static final boolean DEFAULT_HEARTBEAT_ENABLED = true;
 
   private CacheConfig()
   {
@@ -488,6 +497,31 @@ public class CacheConfig
     return conf.getBoolean(KEY_DUMMY_MODE, DEFAULT_DUMMY_MODE);
   }
 
+  public static boolean isEmbeddedModeEnabled(Configuration conf)
+  {
+    return conf.getBoolean(KEY_EMBEDDED_MODE, DEFAULT_EMBEDDED_MODE);
+  }
+
+  public static boolean isHeartbeatEnabled(Configuration conf)
+  {
+    return conf.getBoolean(KEY_HEARTBEAT_ENABLED, DEFAULT_HEARTBEAT_ENABLED);
+  }
+
+  public static String getCoordinatorHostName(Configuration conf)
+  {
+    return conf.get(KEY_RUBIX_CLUSTER_MASTER_HOSTNAME, null);
+  }
+
+  public static String getResourceManagerAddress(Configuration conf)
+  {
+    return conf.get(KEY_YARN_RESOURCEMANAGER_ADDRESS, null);
+  }
+
+  public static String getCurrentNodeHostName(Configuration conf)
+  {
+    return conf.get(KEY_RUBIX_CURRENT_NODE_HOSTNAME, null);
+  }
+
   public static void setBlockSize(Configuration conf, int blockSize)
   {
     conf.setInt(KEY_BLOCK_SIZE, blockSize);
@@ -743,5 +777,30 @@ public class CacheConfig
   public static void setDummyMode(Configuration conf, boolean dummyMode)
   {
     conf.setBoolean(KEY_DUMMY_MODE, dummyMode);
+  }
+
+  public static void setEmbeddedMode(Configuration conf, boolean embeddedMode)
+  {
+    conf.setBoolean(KEY_EMBEDDED_MODE, embeddedMode);
+  }
+
+  public static void enableHeartbeat(Configuration conf, boolean enableHeartbeat)
+  {
+    conf.setBoolean(KEY_HEARTBEAT_ENABLED, enableHeartbeat);
+  }
+
+  public static void setCoordinatorHostName(Configuration conf, String hostName)
+  {
+    conf.set(KEY_RUBIX_CLUSTER_MASTER_HOSTNAME, hostName);
+  }
+
+  public static void setResourceManagerAddress(Configuration conf, String hostName)
+  {
+    conf.set(KEY_YARN_RESOURCEMANAGER_ADDRESS, hostName);
+  }
+
+  public static void setCurrentNodeHostName(Configuration conf, String hostName)
+  {
+    conf.set(KEY_RUBIX_CURRENT_NODE_HOSTNAME, hostName);
   }
 }
