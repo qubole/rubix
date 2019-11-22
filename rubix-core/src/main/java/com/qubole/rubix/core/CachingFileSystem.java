@@ -63,7 +63,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
     MBeanExporter exporter = new MBeanExporter(ManagementFactory.getPlatformMBeanServer());
     statsMBean = new CachingFileSystemStats();
     try {
-      if (ManagementFactory.getPlatformMBeanServer().isRegistered(new ObjectName("rubix:name=stats"))) {
+      if (!ManagementFactory.getPlatformMBeanServer().isRegistered(new ObjectName("rubix:name=stats"))) {
         exporter.export("rubix:name=stats", statsMBean);
       }
     }
