@@ -31,6 +31,9 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.thrift.shaded.TException;
 import org.weakref.jmx.MBeanExporter;
 
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
@@ -59,7 +62,14 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
   static {
     MBeanExporter exporter = new MBeanExporter(ManagementFactory.getPlatformMBeanServer());
     statsMBean = new CachingFileSystemStats();
-    exporter.export("rubix:name=stats", statsMBean);
+    try {
+      if (!ManagementFactory.getPlatformMBeanServer().isRegistered(new ObjectName("rubix:name=stats"))) {
+        exporter.export("rubix:name=stats", statsMBean);
+      }
+    }
+    catch (MalformedObjectNameException e) {
+      throw new RuntimeException("Could not load MBean");
+    }
   }
 
   // this magic is necessary to create an instance of type T
