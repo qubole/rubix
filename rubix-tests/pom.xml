@@ -3,7 +3,7 @@
     <parent>
         <groupId>com.qubole.rubix</groupId>
         <artifactId>rubix-root</artifactId>
-        <version>0.3.4</version>
+        <version>0.3.6-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -20,14 +20,14 @@
             <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-core</artifactId>
             <scope>test</scope>
-            <version>0.3.4</version>
+            <version>0.3.6-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-core</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
-            <version>0.3.4</version>
+            <version>0.3.6-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.qubole.rubix</groupId>
@@ -62,6 +62,23 @@
             <version>1.7.5</version>
         </dependency>
     </dependencies>
+
+    <profiles>
+        <profile>
+            <id>integration-tests</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.robotframework</groupId>
+                        <artifactId>robotframework-maven-plugin</artifactId>
+                        <configuration>
+                            <skipTests>false</skipTests>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
     <build>
         <plugins>
@@ -111,6 +128,9 @@
                     </execution>
                 </executions>
                 <configuration>
+                    <skipTests>true</skipTests>
+                    <name>Integration</name>
+                    <testCasesDirectory>${project.basedir}/src/test/robotframework</testCasesDirectory>
                     <extraPathDirectories>
                         <extraPathDirectory>../rubix-client/target/rubix-client-${project.version}-tests.jar</extraPathDirectory>
                     </extraPathDirectories>

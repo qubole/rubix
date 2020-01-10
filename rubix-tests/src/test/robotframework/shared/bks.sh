@@ -16,11 +16,15 @@ LOG4J_FILE=${RUN_DIR}/log4j.properties
 
 CUR_DATE=$(date '+%Y-%m-%dT%H-%M-%S')
 LOG_DIR=${RUN_DIR}/logs
-LOG_FILE=${LOG_DIR}/bks-${CUR_DATE}.log
+LOG_FILE=${PWD}/rubix-tests/target/integration-test-logs/bks-${CUR_DATE}.log
 SCRIPT_LOG_FILE=${LOG_DIR}/bks-script.log
 
 HADOOP_DIR=/usr/lib/hadoop2
 HADOOP_JAR_DIR=${HADOOP_DIR}/share/hadoop/tools/lib
+
+DOCKER_COMPOSE_YML=${BASE_DIR}/docker/docker-compose.yml
+CLUSTER_NODE_IPS=/tmp/rubix/tests/cluster_node_ips
+CREATE_DOCKER_COMPOSE_PY=${BASE_DIR}/docker/create_docker_compose.py
 
 setup-log4j() {
 (cat << EOF
@@ -67,7 +71,38 @@ setup-disks() {
   done
 }
 
-start() {
+copy-jars-for-container-volume() {
+  JAR_DIR=/tmp/rubix/jars
+
+  rm -rf ${JAR_DIR}
+  mkdir -p ${JAR_DIR}
+
+  RUBIX_JARS=$(ls rubix-*/target/rubix-*.jar | grep -E -v 'tests|client|rpm|presto')
+  cp ${RUBIX_JARS} ${JAR_DIR}
+
+  RUBIX_CLIENT_TEST_JAR=$(ls rubix-client/target/rubix-client-*-tests.jar)
+  cp ${RUBIX_CLIENT_TEST_JAR} ${JAR_DIR}
+
+  RUBIX_CORE_TEST_JAR=$(ls rubix-core/target/rubix-core-*-tests.jar)
+  cp ${RUBIX_CORE_TEST_JAR} ${JAR_DIR}/rubix-core_tests.jar
+}
+
+start-cluster() {
+  numberOfWorkers=$1
+  python ${CREATE_DOCKER_COMPOSE_PY} ${numberOfWorkers} ${BASE_DIR} ${CLUSTER_NODE_IPS}
+
+  copy-jars-for-container-volume
+
+  docker-compose -f ${DOCKER_COMPOSE_YML} up -d --build
+}
+
+stop-cluster() {
+  docker-compose -f ${DOCKER_COMPOSE_YML} down -t 1
+  rm ${DOCKER_COMPOSE_YML}
+  rm ${CLUSTER_NODE_IPS}
+}
+
+start-bks() {
   BKS_OPTIONS=$@
   set-cache-options ${BKS_OPTIONS}
 
@@ -89,7 +124,7 @@ start() {
   sleep 1
 }
 
-stop() {
+stop-bks() {
   BKS_OPTIONS=$@
   set-cache-options ${BKS_OPTIONS}
 
@@ -109,8 +144,10 @@ stop() {
 
 cmd=$1
 case "$cmd" in
-  start) shift ; start $@;;
-  stop) shift ; stop $@;;
+  start-bks) shift ; start-bks $@;;
+  stop-bks) shift ; stop-bks $@;;
+  start-cluster) shift ; start-cluster $@;;
+  stop-cluster) shift ; stop-cluster;;
 esac
 
 exit 0;

@@ -24,6 +24,7 @@ import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.net.util.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
@@ -49,7 +50,7 @@ public class CacheUtil
     @Override
     public String load(final String relLocation) throws Exception
     {
-      return getHashedPath(relLocation);
+      return getHashedPaLinkedinh(relLocation);
     }
   });
 
@@ -297,11 +298,20 @@ public class CacheUtil
     try {
       MessageDigest md = MessageDigest.getInstance("SHA-256");
       byte[] pathBytes = md.digest(relLocation.getBytes());
-      StringBuilder sb = new StringBuilder();
+/*      StringBuilder sb = new StringBuilder();
       for (int i = 0; i < pathBytes.length; i++) {
         sb.append(Integer.toString((pathBytes[i] & 0xff) + 0x100, 16).substring(1));
       }
+      hashRelLocation = sb.toString();*/
+      StringBuilder sb = new StringBuilder();
+      log.info("Length of pathBytes : " + pathBytes.length);
+      for (int i = 0; i < pathBytes.length / 4; i++) {
+        sb.append(Integer.toString((pathBytes[i] & 0xff) + 0x100, 16).substring(1));
+        //log.info(Integer.toString((pathBytes[i])));
+        log.info(pathBytes[i] + pathBytes[4*i+1] + pathBytes[4*i+2] + pathBytes[4*i+3]);
+      }
       hashRelLocation = sb.toString();
+      log.info("Value of hashRelLocation :" + hashRelLocation);
       if (hashedPathSet.get(hashRelLocation) != null) {
         return getHashedPath(hashRelLocation);
       }

@@ -20,7 +20,6 @@ import com.qubole.rubix.common.utils.DataGen;
 import com.qubole.rubix.common.utils.TestUtil;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
-import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.Location;
@@ -35,7 +34,6 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -69,10 +67,11 @@ public class TestFileDownloader
   }
 
   @BeforeMethod
-  public void setUp() throws IOException
+  public void setUp() throws Exception
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     CacheConfig.setBlockSize(conf, 200);
+    CacheConfig.setIsParallelWarmupEnabled(conf, true);
     metrics = new MetricRegistry();
     bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
     bookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics);
@@ -134,8 +133,7 @@ public class TestFileDownloader
     final Path backendPath = new Path("file:///" + TEST_BACKEND_FILE_NAME);
     final ConcurrentMap<String, DownloadRequestContext> contextMap = new ConcurrentHashMap<>();
 
-    CacheStatusRequest request = new CacheStatusRequest(backendPath.toString(), file.length(), 1000, 0, 5,
-        ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+    CacheStatusRequest request = new CacheStatusRequest(backendPath.toString(), file.length(), 1000, 0, 5);
 
     List<BlockLocation> cacheStatus = bookKeeper.getCacheStatus(request);
 

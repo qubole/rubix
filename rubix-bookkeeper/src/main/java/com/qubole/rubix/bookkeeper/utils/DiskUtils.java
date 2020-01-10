@@ -65,7 +65,6 @@ public class DiskUtils
   {
     String cmd = "rm -rf " + path;
     ShellExec se = new ShellExec(cmd);
-    log.debug("Running: " + cmd);
     ShellExec.CommandResult cr = se.runCmd();
   }
 
@@ -109,7 +108,7 @@ public class DiskUtils
       }
     }
     catch (Exception e) {
-      log.error("Exception while calculating the size of the folder " + dirname.toString());
+      log.error(String.format("Exception while calculating the size of the folder %s with exception : %s", dirname.toString(), e.toString()));
     }
     return NumberUtils.toLong(output.toString().split("\\s+")[0]) / 1024;
   }

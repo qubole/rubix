@@ -13,30 +13,25 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.base.Ticker;
+import com.google.common.testing.FakeTicker;
+import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.common.metrics.MetricsReporter;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
-import com.qubole.rubix.spi.RetryingBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.thrift.shaded.transport.TSocket;
-import org.apache.thrift.shaded.transport.TTransportException;
-import org.mockito.ArgumentMatchers;
 
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
@@ -47,6 +42,7 @@ public class BaseServerTest
     COORDINATOR_BOOKKEEPER,
     MOCK_COORDINATOR_BOOKKEEPER,
     MOCK_WORKER_BOOKKEEPER,
+    MOCK_WORKER_BOOKKEEPER_WITH_HEARTBEAT,
     LOCAL_DATA_TRANSFER_SERVER
   }
 
@@ -78,6 +74,7 @@ public class BaseServerTest
       case COORDINATOR_BOOKKEEPER:
       case MOCK_COORDINATOR_BOOKKEEPER:
       case MOCK_WORKER_BOOKKEEPER:
+      case MOCK_WORKER_BOOKKEEPER_WITH_HEARTBEAT:
         metricsToVerify = BookKeeperMetrics.CacheMetric.getAllNames();
         break;
       default:
@@ -110,6 +107,7 @@ public class BaseServerTest
         metricsToVerify = BookKeeperMetrics.HealthMetric.getAllNames();
         break;
       case MOCK_WORKER_BOOKKEEPER:
+      case MOCK_WORKER_BOOKKEEPER_WITH_HEARTBEAT:
         throw new IllegalArgumentException("No health metrics available for WorkerBookKeeper");
       default:
         throw new IllegalArgumentException("Invalid server type " + serverType.name());
@@ -140,6 +138,7 @@ public class BaseServerTest
       case COORDINATOR_BOOKKEEPER:
       case MOCK_COORDINATOR_BOOKKEEPER:
       case MOCK_WORKER_BOOKKEEPER:
+      case MOCK_WORKER_BOOKKEEPER_WITH_HEARTBEAT:
         metricsToVerify = BookKeeperMetrics.BookKeeperJvmMetric.getAllNames();
         break;
       default:
@@ -170,6 +169,7 @@ public class BaseServerTest
       case MOCK_COORDINATOR_BOOKKEEPER:
         throw new IllegalArgumentException("No validation metrics available for CoordinatorBookKeeper");
       case MOCK_WORKER_BOOKKEEPER:
+      case MOCK_WORKER_BOOKKEEPER_WITH_HEARTBEAT:
         metricsToVerify = BookKeeperMetrics.ValidationMetric.getAllNames();
         break;
       default:
@@ -189,7 +189,7 @@ public class BaseServerTest
 
     assertTrue(metrics.getNames().size() == 0, "Metrics should not be registered before server is started.");
 
-    startServer(serverType, conf, metrics);
+    startServer(serverType, conf, metrics, new FakeTicker());
 
     assertTrue(metrics.getNames().size() > 0, "Metrics should be registered once server is started.");
 
@@ -372,7 +372,7 @@ public class BaseServerTest
    * @param conf    The current Hadoop configuration.
    * @param metrics The current metrics registry.
    */
-  protected void startMockWorkerBookKeeperServer(final Configuration conf, final MetricRegistry metrics) throws InterruptedException
+  protected void startMockWorkerBookKeeperServer(final Configuration conf, final MetricRegistry metrics, final Ticker ticker, final boolean startHeartbeatService) throws InterruptedException
   {
     if (mockWorkerBookKeeperServer != null) {
       throw new IllegalStateException("A MockWorkerBookKeeperServer is already running");
@@ -380,12 +380,12 @@ public class BaseServerTest
 
     CacheConfig.setOnMaster(conf, false);
 
-    mockWorkerBookKeeperServer = new MockWorkerBookKeeperServer();
+    mockWorkerBookKeeperServer = new MockWorkerBookKeeperServer(startHeartbeatService);
     final Thread thread = new Thread()
     {
       public void run()
       {
-        mockWorkerBookKeeperServer.startServer(conf, metrics);
+        mockWorkerBookKeeperServer.startServer(conf, metrics, ticker);
       }
     };
     thread.start();
@@ -428,7 +428,7 @@ public class BaseServerTest
     Set<String> metricsNames = getJmxMetricsNames();
     assertDoesNotContainMetrics(metricsNames, metricsToVerify, usePartialMatch);
 
-    startServer(serverType, conf, metrics);
+    startServer(serverType, conf, metrics, new FakeTicker());
 
     try {
       metricsNames = getJmxMetricsNames();
@@ -455,7 +455,7 @@ public class BaseServerTest
    * @param metrics The current metrics registry.
    * @throws InterruptedException if the current thread is interrupted while sleeping.
    */
-  private void startServer(ServerType serverType, Configuration conf, MetricRegistry metrics) throws InterruptedException
+  protected void startServer(ServerType serverType, Configuration conf, MetricRegistry metrics, Ticker ticker) throws InterruptedException
   {
     switch (serverType) {
       case COORDINATOR_BOOKKEEPER:
@@ -465,7 +465,10 @@ public class BaseServerTest
         startMockCoordinatorBookKeeperServer(conf, metrics);
         break;
       case MOCK_WORKER_BOOKKEEPER:
-        startMockWorkerBookKeeperServer(conf, metrics);
+        startMockWorkerBookKeeperServer(conf, metrics, ticker, false);
+        break;
+      case MOCK_WORKER_BOOKKEEPER_WITH_HEARTBEAT:
+        startMockWorkerBookKeeperServer(conf, metrics, ticker, true);
         break;
       case LOCAL_DATA_TRANSFER_SERVER:
         startLocalDataTransferServer(conf, metrics);
@@ -488,6 +491,7 @@ public class BaseServerTest
         stopMockCoordinatorBookKeeperServer();
         break;
       case MOCK_WORKER_BOOKKEEPER:
+      case MOCK_WORKER_BOOKKEEPER_WITH_HEARTBEAT:
         stopMockWorkerBookKeeperServer();
         break;
       case LOCAL_DATA_TRANSFER_SERVER:
@@ -566,8 +570,8 @@ public class BaseServerTest
         // Initializing this BookKeeper here allows it to register the live worker count metric for testing.
         new CoordinatorBookKeeper(conf, bookKeeperMetrics);
       }
-      catch (FileNotFoundException e) {
-        log.error("Cache directories could not be created", e);
+      catch (BookKeeperInitializationException e) {
+        log.error("Could not instantiate Coordinator", e);
         return;
       }
       registerMetrics(conf);
@@ -598,27 +602,25 @@ public class BaseServerTest
   private static class MockWorkerBookKeeperServer extends BookKeeperServer
   {
     private boolean isServerUp;
+    private boolean startHeartbeatService;
 
-    public void startServer(Configuration conf, MetricRegistry metricRegistry)
+    public MockWorkerBookKeeperServer(boolean startHeartbeatService)
     {
-      final BookKeeperFactory bookKeeperFactory = mock(BookKeeperFactory.class);
-      try {
-        when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
-            new RetryingBookkeeperClient(
-                new TSocket("localhost", CacheConfig.getServerPort(conf), CacheConfig.getServerConnectTimeout(conf)),
-                CacheConfig.getMaxRetries(conf)));
-      }
-      catch (TTransportException e) {
-        log.error("Error starting MockWorkerBookKeeperServer for test", e);
-      }
+      this.startHeartbeatService = startHeartbeatService;
+    }
+
+    public void startServer(Configuration conf, MetricRegistry metricRegistry, Ticker ticker)
+    {
+      final BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
 
       metrics = metricRegistry;
       bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
       try {
-        new WorkerBookKeeper(conf, bookKeeperMetrics, bookKeeperFactory);
+        conf.setBoolean("StartHeartBeatService", startHeartbeatService);
+        new MockWorkerBookKeeper(conf, bookKeeperMetrics, ticker, bookKeeperFactory);
       }
-      catch (FileNotFoundException e) {
-        log.error("Cache directories could not be created", e);
+      catch (BookKeeperInitializationException e) {
+        log.error("Could not instantiate Worker", e);
         return;
       }
       registerMetrics(conf);

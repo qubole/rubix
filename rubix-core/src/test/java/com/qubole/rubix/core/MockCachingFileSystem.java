@@ -13,7 +13,6 @@
 package com.qubole.rubix.core;
 
 import com.qubole.rubix.spi.CacheConfig;
-import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -40,13 +39,7 @@ public class MockCachingFileSystem extends CachingFileSystem<RawLocalFileSystem>
   public void initialize(URI uri, Configuration conf) throws IOException
   {
     this.conf = conf;
-    try {
-      initializeClusterManager(conf, ClusterType.TEST_CLUSTER_MANAGER);
-      super.initialize(uri, conf);
-    }
-    catch (ClusterManagerInitilizationException ex) {
-      throw new IOException(ex);
-    }
+    super.initialize(uri, conf);
   }
 
   public String getScheme()
@@ -65,7 +58,7 @@ public class MockCachingFileSystem extends CachingFileSystem<RawLocalFileSystem>
         new BufferedFSInputStream(
             new CachingInputStream(new FSDataInputStream(inputStream), conf, path, file.length(),
                 file.lastModified(), new CachingFileSystemStats(),
-                ClusterType.TEST_CLUSTER_MANAGER, bookKeeperFactory, fs,
+                bookKeeperFactory, fs,
                 CacheConfig.getBlockSize(conf), statistics),
             CacheConfig.getBlockSize(conf)));
   }

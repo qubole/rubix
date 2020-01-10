@@ -24,12 +24,12 @@ import com.qubole.rubix.common.utils.ClusterUtil;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.thrift.HeartbeatRequest;
 import com.qubole.rubix.spi.thrift.HeartbeatStatus;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.shaded.TException;
-import org.apache.thrift.shaded.transport.TTransportException;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -109,31 +109,7 @@ public class HeartbeatService extends AbstractScheduledService
   {
     final int retryInterval = CacheConfig.getServiceRetryInterval(conf);
     final int maxRetries = CacheConfig.getServiceMaxRetries(conf);
-
-    for (int failedStarts = 0; failedStarts < maxRetries; ) {
-      try {
-        RetryingBookkeeperClient client = bookKeeperFactory.createBookKeeperClient(masterHostname, conf);
-        return client;
-      }
-      catch (TTransportException e) {
-        failedStarts++;
-        log.warn(String.format("Could not start client for heartbeat service [%d/%d attempts]", failedStarts, maxRetries));
-      }
-
-      if (failedStarts == maxRetries) {
-        break;
-      }
-
-      try {
-        Thread.sleep(retryInterval);
-      }
-      catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-      }
-    }
-
-    log.fatal("Heartbeat service ran out of retries to connect to the master BookKeeper");
-    throw new RuntimeException("Could not start heartbeat service");
+    return bookKeeperFactory.createBookKeeperClient(masterHostname, conf, maxRetries, retryInterval, true);
   }
 
   @Override
@@ -152,7 +128,7 @@ public class HeartbeatService extends AbstractScheduledService
           : new HeartbeatStatus();
 
       log.debug(String.format("Sending heartbeat to %s", masterHostname));
-      bookkeeperClient.handleHeartbeat(InetAddress.getLocalHost().getCanonicalHostName(), status);
+      bookkeeperClient.handleHeartbeat(new HeartbeatRequest(InetAddress.getLocalHost().getCanonicalHostName(), status));
     }
     catch (IOException e) {
       log.error("Could not send heartbeat", e);

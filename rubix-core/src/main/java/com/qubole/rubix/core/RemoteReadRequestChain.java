@@ -16,6 +16,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.thrift.SetCachedRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -54,7 +55,6 @@ public class RemoteReadRequestChain extends ReadRequestChain
   private String localFile;
 
   public RemoteReadRequestChain(FSDataInputStream inputStream, String localfile, ByteBuffer directBuffer, byte[] affixBuffer)
-      throws IOException
   {
     this(inputStream,
         localfile,
@@ -64,7 +64,6 @@ public class RemoteReadRequestChain extends ReadRequestChain
   }
 
   public RemoteReadRequestChain(FSDataInputStream inputStream, String localfile, ByteBuffer directBuffer, byte[] affixBuffer, BookKeeperFactory bookKeeperFactory)
-      throws IOException
   {
     this.inputStream = inputStream;
     this.directBuffer = directBuffer;
@@ -76,7 +75,6 @@ public class RemoteReadRequestChain extends ReadRequestChain
 
   @VisibleForTesting
   public RemoteReadRequestChain(FSDataInputStream inputStream, String fileName)
-      throws IOException
   {
     this(inputStream, fileName, ByteBuffer.allocate(100), new byte[100]);
   }
@@ -84,6 +82,7 @@ public class RemoteReadRequestChain extends ReadRequestChain
   public Integer call()
       throws IOException
   {
+    log.debug(String.format("Read Request threadName: %s, Remote read Executor threadName: %s", threadName, Thread.currentThread().getName()));
     Thread.currentThread().setName(threadName);
     checkState(isLocked, "Trying to execute Chain without locking");
 
@@ -162,7 +161,7 @@ public class RemoteReadRequestChain extends ReadRequestChain
   private int copyIntoCache(FileChannel fileChannel, byte[] destBuffer, int destBufferOffset, int length, long cacheReadStart)
       throws IOException
   {
-    log.info(String.format("Trying to copy [%d - %d] bytes into cache from destination buffer offset %d into localFile %s", cacheReadStart, cacheReadStart + length, destBufferOffset, localFile));
+    log.info(String.format("Trying to copy [%d - %d] bytes into cache with offset %d into localFile %s", cacheReadStart, cacheReadStart + length, destBufferOffset, localFile));
     long start = System.nanoTime();
     int leftToWrite = length;
     int writtenSoFar = 0;
@@ -196,8 +195,9 @@ public class RemoteReadRequestChain extends ReadRequestChain
     try {
       client = bookKeeperFactory.createBookKeeperClient(conf);
       for (ReadRequest readRequest : readRequests) {
-        log.debug("Setting cached from : " + toBlock(readRequest.getBackendReadStart()) + " block to : " + (toBlock(readRequest.getBackendReadEnd() - 1) + 1));
-        client.setAllCached(remotePath, fileSize, lastModified, toBlock(readRequest.getBackendReadStart()), toBlock(readRequest.getBackendReadEnd() - 1) + 1);
+        SetCachedRequest request = new SetCachedRequest(remotePath, fileSize, lastModified,
+            toBlock(readRequest.getBackendReadStart()), toBlock(readRequest.getBackendReadEnd() - 1) + 1);
+        client.setAllCached(request);
       }
     }
     catch (Exception e) {

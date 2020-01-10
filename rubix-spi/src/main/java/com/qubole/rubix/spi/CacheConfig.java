@@ -29,11 +29,13 @@ import org.apache.hadoop.conf.Configuration;
 public class CacheConfig
 {
   public static final String RUBIX_SCHEME = "rubix";
+  public static final int READ_SERVICE_THREAD_POOL_SIZE = 100;
 
   private static final String KEY_BLOCK_SIZE = "rubix.cache.block.size";
   private static final String KEY_CACHE_ENABLED = "rubix.cache.enabled";
   private static final String KEY_CACHE_METADATA_FILE_SUFFIX = "rubix.cache.metadata.file.suffix";
   private static final String KEY_SERVER_CONNECT_TIMEOUT = "rubix.network.server.connect.timeout";
+  private static final String KEY_SERVER_SOCKET_TIMEOUT = "rubix.network.server.socket.timeout";
   private static final String KEY_DATA_CACHE_EXPIRY_AFTER_WRITE = "rubix.cache.expiration.after-write";
   private static final String KEY_DATA_CACHE_DIR_PREFIX = "rubix.cache.dirprefix.list";
   private static final String KEY_DATA_CACHE_DIR_SUFFIX = "rubix.cache.dirsuffix";
@@ -87,10 +89,16 @@ public class CacheConfig
   private static final String KEY_CACHE_FILE_SPLIT_SIZE = "rubix.cache.filesplit.size";
   private static final String KEY_CLUSTER_NODE_REFRESH_TIME = "rubix.cluster.node.refresh.time";
   private static final String KEY_ENABLE_PATH_ENCRYPTION = "rubix.cache.path.encryption.enabled";
+  private static final String KEY_WORKER_NODEINFO_EXPIRY_PERIOD = "rubix.cluster.workerinfo.expiry.period";
+  private static final String KEY_RUBIX_CLUSTER_TYPE = "rubix.cluster.type";
+  private static final String KEY_RUBIX_WORKER_NODELIST_FETCH_MAX_RETRIES = "rubix.cluster.worker.nodelist.fetch.max-retries";
+  private static final String KEY_RUBIX_WORKER_NODELIST_FETCH_WAIT_INTERVAL = "rubix.cluster.worker.nodelist.fetch.wait.interval";
+  private static final String KEY_DUMMY_MODE = "rubix.cache.dummy.mode";
 
   // default values
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
   private static final int DEFAULT_SERVER_CONNECT_TIMEOUT = 1000; // ms
+  private static final int DEFAULT_SERVER_SOCKET_TIMEOUT = 6000; // ms
   private static final String DEFAULT_CACHE_METADATA_FILE_SUFFIX = "_mdfile";
   private static final String DEFAULT_DATA_CACHE_DIR_PREFIX = "/media/ephemeral";
   private static final String DEFAULT_DATA_CACHE_DIR_SUFFIX = "/fcache/";
@@ -142,11 +150,16 @@ public class CacheConfig
   private static final String DEFAULT_DUMMY_CLUSTER_MANAGER = "com.qubole.rubix.core.utils.DummyClusterManager";
   private static final boolean DEFAULT_ENABLE_FILE_STALESSNESS_CHECK = true;
   private static final int DEFAULT_STALE_FILEINFO_EXPIRY_PERIOD = 36000; // seconds
-  private static final boolean DEFAULT_CLEANUP_FILES_DURING_START = true;
-  private static final long DEFAULT_MAX_CACHE_SIZE = 0;
   private static final long DEFAULT_CACHE_FILE_SPLIT_SIZE = 256 * 1024 * 1024;
+  private static final int DEFAULT_WORKER_NODEINFO_EXPIRY_PERIOD = 300; // seconds
+  private static final boolean DEFAULT_CLEANUP_FILES_DURING_START = true;
   private static final int DEFAULT_CLUSTER_NODE_REFRESH_TIME = 300; //seconds
   private static final boolean DEFAULT_ENABLE_PATH_ENCRYPTION = false;
+  private static final boolean DEFAULT_DUMMY_MODE = false;
+  private static final long DEFAULT_MAX_CACHE_SIZE = 0;
+  private static final int DEFAULT_RUBIX_CLUSTER_TYPE = ClusterType.TEST_CLUSTER_MANAGER.ordinal();
+  private static final int DEFAULT_RUBIX_WORKER_NODELIST_FETCH_MAX_RETRIES = 10;
+  private static final int DEFAULT_RUBIX_WORKER_NODELIST_FETCH_WAIT_INTERVAL = 30000; //msec
 
   private CacheConfig()
   {
@@ -235,6 +248,11 @@ public class CacheConfig
   public static int getServerConnectTimeout(Configuration conf)
   {
     return conf.getInt(KEY_SERVER_CONNECT_TIMEOUT, DEFAULT_SERVER_CONNECT_TIMEOUT);
+  }
+
+  public static int getServerSocketTimeout(Configuration conf)
+  {
+    return conf.getInt(KEY_SERVER_SOCKET_TIMEOUT, DEFAULT_SERVER_SOCKET_TIMEOUT);
   }
 
   public static int getDiskReadBufferSize(Configuration conf)
@@ -437,19 +455,44 @@ public class CacheConfig
     return conf.getInt(KEY_STALE_FILEINFO_EXPIRY_PERIOD, DEFAULT_STALE_FILEINFO_EXPIRY_PERIOD);
   }
 
-  public static boolean isCleanupFilesDuringStartEnabled(Configuration conf)
-  {
-    return conf.getBoolean(KEY_CLEANUP_FILES_DURING_START, DEFAULT_CLEANUP_FILES_DURING_START);
-  }
-
   public static long getCacheFileSplitSize(Configuration conf)
   {
     return conf.getLong(KEY_CACHE_FILE_SPLIT_SIZE, DEFAULT_CACHE_FILE_SPLIT_SIZE);
   }
 
+  public static int getWorkerNodeInfoExpiryPeriod(Configuration conf)
+  {
+    return conf.getInt(KEY_WORKER_NODEINFO_EXPIRY_PERIOD, DEFAULT_WORKER_NODEINFO_EXPIRY_PERIOD);
+  }
+
+  public static boolean isCleanupFilesDuringStartEnabled(Configuration conf)
+  {
+    return conf.getBoolean(KEY_CLEANUP_FILES_DURING_START, DEFAULT_CLEANUP_FILES_DURING_START);
+  }
+
+  public static int getClusterType(Configuration conf)
+  {
+    return conf.getInt(KEY_RUBIX_CLUSTER_TYPE, DEFAULT_RUBIX_CLUSTER_TYPE);
+  }
+
   public static int getClusterNodeRefreshTime(Configuration conf)
   {
     return conf.getInt(KEY_CLUSTER_NODE_REFRESH_TIME, DEFAULT_CLUSTER_NODE_REFRESH_TIME);
+  }
+
+  public static int getClusterNodesFetchRetryCount(Configuration conf)
+  {
+    return conf.getInt(KEY_RUBIX_WORKER_NODELIST_FETCH_MAX_RETRIES, DEFAULT_RUBIX_WORKER_NODELIST_FETCH_MAX_RETRIES);
+  }
+
+  public static int getClusterNodesFetchWaitInterval(Configuration conf)
+  {
+    return conf.getInt(KEY_RUBIX_WORKER_NODELIST_FETCH_WAIT_INTERVAL, DEFAULT_RUBIX_WORKER_NODELIST_FETCH_WAIT_INTERVAL);
+  }
+
+  public static boolean isDummyModeEnabled(Configuration conf)
+  {
+    return conf.getBoolean(KEY_DUMMY_MODE, DEFAULT_DUMMY_MODE);
   }
 
   public static void setBlockSize(Configuration conf, int blockSize)
@@ -582,6 +625,16 @@ public class CacheConfig
     conf.setInt(KEY_REMOTE_FETCH_PROCESS_INTERVAL, interval);
   }
 
+  public static void setServerConnectTimeout(Configuration conf, int timeout)
+  {
+    conf.setInt(KEY_SERVER_CONNECT_TIMEOUT, timeout);
+  }
+
+  public static void setServerSocketTimeout(Configuration conf, int timeout)
+  {
+    conf.setInt(KEY_SERVER_SOCKET_TIMEOUT, timeout);
+  }
+
   public static void setServerPort(Configuration conf, int serverPort)
   {
     conf.setInt(KEY_SERVER_PORT, serverPort);
@@ -662,18 +715,45 @@ public class CacheConfig
     conf.setInt(KEY_STALE_FILEINFO_EXPIRY_PERIOD, expiryPeriod);
   }
 
-  public static void setCleanupFilesDuringStart(Configuration conf, boolean isCleanupRequired)
-  {
-    conf.setBoolean(KEY_CLEANUP_FILES_DURING_START, isCleanupRequired);
-  }
-
   public static void setCacheFileSplitSize(Configuration conf, long splitSize)
   {
     conf.setLong(KEY_CACHE_FILE_SPLIT_SIZE, splitSize);
   }
 
+  public static void setWorkerNodeInfoExpiryPeriod(Configuration conf, int expiryPeriod)
+  {
+    conf.setInt(KEY_WORKER_NODEINFO_EXPIRY_PERIOD, expiryPeriod);
+  }
+
+  public static void setCleanupFilesDuringStart(Configuration conf, boolean isCleanupRequired)
+  {
+    conf.setBoolean(KEY_CLEANUP_FILES_DURING_START, isCleanupRequired);
+  }
+
+  public static void setRubixClusterType(Configuration conf, int clusterType)
+  {
+    if (ClusterType.findByValue(clusterType) != null) {
+      conf.setInt(KEY_RUBIX_CLUSTER_TYPE, clusterType);
+    }
+  }
+
   public static void setClusterNodeRefreshTime(Configuration conf, int refreshTime)
   {
     conf.setInt(KEY_CLUSTER_NODE_REFRESH_TIME, refreshTime);
+  }
+
+  public static void setClusterNodesFetchRetryCount(Configuration conf, int maxRetries)
+  {
+    conf.setInt(KEY_RUBIX_WORKER_NODELIST_FETCH_MAX_RETRIES, maxRetries);
+  }
+
+  public static void setClusterNodesFetchWaitInterval(Configuration conf, int waitInterval)
+  {
+    conf.setInt(KEY_RUBIX_WORKER_NODELIST_FETCH_WAIT_INTERVAL, waitInterval);
+  }
+
+  public static void setDummyMode(Configuration conf, boolean dummyMode)
+  {
+    conf.setBoolean(KEY_DUMMY_MODE, dummyMode);
   }
 }
