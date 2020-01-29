@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.commons.net.util.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.file.tfile.ByteArray;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -50,7 +51,7 @@ public class CacheUtil
     @Override
     public String load(final String relLocation) throws Exception
     {
-      return getHashedPaLinkedinh(relLocation);
+      return getHashedPath(relLocation);
     }
   });
 
@@ -305,10 +306,12 @@ public class CacheUtil
       hashRelLocation = sb.toString();*/
       StringBuilder sb = new StringBuilder();
       log.info("Length of pathBytes : " + pathBytes.length);
-      for (int i = 0; i < pathBytes.length / 4; i++) {
-        sb.append(Integer.toString((pathBytes[i] & 0xff) + 0x100, 16).substring(1));
+      log.info("Value of the string : " + new String(pathBytes));
+      for (int i = 0; i < pathBytes.length/4-1; i++) {
+        //sb.append(Integer.toString((pathBytes[i] & 0xff) + 0x100, 16).substring(1));
+        sb.append(Integer.toHexString(0xFF & pathBytes[i]));
         //log.info(Integer.toString((pathBytes[i])));
-        log.info(pathBytes[i] + pathBytes[4*i+1] + pathBytes[4*i+2] + pathBytes[4*i+3]);
+        log.info(pathBytes[4*i] & pathBytes[4*i+1] & pathBytes[4*i+2] & pathBytes[4*i+3] & 0xFF);
       }
       hashRelLocation = sb.toString();
       log.info("Value of hashRelLocation :" + hashRelLocation);

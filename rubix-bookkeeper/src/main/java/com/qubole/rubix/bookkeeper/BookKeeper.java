@@ -301,7 +301,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       throw new TException(e);
     }
 
-    if (request.isIncrMetrics() && !isValidatingCachingBehavior(remotePath)) {
+    if (request.isIncrMetrics() && !isValidatingCachingBehavior(remotePath, conf)) {
       totalRequestCount.inc(totalRequests);
       nonlocalRequestCount.inc(nonLocalRequests);
       cacheRequestCount.inc(cacheRequests);
@@ -561,7 +561,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         })
         .maximumWeight(totalAvailableForCache)
         .expireAfterWrite(CacheConfig.getCacheDataExpirationAfterWrite(conf), TimeUnit.MILLISECONDS)
-        .removalListener(new CacheRemovalListener())
+        .removalListener(new CacheRemovalListener(conf))
         .build();
   }
 
@@ -602,13 +602,19 @@ public abstract class BookKeeper implements BookKeeperService.Iface
 
   protected static class CacheRemovalListener implements RemovalListener<String, FileMetadata>
   {
+    final Configuration conf;
+    CacheRemovalListener(Configuration configuration)
+    {
+      super();
+      conf = configuration;
+    }
     @Override
     public void onRemoval(RemovalNotification<String, FileMetadata> notification)
     {
       FileMetadata md = notification.getValue();
       try {
         md.closeAndCleanup(notification.getCause(), fileMetadataCache);
-        if (!isValidatingCachingBehavior(md.getRemotePath())) {
+        if (!isValidatingCachingBehavior(md.getRemotePath(), conf)) {
           switch (notification.getCause()) {
             case EXPLICIT:
               cacheInvalidationCount.inc();
@@ -691,10 +697,9 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     return false;
   }
 
-  private static boolean isValidatingCachingBehavior(String remotePath)
+  private static boolean isValidatingCachingBehavior(String remotePath, Configuration conf)
   {
-    //return CachingValidator.VALIDATOR_TEST_FILE_NAME.equals(CacheUtil.getName(remotePath));
-    return false;
+    return CachingValidator.VALIDATOR_TEST_FILE_NAME.equals(CacheUtil.getName(remotePath, conf));
   }
 
   /**
