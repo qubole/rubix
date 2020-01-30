@@ -299,22 +299,13 @@ public class CacheUtil
     try {
       MessageDigest md = MessageDigest.getInstance("SHA-256");
       byte[] pathBytes = md.digest(relLocation.getBytes());
-/*      StringBuilder sb = new StringBuilder();
-      for (int i = 0; i < pathBytes.length; i++) {
-        sb.append(Integer.toString((pathBytes[i] & 0xff) + 0x100, 16).substring(1));
-      }
-      hashRelLocation = sb.toString();*/
       StringBuilder sb = new StringBuilder();
-      log.info("Length of pathBytes : " + pathBytes.length);
-      log.info("Value of the string : " + new String(pathBytes));
       for (int i = 0; i < pathBytes.length/4-1; i++) {
-        //sb.append(Integer.toString((pathBytes[i] & 0xff) + 0x100, 16).substring(1));
         sb.append(Integer.toHexString(0xFF & pathBytes[i]));
-        //log.info(Integer.toString((pathBytes[i])));
         log.info(pathBytes[4*i] & pathBytes[4*i+1] & pathBytes[4*i+2] & pathBytes[4*i+3] & 0xFF);
       }
       hashRelLocation = sb.toString();
-      log.info("Value of hashRelLocation :" + hashRelLocation);
+      log.debug("Value of hashRelLocation :" + hashRelLocation);
       if (hashedPathSet.get(hashRelLocation) != null) {
         return getHashedPath(hashRelLocation);
       }
