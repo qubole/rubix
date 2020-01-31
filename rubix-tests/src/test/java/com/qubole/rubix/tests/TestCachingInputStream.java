@@ -92,6 +92,7 @@ public class TestCachingInputStream
     CacheConfig.setMaxDisks(conf, 1);
     CacheConfig.setIsParallelWarmupEnabled(conf, false);
     CacheConfig.setOnMaster(conf, true);
+    CacheConfig.setBlockSize(conf, blockSize);
 
     Thread server = new Thread()
     {

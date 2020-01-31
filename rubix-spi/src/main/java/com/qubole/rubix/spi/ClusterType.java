@@ -21,7 +21,8 @@ public enum ClusterType
   PRESTO_CLUSTER_MANAGER,
   HADOOP_CLUSTER_MANAGER,
   TEST_CLUSTER_MANAGER,
-  TEST_CLUSTER_MANAGER_MULTINODE;
+  TEST_CLUSTER_MANAGER_MULTINODE,
+  PRESTOSQL_CLUSTER_MANAGER;
 
   public static ClusterType findByValue(int value)
   {
@@ -36,6 +37,8 @@ public enum ClusterType
         return TEST_CLUSTER_MANAGER;
       case 4:
         return TEST_CLUSTER_MANAGER_MULTINODE;
+      case 5:
+        return PRESTOSQL_CLUSTER_MANAGER;
       default:
         return null;
     }

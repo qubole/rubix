@@ -16,7 +16,6 @@ import com.google.common.base.Throwables;
 import com.qubole.rubix.core.ReadRequest;
 import com.qubole.rubix.core.ReadRequestChain;
 import com.qubole.rubix.core.ReadRequestChainStats;
-import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.thrift.SetCachedRequest;
@@ -45,7 +44,6 @@ public class FileDownloadRequestChain extends ReadRequestChain
   private String remotePath;
   private long fileSize;
   private long lastModified;
-  private BookKeeperFactory bookKeeperFactory;
   private int totalRequestedRead;
   private int warmupPenalty;
   private int blockSize;
@@ -66,7 +64,6 @@ public class FileDownloadRequestChain extends ReadRequestChain
     this.remotePath = remotePath;
     this.fileSize = fileSize;
     this.lastModified = lastModified;
-    this.bookKeeperFactory = new BookKeeperFactory();
     this.blockSize = CacheConfig.getBlockSize(conf);
     this.directBuffer = directBuffer;
   }
@@ -106,7 +103,7 @@ public class FileDownloadRequestChain extends ReadRequestChain
     long startTime = System.currentTimeMillis();
     File file = new File(localFile);
     if (!file.exists()) {
-      log.info("Creating localfile : " + localFile);
+      log.debug("Creating localfile : " + localFile);
       String metadataFilePath = CacheUtil.getMetadataFilePath(remotePath, conf);
       File mdFile = new File(metadataFilePath);
       if (mdFile.exists() && mdFile.length() > 0) {
@@ -120,20 +117,19 @@ public class FileDownloadRequestChain extends ReadRequestChain
 
     FSDataInputStream inputStream = null;
     FileChannel fileChannel = null;
-
+    FileSystem fileSystem = remoteFileSystem;
     try {
-      inputStream = remoteFileSystem.open(new Path(remotePath), CacheConfig.getBlockSize(conf));
+      inputStream = fileSystem.open(new Path(remotePath), CacheConfig.getBlockSize(conf));
       fileChannel = new FileOutputStream(new RandomAccessFile(file, "rw").getFD()).getChannel();
       for (ReadRequest readRequest : readRequests) {
         if (isCancelled()) {
-          log.info("Request Cancelled for " + readRequest.getBackendReadStart());
+          log.debug("Request Cancelled for " + readRequest.getBackendReadStart());
           propagateCancel(this.getClass().getName());
         }
 
         int readBytes = 0;
         inputStream.seek(readRequest.getBackendReadStart());
-        log.info("Seeking to " + readRequest.getBackendReadStart());
-        //log.info("Processing request of  " + readRequest.getBackendReadLength() + " from " + readRequest.backendReadStart);
+        log.debug("Seeking to " + readRequest.getBackendReadStart());
         readBytes = copyIntoCache(inputStream, fileChannel, readRequest.getBackendReadLength(),
             readRequest.getBackendReadStart());
         totalRequestedRead += readBytes;
@@ -141,7 +137,7 @@ public class FileDownloadRequestChain extends ReadRequestChain
       long endTime = System.currentTimeMillis();
       timeSpentOnDownload = (endTime - startTime) / 1000;
 
-      log.info("Downloaded " + totalRequestedRead + " bytes of file " + remotePath);
+      log.debug("Downloaded " + totalRequestedRead + " bytes of file " + remotePath);
       log.debug("RemoteFetchRequest took : " + timeSpentOnDownload + " secs ");
       return totalRequestedRead;
     }
@@ -154,7 +150,7 @@ public class FileDownloadRequestChain extends ReadRequestChain
         inputStream.close();
       }
 
-      remoteFileSystem.close();
+      fileSystem.close();
     }
   }
 
@@ -166,7 +162,7 @@ public class FileDownloadRequestChain extends ReadRequestChain
     try {
       long start = System.nanoTime();
       buffer = new byte[length];
-      log.info("Copying data of file " + remotePath + " of length " + length + " from offset " + cacheReadStart);
+      log.debug("Copying data of file " + remotePath + " of length " + length + " from offset " + cacheReadStart);
       while (nread < length) {
         int nbytes = inputStream.read(buffer, nread, length - nread);
         if (nbytes < 0) {
@@ -189,7 +185,7 @@ public class FileDownloadRequestChain extends ReadRequestChain
         leftToWrite -= nwrite;
       }
       warmupPenalty += System.nanoTime() - start;
-      log.info("Read " + nread + " for file " + remotePath + " from offset " + cacheReadStart);
+      log.debug("Read " + nread + " for file " + remotePath + " from offset " + cacheReadStart);
     }
     finally {
       buffer = null;
@@ -201,7 +197,7 @@ public class FileDownloadRequestChain extends ReadRequestChain
   public void updateCacheStatus(String remotePath, long fileSize, long lastModified, int blockSize, Configuration conf)
   {
     try {
-      log.info("Updating cache for FileDownloadRequestChain . Num Requests : " + getReadRequests().size() + " for remotepath : " + remotePath);
+      log.debug("Updating cache for FileDownloadRequestChain . Num Requests : " + getReadRequests().size() + " for remotepath : " + remotePath);
       for (ReadRequest readRequest : getReadRequests()) {
         SetCachedRequest request = new SetCachedRequest(remotePath, fileSize, lastModified,
             toBlock(readRequest.getBackendReadStart()), toBlock(readRequest.getBackendReadEnd() - 1) + 1);
@@ -209,7 +205,7 @@ public class FileDownloadRequestChain extends ReadRequestChain
       }
     }
     catch (Exception e) {
-      log.info("Could not update BookKeeper about newly cached blocks: " + Throwables.getStackTraceAsString(e));
+      log.debug("Could not update BookKeeper about newly cached blocks: " + Throwables.getStackTraceAsString(e));
     }
   }
 

@@ -13,7 +13,6 @@
 package com.qubole.rubix.core;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Throwables;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
@@ -134,10 +133,10 @@ public class CachedReadRequestChain extends ReadRequestChain
           read += nread;
         }
       }
-      log.info(String.format("Read %d bytes from cached file", read));
+      log.debug(String.format("Read %d bytes from cached file", read));
     }
     catch (Exception ex) {
-      log.error(String.format("Fall back to read from object store for %s .Could not read data from cached file : ", localCachedFile, ex));
+      log.error(String.format("Fall back to read from object store for %s .Could not read data from cached file : ", localCachedFile), ex);
       needsInvalidation = true;
       directDataRead = readFromRemoteFileSystem();
       return directDataRead;
@@ -183,7 +182,7 @@ public class CachedReadRequestChain extends ReadRequestChain
       client.invalidateFileMetadata(remotePath);
     }
     catch (Exception e) {
-      log.error("Could not Invalidate Corrupted File " + remotePath + " Error : " + Throwables.getStackTraceAsString(e));
+      log.error("Could not Invalidate Corrupted File " + remotePath + " Error : ", e);
     }
     finally {
       try {
@@ -193,7 +192,7 @@ public class CachedReadRequestChain extends ReadRequestChain
         }
       }
       catch (IOException ex) {
-        log.error("Could not close bookkeeper client. Exception: " + ex.toString());
+        log.error("Could not close bookkeeper client. Exception: ", ex);
       }
     }
   }

@@ -13,6 +13,7 @@
 
 package com.qubole.rubix.common.utils;
 
+import com.qubole.rubix.spi.CacheConfig;
 import org.apache.hadoop.conf.Configuration;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.Test;
@@ -40,8 +41,8 @@ public class TestClusterUtil
   @Test
   public void testGetMasterHostname_masterHostnameConf()
   {
-    conf.set(ClusterUtil.KEY_MASTER_HOSTNAME, TEST_MASTER_HOSTNAME);
-    conf.set(ClusterUtil.KEY_YARN_RESOURCEMANAGER_ADDRESS, TEST_YARN_RESOURCEMANAGER_ADDRESS);
+    CacheConfig.setCoordinatorHostName(conf, TEST_MASTER_HOSTNAME);
+    CacheConfig.setResourceManagerAddress(conf, TEST_YARN_RESOURCEMANAGER_ADDRESS);
 
     final String hostname = ClusterUtil.getMasterHostname(conf);
     assertEquals(hostname, TEST_MASTER_HOSTNAME, "Unexpected hostname!");
@@ -53,7 +54,7 @@ public class TestClusterUtil
   @Test
   public void testGetMasterHostname_yarnResourceManagerConf()
   {
-    conf.set(ClusterUtil.KEY_YARN_RESOURCEMANAGER_ADDRESS, TEST_YARN_RESOURCEMANAGER_ADDRESS);
+    CacheConfig.setResourceManagerAddress(conf, TEST_YARN_RESOURCEMANAGER_ADDRESS);
 
     final String hostname = ClusterUtil.getMasterHostname(conf);
     assertEquals(hostname, TEST_YARN_RESOURCEMANAGER_HOSTNAME, "Unexpected hostname!");

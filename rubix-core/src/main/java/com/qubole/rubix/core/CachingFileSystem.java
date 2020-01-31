@@ -16,6 +16,7 @@ import com.google.common.base.Throwables;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.thrift.BookKeeperService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -57,7 +58,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
   private Path workingDir;
 
   private static CachingFileSystemStats statsMBean;
-  public BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
+  public static BookKeeperFactory bookKeeperFactory;
 
   static {
     MBeanExporter exporter = new MBeanExporter(ManagementFactory.getPlatformMBeanServer());
@@ -85,11 +86,24 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
   {
     try {
       this.fs = getTypeParameterClass().newInstance();
+      if (bookKeeperFactory == null) {
+        bookKeeperFactory = new BookKeeperFactory();
+      }
     }
     catch (InstantiationException | IllegalAccessException e) {
       log.error("cannot instantiate base filesystem ", e);
       Throwables.propagate(e);
     }
+  }
+
+  public FileSystem getRemoteFileSystem()
+  {
+    return fs;
+  }
+
+  public static void setLocalBookKeeper(BookKeeperService.Iface bookKeeper)
+  {
+    bookKeeperFactory = new BookKeeperFactory(bookKeeper);
   }
 
   public abstract String getScheme();
@@ -247,7 +261,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
   @Override
   public BlockLocation[] getFileBlockLocations(FileStatus file, long start, long len) throws IOException
   {
-    if (cacheSkipped) {
+    if (cacheSkipped || (CacheConfig.isEmbeddedModeEnabled(getConf()) && !bookKeeperFactory.isBookKeeperInitialized())) {
       return fs.getFileBlockLocations(file, start, len);
     }
 
@@ -268,7 +282,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
           BlockLocation[] blockLocations = new BlockLocation[(int) Math.ceil((double) file.getLen() / splitSize)];
           int blockNumber = 0;
 
-          RetryingBookkeeperClient client = new BookKeeperFactory().createBookKeeperClient(conf);
+          RetryingBookkeeperClient client = bookKeeperFactory.createBookKeeperClient(conf);
 
           for (long i = 0; i < file.getLen(); i = i + splitSize) {
             long end = i + splitSize;
@@ -291,7 +305,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
           return blockLocations;
         }
         catch (TException ex) {
-          log.error("Error while getting Node HostName. Fallingback on RemoteFileSystem. " + ex.toString());
+          log.error("Error while getting Node HostName. Fallingback on RemoteFileSystem. ", ex);
           return fs.getFileBlockLocations(file, start, len);
         }
       }

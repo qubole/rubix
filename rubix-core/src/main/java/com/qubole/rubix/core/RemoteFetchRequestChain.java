@@ -12,7 +12,6 @@
  */
 package com.qubole.rubix.core;
 
-import com.google.common.base.Throwables;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.RetryingBookkeeperClient;
@@ -39,7 +38,7 @@ public class RemoteFetchRequestChain extends ReadRequestChain
   long fileSize;
 
   public RemoteFetchRequestChain(String remotePath, FileSystem remoteFileSystem, String remoteNodeLocation,
-                                 Configuration conf, long lastModified, long fileSize)
+                                 Configuration conf, long lastModified, long fileSize, BookKeeperFactory bookKeeperFactory)
   {
     this.remotePath = remotePath;
     this.remoteFileSystem = remoteFileSystem;
@@ -47,7 +46,7 @@ public class RemoteFetchRequestChain extends ReadRequestChain
     this.conf = conf;
     this.lastModified = lastModified;
     this.fileSize = fileSize;
-    this.bookKeeperFactory = new BookKeeperFactory();
+    this.bookKeeperFactory = bookKeeperFactory;
   }
 
   @Override
@@ -62,7 +61,7 @@ public class RemoteFetchRequestChain extends ReadRequestChain
     try {
       client = bookKeeperFactory.createBookKeeperClient(remoteNodeLocation, conf);
       for (ReadRequest request : readRequests) {
-        log.info("RemoteFetchRequest from : " + remoteNodeLocation + " Start : " + request.backendReadStart +
+        log.debug("RemoteFetchRequest from : " + remoteNodeLocation + " Start : " + request.backendReadStart +
                 " of length " + request.getBackendReadLength());
         client.readData(new ReadDataRequest(remotePath, request.backendReadStart, request.getBackendReadLength(),
             fileSize, lastModified));
@@ -76,10 +75,10 @@ public class RemoteFetchRequestChain extends ReadRequestChain
         }
       }
       catch (IOException ex) {
-        log.error("Could not close bookkeeper client. Exception: " + ex.toString());
+        log.error("Could not close bookkeeper client. Exception: ", ex);
       }
     }
-    log.info("Send request to remote took " + (System.currentTimeMillis() - startTime) + " :msecs");
+    log.debug("Send request to remote took " + (System.currentTimeMillis() - startTime) + " :msecs");
 
     return 0;
   }
@@ -95,7 +94,7 @@ public class RemoteFetchRequestChain extends ReadRequestChain
     if (CacheConfig.isDummyModeEnabled(conf)) {
       RetryingBookkeeperClient bookKeeperClient = null;
       try {
-        bookKeeperClient = new BookKeeperFactory().createBookKeeperClient(remoteNodeLocation, conf);
+        bookKeeperClient = bookKeeperFactory.createBookKeeperClient(remoteNodeLocation, conf);
         for (ReadRequest readRequest : readRequests) {
           long startBlock = toBlock(readRequest.getBackendReadStart());
           long endBlock = toBlock(readRequest.getBackendReadEnd() - 1) + 1;
@@ -106,7 +105,7 @@ public class RemoteFetchRequestChain extends ReadRequestChain
         }
       }
       catch (Exception e) {
-        log.error("Dummy Mode: Could not update Cache Status for Remote Fetch Request " + Throwables.getStackTraceAsString(e));
+        log.error("Dummy Mode: Could not update Cache Status for Remote Fetch Request ", e);
       }
       finally {
         try {
@@ -115,7 +114,7 @@ public class RemoteFetchRequestChain extends ReadRequestChain
           }
         }
         catch (IOException ex) {
-          log.error("Dummy Mode: Could not close bookkeeper client. Exception: " + ex.toString());
+          log.error("Dummy Mode: Could not close bookkeeper client. Exception: ", ex);
         }
       }
     }

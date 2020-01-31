@@ -62,6 +62,17 @@ public class CacheUtil
       }
     }
 
+    // If count based directories dont exist then fallback to prefix+suffix based directories
+    if (!parentDirectoryExists) {
+      for (String dirPrefix : dirPrefixList) {
+        if (exists(dirPrefix)) {
+          parentDirectoryExists = true;
+          final String cacheDirPath = dirPrefix + "/" + CacheConfig.getCacheDataDirSuffix(conf);
+          createCacheDirectory(cacheDirPath, conf);
+        }
+      }
+    }
+
     if (!parentDirectoryExists) {
       throw new FileNotFoundException(String.format("None of the cache parent directories exists"));
     }
@@ -106,6 +117,17 @@ public class CacheUtil
             }
           }
         }
+
+        if (numDisks == 0) {
+          for (String dirPrefix : dirPrefixList) {
+            final String cacheDirPath = dirPrefix + "/" + dirSuffix;
+            if (exists(cacheDirPath)) {
+              dirPathMap.put(numDisks, dirPrefix);
+              ++numDisks;
+            }
+          }
+        }
+
         return dirPathMap;
       }
     });

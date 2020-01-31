@@ -52,6 +52,7 @@ public class BookKeeperServer extends Configured implements Tool
   // Registry for gathering & storing necessary metrics
   protected MetricRegistry metrics;
   protected BookKeeperMetrics bookKeeperMetrics;
+  private BookKeeper localBookKeeper;
 
   public Configuration conf;
 
@@ -83,9 +84,32 @@ public class BookKeeperServer extends Configured implements Tool
     return 0;
   }
 
-  public void startServer(Configuration conf, MetricRegistry metricsRegistry)
+  public BookKeeper startServer(final Configuration conf, MetricRegistry metricsRegistry)
   {
-    BookKeeper localBookKeeper;
+    setupServer(conf, metricsRegistry);
+    if (CacheConfig.isEmbeddedModeEnabled(conf)) {
+      new Thread(new Runnable()
+      {
+        @Override
+        public void run()
+        {
+          startThriftServer(conf, localBookKeeper);
+        }
+      }).start();
+    }
+    else {
+      startThriftServer(conf, localBookKeeper);
+    }
+
+    return localBookKeeper;
+  }
+
+  public void setupServer(Configuration conf, MetricRegistry metricsRegistry)
+  {
+    conf = new Configuration(conf);
+    CacheConfig.setCacheDataEnabled(conf, false);
+    CacheConfig.disableFSCaches(conf);
+
     this.metrics = metricsRegistry;
     this.bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
     registerMetrics(conf);
@@ -100,14 +124,15 @@ public class BookKeeperServer extends Configured implements Tool
     }
     catch (BookKeeperInitializationException e) {
       log.error("Could not start BookKeeper daemon. Exception: ", e);
-      return;
+      throw Throwables.propagate(e);
     }
-
-    startThriftServer(conf, localBookKeeper);
   }
 
   void startServer(Configuration conf, BookKeeper bookKeeper, BookKeeperMetrics bookKeeperMetrics)
   {
+    conf = new Configuration(conf);
+    CacheConfig.setCacheDataEnabled(conf, false);
+    CacheConfig.disableFSCaches(conf);
     this.metrics = bookKeeperMetrics.getMetricsRegistry();
     this.bookKeeperMetrics = bookKeeperMetrics;
     registerMetrics(conf);
@@ -154,7 +179,7 @@ public class BookKeeperServer extends Configured implements Tool
       log.error("Metrics reporters could not be closed", e);
     }
     server.stop();
-    log.debug("Bookkeeper Server Stopped");
+    log.info("Bookkeeper Server Stopped");
   }
 
   protected void removeMetrics()
