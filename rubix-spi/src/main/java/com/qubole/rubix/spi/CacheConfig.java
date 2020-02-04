@@ -89,6 +89,7 @@ public class CacheConfig
   private static final String KEY_CACHE_FILE_SPLIT_SIZE = "rubix.cache.filesplit.size";
   private static final String KEY_CLUSTER_NODE_REFRESH_TIME = "rubix.cluster.node.refresh.time";
   private static final String KEY_ENABLE_PATH_ENCRYPTION = "rubix.cache.path.encryption.enabled";
+  private static final String KEY_DEPTH_OF_FILE_PATH_ENCRYPTION = "rubix.cache.path.encryption.depth";
   private static final String KEY_WORKER_NODEINFO_EXPIRY_PERIOD = "rubix.cluster.workerinfo.expiry.period";
   private static final String KEY_RUBIX_CLUSTER_TYPE = "rubix.cluster.type";
   private static final String KEY_RUBIX_WORKER_NODELIST_FETCH_MAX_RETRIES = "rubix.cluster.worker.nodelist.fetch.max-retries";
@@ -155,6 +156,7 @@ public class CacheConfig
   private static final boolean DEFAULT_CLEANUP_FILES_DURING_START = true;
   private static final int DEFAULT_CLUSTER_NODE_REFRESH_TIME = 300; //seconds
   private static final boolean DEFAULT_ENABLE_PATH_ENCRYPTION = false;
+  private static final int DEFAULT_PATH_ENCRYPTION_DEPTH = 1;
   private static final boolean DEFAULT_DUMMY_MODE = false;
   private static final long DEFAULT_MAX_CACHE_SIZE = 0;
   private static final int DEFAULT_RUBIX_CLUSTER_TYPE = ClusterType.TEST_CLUSTER_MANAGER.ordinal();
@@ -163,6 +165,11 @@ public class CacheConfig
 
   private CacheConfig()
   {
+  }
+
+  public static int getPathEncryptionDepth(Configuration conf)
+  {
+    return conf.getInt(KEY_DEPTH_OF_FILE_PATH_ENCRYPTION, DEFAULT_PATH_ENCRYPTION_DEPTH);
   }
 
   public static int getBlockSize(Configuration conf)
@@ -493,6 +500,11 @@ public class CacheConfig
   public static boolean isDummyModeEnabled(Configuration conf)
   {
     return conf.getBoolean(KEY_DUMMY_MODE, DEFAULT_DUMMY_MODE);
+  }
+
+  public static void setPathEncryptionDepth(Configuration conf, int encryptionDepth)
+  {
+    conf.setInt(KEY_DEPTH_OF_FILE_PATH_ENCRYPTION, encryptionDepth);
   }
 
   public static void setBlockSize(Configuration conf, int blockSize)

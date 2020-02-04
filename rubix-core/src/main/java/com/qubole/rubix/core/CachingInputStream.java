@@ -252,7 +252,6 @@ public class CachingInputStream extends FSInputStream
     ImmutableList.Builder builder = ImmutableList.builder();
     int sizeRead = 0;
 
-
     for (ReadRequestChain readRequestChain : readRequestChains) {
       readRequestChain.lock();
       builder.add(readService.submit(readRequestChain));

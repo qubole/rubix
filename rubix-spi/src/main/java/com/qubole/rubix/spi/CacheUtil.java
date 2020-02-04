@@ -24,10 +24,8 @@ import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.net.util.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.file.tfile.ByteArray;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -45,6 +43,7 @@ public class CacheUtil
   private static final Log log = LogFactory.getLog(CacheUtil.class);
   private static ConcurrentHashMap<String, Boolean> hashedPathSet = new ConcurrentHashMap<>();
   private static ConcurrentHashMap<String, Boolean> hashedFileNameSet = new ConcurrentHashMap<>();
+  protected static int encryptionDepth = 1;
 
   @VisibleForTesting
   protected static LoadingCache<String, String> hashedPaths = CacheBuilder.newBuilder().build(new CacheLoader<String, String>() {
@@ -267,6 +266,7 @@ public class CacheUtil
   {
     final String parentPath = getParent(remotePath);
     String relLocation = parentPath;
+    encryptionDepth = CacheConfig.getPathEncryptionDepth(conf);
 
     if (parentPath.contains(":")) {
       URI parentUri = new Path(parentPath).toUri();
@@ -296,22 +296,38 @@ public class CacheUtil
   protected static String getHashedPath(String relLocation)
   {
     String hashRelLocation = relLocation;
+    StringBuilder sb = new StringBuilder();
+
+    for (int i = 1; i <= 2; i++) {
+      sb.append(getHashedPathSegment(hashRelLocation, i) + "/");
+    }
+    sb.deleteCharAt(sb.length() - 1);
+    hashRelLocation = sb.toString();
+    log.debug("Value of hashRelLocation :" + hashRelLocation);
+    if (hashedPathSet.get(hashRelLocation) != null) {
+      return getHashedPath(hashRelLocation);
+    }
+    else {
+      hashedPathSet.put(hashRelLocation, true);
+    }
+    return hashRelLocation;
+  }
+
+  protected static String getHashedPathSegment(String relLocation, int depth)
+  {
+    String hashRelLocation = relLocation;
     try {
       MessageDigest md = MessageDigest.getInstance("SHA-256");
       byte[] pathBytes = md.digest(relLocation.getBytes());
+      for (int i = 0; i < depth - 1; i++) {
+        pathBytes = md.digest(pathBytes);
+      }
       StringBuilder sb = new StringBuilder();
-      for (int i = 0; i < pathBytes.length/4-1; i++) {
-        sb.append(Integer.toHexString(0xFF & pathBytes[i]));
-        log.info(pathBytes[4*i] & pathBytes[4*i+1] & pathBytes[4*i+2] & pathBytes[4*i+3] & 0xFF);
+      for (int i = 0; i < pathBytes.length / 4 - 1; i++) {
+        sb.append(Integer.toHexString(pathBytes[4 * i] & pathBytes[4 * i + 1] & pathBytes[4 * i + 2] & pathBytes[4 * i + 3] & 0xFF));
+        //log.debug("Value of Path Segment : " + (pathBytes[4 * i] & pathBytes[4 * i + 1] & pathBytes[4 * i + 2] & pathBytes[4 * i + 3] & 0xFF));
       }
       hashRelLocation = sb.toString();
-      log.debug("Value of hashRelLocation :" + hashRelLocation);
-      if (hashedPathSet.get(hashRelLocation) != null) {
-        return getHashedPath(hashRelLocation);
-      }
-      else {
-        hashedPathSet.put(hashRelLocation, true);
-      }
     }
     catch (NoSuchAlgorithmException e) {
       log.error("No Such Algorithm for Hashing ", e);
