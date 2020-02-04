@@ -215,7 +215,7 @@ public class LocalDataTransferServer extends Configured implements Tool
     public void run()
     {
       try {
-        log.debug("Connected to node - " + localDataTransferClient.getLocalAddress());
+        log.debug("Connected to node - " + localDataTransferClient.getRemoteAddress());
         ByteBuffer dataInfo = ByteBuffer.allocate(CacheConfig.getMaxHeaderSize(conf));
 
         int read = localDataTransferClient.read(dataInfo);

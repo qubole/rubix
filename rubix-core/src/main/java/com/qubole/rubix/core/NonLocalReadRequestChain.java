@@ -99,7 +99,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
         dataTransferClient = DataTransferClientHelper.createDataTransferClient(remoteNodeName, conf);
       }
       catch (Exception e) {
-        log.warn("Could not create Data Transfer Client ", e);
+        log.warn("Could not create Data Transfer Client to node " + remoteNodeName, e);
         if (strictMode) {
           throw Throwables.propagate(e);
         }

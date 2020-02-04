@@ -82,7 +82,7 @@ public class NonLocalRequestChain extends ReadRequestChain
       if (strictMode) {
         throw Throwables.propagate(e);
       }
-      log.error("Could not get cache status from server ", e);
+      log.error("Could not get cache status from bookkeeper server at " + remoteNodeName, e);
     }
     finally {
       try {

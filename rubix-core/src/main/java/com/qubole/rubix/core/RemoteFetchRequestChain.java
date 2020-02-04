@@ -67,6 +67,10 @@ public class RemoteFetchRequestChain extends ReadRequestChain
             fileSize, lastModified));
       }
     }
+    catch (Exception e) {
+      log.info("Could not initiate parallel warmup in node " + remoteNodeLocation, e);
+      throw e;
+    }
     finally {
       try {
         if (client != null) {
