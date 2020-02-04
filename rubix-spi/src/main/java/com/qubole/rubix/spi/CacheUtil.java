@@ -325,7 +325,7 @@ public class CacheUtil
       StringBuilder sb = new StringBuilder();
       for (int i = 0; i < pathBytes.length / 4 - 1; i++) {
         sb.append(Integer.toHexString(pathBytes[4 * i] & pathBytes[4 * i + 1] & pathBytes[4 * i + 2] & pathBytes[4 * i + 3] & 0xFF));
-        //log.debug("Value of Path Segment : " + (pathBytes[4 * i] & pathBytes[4 * i + 1] & pathBytes[4 * i + 2] & pathBytes[4 * i + 3] & 0xFF));
+        log.debug("Value of Path Segment : " + (pathBytes[4 * i] & pathBytes[4 * i + 1] & pathBytes[4 * i + 2] & pathBytes[4 * i + 3] & 0xFF));
       }
       hashRelLocation = sb.toString();
     }
@@ -379,6 +379,7 @@ public class CacheUtil
         sb.append(Integer.toString((pathBytes[i] & 0xff) + 0x100, 16).substring(1));
       }
       hashFileName = sb.toString();
+      log.debug("Hashed File Name : " + hashFileName);
       if (hashedFileNameSet.get(hashFileName) != null) {
         return getHashedFileName(hashFileName);
       }

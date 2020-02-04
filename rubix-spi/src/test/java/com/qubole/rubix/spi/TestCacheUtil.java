@@ -182,8 +182,6 @@ public class TestCacheUtil
   @Test
   public void testGetLocalPath_singleLevel_WithPathEncryption() throws ExecutionException
   {
-    /* /usr/lib/jvm/java-1.8.0-openjdk.x86_64/jre/bin/java -cp grpcDemo-0.0.1-SNAPSHOT-shaded.jar HelloServerForkJoin
-     /usr/lib/jvm/java-1.8.0-openjdk.x86_64/jre/bin/java -cp grpcDemo-0.0.1-SNAPSHOT-shaded.jar com.qubole.rubix.thrift.HelloThriftServer */
     String localRelPath = "testbucket";
     CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
     CacheConfig.setCacheDataDirSuffix(conf, "/fcache/");
