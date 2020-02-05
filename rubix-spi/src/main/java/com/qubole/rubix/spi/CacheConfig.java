@@ -30,6 +30,8 @@ public class CacheConfig
 {
   public static final String RUBIX_SCHEME = "rubix";
   public static final int READ_SERVICE_THREAD_POOL_SIZE = 100;
+  public static final int DEFAULT_DATA_TRANSFER_SERVER_PORT = 8898;
+  public static final int DEFAULT_BOOKKEEPER_SERVER_PORT = 8899;
 
   private static final String KEY_BLOCK_SIZE = "rubix.cache.block.size";
   private static final String KEY_CACHE_ENABLED = "rubix.cache.enabled";
@@ -124,7 +126,6 @@ public class CacheConfig
   private static final int DEFAULT_HEARTBEAT_INITIAL_DELAY = 30000; // ms
   private static final int DEFAULT_HEARTBEAT_INTERVAL = 30000; // ms
   private static final int DEFAULT_LOCAL_TRANSFER_BUFFER_SIZE = 10 * 1024 * 1024; // 10MB
-  private static final int DEFAULT_LOCAL_SERVER_PORT = 8898;
   private static final int DEFAULT_MAX_BUFFER_SIZE = 1024;
   private static final int DEFAULT_MAX_RETRIES = 3;
   private static final boolean DEFAULT_METRICS_CACHE_ENABLED = true;
@@ -143,7 +144,6 @@ public class CacheConfig
   private static final int DEFAULT_REMOTE_FETCH_THREADS = 10;
   private static final boolean DEFAULT_RUBIX_ON_MASTER = false;
   private static final int DEFAULT_SERVER_MAX_THREADS = Integer.MAX_VALUE;
-  private static final int DEFAULT_SERVER_PORT = 8899;
   private static final int DEFAULT_SERVICE_RETRY_INTERVAL = 30000; // ms
   private static final int DEFAULT_SERVICE_MAX_RETRIES = 100;
   private static final int DEFAULT_CLIENT_READ_TIMEOUT = 3000; // ms
@@ -278,9 +278,9 @@ public class CacheConfig
     return conf.getInt(KEY_HEARTBEAT_INTERVAL, DEFAULT_HEARTBEAT_INTERVAL);
   }
 
-  public static int getLocalServerPort(Configuration conf)
+  public static int getDataTransferServerPort(Configuration conf)
   {
-    return conf.getInt(KEY_LOCAL_SERVER_PORT, DEFAULT_LOCAL_SERVER_PORT);
+    return conf.getInt(KEY_LOCAL_SERVER_PORT, DEFAULT_DATA_TRANSFER_SERVER_PORT);
   }
 
   public static int getLocalTransferBufferSize(Configuration conf)
@@ -328,9 +328,9 @@ public class CacheConfig
     return conf.getInt(KEY_SERVER_MAX_THREADS, DEFAULT_SERVER_MAX_THREADS);
   }
 
-  public static int getServerPort(Configuration conf)
+  public static int getBookKeeperServerPort(Configuration conf)
   {
-    return conf.getInt(KEY_SERVER_PORT, DEFAULT_SERVER_PORT);
+    return conf.getInt(KEY_SERVER_PORT, DEFAULT_BOOKKEEPER_SERVER_PORT);
   }
 
   public static int getServiceMaxRetries(Configuration conf)
@@ -625,7 +625,7 @@ public class CacheConfig
     conf.setBoolean(KEY_METRICS_HEALTH_ENABLED, healthMetricsEnabled);
   }
 
-  public static void setLocalServerPort(Configuration conf, int localServerPort)
+  public static void setDataTransferServerPort(Configuration conf, int localServerPort)
   {
     conf.setInt(KEY_LOCAL_SERVER_PORT, localServerPort);
   }
@@ -660,7 +660,7 @@ public class CacheConfig
     conf.setInt(KEY_SERVER_SOCKET_TIMEOUT, timeout);
   }
 
-  public static void setServerPort(Configuration conf, int serverPort)
+  public static void setBookKeeperServerPort(Configuration conf, int serverPort)
   {
     conf.setInt(KEY_SERVER_PORT, serverPort);
   }

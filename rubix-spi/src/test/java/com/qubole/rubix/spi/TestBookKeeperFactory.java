@@ -216,7 +216,7 @@ public class TestBookKeeperFactory
       when(bookKeeper.isBookKeeperAlive()).then(new GetBookKeeperAliveStatus());
 
       try {
-        TServerTransport serverTransport = new TServerSocket(CacheConfig.getServerPort(conf));
+        TServerTransport serverTransport = new TServerSocket(CacheConfig.getBookKeeperServerPort(conf));
         BookKeeperService.Processor processor = new BookKeeperService.Processor<>(bookKeeper);
         server = new TThreadPoolServer(new TThreadPoolServer.Args(serverTransport).processor(processor));
         server.serve();

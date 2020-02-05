@@ -12,6 +12,7 @@
  */
 package com.qubole.rubix.core;
 
+import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
@@ -60,12 +61,13 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
   private static CachingFileSystemStats statsMBean;
   public static BookKeeperFactory bookKeeperFactory;
 
+  public static String statsMBeanBaseName = "rubix:name=stats";
   static {
     MBeanExporter exporter = new MBeanExporter(ManagementFactory.getPlatformMBeanServer());
     statsMBean = new CachingFileSystemStats();
     try {
-      if (!ManagementFactory.getPlatformMBeanServer().isRegistered(new ObjectName("rubix:name=stats"))) {
-        exporter.export("rubix:name=stats", statsMBean);
+      if (!ManagementFactory.getPlatformMBeanServer().isRegistered(new ObjectName(statsMBeanBaseName))) {
+        exporter.export(statsMBeanBaseName, statsMBean);
       }
     }
     catch (MalformedObjectNameException e) {
@@ -101,9 +103,24 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
     return fs;
   }
 
-  public static void setLocalBookKeeper(BookKeeperService.Iface bookKeeper)
+  public static void setLocalBookKeeper(BookKeeperService.Iface bookKeeper, String statsMbeanSuffix)
   {
     bookKeeperFactory = new BookKeeperFactory(bookKeeper);
+    if (!Strings.isNullOrEmpty(statsMbeanSuffix)) {
+      String mBeanName = statsMBeanBaseName + "," + statsMbeanSuffix;
+      MBeanExporter exporter = new MBeanExporter(ManagementFactory.getPlatformMBeanServer());
+      try {
+        if (ManagementFactory.getPlatformMBeanServer().isRegistered(new ObjectName(statsMBeanBaseName))) {
+          exporter.unexport(statsMBeanBaseName);
+        }
+        if (!ManagementFactory.getPlatformMBeanServer().isRegistered(new ObjectName(mBeanName))) {
+          exporter.export(mBeanName, statsMBean);
+        }
+      }
+      catch (MalformedObjectNameException e) {
+        log.error("Could not export stats mbean", e);
+      }
+    }
   }
 
   public abstract String getScheme();

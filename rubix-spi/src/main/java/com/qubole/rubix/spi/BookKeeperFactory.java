@@ -48,7 +48,7 @@ public class BookKeeperFactory
       final int socketTimeout = CacheConfig.getServerSocketTimeout(conf);
       final int connectTimeout = CacheConfig.getServerConnectTimeout(conf);
 
-      TTransport transport = new TSocket(host, CacheConfig.getServerPort(conf), socketTimeout, connectTimeout);
+      TTransport transport = new TSocket(host, CacheConfig.getBookKeeperServerPort(conf), socketTimeout, connectTimeout);
       transport.open();
       RetryingBookkeeperClient retryingBookkeeperClient = new RetryingBookkeeperClient(transport, CacheConfig.getMaxRetries(conf));
       return retryingBookkeeperClient;

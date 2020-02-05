@@ -162,7 +162,7 @@ public class LocalDataTransferServer extends Configured implements Tool
     @Override
     public void run()
     {
-      int port = CacheConfig.getLocalServerPort(conf);
+      int port = CacheConfig.getDataTransferServerPort(conf);
       ExecutorService threadPool = Executors.newCachedThreadPool();
       try {
         listener = ServerSocketChannel.open();

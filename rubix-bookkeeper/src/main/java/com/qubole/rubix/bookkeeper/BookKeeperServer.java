@@ -39,8 +39,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
 
+import static com.qubole.rubix.spi.CacheConfig.getBookKeeperServerPort;
 import static com.qubole.rubix.spi.CacheConfig.getServerMaxThreads;
-import static com.qubole.rubix.spi.CacheConfig.getServerPort;
 
 /**
  * Created by stagra on 15/2/16.
@@ -143,10 +143,10 @@ public class BookKeeperServer extends Configured implements Tool
   private void startThriftServer(Configuration conf, BookKeeper bookKeeper)
   {
     processor = new BookKeeperService.Processor(bookKeeper);
-    log.info("Starting BookKeeperServer on port " + getServerPort(conf));
+    log.info("Starting BookKeeperServer on port " + getBookKeeperServerPort(conf));
     try {
       TServerTransport serverTransport = new TServerSocket(
-              new TServerSocket.ServerSocketTransportArgs().bindAddr(new InetSocketAddress(getServerPort(conf))).backlog(Integer.MAX_VALUE));
+              new TServerSocket.ServerSocketTransportArgs().bindAddr(new InetSocketAddress(getBookKeeperServerPort(conf))).backlog(Integer.MAX_VALUE));
       server = new TThreadPoolServer(new TThreadPoolServer
           .Args(serverTransport)
           .processor(processor)

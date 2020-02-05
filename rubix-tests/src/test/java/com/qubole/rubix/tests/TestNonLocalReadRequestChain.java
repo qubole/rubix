@@ -94,8 +94,8 @@ public class TestNonLocalReadRequestChain
   {
     CacheConfig.setOnMaster(conf, true);
     CacheConfig.setIsStrictMode(conf, true);
-    CacheConfig.setServerPort(conf, 3456);
-    CacheConfig.setLocalServerPort(conf, 2222);
+    CacheConfig.setBookKeeperServerPort(conf, 3456);
+    CacheConfig.setDataTransferServerPort(conf, 2222);
     CacheConfig.setBlockSize(conf, blockSize);
     CacheConfig.setCacheDataDirPrefix(conf, testDirectoryPrefix + "dir");
     CacheConfig.setMaxDisks(conf, 1);
