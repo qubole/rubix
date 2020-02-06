@@ -150,7 +150,7 @@ public class LocalDataTransferServer extends Configured implements Tool
       ExecutorService threadPool = Executors.newCachedThreadPool();
       try {
         listener = ServerSocketChannel.open();
-        listener.bind(new InetSocketAddress(port));
+        listener.bind(new InetSocketAddress(port), Integer.MAX_VALUE);
         log.info("Listening on port " + port);
         while (true) {
           SocketChannel clientSocket = listener.accept();
