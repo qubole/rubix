@@ -69,7 +69,7 @@
         <module>rubix-tests</module>
         <module>assembly</module>
         <module>rubix-rpm</module>
-        <module>rubix-shaded</module>
+        <module>rubix-presto-shaded</module>
     </modules>
 
     <repositories>

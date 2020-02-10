@@ -8,7 +8,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.qubole.rubix</groupId>
-    <artifactId>rubix-shaded</artifactId>
+    <artifactId>rubix-presto-shaded</artifactId>
 
     <properties>
         <main.basedir>${project.parent.basedir}</main.basedir>
