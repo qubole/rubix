@@ -57,8 +57,6 @@ public class PrestoClusterManager extends ClusterManager
   private Log log = LogFactory.getLog(PrestoClusterManager.class);
 
   public static String serverPortConf = "caching.fs.presto-server-port";
-  public static String serverAddressConf = "master.hostname";
-  public static String yarnServerAddressConf = "yarn.resourcemanager.address";
 
   // Safe to use single instance of HttpClient since Supplier.get() provides synchronization
   @Override
