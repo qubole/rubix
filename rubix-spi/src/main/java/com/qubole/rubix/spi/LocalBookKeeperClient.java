@@ -15,6 +15,9 @@ package com.qubole.rubix.spi;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.BookKeeperService;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
+import com.qubole.rubix.spi.thrift.ClusterNode;
+import com.qubole.rubix.spi.thrift.FileInfo;
+import com.qubole.rubix.spi.thrift.ReadDataRequest;
 import com.qubole.rubix.spi.thrift.SetCachedRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -23,6 +26,7 @@ import org.apache.thrift.transport.TTransport;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by sakshia on 6/10/16.
@@ -49,6 +53,55 @@ public class LocalBookKeeperClient extends RetryingBookkeeperClient
       throws TException
   {
     bookKeeper.setAllCached(request);
+  }
+
+  @Override
+  public Map<String, Double> getCacheMetrics()
+          throws TException
+  {
+    return bookKeeper.getCacheMetrics();
+  }
+
+  @Override
+  public boolean readData(ReadDataRequest request)
+          throws TException
+  {
+    return bookKeeper.readData(request);
+  }
+
+  @Override
+  public FileInfo getFileInfo(String remotePath)
+          throws TException
+  {
+    return bookKeeper.getFileInfo(remotePath);
+  }
+
+  @Override
+  public List<ClusterNode> getClusterNodes()
+          throws TException
+  {
+    return bookKeeper.getClusterNodes();
+  }
+
+  @Override
+  public String getOwnerNodeForPath(String remotePathKey)
+          throws TException
+  {
+    return bookKeeper.getOwnerNodeForPath(remotePathKey);
+  }
+
+  @Override
+  public boolean isBookKeeperAlive()
+          throws TException
+  {
+    return bookKeeper.isBookKeeperAlive();
+  }
+
+  @Override
+  public void invalidateFileMetadata(String remotePath)
+          throws TException
+  {
+    bookKeeper.invalidateFileMetadata(remotePath);
   }
 
   @Override

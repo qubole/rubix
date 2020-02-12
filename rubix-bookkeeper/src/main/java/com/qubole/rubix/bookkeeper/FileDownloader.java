@@ -87,11 +87,11 @@ class FileDownloader
 
       // Creating a new instance of the filesystem object by calling FileSystem.newInstance
       // This one makes sure we will get a new instance even if fs.%.impl.disable.cache is set to false
-      FileSystem fs = FileSystem.newInstance(path.toUri(), conf);
+      FileSystem fs = FileSystem.get(path.toUri(), conf);
       fs.initialize(path.toUri(), conf);
 
       String localPath = CacheUtil.getLocalPath(entry.getKey(), conf);
-      log.info("Processing Request for File : " + path.toString() + " LocalFile : " + localPath);
+      log.debug("Processing Request for File : " + path.toString() + " LocalFile : " + localPath);
       ByteBuffer directWriteBuffer = bufferPool.getBuffer(diskReadBufferSize);
 
       FileDownloadRequestChain requestChain = new FileDownloadRequestChain(bookKeeper, fs, localPath,
@@ -151,7 +151,7 @@ class FileDownloader
         }
       }
       catch (ExecutionException | InterruptedException ex) {
-        log.error(ex.getStackTrace());
+        log.error(ex);
         requestChain.cancel();
       }
     }

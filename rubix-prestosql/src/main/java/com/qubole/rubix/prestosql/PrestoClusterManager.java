@@ -10,7 +10,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-package com.qubole.rubix.presto;
+package com.qubole.rubix.prestosql;
 
 import com.google.common.base.Throwables;
 import com.google.common.cache.CacheBuilder;
@@ -57,8 +57,6 @@ public class PrestoClusterManager extends ClusterManager
   private Log log = LogFactory.getLog(PrestoClusterManager.class);
 
   public static String serverPortConf = "caching.fs.presto-server-port";
-  public static String serverAddressConf = "master.hostname";
-  public static String yarnServerAddressConf = "yarn.resourcemanager.address";
 
   // Safe to use single instance of HttpClient since Supplier.get() provides synchronization
   @Override
@@ -203,7 +201,7 @@ public class PrestoClusterManager extends ClusterManager
   @Override
   public ClusterType getClusterType()
   {
-    return ClusterType.PRESTO_CLUSTER_MANAGER;
+    return ClusterType.PRESTOSQL_CLUSTER_MANAGER;
   }
 
   public static void setPrestoServerPort(Configuration conf, int port)

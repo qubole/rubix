@@ -13,6 +13,7 @@
 
 package com.qubole.rubix.common.utils;
 
+import com.qubole.rubix.spi.CacheConfig;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -20,9 +21,6 @@ import org.apache.hadoop.conf.Configuration;
 public class ClusterUtil
 {
   private static final Log log = LogFactory.getLog(ClusterUtil.class.getName());
-
-  protected static final String KEY_MASTER_HOSTNAME = "master.hostname";
-  protected static final String KEY_YARN_RESOURCEMANAGER_ADDRESS = "yarn.resourcemanager.address";
 
   private ClusterUtil()
   {
@@ -36,13 +34,13 @@ public class ClusterUtil
   public static String getMasterHostname(Configuration conf)
   {
     log.debug("Trying master.hostname");
-    String host = conf.get(KEY_MASTER_HOSTNAME);
+    String host = CacheConfig.getCoordinatorHostName(conf);
     if (host != null) {
       return host;
     }
 
     log.debug("Trying yarn.resourcemanager.address");
-    host = conf.get(KEY_YARN_RESOURCEMANAGER_ADDRESS);
+    host = CacheConfig.getResourceManagerAddress(conf);
     if (host != null) {
       return host.contains(":")
           ? host.substring(0, host.indexOf(":"))

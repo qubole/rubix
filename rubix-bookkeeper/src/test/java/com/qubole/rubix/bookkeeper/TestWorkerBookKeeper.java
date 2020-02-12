@@ -127,7 +127,7 @@ public class TestWorkerBookKeeper
       final CoordinatorBookKeeper spyCoordinator = spy(new CoordinatorBookKeeper(conf, bookKeeperMetrics));
       final BookKeeperServer bookKeeperServer = new BookKeeperServer();
 
-      CacheConfig.setServerPort(conf, 1234);
+      CacheConfig.setBookKeeperServerPort(conf, 1234);
       final Thread thread = new Thread() {
         public void run()
         {

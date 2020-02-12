@@ -46,6 +46,7 @@
         <main.basedir>${project.basedir}</main.basedir>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <dep.presto.version>0.193</dep.presto.version>
+        <dep.prestosql.version>322</dep.prestosql.version>
         <dep.airlift.version>0.98</dep.airlift.version>
         <commons-httpclient.version>3.0.1</commons-httpclient.version>
         <dep.guava.version>18.0</dep.guava.version>
@@ -62,11 +63,13 @@
         <module>rubix-client</module>
         <module>rubix-common</module>
         <module>rubix-presto</module>
+        <module>rubix-prestosql</module>
         <module>rubix-hadoop2</module>
         <module>rubix-bookkeeper</module>
         <module>rubix-tests</module>
         <module>assembly</module>
         <module>rubix-rpm</module>
+        <module>rubix-presto-shaded</module>
     </modules>
 
     <repositories>
@@ -107,6 +110,12 @@
             <dependency>
                 <groupId>com.qubole.rubix</groupId>
                 <artifactId>rubix-presto</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.qubole.rubix</groupId>
+                <artifactId>rubix-prestosql</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

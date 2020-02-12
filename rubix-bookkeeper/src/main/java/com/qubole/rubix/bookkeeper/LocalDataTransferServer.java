@@ -82,11 +82,20 @@ public class LocalDataTransferServer extends Configured implements Tool
 
   public static void startServer(Configuration conf, MetricRegistry metricRegistry)
   {
+    startServer(conf, metricRegistry, null);
+  }
+
+  // In embedded mode, this is called directly with local bookKeeper object
+  public static void startServer(Configuration conf, MetricRegistry metricRegistry, BookKeeper bookKeeper)
+  {
+    conf = new Configuration(conf);
+    CacheConfig.setCacheDataEnabled(conf, false);
+    CacheConfig.disableFSCaches(conf);
     metrics = metricRegistry;
     registerMetrics(conf);
 
-    localServer = new LocalServer(conf);
-    new Thread(localServer).run();
+    localServer = new LocalServer(conf, bookKeeper);
+    new Thread(localServer).start();
   }
 
   /**
@@ -137,32 +146,39 @@ public class LocalDataTransferServer extends Configured implements Tool
   {
     static ServerSocketChannel listener;
     Configuration conf;
+    BookKeeperFactory bookKeeperFactory;
 
-    public LocalServer(Configuration conf)
+    public LocalServer(Configuration conf, BookKeeper bookKeeper)
+    {
+      this(conf, new BookKeeperFactory(bookKeeper));
+    }
+
+    public LocalServer(Configuration conf, BookKeeperFactory bookKeeperFactory)
     {
       this.conf = conf;
+      this.bookKeeperFactory = bookKeeperFactory;
     }
 
     @Override
     public void run()
     {
-      int port = CacheConfig.getLocalServerPort(conf);
+      int port = CacheConfig.getDataTransferServerPort(conf);
       ExecutorService threadPool = Executors.newCachedThreadPool();
       try {
         listener = ServerSocketChannel.open();
         listener.bind(new InetSocketAddress(port), Integer.MAX_VALUE);
-        log.info("Listening on port " + port);
+        log.info("Started LocalDataTransferServer on port " + port);
         while (true) {
           SocketChannel clientSocket = listener.accept();
-          ClientServiceThread cliThread = new ClientServiceThread(clientSocket, conf);
+          ClientServiceThread cliThread = new ClientServiceThread(clientSocket, conf, bookKeeperFactory);
           threadPool.execute(cliThread);
         }
       }
       catch (AsynchronousCloseException e) {
-        log.info("Stopping Local Transfer server");
+        log.warn("Stopping Local Transfer server", e);
       }
       catch (IOException e) {
-        log.error(String.format("Error starting Local Transfer server %s", e));
+        log.error("Error starting Local Transfer server", e);
       }
     }
 
@@ -177,7 +193,7 @@ public class LocalDataTransferServer extends Configured implements Tool
         listener.close();
       }
       catch (IOException e) {
-        log.error(String.format("Error stopping Local Transfer server %s", e));
+        log.error("Error stopping Local Transfer server", e);
       }
     }
   }
@@ -186,20 +202,20 @@ public class LocalDataTransferServer extends Configured implements Tool
       extends Thread
   {
     SocketChannel localDataTransferClient;
-    RetryingBookkeeperClient bookKeeperClient;
     Configuration conf;
+    BookKeeperFactory bookKeeperFactory;
 
-    ClientServiceThread(SocketChannel s, Configuration conf)
+    ClientServiceThread(SocketChannel s, Configuration conf, BookKeeperFactory bookKeeperFactory)
     {
       localDataTransferClient = s;
       this.conf = conf;
+      this.bookKeeperFactory = bookKeeperFactory;
     }
 
     public void run()
     {
       try {
-        log.debug("Connected to node - " + localDataTransferClient.getLocalAddress());
-        BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
+        log.debug("Connected to node - " + localDataTransferClient.getRemoteAddress());
         ByteBuffer dataInfo = ByteBuffer.allocate(CacheConfig.getMaxHeaderSize(conf));
 
         int read = localDataTransferClient.read(dataInfo);
@@ -213,8 +229,9 @@ public class LocalDataTransferServer extends Configured implements Tool
         int readLength = header.getReadLength();
         String remotePath = header.getFilePath();
         log.debug(String.format("Trying to read from %s at offset %d and length %d for client %s", remotePath, offset, readLength, localDataTransferClient.getRemoteAddress()));
+        RetryingBookkeeperClient bookKeeperClient;
         try {
-          this.bookKeeperClient = bookKeeperFactory.createBookKeeperClient(conf);
+          bookKeeperClient = bookKeeperFactory.createBookKeeperClient(conf);
         }
         catch (Exception e) {
           throw new Exception("Could not create BookKeeper Client " + Throwables.getStackTraceAsString(e));
@@ -249,7 +266,7 @@ public class LocalDataTransferServer extends Configured implements Tool
           }
         }
 
-        int nread = readDataFromCachedFile(remotePath, offset, readLength);
+        int nread = readDataFromCachedFile(bookKeeperClient, remotePath, offset, readLength);
 
         if (bookKeeperClient != null) {
           bookKeeperClient.close();
@@ -270,12 +287,12 @@ public class LocalDataTransferServer extends Configured implements Tool
           localDataTransferClient.close();
         }
         catch (IOException e) {
-          log.info("Error in Local Data Transfer Server: ", e);
+          log.warn("Error in Local Data Transfer Server: ", e);
         }
       }
     }
 
-    private int readDataFromCachedFile(String remotePath, long offset, int readLength) throws IOException, TException
+    private int readDataFromCachedFile(RetryingBookkeeperClient bookKeeperClient, String remotePath, long offset, int readLength) throws IOException, TException
     {
       FileChannel fc = null;
       int nread = 0;

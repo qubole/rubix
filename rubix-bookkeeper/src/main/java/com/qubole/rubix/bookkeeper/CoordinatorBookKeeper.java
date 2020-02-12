@@ -119,7 +119,7 @@ public class CoordinatorBookKeeper extends BookKeeper
           throws CoordinatorInitializationException
   {
     String clusterManagerClassName = CacheConfig.getClusterManagerClass(conf, clusterType);
-    log.info("Initializing cluster manager : " + clusterManagerClassName + " for cluster type " + clusterType);
+    log.debug("Initializing cluster manager : " + clusterManagerClassName + " for cluster type " + clusterType);
     ClusterManager manager = null;
 
     try {
@@ -141,24 +141,26 @@ public class CoordinatorBookKeeper extends BookKeeper
   @Override
   public void handleHeartbeat(HeartbeatRequest request)
   {
-    String workerHostname = request.getWorkerHostname();
-    HeartbeatStatus heartbeatStatus = request.getHeartbeatStatus();
-    liveWorkerCache.put(workerHostname, true);
-    log.debug("Received heartbeat from " + workerHostname);
+    if (CacheConfig.isHeartbeatEnabled(conf) || !CacheConfig.isEmbeddedModeEnabled(conf)) {
+      String workerHostname = request.getWorkerHostname();
+      HeartbeatStatus heartbeatStatus = request.getHeartbeatStatus();
+      liveWorkerCache.put(workerHostname, true);
+      log.debug("Received heartbeat from " + workerHostname);
 
-    if (isValidationEnabled) {
-      if (heartbeatStatus.cachingValidationSucceeded) {
-        cachingValidatedWorkerCache.put(workerHostname, true);
-      }
-      else {
-        log.error(String.format("Caching validation failed for worker node (hostname: %s)", workerHostname));
-      }
+      if (isValidationEnabled) {
+        if (heartbeatStatus.cachingValidationSucceeded) {
+          cachingValidatedWorkerCache.put(workerHostname, true);
+        }
+        else {
+          log.error(String.format("Caching validation failed for worker node (hostname: %s)", workerHostname));
+        }
 
-      if (heartbeatStatus.fileValidationSucceeded) {
-        fileValidatedWorkerCache.put(workerHostname, true);
-      }
-      else {
-        log.error(String.format("File validation failed for worker node (hostname: %s)", workerHostname));
+        if (heartbeatStatus.fileValidationSucceeded) {
+          fileValidatedWorkerCache.put(workerHostname, true);
+        }
+        else {
+          log.error(String.format("File validation failed for worker node (hostname: %s)", workerHostname));
+        }
       }
     }
   }

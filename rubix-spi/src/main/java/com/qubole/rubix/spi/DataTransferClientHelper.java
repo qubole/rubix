@@ -32,7 +32,7 @@ public class DataTransferClientHelper
   public static SocketChannel createDataTransferClient(String remoteNodeName, Configuration conf)
       throws IOException
   {
-    SocketAddress sad = new InetSocketAddress(remoteNodeName, CacheConfig.getLocalServerPort(conf));
+    SocketAddress sad = new InetSocketAddress(remoteNodeName, CacheConfig.getDataTransferServerPort(conf));
     SocketChannel sc = SocketChannel.open();
     sc.socket().setSoTimeout(CacheConfig.getClientReadTimeout(conf));
     sc.configureBlocking(true);

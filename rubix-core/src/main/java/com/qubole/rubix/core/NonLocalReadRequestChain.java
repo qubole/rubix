@@ -99,7 +99,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
         dataTransferClient = DataTransferClientHelper.createDataTransferClient(remoteNodeName, conf);
       }
       catch (Exception e) {
-        log.warn("Could not create Data Transfer Client ", e);
+        log.warn("Could not create Data Transfer Client to node " + remoteNodeName, e);
         if (strictMode) {
           throw Throwables.propagate(e);
         }
@@ -137,16 +137,16 @@ public class NonLocalReadRequestChain extends ReadRequestChain
       }
       catch (SocketTimeoutException e) {
         if (strictMode) {
-          log.error(remoteNodeName + ": socket read timed out.");
+          log.error(remoteNodeName + ": socket read timed out.", e);
           throw Throwables.propagate(e);
         }
         else {
-          log.info(remoteNodeName + ": socket read timed out. Using direct reads");
+          log.warn(remoteNodeName + ": socket read timed out. Using direct reads", e);
           return directReadRequest(readRequests.indexOf(readRequest));
         }
       }
       catch (Exception e) {
-        log.info("Error reading data from node : " + remoteNodeName, e);
+        log.warn("Error reading data from node : " + remoteNodeName, e);
         if (strictMode) {
           throw Throwables.propagate(e);
         }
@@ -155,7 +155,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
         }
       }
       finally {
-        log.info(String.format("Read %d bytes internally from node %s", totalRead, remoteNodeName));
+        log.debug(String.format("Read %d bytes internally from node %s", totalRead, remoteNodeName));
         if (statistics != null) {
           statistics.incrementBytesRead(totalRead);
         }
@@ -166,7 +166,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
           }
         }
         catch (IOException e) {
-          log.info("Error closing Data Transfer client : " + remoteNodeName, e);
+          log.warn("Error closing Data Transfer client : " + remoteNodeName, e);
         }
       }
     }
@@ -218,7 +218,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
         if (strictMode) {
           throw Throwables.propagate(e);
         }
-        log.error("Dummy Mode: Could not update Cache Status for Non-Local Read Request " + Throwables.getStackTraceAsString(e));
+        log.error("Dummy Mode: Could not update Cache Status for Non-Local Read Request ", e);
       }
       finally {
         try {
@@ -227,7 +227,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
           }
         }
         catch (IOException ex) {
-          log.error("Dummy Mode: Could not close bookkeeper client. Exception: " + ex.toString());
+          log.error("Dummy Mode: Could not close bookkeeper client. Exception: ", ex);
         }
       }
     }

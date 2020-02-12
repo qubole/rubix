@@ -30,6 +30,8 @@ public class CacheConfig
 {
   public static final String RUBIX_SCHEME = "rubix";
   public static final int READ_SERVICE_THREAD_POOL_SIZE = 100;
+  public static final int DEFAULT_DATA_TRANSFER_SERVER_PORT = 8898;
+  public static final int DEFAULT_BOOKKEEPER_SERVER_PORT = 8899;
 
   private static final String KEY_BLOCK_SIZE = "rubix.cache.block.size";
   private static final String KEY_CACHE_ENABLED = "rubix.cache.enabled";
@@ -93,6 +95,13 @@ public class CacheConfig
   private static final String KEY_RUBIX_WORKER_NODELIST_FETCH_MAX_RETRIES = "rubix.cluster.worker.nodelist.fetch.max-retries";
   private static final String KEY_RUBIX_WORKER_NODELIST_FETCH_WAIT_INTERVAL = "rubix.cluster.worker.nodelist.fetch.wait.interval";
   private static final String KEY_DUMMY_MODE = "rubix.cache.dummy.mode";
+  private static final String KEY_EMBEDDED_MODE = "rubix.cluster.embedded.mode";
+  private static final String KEY_HEARTBEAT_ENABLED = "rubix.cluster.heartbeat.enabled";
+
+  // Internal Configurations used in RubiX
+  private static final String KEY_YARN_RESOURCEMANAGER_ADDRESS = "yarn.resourcemanager.address";
+  private static final String KEY_RUBIX_CLUSTER_MASTER_HOSTNAME = "master.hostname";
+  private static final String KEY_RUBIX_CURRENT_NODE_HOSTNAME = "current.node.hostname";
 
   // default values
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
@@ -117,7 +126,6 @@ public class CacheConfig
   private static final int DEFAULT_HEARTBEAT_INITIAL_DELAY = 30000; // ms
   private static final int DEFAULT_HEARTBEAT_INTERVAL = 30000; // ms
   private static final int DEFAULT_LOCAL_TRANSFER_BUFFER_SIZE = 10 * 1024 * 1024; // 10MB
-  private static final int DEFAULT_LOCAL_SERVER_PORT = 8898;
   private static final int DEFAULT_MAX_BUFFER_SIZE = 1024;
   private static final int DEFAULT_MAX_RETRIES = 3;
   private static final boolean DEFAULT_METRICS_CACHE_ENABLED = true;
@@ -136,7 +144,6 @@ public class CacheConfig
   private static final int DEFAULT_REMOTE_FETCH_THREADS = 10;
   private static final boolean DEFAULT_RUBIX_ON_MASTER = false;
   private static final int DEFAULT_SERVER_MAX_THREADS = Integer.MAX_VALUE;
-  private static final int DEFAULT_SERVER_PORT = 8899;
   private static final int DEFAULT_SERVICE_RETRY_INTERVAL = 30000; // ms
   private static final int DEFAULT_SERVICE_MAX_RETRIES = 100;
   private static final int DEFAULT_CLIENT_READ_TIMEOUT = 3000; // ms
@@ -145,6 +152,7 @@ public class CacheConfig
   private static final int DEFAULT_CACHING_VALIDATION_INTERVAL = 1800000; // ms (30min)
   private static final int DEFAULT_FILE_VALIDATION_INTERVAL = 1800000; // ms (30min)
   private static final String DEFAULT_PRESTO_CLUSTER_MANAGER = "com.qubole.rubix.presto.PrestoClusterManager";
+  private static final String DEFAULT_PRESTOSQL_CLUSTER_MANAGER = "com.qubole.rubix.prestosql.PrestoClusterManager";
   private static final String DEFAULT_HADOOP_CLUSTER_MANAGER = "com.qubole.rubix.hadoop2.Hadoop2ClusterManager";
   private static final String DEFAULT_DUMMY_CLUSTER_MANAGER = "com.qubole.rubix.core.utils.DummyClusterManager";
   private static final boolean DEFAULT_ENABLE_FILE_STALESSNESS_CHECK = true;
@@ -158,6 +166,8 @@ public class CacheConfig
   private static final int DEFAULT_RUBIX_CLUSTER_TYPE = ClusterType.TEST_CLUSTER_MANAGER.ordinal();
   private static final int DEFAULT_RUBIX_WORKER_NODELIST_FETCH_MAX_RETRIES = 10;
   private static final int DEFAULT_RUBIX_WORKER_NODELIST_FETCH_WAIT_INTERVAL = 30000; //msec
+  private static final boolean DEFAULT_EMBEDDED_MODE = false;
+  private static final boolean DEFAULT_HEARTBEAT_ENABLED = true;
 
   private CacheConfig()
   {
@@ -268,9 +278,9 @@ public class CacheConfig
     return conf.getInt(KEY_HEARTBEAT_INTERVAL, DEFAULT_HEARTBEAT_INTERVAL);
   }
 
-  public static int getLocalServerPort(Configuration conf)
+  public static int getDataTransferServerPort(Configuration conf)
   {
-    return conf.getInt(KEY_LOCAL_SERVER_PORT, DEFAULT_LOCAL_SERVER_PORT);
+    return conf.getInt(KEY_LOCAL_SERVER_PORT, DEFAULT_DATA_TRANSFER_SERVER_PORT);
   }
 
   public static int getLocalTransferBufferSize(Configuration conf)
@@ -318,9 +328,9 @@ public class CacheConfig
     return conf.getInt(KEY_SERVER_MAX_THREADS, DEFAULT_SERVER_MAX_THREADS);
   }
 
-  public static int getServerPort(Configuration conf)
+  public static int getBookKeeperServerPort(Configuration conf)
   {
-    return conf.getInt(KEY_SERVER_PORT, DEFAULT_SERVER_PORT);
+    return conf.getInt(KEY_SERVER_PORT, DEFAULT_BOOKKEEPER_SERVER_PORT);
   }
 
   public static int getServiceMaxRetries(Configuration conf)
@@ -433,6 +443,8 @@ public class CacheConfig
       case TEST_CLUSTER_MANAGER:
       case TEST_CLUSTER_MANAGER_MULTINODE:
         return conf.get(KEY_DUMMY_CLUSTER_MANAGER, DEFAULT_DUMMY_CLUSTER_MANAGER);
+      case PRESTOSQL_CLUSTER_MANAGER:
+        return conf.get(KEY_PRESTO_CLUSTER_MANAGER, DEFAULT_PRESTOSQL_CLUSTER_MANAGER);
       default:
         return null;
     }
@@ -486,6 +498,31 @@ public class CacheConfig
   public static boolean isDummyModeEnabled(Configuration conf)
   {
     return conf.getBoolean(KEY_DUMMY_MODE, DEFAULT_DUMMY_MODE);
+  }
+
+  public static boolean isEmbeddedModeEnabled(Configuration conf)
+  {
+    return conf.getBoolean(KEY_EMBEDDED_MODE, DEFAULT_EMBEDDED_MODE);
+  }
+
+  public static boolean isHeartbeatEnabled(Configuration conf)
+  {
+    return conf.getBoolean(KEY_HEARTBEAT_ENABLED, DEFAULT_HEARTBEAT_ENABLED);
+  }
+
+  public static String getCoordinatorHostName(Configuration conf)
+  {
+    return conf.get(KEY_RUBIX_CLUSTER_MASTER_HOSTNAME, null);
+  }
+
+  public static String getResourceManagerAddress(Configuration conf)
+  {
+    return conf.get(KEY_YARN_RESOURCEMANAGER_ADDRESS, null);
+  }
+
+  public static String getCurrentNodeHostName(Configuration conf)
+  {
+    return conf.get(KEY_RUBIX_CURRENT_NODE_HOSTNAME, null);
   }
 
   public static void setBlockSize(Configuration conf, int blockSize)
@@ -588,7 +625,7 @@ public class CacheConfig
     conf.setBoolean(KEY_METRICS_HEALTH_ENABLED, healthMetricsEnabled);
   }
 
-  public static void setLocalServerPort(Configuration conf, int localServerPort)
+  public static void setDataTransferServerPort(Configuration conf, int localServerPort)
   {
     conf.setInt(KEY_LOCAL_SERVER_PORT, localServerPort);
   }
@@ -623,7 +660,7 @@ public class CacheConfig
     conf.setInt(KEY_SERVER_SOCKET_TIMEOUT, timeout);
   }
 
-  public static void setServerPort(Configuration conf, int serverPort)
+  public static void setBookKeeperServerPort(Configuration conf, int serverPort)
   {
     conf.setInt(KEY_SERVER_PORT, serverPort);
   }
@@ -718,6 +755,11 @@ public class CacheConfig
     conf.setBoolean(KEY_CLEANUP_FILES_DURING_START, isCleanupRequired);
   }
 
+  public static void setRubixClusterType(Configuration conf, ClusterType clusterType)
+  {
+    setRubixClusterType(conf, clusterType.ordinal());
+  }
+
   public static void setRubixClusterType(Configuration conf, int clusterType)
   {
     if (ClusterType.findByValue(clusterType) != null) {
@@ -743,5 +785,40 @@ public class CacheConfig
   public static void setDummyMode(Configuration conf, boolean dummyMode)
   {
     conf.setBoolean(KEY_DUMMY_MODE, dummyMode);
+  }
+
+  public static void setEmbeddedMode(Configuration conf, boolean embeddedMode)
+  {
+    conf.setBoolean(KEY_EMBEDDED_MODE, embeddedMode);
+  }
+
+  public static void enableHeartbeat(Configuration conf, boolean enableHeartbeat)
+  {
+    conf.setBoolean(KEY_HEARTBEAT_ENABLED, enableHeartbeat);
+  }
+
+  public static void setCoordinatorHostName(Configuration conf, String hostName)
+  {
+    conf.set(KEY_RUBIX_CLUSTER_MASTER_HOSTNAME, hostName);
+  }
+
+  public static void setResourceManagerAddress(Configuration conf, String hostName)
+  {
+    conf.set(KEY_YARN_RESOURCEMANAGER_ADDRESS, hostName);
+  }
+
+  public static void setCurrentNodeHostName(Configuration conf, String hostName)
+  {
+    conf.set(KEY_RUBIX_CURRENT_NODE_HOSTNAME, hostName);
+  }
+
+  public static Configuration disableFSCaches(Configuration conf)
+  {
+    conf.setBoolean("fs.s3.impl.disable.cache", true);
+    conf.setBoolean("fs.s3n.impl.disable.cache", true);
+    conf.setBoolean("fs.s3a.impl.disable.cache", true);
+    conf.setBoolean("fs.wasb.impl.disable.cache", true);
+    conf.setBoolean("fs.gs.impl.disable.cache", true);
+    return conf;
   }
 }

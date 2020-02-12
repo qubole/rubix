@@ -562,20 +562,22 @@ public class BaseServerTest
   {
     private boolean isServerUp;
 
-    public void startServer(Configuration conf, MetricRegistry metricRegistry)
+    public BookKeeper startServer(Configuration conf, MetricRegistry metricRegistry)
     {
+      BookKeeper bookKeeper;
       metrics = metricRegistry;
       bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
       try {
         // Initializing this BookKeeper here allows it to register the live worker count metric for testing.
-        new CoordinatorBookKeeper(conf, bookKeeperMetrics);
+        bookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics);
       }
       catch (BookKeeperInitializationException e) {
         log.error("Could not instantiate Coordinator", e);
-        return;
+        return null;
       }
       registerMetrics(conf);
       isServerUp = true;
+      return bookKeeper;
     }
 
     public void stopServer()
