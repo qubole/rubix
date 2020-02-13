@@ -5,7 +5,7 @@
     <groupId>com.qubole.rubix</groupId>
     <artifactId>rubix-root</artifactId>
     <packaging>pom</packaging>
-    <version>0.3.6-SNAPSHOT</version>
+    <version>0.3.6</version>
     <name>rubix</name>
     <url>http://github.com/qubole/rubix</url>
     <description>Caching Framework for Big Data Engines</description>
@@ -33,7 +33,7 @@
         <connection>scm:git:git://github.com/qubole/rubix.git</connection>
         <url>http://github.com/qubole/rubix</url>
         <developerConnection>scm:git:git@github.com:qubole/rubix.git</developerConnection>
-      <tag>HEAD</tag>
+      <tag>rubix-root-0.3.6</tag>
   </scm>
 
     <inceptionYear>2016</inceptionYear>
