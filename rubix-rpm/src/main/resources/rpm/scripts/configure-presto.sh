@@ -25,6 +25,14 @@ RUBIX_PRESTO_CLIENT_CONFIG="/etc/rubix/presto-config.xml"
         <value>com.qubole.rubix.presto.CachingPrestoNativeAzureFileSystem</value>
     </property>
     <property>
+        <name>fs.abfs.impl</name>
+        <value>com.qubole.rubix.presto.CachingPrestoAzureBlobFileSystem</value>
+    </property>
+    <property>
+        <name>fs.abfss.impl</name>
+        <value>com.qubole.rubix.presto.CachingPrestoSecureAzureBlobFileSystem</value>
+    </property>
+    <property>
         <name>caching.fs.presto-server-port</name>
         <value>8889</value>
     </property>
