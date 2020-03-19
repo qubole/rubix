@@ -185,14 +185,8 @@ public class CachedReadRequestChain extends ReadRequestChain
       log.error("Could not Invalidate Corrupted File " + remotePath + " Error : ", e);
     }
     finally {
-      try {
-        if (client != null) {
-          client.close();
-          client = null;
-        }
-      }
-      catch (IOException ex) {
-        log.error("Could not close bookkeeper client. Exception: ", ex);
+      if (client != null) {
+        factory.returnBookKeeperClient(client.getTransportPoolable());
       }
     }
   }

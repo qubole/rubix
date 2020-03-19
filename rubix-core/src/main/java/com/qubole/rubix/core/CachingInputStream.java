@@ -531,7 +531,7 @@ public class CachingInputStream extends FSInputStream
         inputStream.close();
       }
       if (bookKeeperClient != null) {
-        bookKeeperClient.close();
+        bookKeeperFactory.returnBookKeeperClient(bookKeeperClient.getTransportPoolable());
       }
     }
     catch (IOException e) {

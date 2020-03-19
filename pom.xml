@@ -257,6 +257,9 @@
                 <includes>
                     <include>**/*.java</include>
                 </includes>
+                <excludes>
+                    <exclude>src/main/java/com/qubole/rubix/spi/fop/**</exclude>
+                </excludes>
             </configuration>
             <executions>
                 <execution>

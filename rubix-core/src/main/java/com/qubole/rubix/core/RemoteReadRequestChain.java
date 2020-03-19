@@ -194,14 +194,8 @@ public class RemoteReadRequestChain extends ReadRequestChain
       log.warn("Could not update BookKeeper about newly cached blocks", e);
     }
     finally {
-      try {
-        if (client != null) {
-          client.close();
-          client = null;
-        }
-      }
-      catch (IOException ex) {
-        log.error("Could not close bookkeeper client. Exception", ex);
+      if (client != null) {
+        bookKeeperFactory.returnBookKeeperClient(client.getTransportPoolable());
       }
     }
   }

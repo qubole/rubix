@@ -176,10 +176,10 @@ public class WorkerBookKeeper extends BookKeeper
               return client.getClusterNodes();
             }
             catch (Exception e) {
-              client.close();
               throw e;
             }
             finally {
+              bookKeeperFactory.returnBookKeeperClient(client.getTransportPoolable());
               client = null;
             }
           }

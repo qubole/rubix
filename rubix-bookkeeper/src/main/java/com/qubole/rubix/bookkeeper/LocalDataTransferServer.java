@@ -269,7 +269,7 @@ public class LocalDataTransferServer extends Configured implements Tool
         int nread = readDataFromCachedFile(bookKeeperClient, remotePath, offset, readLength);
 
         if (bookKeeperClient != null) {
-          bookKeeperClient.close();
+          bookKeeperFactory.returnBookKeeperClient(bookKeeperClient.getTransportPoolable());
         }
         log.debug(String.format("Done reading %d from %s at offset %d and length %d for client %s", nread, remotePath, offset, readLength, localDataTransferClient.getRemoteAddress()));
       }

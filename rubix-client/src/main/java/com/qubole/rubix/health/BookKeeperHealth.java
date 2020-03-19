@@ -20,8 +20,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 
-import java.io.IOException;
-
 /**
 * Created by kvankayala on 16 Dec 2018.
 */
@@ -67,13 +65,8 @@ public class BookKeeperHealth extends Configured
       log.error("Bookkeeper is not responding", e);
     }
     finally {
-      try {
-        if (rclient != null) {
-          rclient.close();
-        }
-      }
-      catch (IOException e) {
-        log.error("Exception Thrown while closing thrift connection", e);
+      if (rclient != null) {
+        this.factory.returnBookKeeperClient(rclient.getTransportPoolable());
       }
     }
     return isBksAlive;

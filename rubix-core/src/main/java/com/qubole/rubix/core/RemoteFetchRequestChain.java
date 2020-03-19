@@ -23,8 +23,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 
-import java.io.IOException;
-
 public class RemoteFetchRequestChain extends ReadRequestChain
 {
   private static final Log log = LogFactory.getLog(RemoteFetchRequestChain.class);
@@ -72,14 +70,8 @@ public class RemoteFetchRequestChain extends ReadRequestChain
       throw e;
     }
     finally {
-      try {
-        if (client != null) {
-          client.close();
-          client = null;
-        }
-      }
-      catch (IOException ex) {
-        log.error("Could not close bookkeeper client. Exception: ", ex);
+      if (client != null) {
+        bookKeeperFactory.returnBookKeeperClient(client.getTransportPoolable());
       }
     }
     log.debug("Send request to remote took " + (System.currentTimeMillis() - startTime) + " :msecs");
@@ -112,13 +104,8 @@ public class RemoteFetchRequestChain extends ReadRequestChain
         log.error("Dummy Mode: Could not update Cache Status for Remote Fetch Request ", e);
       }
       finally {
-        try {
-          if (bookKeeperClient != null) {
-            bookKeeperClient.close();
-          }
-        }
-        catch (IOException ex) {
-          log.error("Dummy Mode: Could not close bookkeeper client. Exception: ", ex);
+        if (bookKeeperClient != null) {
+          bookKeeperFactory.returnBookKeeperClient(bookKeeperClient.getTransportPoolable());
         }
       }
     }

@@ -56,6 +56,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
   DirectReadRequestChain directReadChain; // Used when Non Local Requests fail
 
   private static final Log log = LogFactory.getLog(NonLocalReadRequestChain.class);
+  private BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
 
   public NonLocalReadRequestChain(String remoteLocation, long fileSize, long lastModified, Configuration conf,
                                   FileSystem remoteFileSystem, String remotePath,
@@ -204,7 +205,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
     if (CacheConfig.isDummyModeEnabled(conf)) {
       RetryingBookkeeperClient bookKeeperClient = null;
       try {
-        bookKeeperClient = new BookKeeperFactory().createBookKeeperClient(remoteNodeName, conf);
+        bookKeeperClient = bookKeeperFactory.createBookKeeperClient(remoteNodeName, conf);
         for (ReadRequest readRequest : readRequests) {
           long startBlock = toBlock(readRequest.getBackendReadStart());
           long endBlock = toBlock(readRequest.getBackendReadEnd() - 1) + 1;
@@ -221,13 +222,8 @@ public class NonLocalReadRequestChain extends ReadRequestChain
         log.error("Dummy Mode: Could not update Cache Status for Non-Local Read Request ", e);
       }
       finally {
-        try {
-          if (bookKeeperClient != null) {
-            bookKeeperClient.close();
-          }
-        }
-        catch (IOException ex) {
-          log.error("Dummy Mode: Could not close bookkeeper client. Exception: ", ex);
+        if (bookKeeperClient != null) {
+          bookKeeperFactory.returnBookKeeperClient(bookKeeperClient.getTransportPoolable());
         }
       }
     }

@@ -44,6 +44,13 @@
             <version>${dep.mockito.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.conversantmedia</groupId>
+            <artifactId>disruptor</artifactId>
+            <version>1.2.14</version>
+            <!-- This is optional, if you want the best performance you need to manually add disruptor into your dependency -->
+            <optional>true</optional>
+        </dependency>
     </dependencies>
 
     <build>

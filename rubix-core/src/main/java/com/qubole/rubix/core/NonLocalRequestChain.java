@@ -85,14 +85,8 @@ public class NonLocalRequestChain extends ReadRequestChain
       log.error("Could not get cache status from bookkeeper server at " + remoteNodeName, e);
     }
     finally {
-      try {
-        if (bookKeeperClient != null) {
-          bookKeeperClient.close();
-          bookKeeperClient = null;
-        }
-      }
-      catch (Exception e) {
-        log.error("Could not close BookKeeper client ", e);
+      if (bookKeeperClient != null) {
+        bookKeeperFactory.returnBookKeeperClient(bookKeeperClient.getTransportPoolable());
       }
     }
   }

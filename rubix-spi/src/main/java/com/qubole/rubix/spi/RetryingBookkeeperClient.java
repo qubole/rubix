@@ -16,6 +16,7 @@ package com.qubole.rubix.spi;
  * Created by sakshia on 27/9/16.
  */
 
+import com.qubole.rubix.spi.fop.Poolable;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.BookKeeperService;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
@@ -37,12 +38,26 @@ public class RetryingBookkeeperClient extends BookKeeperService.Client implement
   private static final Log log = LogFactory.getLog(RetryingBookkeeperClient.class);
   private int maxRetries;
   TTransport transport;
+  Poolable<TTransport> transportPoolable;
 
   public RetryingBookkeeperClient(TTransport transport, int maxRetries)
   {
     super(new TBinaryProtocol(transport));
     this.transport = transport;
     this.maxRetries = maxRetries;
+  }
+
+  public RetryingBookkeeperClient(Poolable<TTransport> transportPoolable, int maxRetries)
+  {
+    super(new TBinaryProtocol(transportPoolable.getObject()));
+    this.transport = transportPoolable.getObject();
+    this.transportPoolable = transportPoolable;
+    this.maxRetries = maxRetries;
+  }
+
+  public Poolable<TTransport> getTransportPoolable()
+  {
+    return transportPoolable;
   }
 
   @Override
