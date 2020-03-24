@@ -48,12 +48,12 @@ public class ContainerRequestServer implements RequestServer
   }
 
   @Override
-  public Map<String, Double> getCacheMetrics(GetCacheMetricsRequest request) throws RemoteException
+  public Map<String, Double> getCacheMetrics(GetCacheMetricsRequest request)
   {
     try (RetryingBookkeeperClient client = createBookKeeperClient()) {
       return request.execute(client);
     }
-    catch (IOException | TTransportException e) {
+    catch (TTransportException e) {
       log.error("Error getting cache metrics", e);
     }
     return new HashMap<>();
@@ -77,7 +77,8 @@ public class ContainerRequestServer implements RequestServer
    * @return The BookKeeper client.
    * @throws TTransportException if an error occurs when trying to connect to the BookKeeper server.
    */
-  private RetryingBookkeeperClient createBookKeeperClient() throws TTransportException
+  private RetryingBookkeeperClient createBookKeeperClient()
+          throws TTransportException
   {
     return factory.createBookKeeperClient(conf);
   }

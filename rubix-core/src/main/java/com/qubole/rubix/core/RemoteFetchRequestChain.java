@@ -55,9 +55,7 @@ public class RemoteFetchRequestChain extends ReadRequestChain
     }
     long startTime = System.currentTimeMillis();
 
-    RetryingBookkeeperClient client = null;
-    try {
-      client = bookKeeperFactory.createBookKeeperClient(remoteNodeLocation, conf);
+    try (RetryingBookkeeperClient client = bookKeeperFactory.createBookKeeperClient(remoteNodeLocation, conf)) {
       for (ReadRequest request : readRequests) {
         log.debug("RemoteFetchRequest from : " + remoteNodeLocation + " Start : " + request.backendReadStart +
                 " of length " + request.getBackendReadLength());
@@ -68,11 +66,6 @@ public class RemoteFetchRequestChain extends ReadRequestChain
     catch (Exception e) {
       log.info("Could not initiate parallel warmup in node " + remoteNodeLocation, e);
       throw e;
-    }
-    finally {
-      if (client != null) {
-        bookKeeperFactory.returnBookKeeperClient(client.getTransportPoolable());
-      }
     }
     log.debug("Send request to remote took " + (System.currentTimeMillis() - startTime) + " :msecs");
 
@@ -88,9 +81,7 @@ public class RemoteFetchRequestChain extends ReadRequestChain
   public void updateCacheStatus(String remotePath, long fileSize, long lastModified, int blockSize, Configuration conf)
   {
     if (CacheConfig.isDummyModeEnabled(conf)) {
-      RetryingBookkeeperClient bookKeeperClient = null;
-      try {
-        bookKeeperClient = bookKeeperFactory.createBookKeeperClient(remoteNodeLocation, conf);
+      try (RetryingBookkeeperClient bookKeeperClient = bookKeeperFactory.createBookKeeperClient(remoteNodeLocation, conf)) {
         for (ReadRequest readRequest : readRequests) {
           long startBlock = toBlock(readRequest.getBackendReadStart());
           long endBlock = toBlock(readRequest.getBackendReadEnd() - 1) + 1;
@@ -102,11 +93,6 @@ public class RemoteFetchRequestChain extends ReadRequestChain
       }
       catch (Exception e) {
         log.error("Dummy Mode: Could not update Cache Status for Remote Fetch Request ", e);
-      }
-      finally {
-        if (bookKeeperClient != null) {
-          bookKeeperFactory.returnBookKeeperClient(bookKeeperClient.getTransportPoolable());
-        }
       }
     }
   }

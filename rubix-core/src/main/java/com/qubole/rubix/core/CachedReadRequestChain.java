@@ -176,18 +176,11 @@ public class CachedReadRequestChain extends ReadRequestChain
 
   private void invalidateMetadata()
   {
-    RetryingBookkeeperClient client = null;
-    try {
-      client = factory.createBookKeeperClient(conf);
+    try (RetryingBookkeeperClient client = factory.createBookKeeperClient(conf)) {
       client.invalidateFileMetadata(remotePath);
     }
     catch (Exception e) {
       log.error("Could not Invalidate Corrupted File " + remotePath + " Error : ", e);
-    }
-    finally {
-      if (client != null) {
-        factory.returnBookKeeperClient(client.getTransportPoolable());
-      }
     }
   }
 

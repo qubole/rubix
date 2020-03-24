@@ -29,7 +29,6 @@ import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.transport.TTransport;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Callable;
 
@@ -53,11 +52,6 @@ public class RetryingBookkeeperClient extends BookKeeperService.Client implement
     this.transport = transportPoolable.getObject();
     this.transportPoolable = transportPoolable;
     this.maxRetries = maxRetries;
-  }
-
-  public Poolable<TTransport> getTransportPoolable()
-  {
-    return transportPoolable;
   }
 
   @Override
@@ -129,10 +123,9 @@ public class RetryingBookkeeperClient extends BookKeeperService.Client implement
 
   @Override
   public void close()
-      throws IOException
   {
-    if (transport.isOpen()) {
-      transport.close();
+    if (transportPoolable != null && transportPoolable.getObject() != null && transportPoolable.getObject().isOpen()) {
+      BookKeeperFactory.pool.returnObject(transportPoolable);
     }
   }
 }

@@ -24,7 +24,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.thrift.TException;
 import org.apache.thrift.transport.TTransport;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -102,11 +101,5 @@ public class LocalBookKeeperClient extends RetryingBookkeeperClient
           throws TException
   {
     bookKeeper.invalidateFileMetadata(remotePath);
-  }
-
-  @Override
-  public void close()
-      throws IOException
-  {
   }
 }

@@ -55,19 +55,12 @@ public class BookKeeperHealth extends Configured
 
   public boolean checkIfBookKeeperAlive()
   {
-    RetryingBookkeeperClient rclient = null;
     boolean isBksAlive = false;
-    try {
-      rclient = this.factory.createBookKeeperClient(conf);
+    try (RetryingBookkeeperClient rclient = this.factory.createBookKeeperClient(conf)) {
       isBksAlive = rclient.isBookKeeperAlive();
     }
     catch (Exception e) {
       log.error("Bookkeeper is not responding", e);
-    }
-    finally {
-      if (rclient != null) {
-        this.factory.returnBookKeeperClient(rclient.getTransportPoolable());
-      }
     }
     return isBksAlive;
   }

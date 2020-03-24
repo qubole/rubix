@@ -41,7 +41,7 @@ public class BookKeeperFactory
   private static PoolConfig poolConfig;
   private static ConcurrentHashMap<String, Integer> concurrentHashMap = new ConcurrentHashMap<>();
   private static ObjectFactory<TSocket> factory;
-  private static ObjectPool pool;
+  static ObjectPool pool;
 
   private static final String LOCALHOST = "localhost";
 

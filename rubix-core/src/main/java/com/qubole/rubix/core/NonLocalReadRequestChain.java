@@ -203,9 +203,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
   public void updateCacheStatus(String remotePath, long fileSize, long lastModified, int blockSize, Configuration conf)
   {
     if (CacheConfig.isDummyModeEnabled(conf)) {
-      RetryingBookkeeperClient bookKeeperClient = null;
-      try {
-        bookKeeperClient = bookKeeperFactory.createBookKeeperClient(remoteNodeName, conf);
+      try (RetryingBookkeeperClient bookKeeperClient = bookKeeperFactory.createBookKeeperClient(remoteNodeName, conf)) {
         for (ReadRequest readRequest : readRequests) {
           long startBlock = toBlock(readRequest.getBackendReadStart());
           long endBlock = toBlock(readRequest.getBackendReadEnd() - 1) + 1;
@@ -220,11 +218,6 @@ public class NonLocalReadRequestChain extends ReadRequestChain
           throw Throwables.propagate(e);
         }
         log.error("Dummy Mode: Could not update Cache Status for Non-Local Read Request ", e);
-      }
-      finally {
-        if (bookKeeperClient != null) {
-          bookKeeperFactory.returnBookKeeperClient(bookKeeperClient.getTransportPoolable());
-        }
       }
     }
   }

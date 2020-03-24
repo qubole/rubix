@@ -41,7 +41,6 @@ public class NonLocalRequestChain extends ReadRequestChain
   int blockSize;
   boolean strictMode;
   BookKeeperFactory bookKeeperFactory;
-  RetryingBookkeeperClient bookKeeperClient;
   NonLocalReadRequestChain nonLocalReadRequestChain;
   RemoteFetchRequestChain remoteFetchRequestChain;
   FileSystem.Statistics statistics;
@@ -69,8 +68,7 @@ public class NonLocalRequestChain extends ReadRequestChain
     this.bookKeeperFactory = bookKeeperFactory;
     this.blockSize = CacheConfig.getBlockSize(conf);
 
-    try {
-      this.bookKeeperClient = bookKeeperFactory.createBookKeeperClient(remoteNodeName, conf);
+    try (RetryingBookkeeperClient bookKeeperClient = bookKeeperFactory.createBookKeeperClient(remoteNodeName, conf)) {
       log.debug(" Trying to getCacheStatus from : " + remoteNodeName + " for file : " + remoteFilePath
               + " StartBlock : " + startBlock + " EndBlock : " + endBlock);
 
@@ -83,11 +81,6 @@ public class NonLocalRequestChain extends ReadRequestChain
         throw Throwables.propagate(e);
       }
       log.error("Could not get cache status from bookkeeper server at " + remoteNodeName, e);
-    }
-    finally {
-      if (bookKeeperClient != null) {
-        bookKeeperFactory.returnBookKeeperClient(bookKeeperClient.getTransportPoolable());
-      }
     }
   }
 

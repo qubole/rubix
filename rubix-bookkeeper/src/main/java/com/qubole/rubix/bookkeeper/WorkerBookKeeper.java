@@ -179,7 +179,7 @@ public class WorkerBookKeeper extends BookKeeper
               throw e;
             }
             finally {
-              bookKeeperFactory.returnBookKeeperClient(client.getTransportPoolable());
+              client.close();
               client = null;
             }
           }
