@@ -30,9 +30,9 @@ import java.util.Map;
 /**
  * Created by sakshia on 6/10/16.
  */
-public class LocalBookKeeperClient extends RetryingBookkeeperClient
+public class LocalBookKeeperClient extends RetryingPooledBookkeeperClient
 {
-  private static final Log log = LogFactory.getLog(RetryingBookkeeperClient.class);
+  private static final Log log = LogFactory.getLog(RetryingPooledBookkeeperClient.class);
   BookKeeperService.Iface bookKeeper;
 
   public LocalBookKeeperClient(TTransport transport, BookKeeperService.Iface bookKeeper)

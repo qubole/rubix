@@ -114,7 +114,7 @@ public class BookKeeperFactory
     }
   }
 
-  public RetryingBookkeeperClient createBookKeeperClient(String host, Configuration conf) throws TTransportException
+  public RetryingPooledBookkeeperClient createBookKeeperClient(String host, Configuration conf) throws TTransportException
   {
     if (bookKeeper != null) {
       return new LocalBookKeeperClient(null, bookKeeper);
@@ -141,12 +141,12 @@ public class BookKeeperFactory
         e.printStackTrace();
         throw new TTransportException();
       }
-      RetryingBookkeeperClient retryingBookkeeperClient = new RetryingBookkeeperClient(obj, CacheConfig.getMaxRetries(conf));
+      RetryingPooledBookkeeperClient retryingBookkeeperClient = new RetryingPooledBookkeeperClient(obj, CacheConfig.getMaxRetries(conf));
       return retryingBookkeeperClient;
     }
   }
 
-  public RetryingBookkeeperClient createBookKeeperClient(String host, Configuration conf, int maxRetries,
+  public RetryingPooledBookkeeperClient createBookKeeperClient(String host, Configuration conf, int maxRetries,
                                                          long retryInterval, boolean throwException)
   {
     for (int failedStarts = 1; failedStarts <= maxRetries; failedStarts++) {
@@ -177,7 +177,7 @@ public class BookKeeperFactory
     return bookKeeper != null;
   }
 
-  public RetryingBookkeeperClient createBookKeeperClient(Configuration conf) throws TTransportException
+  public RetryingPooledBookkeeperClient createBookKeeperClient(Configuration conf) throws TTransportException
   {
     return createBookKeeperClient(LOCALHOST, conf);
   }

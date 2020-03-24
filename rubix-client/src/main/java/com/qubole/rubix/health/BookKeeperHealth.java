@@ -14,7 +14,7 @@
 package com.qubole.rubix.health;
 
 import com.qubole.rubix.spi.BookKeeperFactory;
-import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -56,7 +56,7 @@ public class BookKeeperHealth extends Configured
   public boolean checkIfBookKeeperAlive()
   {
     boolean isBksAlive = false;
-    try (RetryingBookkeeperClient rclient = this.factory.createBookKeeperClient(conf)) {
+    try (RetryingPooledBookkeeperClient rclient = this.factory.createBookKeeperClient(conf)) {
       isBksAlive = rclient.isBookKeeperAlive();
     }
     catch (Exception e) {

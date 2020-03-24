@@ -24,7 +24,7 @@ import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.common.utils.ClusterUtil;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
-import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
 import com.qubole.rubix.spi.thrift.ClusterNode;
 import com.qubole.rubix.spi.thrift.HeartbeatRequest;
 import com.qubole.rubix.spi.thrift.NodeState;
@@ -47,7 +47,7 @@ public class WorkerBookKeeper extends BookKeeper
   private BookKeeperFactory bookKeeperFactory;
   // The hostname of the master node.
   private String masterHostname;
-  private RetryingBookkeeperClient client;
+  private RetryingPooledBookkeeperClient client;
 
   public WorkerBookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics) throws BookKeeperInitializationException
   {
@@ -222,7 +222,7 @@ public class WorkerBookKeeper extends BookKeeper
    * @param bookKeeperFactory   The factory to use for creating a BookKeeper client.
    * @return The client used for communication with the master node.
    */
-  private static RetryingBookkeeperClient createBookKeeperClientWithRetry(BookKeeperFactory bookKeeperFactory,
+  private static RetryingPooledBookkeeperClient createBookKeeperClientWithRetry(BookKeeperFactory bookKeeperFactory,
                                                                           String hostName, Configuration conf)
   {
     final int retryInterval = CacheConfig.getServiceRetryInterval(conf);

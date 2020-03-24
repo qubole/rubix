@@ -23,7 +23,7 @@ import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.DataTransferClientHelper;
 import com.qubole.rubix.spi.DataTransferHeader;
-import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.Location;
@@ -228,7 +228,7 @@ public class LocalDataTransferServer extends Configured implements Tool
         int readLength = header.getReadLength();
         String remotePath = header.getFilePath();
         log.debug(String.format("Trying to read from %s at offset %d and length %d for client %s", remotePath, offset, readLength, localDataTransferClient.getRemoteAddress()));
-        try (RetryingBookkeeperClient bookKeeperClient = bookKeeperFactory.createBookKeeperClient(conf)) {
+        try (RetryingPooledBookkeeperClient bookKeeperClient = bookKeeperFactory.createBookKeeperClient(conf)) {
           if (!CacheConfig.isParallelWarmupEnabled(conf)) {
             ReadDataRequest readDataRequest = new ReadDataRequest(remotePath, offset, readLength, header.getFileSize(), header.getLastModified());
             if (!bookKeeperClient.readData(readDataRequest)) {
@@ -281,7 +281,7 @@ public class LocalDataTransferServer extends Configured implements Tool
       }
     }
 
-    private int readDataFromCachedFile(RetryingBookkeeperClient bookKeeperClient, String remotePath, long offset, int readLength) throws IOException, TException
+    private int readDataFromCachedFile(RetryingPooledBookkeeperClient bookKeeperClient, String remotePath, long offset, int readLength) throws IOException, TException
     {
       FileChannel fc = null;
       int nread = 0;

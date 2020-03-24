@@ -12,7 +12,7 @@
  */
 package com.qubole.rubix.client.robotframework.container.client;
 
-import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
 import org.apache.thrift.shaded.TException;
 
 import java.io.Serializable;
@@ -23,7 +23,7 @@ public class GetCacheMetricsRequest implements Serializable
 {
   public static final long serialVersionUID = 126L;
 
-  public Map<String, Double> execute(RetryingBookkeeperClient client)
+  public Map<String, Double> execute(RetryingPooledBookkeeperClient client)
   {
     try {
       return client.getCacheMetrics();

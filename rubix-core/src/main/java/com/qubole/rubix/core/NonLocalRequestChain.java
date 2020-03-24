@@ -15,7 +15,7 @@ package com.qubole.rubix.core;
 import com.google.common.base.Throwables;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
-import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.Location;
@@ -68,7 +68,7 @@ public class NonLocalRequestChain extends ReadRequestChain
     this.bookKeeperFactory = bookKeeperFactory;
     this.blockSize = CacheConfig.getBlockSize(conf);
 
-    try (RetryingBookkeeperClient bookKeeperClient = bookKeeperFactory.createBookKeeperClient(remoteNodeName, conf)) {
+    try (RetryingPooledBookkeeperClient bookKeeperClient = bookKeeperFactory.createBookKeeperClient(remoteNodeName, conf)) {
       log.debug(" Trying to getCacheStatus from : " + remoteNodeName + " for file : " + remoteFilePath
               + " StartBlock : " + startBlock + " EndBlock : " + endBlock);
 

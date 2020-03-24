@@ -14,7 +14,7 @@ package com.qubole.rubix.core;
 
 import com.google.common.base.Throwables;
 import com.qubole.rubix.spi.BookKeeperFactory;
-import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -72,7 +72,7 @@ public class DummyModeCachingInputStream extends CachingInputStream
       @Override
       public void run()
       {
-        try (RetryingBookkeeperClient client = bookKeeperFactory.createBookKeeperClient(conf)) {
+        try (RetryingPooledBookkeeperClient client = bookKeeperFactory.createBookKeeperClient(conf)) {
           long endBlock = ((initPos + (length - 1)) / blockSize) + 1;
           final List<ReadRequestChain> readRequestChains = setupReadRequestChains(buffer, offset, endBlock, length,
               initPos, initNextReadBlock, client);

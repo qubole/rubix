@@ -20,7 +20,7 @@ import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.common.utils.TestUtil;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
-import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.ClusterNode;
@@ -155,7 +155,7 @@ public class TestWorkerBookKeeper
       TSocket socket = new TSocket("localhost", 1234, CacheConfig.getServerConnectTimeout(conf));
       socket.open();
 
-      doReturn(new RetryingBookkeeperClient(socket, CacheConfig.getMaxRetries(conf)))
+      doReturn(new RetryingPooledBookkeeperClient(socket, CacheConfig.getMaxRetries(conf)))
           .when(bookKeeperFactory).createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any());
 
       FakeTicker ticker = new FakeTicker();

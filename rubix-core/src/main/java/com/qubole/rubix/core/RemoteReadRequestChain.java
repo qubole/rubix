@@ -14,7 +14,7 @@ package com.qubole.rubix.core;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.qubole.rubix.spi.BookKeeperFactory;
-import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
 import com.qubole.rubix.spi.thrift.SetCachedRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -181,7 +181,7 @@ public class RemoteReadRequestChain extends ReadRequestChain
   @Override
   public void updateCacheStatus(String remotePath, long fileSize, long lastModified, int blockSize, Configuration conf)
   {
-    try (RetryingBookkeeperClient client = bookKeeperFactory.createBookKeeperClient(conf)) {
+    try (RetryingPooledBookkeeperClient client = bookKeeperFactory.createBookKeeperClient(conf)) {
       for (ReadRequest readRequest : readRequests) {
         SetCachedRequest request = new SetCachedRequest(remotePath, fileSize, lastModified,
             toBlock(readRequest.getBackendReadStart()), toBlock(readRequest.getBackendReadEnd() - 1) + 1);

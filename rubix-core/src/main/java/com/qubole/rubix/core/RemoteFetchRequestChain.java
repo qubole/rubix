@@ -14,7 +14,7 @@ package com.qubole.rubix.core;
 
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
-import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.ReadDataRequest;
 import com.qubole.rubix.spi.thrift.SetCachedRequest;
@@ -55,7 +55,7 @@ public class RemoteFetchRequestChain extends ReadRequestChain
     }
     long startTime = System.currentTimeMillis();
 
-    try (RetryingBookkeeperClient client = bookKeeperFactory.createBookKeeperClient(remoteNodeLocation, conf)) {
+    try (RetryingPooledBookkeeperClient client = bookKeeperFactory.createBookKeeperClient(remoteNodeLocation, conf)) {
       for (ReadRequest request : readRequests) {
         log.debug("RemoteFetchRequest from : " + remoteNodeLocation + " Start : " + request.backendReadStart +
                 " of length " + request.getBackendReadLength());
@@ -81,7 +81,7 @@ public class RemoteFetchRequestChain extends ReadRequestChain
   public void updateCacheStatus(String remotePath, long fileSize, long lastModified, int blockSize, Configuration conf)
   {
     if (CacheConfig.isDummyModeEnabled(conf)) {
-      try (RetryingBookkeeperClient bookKeeperClient = bookKeeperFactory.createBookKeeperClient(remoteNodeLocation, conf)) {
+      try (RetryingPooledBookkeeperClient bookKeeperClient = bookKeeperFactory.createBookKeeperClient(remoteNodeLocation, conf)) {
         for (ReadRequest readRequest : readRequests) {
           long startBlock = toBlock(readRequest.getBackendReadStart());
           long endBlock = toBlock(readRequest.getBackendReadEnd() - 1) + 1;

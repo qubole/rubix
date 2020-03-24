@@ -23,7 +23,7 @@ import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.common.utils.ClusterUtil;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
-import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
 import com.qubole.rubix.spi.thrift.HeartbeatRequest;
 import com.qubole.rubix.spi.thrift.HeartbeatStatus;
 import org.apache.commons.logging.Log;
@@ -45,7 +45,7 @@ public class HeartbeatService extends AbstractScheduledService
   private final ScheduledExecutorService validatorExecutor = Executors.newSingleThreadScheduledExecutor();
 
   // The client for interacting with the master BookKeeper.
-  private final RetryingBookkeeperClient bookkeeperClient;
+  private final RetryingPooledBookkeeperClient bookkeeperClient;
 
   // The initial delay for sending heartbeats.
   private final int heartbeatInitialDelay;
@@ -105,7 +105,7 @@ public class HeartbeatService extends AbstractScheduledService
    * @param bookKeeperFactory   The factory to use for creating a BookKeeper client.
    * @return The client used for communication with the master node.
    */
-  private RetryingBookkeeperClient initializeClientWithRetry(BookKeeperFactory bookKeeperFactory)
+  private RetryingPooledBookkeeperClient initializeClientWithRetry(BookKeeperFactory bookKeeperFactory)
   {
     final int retryInterval = CacheConfig.getServiceRetryInterval(conf);
     final int maxRetries = CacheConfig.getServiceMaxRetries(conf);

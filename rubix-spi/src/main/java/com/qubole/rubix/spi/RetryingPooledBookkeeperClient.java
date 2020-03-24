@@ -32,21 +32,22 @@ import java.io.Closeable;
 import java.util.List;
 import java.util.concurrent.Callable;
 
-public class RetryingBookkeeperClient extends BookKeeperService.Client implements Closeable
+public class RetryingPooledBookkeeperClient
+        extends BookKeeperService.Client implements Closeable
 {
-  private static final Log log = LogFactory.getLog(RetryingBookkeeperClient.class);
+  private static final Log log = LogFactory.getLog(RetryingPooledBookkeeperClient.class);
   private int maxRetries;
   TTransport transport;
   Poolable<TTransport> transportPoolable;
 
-  public RetryingBookkeeperClient(TTransport transport, int maxRetries)
+  public RetryingPooledBookkeeperClient(TTransport transport, int maxRetries)
   {
     super(new TBinaryProtocol(transport));
     this.transport = transport;
     this.maxRetries = maxRetries;
   }
 
-  public RetryingBookkeeperClient(Poolable<TTransport> transportPoolable, int maxRetries)
+  public RetryingPooledBookkeeperClient(Poolable<TTransport> transportPoolable, int maxRetries)
   {
     super(new TBinaryProtocol(transportPoolable.getObject()));
     this.transport = transportPoolable.getObject();
@@ -63,7 +64,7 @@ public class RetryingBookkeeperClient extends BookKeeperService.Client implement
       public List<BlockLocation> call()
           throws TException
       {
-        return RetryingBookkeeperClient.super.getCacheStatus(request);
+        return RetryingPooledBookkeeperClient.super.getCacheStatus(request);
       }
     });
   }
@@ -77,7 +78,7 @@ public class RetryingBookkeeperClient extends BookKeeperService.Client implement
       public Void call()
           throws Exception
       {
-        RetryingBookkeeperClient.super.setAllCached(request);
+        RetryingPooledBookkeeperClient.super.setAllCached(request);
         return null;
       }
     });
@@ -91,7 +92,7 @@ public class RetryingBookkeeperClient extends BookKeeperService.Client implement
       @Override
       public Void call() throws Exception
       {
-        RetryingBookkeeperClient.super.handleHeartbeat(request);
+        RetryingPooledBookkeeperClient.super.handleHeartbeat(request);
         return null;
       }
     });

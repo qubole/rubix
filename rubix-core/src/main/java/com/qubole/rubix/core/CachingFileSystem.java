@@ -16,7 +16,7 @@ import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
-import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
 import com.qubole.rubix.spi.thrift.BookKeeperService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -295,7 +295,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
       else {
         // Using similar logic of returning all Blocks as FileSystem.getFileBlockLocations does instead of only returning blocks from start till len
 
-        try (RetryingBookkeeperClient client = bookKeeperFactory.createBookKeeperClient(conf);) {
+        try (RetryingPooledBookkeeperClient client = bookKeeperFactory.createBookKeeperClient(conf);) {
           BlockLocation[] blockLocations = new BlockLocation[(int) Math.ceil((double) file.getLen() / splitSize)];
           int blockNumber = 0;
 
