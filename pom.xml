@@ -75,7 +75,7 @@
     <repositories>
         <repository>
             <id>spring-plugins</id>
-            <url>http://repo.spring.io/libs-release/</url>
+            <url>https://repo.spring.io/libs-release/</url>
         </repository>
     </repositories>
 
