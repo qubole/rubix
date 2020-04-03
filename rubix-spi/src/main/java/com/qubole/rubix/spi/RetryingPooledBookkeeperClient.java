@@ -38,8 +38,8 @@ public class RetryingPooledBookkeeperClient
 {
   private static final Log log = LogFactory.getLog(RetryingPooledBookkeeperClient.class);
   private int maxRetries;
-  TTransport transport;
-  Poolable<TTransport> transportPoolable;
+  private TTransport transport;
+  private Poolable<TTransport> transportPoolable;
 
   @VisibleForTesting
   public RetryingPooledBookkeeperClient(TTransport transport, int maxRetries)

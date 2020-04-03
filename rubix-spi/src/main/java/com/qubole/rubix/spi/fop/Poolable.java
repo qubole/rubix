@@ -25,14 +25,14 @@ public class Poolable<T>
 {
   private final T object;
   private ObjectPool<T> pool;
-  private final int partition;
+  private final String host;
   private long lastAccessTs;
 
-  public Poolable(T t, ObjectPool<T> pool, int partition)
+  public Poolable(T t, ObjectPool<T> pool, String host)
   {
     this.object = t;
     this.pool = pool;
-    this.partition = partition;
+    this.host = host;
     this.lastAccessTs = System.currentTimeMillis();
   }
 
@@ -46,9 +46,9 @@ public class Poolable<T>
     return pool;
   }
 
-  public int getPartition()
+  public String getHost()
   {
-    return partition;
+    return host;
   }
 
   public void returnObject()

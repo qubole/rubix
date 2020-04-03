@@ -44,12 +44,6 @@
             <version>${dep.mockito.version}</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>com.conversantmedia</groupId>
-            <artifactId>disruptor</artifactId>
-            <version>1.2.14</version>
-            <optional>true</optional>
-        </dependency>
     </dependencies>
 
     <build>

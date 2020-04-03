@@ -24,10 +24,7 @@ import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
 
-import java.net.SocketException;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by sakshia on 5/10/16.
@@ -36,10 +33,8 @@ public class BookKeeperFactory
 {
   BookKeeperService.Iface bookKeeper;
   private static Log log = LogFactory.getLog(BookKeeperFactory.class.getName());
-  private static final AtomicInteger count = new AtomicInteger();
   private static final AtomicBoolean initFlag = new AtomicBoolean();
   private static PoolConfig poolConfig;
-  private static ConcurrentHashMap<String, Integer> hostToPartitionId = new ConcurrentHashMap<>();
   private static ObjectFactory<TSocket> factory;
   static ObjectPool pool;
 
@@ -51,7 +46,7 @@ public class BookKeeperFactory
     poolConfig.setMaxSize(CacheConfig.getPoolSizeMax(conf));
     poolConfig.setMinSize(CacheConfig.getPoolSizeMin(conf));
     poolConfig.setDelta(CacheConfig.getPoolDeltaSize(conf));
-    poolConfig.setMaxIdleMilliseconds(CacheConfig.getPoolIdleTimeout(conf));
+    poolConfig.setMaxWaitMilliseconds(CacheConfig.getPoolMaxWait(conf));
 
     factory = new ObjectFactory<TSocket>()
     {
@@ -87,10 +82,7 @@ public class BookKeeperFactory
     };
 
     pool = new ObjectPool(poolConfig, factory);
-    log.debug("Registering host: localhost count: " + count.get());
-    int index = count.getAndAdd(1);
-    pool.registerHost(LOCALHOST, CacheConfig.getServerSocketTimeout(conf), CacheConfig.getServerConnectTimeout(conf), index);
-    hostToPartitionId.put(LOCALHOST, index);
+    pool.registerHost(LOCALHOST, CacheConfig.getServerSocketTimeout(conf), CacheConfig.getServerConnectTimeout(conf));
   }
 
   public BookKeeperFactory()
@@ -116,30 +108,11 @@ public class BookKeeperFactory
     }
 
     if (bookKeeper != null) {
-      return new LocalBookKeeperClient(null, bookKeeper);
+      return new LocalBookKeeperClient(new Poolable<TTransport>(null, null, null), bookKeeper);
     }
     else {
-      if (!hostToPartitionId.containsKey(host)) {
-        synchronized (hostToPartitionId) {
-          if (!hostToPartitionId.containsKey(host)) {
-            final int socketTimeout = CacheConfig.getServerSocketTimeout(conf);
-            final int connectTimeout = CacheConfig.getServerConnectTimeout(conf);
-            log.info("Registering host on connection pool, hostname: " + host + " pool ID: " + count.get());
-            int index = count.getAndAdd(1);
-            pool.registerHost(host, socketTimeout, connectTimeout, index);
-            hostToPartitionId.put(host, index);
-          }
-        }
-      }
-
       Poolable<TTransport> obj;
-      try {
-        obj = pool.borrowObject(hostToPartitionId.get(host));
-      }
-      catch (SocketException e) {
-        e.printStackTrace();
-        throw new TTransportException();
-      }
+      obj = pool.borrowObject(host, conf);
       RetryingPooledBookkeeperClient retryingBookkeeperClient = new RetryingPooledBookkeeperClient(obj, CacheConfig.getMaxRetries(conf));
       return retryingBookkeeperClient;
     }
