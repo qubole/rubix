@@ -295,7 +295,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
       else {
         // Using similar logic of returning all Blocks as FileSystem.getFileBlockLocations does instead of only returning blocks from start till len
 
-        try (RetryingPooledBookkeeperClient client = bookKeeperFactory.createBookKeeperClient(conf);) {
+        try (RetryingPooledBookkeeperClient client = bookKeeperFactory.createBookKeeperClient(conf)) {
           BlockLocation[] blockLocations = new BlockLocation[(int) Math.ceil((double) file.getLen() / splitSize)];
           int blockNumber = 0;
 

@@ -16,6 +16,7 @@ package com.qubole.rubix.spi;
  * Created by sakshia on 27/9/16.
  */
 
+import com.google.common.annotations.VisibleForTesting;
 import com.qubole.rubix.spi.fop.Poolable;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.BookKeeperService;
@@ -40,6 +41,7 @@ public class RetryingPooledBookkeeperClient
   TTransport transport;
   Poolable<TTransport> transportPoolable;
 
+  @VisibleForTesting
   public RetryingPooledBookkeeperClient(TTransport transport, int maxRetries)
   {
     super(new TBinaryProtocol(transport));

@@ -12,6 +12,7 @@
  */
 package com.qubole.rubix.spi;
 
+import com.qubole.rubix.spi.fop.Poolable;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.BookKeeperService;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
@@ -35,9 +36,9 @@ public class LocalBookKeeperClient extends RetryingPooledBookkeeperClient
   private static final Log log = LogFactory.getLog(RetryingPooledBookkeeperClient.class);
   BookKeeperService.Iface bookKeeper;
 
-  public LocalBookKeeperClient(TTransport transport, BookKeeperService.Iface bookKeeper)
+  public LocalBookKeeperClient(Poolable<TTransport> transportPoolable, BookKeeperService.Iface bookKeeper)
   {
-    super(transport, 1);
+    super(transportPoolable, 1);
     this.bookKeeper = bookKeeper;
   }
 

@@ -37,34 +37,31 @@ public class BookKeeperFactory
   BookKeeperService.Iface bookKeeper;
   private static Log log = LogFactory.getLog(BookKeeperFactory.class.getName());
   private static final AtomicInteger count = new AtomicInteger();
-  private static final AtomicBoolean flag = new AtomicBoolean();
+  private static final AtomicBoolean initFlag = new AtomicBoolean();
   private static PoolConfig poolConfig;
-  private static ConcurrentHashMap<String, Integer> concurrentHashMap = new ConcurrentHashMap<>();
+  private static ConcurrentHashMap<String, Integer> hostToPartitionId = new ConcurrentHashMap<>();
   private static ObjectFactory<TSocket> factory;
   static ObjectPool pool;
 
   private static final String LOCALHOST = "localhost";
 
-  static {
-    // TODO: add config.properties file to set this config
+  private void init(final Configuration conf)
+  {
     poolConfig = new PoolConfig();
-    poolConfig.setPartitionSize(10);
-    poolConfig.setMaxSize(2000);
-    poolConfig.setMinSize(100);
-    poolConfig.setDelta(100);
-    poolConfig.setMaxIdleMilliseconds(60 * 1000 * 5);
-    final int socketTimeout = 60000;
-    final int connectTimeout = 10000;
+    poolConfig.setMaxSize(CacheConfig.getPoolSizeMax(conf));
+    poolConfig.setMinSize(CacheConfig.getPoolSizeMin(conf));
+    poolConfig.setDelta(CacheConfig.getPoolDeltaSize(conf));
+    poolConfig.setMaxIdleMilliseconds(CacheConfig.getPoolIdleTimeout(conf));
 
     factory = new ObjectFactory<TSocket>()
     {
       @Override
       public TSocket create(String host, int socketTimeout, int connectTimeout)
       {
-        log.debug("Opening connection on host: " + host);
+        log.debug("Opening connection to host: " + host);
         TSocket socket = null;
         try {
-          socket = new TSocket(host, 8899, socketTimeout, connectTimeout); // create your object here
+          socket = new TSocket(host, CacheConfig.getBookKeeperServerPort(conf), socketTimeout, connectTimeout);
           socket.open();
         }
         catch (TTransportException e) {
@@ -85,22 +82,15 @@ public class BookKeeperFactory
       {
         boolean isClosed = o.getSocket().isClosed();
         log.debug("Is valid object: " + isClosed);
-        return !isClosed; // validate your object here
+        return !isClosed;
       }
     };
 
-    if (!flag.get()) {
-      synchronized (flag) {
-        if (!flag.get()) {
-          pool = new ObjectPool(poolConfig, factory);
-          log.debug("Registering host: localhost count: " + count.get());
-          int index = count.getAndAdd(1);
-          pool.registerHost(LOCALHOST, socketTimeout, connectTimeout, index);
-          concurrentHashMap.put(LOCALHOST, index);
-          flag.set(true);
-        }
-      }
-    }
+    pool = new ObjectPool(poolConfig, factory);
+    log.debug("Registering host: localhost count: " + count.get());
+    int index = count.getAndAdd(1);
+    pool.registerHost(LOCALHOST, CacheConfig.getServerSocketTimeout(conf), CacheConfig.getServerConnectTimeout(conf), index);
+    hostToPartitionId.put(LOCALHOST, index);
   }
 
   public BookKeeperFactory()
@@ -116,26 +106,35 @@ public class BookKeeperFactory
 
   public RetryingPooledBookkeeperClient createBookKeeperClient(String host, Configuration conf) throws TTransportException
   {
+    if (!initFlag.get()) {
+      synchronized (initFlag) {
+        if (!initFlag.get()) {
+          init(conf);
+          initFlag.set(true);
+        }
+      }
+    }
+
     if (bookKeeper != null) {
       return new LocalBookKeeperClient(null, bookKeeper);
     }
     else {
-      if (!concurrentHashMap.containsKey(host)) {
-        synchronized (concurrentHashMap) {
-          if (!concurrentHashMap.containsKey(host)) {
+      if (!hostToPartitionId.containsKey(host)) {
+        synchronized (hostToPartitionId) {
+          if (!hostToPartitionId.containsKey(host)) {
             final int socketTimeout = CacheConfig.getServerSocketTimeout(conf);
             final int connectTimeout = CacheConfig.getServerConnectTimeout(conf);
             log.info("Registering host on connection pool, hostname: " + host + " pool ID: " + count.get());
             int index = count.getAndAdd(1);
             pool.registerHost(host, socketTimeout, connectTimeout, index);
-            concurrentHashMap.put(host, index);
+            hostToPartitionId.put(host, index);
           }
         }
       }
 
       Poolable<TTransport> obj;
       try {
-        obj = pool.borrowObject(concurrentHashMap.get(host));
+        obj = pool.borrowObject(hostToPartitionId.get(host));
       }
       catch (SocketException e) {
         e.printStackTrace();
@@ -180,12 +179,5 @@ public class BookKeeperFactory
   public RetryingPooledBookkeeperClient createBookKeeperClient(Configuration conf) throws TTransportException
   {
     return createBookKeeperClient(LOCALHOST, conf);
-  }
-
-  public void returnBookKeeperClient(Poolable<TTransport> obj)
-  {
-    if (obj != null && obj.getObject() != null && obj.getObject().isOpen()) {
-      pool.returnObject(obj);
-    }
   }
 }

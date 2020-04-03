@@ -77,8 +77,7 @@ public class ContainerRequestServer implements RequestServer
    * @return The BookKeeper client.
    * @throws TTransportException if an error occurs when trying to connect to the BookKeeper server.
    */
-  private RetryingPooledBookkeeperClient createBookKeeperClient()
-          throws TTransportException
+  private RetryingPooledBookkeeperClient createBookKeeperClient() throws TTransportException
   {
     return factory.createBookKeeperClient(conf);
   }

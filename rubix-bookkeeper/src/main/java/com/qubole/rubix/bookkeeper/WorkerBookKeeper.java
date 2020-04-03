@@ -175,9 +175,6 @@ public class WorkerBookKeeper extends BookKeeper
             try {
               return client.getClusterNodes();
             }
-            catch (Exception e) {
-              throw e;
-            }
             finally {
               client.close();
               client = null;
