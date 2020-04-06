@@ -15,7 +15,7 @@ package com.qubole.rubix.core;
 import com.google.common.base.Throwables;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
-import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.Location;
@@ -41,7 +41,6 @@ public class NonLocalRequestChain extends ReadRequestChain
   int blockSize;
   boolean strictMode;
   BookKeeperFactory bookKeeperFactory;
-  RetryingBookkeeperClient bookKeeperClient;
   NonLocalReadRequestChain nonLocalReadRequestChain;
   RemoteFetchRequestChain remoteFetchRequestChain;
   FileSystem.Statistics statistics;
@@ -69,8 +68,7 @@ public class NonLocalRequestChain extends ReadRequestChain
     this.bookKeeperFactory = bookKeeperFactory;
     this.blockSize = CacheConfig.getBlockSize(conf);
 
-    try {
-      this.bookKeeperClient = bookKeeperFactory.createBookKeeperClient(remoteNodeName, conf);
+    try (RetryingPooledBookkeeperClient bookKeeperClient = bookKeeperFactory.createBookKeeperClient(remoteNodeName, conf)) {
       log.debug(" Trying to getCacheStatus from : " + remoteNodeName + " for file : " + remoteFilePath
               + " StartBlock : " + startBlock + " EndBlock : " + endBlock);
 
@@ -83,17 +81,6 @@ public class NonLocalRequestChain extends ReadRequestChain
         throw Throwables.propagate(e);
       }
       log.error("Could not get cache status from bookkeeper server at " + remoteNodeName, e);
-    }
-    finally {
-      try {
-        if (bookKeeperClient != null) {
-          bookKeeperClient.close();
-          bookKeeperClient = null;
-        }
-      }
-      catch (Exception e) {
-        log.error("Could not close BookKeeper client ", e);
-      }
     }
   }
 

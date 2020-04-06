@@ -9,28 +9,21 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
+ * <p>
+ * <p>
+ * NOTICE: THIS FILE HAS BEEN MODIFIED BY  Qubole Inc UNDER COMPLIANCE WITH THE APACHE 2.0 LICENCE FROM THE ORIGINAL WORK
+ * OF https://github.com/DanielYWoo/fast-object-pool.
  */
-package com.qubole.rubix.client.robotframework.container.client;
+package com.qubole.rubix.spi.fop;
 
-import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
-import org.apache.thrift.shaded.TException;
-
-import java.io.Serializable;
-import java.util.HashMap;
-import java.util.Map;
-
-public class GetCacheMetricsRequest implements Serializable
+/**
+ * @author Daniel
+ */
+public interface ObjectFactory<T>
 {
-  public static final long serialVersionUID = 126L;
+  T create(String host, int socketTimeout, int connectTimeout);
 
-  public Map<String, Double> execute(RetryingPooledBookkeeperClient client)
-  {
-    try {
-      return client.getCacheMetrics();
-    }
-    catch (TException ex) {
-      ex.printStackTrace();
-    }
-    return new HashMap<>();
-  }
+  void destroy(T t);
+
+  boolean validate(T t);
 }

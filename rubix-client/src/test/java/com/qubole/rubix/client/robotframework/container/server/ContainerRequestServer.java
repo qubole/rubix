@@ -17,7 +17,7 @@ import com.qubole.rubix.client.robotframework.container.client.ReadDataRequestPa
 import com.qubole.rubix.client.robotframework.container.client.ReadDataWithFileSystemRequest;
 import com.qubole.rubix.core.MockCachingFileSystem;
 import com.qubole.rubix.spi.BookKeeperFactory;
-import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -48,12 +48,12 @@ public class ContainerRequestServer implements RequestServer
   }
 
   @Override
-  public Map<String, Double> getCacheMetrics(GetCacheMetricsRequest request) throws RemoteException
+  public Map<String, Double> getCacheMetrics(GetCacheMetricsRequest request)
   {
-    try (RetryingBookkeeperClient client = createBookKeeperClient()) {
+    try (RetryingPooledBookkeeperClient client = createBookKeeperClient()) {
       return request.execute(client);
     }
-    catch (IOException | TTransportException e) {
+    catch (TTransportException e) {
       log.error("Error getting cache metrics", e);
     }
     return new HashMap<>();
@@ -77,7 +77,7 @@ public class ContainerRequestServer implements RequestServer
    * @return The BookKeeper client.
    * @throws TTransportException if an error occurs when trying to connect to the BookKeeper server.
    */
-  private RetryingBookkeeperClient createBookKeeperClient() throws TTransportException
+  private RetryingPooledBookkeeperClient createBookKeeperClient() throws TTransportException
   {
     return factory.createBookKeeperClient(conf);
   }

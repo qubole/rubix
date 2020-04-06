@@ -66,7 +66,7 @@ public class TestBookKeeperFactory
 
     server = startMockServer(true, NO_DELAY, NO_DELAY);
 
-    final RetryingBookkeeperClient client = createTestBookKeeperClient(socketTimeout, connectTimeout);
+    final RetryingPooledBookkeeperClient client = createTestBookKeeperClient(socketTimeout, connectTimeout);
     assertTrue(client.isBookKeeperAlive());
 
     stopMockServer();
@@ -81,7 +81,7 @@ public class TestBookKeeperFactory
 
     server = startMockServer(true, startDelay, NO_DELAY);
 
-    final RetryingBookkeeperClient client = createTestBookKeeperClient(socketTimeout, connectTimeout);
+    final RetryingPooledBookkeeperClient client = createTestBookKeeperClient(socketTimeout, connectTimeout);
     assertTrue(client.isBookKeeperAlive());
 
     stopMockServer();
@@ -96,7 +96,7 @@ public class TestBookKeeperFactory
 
     server = startMockServer(true, NO_DELAY, aliveCallDelay);
 
-    final RetryingBookkeeperClient client = createTestBookKeeperClient(socketTimeout, connectTimeout);
+    final RetryingPooledBookkeeperClient client = createTestBookKeeperClient(socketTimeout, connectTimeout);
     assertTrue(client.isBookKeeperAlive());
 
     stopMockServer();
@@ -112,7 +112,7 @@ public class TestBookKeeperFactory
 
     server = startMockServer(true, startDelay, aliveCallDelay);
 
-    final RetryingBookkeeperClient client = createTestBookKeeperClient(socketTimeout, connectTimeout);
+    final RetryingPooledBookkeeperClient client = createTestBookKeeperClient(socketTimeout, connectTimeout);
     assertTrue(client.isBookKeeperAlive());
 
     stopMockServer();
@@ -139,7 +139,7 @@ public class TestBookKeeperFactory
 
     server = startMockServer(true, NO_DELAY, aliveCallDelay);
 
-    final RetryingBookkeeperClient client = createTestBookKeeperClient(socketTimeout, connectTimeout);
+    final RetryingPooledBookkeeperClient client = createTestBookKeeperClient(socketTimeout, connectTimeout);
     client.isBookKeeperAlive(); // should throw expected exception due to socket timeout
   }
 
@@ -153,7 +153,7 @@ public class TestBookKeeperFactory
 
     server = startMockServer(true, startDelay, aliveCallDelay);
 
-    final RetryingBookkeeperClient client = createTestBookKeeperClient(socketTimeout, connectTimeout);
+    final RetryingPooledBookkeeperClient client = createTestBookKeeperClient(socketTimeout, connectTimeout);
     client.isBookKeeperAlive(); // should throw expected exception due to socket timeout
   }
 
@@ -178,7 +178,7 @@ public class TestBookKeeperFactory
     server = null;
   }
 
-  private RetryingBookkeeperClient createTestBookKeeperClient(int socketTimeout, int connectTimeout) throws TTransportException
+  private RetryingPooledBookkeeperClient createTestBookKeeperClient(int socketTimeout, int connectTimeout) throws TTransportException
   {
     CacheConfig.setServerSocketTimeout(conf, socketTimeout);
     CacheConfig.setServerConnectTimeout(conf, connectTimeout);

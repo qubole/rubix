@@ -15,7 +15,7 @@ package com.qubole.rubix.core;
 import com.google.common.annotations.VisibleForTesting;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheUtil;
-import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -176,24 +176,11 @@ public class CachedReadRequestChain extends ReadRequestChain
 
   private void invalidateMetadata()
   {
-    RetryingBookkeeperClient client = null;
-    try {
-      client = factory.createBookKeeperClient(conf);
+    try (RetryingPooledBookkeeperClient client = factory.createBookKeeperClient(conf)) {
       client.invalidateFileMetadata(remotePath);
     }
     catch (Exception e) {
       log.error("Could not Invalidate Corrupted File " + remotePath + " Error : ", e);
-    }
-    finally {
-      try {
-        if (client != null) {
-          client.close();
-          client = null;
-        }
-      }
-      catch (IOException ex) {
-        log.error("Could not close bookkeeper client. Exception: ", ex);
-      }
     }
   }
 

@@ -14,13 +14,11 @@
 package com.qubole.rubix.health;
 
 import com.qubole.rubix.spi.BookKeeperFactory;
-import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-
-import java.io.IOException;
 
 /**
 * Created by kvankayala on 16 Dec 2018.
@@ -57,24 +55,12 @@ public class BookKeeperHealth extends Configured
 
   public boolean checkIfBookKeeperAlive()
   {
-    RetryingBookkeeperClient rclient = null;
     boolean isBksAlive = false;
-    try {
-      rclient = this.factory.createBookKeeperClient(conf);
+    try (RetryingPooledBookkeeperClient rclient = this.factory.createBookKeeperClient(conf)) {
       isBksAlive = rclient.isBookKeeperAlive();
     }
     catch (Exception e) {
       log.error("Bookkeeper is not responding", e);
-    }
-    finally {
-      try {
-        if (rclient != null) {
-          rclient.close();
-        }
-      }
-      catch (IOException e) {
-        log.error("Exception Thrown while closing thrift connection", e);
-      }
     }
     return isBksAlive;
   }

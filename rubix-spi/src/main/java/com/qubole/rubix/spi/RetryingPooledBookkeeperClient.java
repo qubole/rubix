@@ -16,6 +16,8 @@ package com.qubole.rubix.spi;
  * Created by sakshia on 27/9/16.
  */
 
+import com.google.common.annotations.VisibleForTesting;
+import com.qubole.rubix.spi.fop.Poolable;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.BookKeeperService;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
@@ -28,20 +30,30 @@ import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.transport.TTransport;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Callable;
 
-public class RetryingBookkeeperClient extends BookKeeperService.Client implements Closeable
+public class RetryingPooledBookkeeperClient
+        extends BookKeeperService.Client implements Closeable
 {
-  private static final Log log = LogFactory.getLog(RetryingBookkeeperClient.class);
+  private static final Log log = LogFactory.getLog(RetryingPooledBookkeeperClient.class);
   private int maxRetries;
-  TTransport transport;
+  private TTransport transport;
+  private Poolable<TTransport> transportPoolable;
 
-  public RetryingBookkeeperClient(TTransport transport, int maxRetries)
+  @VisibleForTesting
+  public RetryingPooledBookkeeperClient(TTransport transport, int maxRetries)
   {
     super(new TBinaryProtocol(transport));
     this.transport = transport;
+    this.maxRetries = maxRetries;
+  }
+
+  public RetryingPooledBookkeeperClient(Poolable<TTransport> transportPoolable, int maxRetries)
+  {
+    super(new TBinaryProtocol(transportPoolable.getObject()));
+    this.transport = transportPoolable.getObject();
+    this.transportPoolable = transportPoolable;
     this.maxRetries = maxRetries;
   }
 
@@ -54,7 +66,7 @@ public class RetryingBookkeeperClient extends BookKeeperService.Client implement
       public List<BlockLocation> call()
           throws TException
       {
-        return RetryingBookkeeperClient.super.getCacheStatus(request);
+        return RetryingPooledBookkeeperClient.super.getCacheStatus(request);
       }
     });
   }
@@ -68,7 +80,7 @@ public class RetryingBookkeeperClient extends BookKeeperService.Client implement
       public Void call()
           throws Exception
       {
-        RetryingBookkeeperClient.super.setAllCached(request);
+        RetryingPooledBookkeeperClient.super.setAllCached(request);
         return null;
       }
     });
@@ -82,7 +94,7 @@ public class RetryingBookkeeperClient extends BookKeeperService.Client implement
       @Override
       public Void call() throws Exception
       {
-        RetryingBookkeeperClient.super.handleHeartbeat(request);
+        RetryingPooledBookkeeperClient.super.handleHeartbeat(request);
         return null;
       }
     });
@@ -114,10 +126,9 @@ public class RetryingBookkeeperClient extends BookKeeperService.Client implement
 
   @Override
   public void close()
-      throws IOException
   {
-    if (transport.isOpen()) {
-      transport.close();
+    if (transportPoolable != null && transportPoolable.getObject() != null && transportPoolable.getObject().isOpen()) {
+      BookKeeperFactory.pool.returnObject(transportPoolable);
     }
   }
 }

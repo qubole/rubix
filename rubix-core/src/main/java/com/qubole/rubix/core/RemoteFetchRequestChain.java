@@ -14,7 +14,7 @@ package com.qubole.rubix.core;
 
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
-import com.qubole.rubix.spi.RetryingBookkeeperClient;
+import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.ReadDataRequest;
 import com.qubole.rubix.spi.thrift.SetCachedRequest;
@@ -22,8 +22,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-
-import java.io.IOException;
 
 public class RemoteFetchRequestChain extends ReadRequestChain
 {
@@ -57,9 +55,7 @@ public class RemoteFetchRequestChain extends ReadRequestChain
     }
     long startTime = System.currentTimeMillis();
 
-    RetryingBookkeeperClient client = null;
-    try {
-      client = bookKeeperFactory.createBookKeeperClient(remoteNodeLocation, conf);
+    try (RetryingPooledBookkeeperClient client = bookKeeperFactory.createBookKeeperClient(remoteNodeLocation, conf)) {
       for (ReadRequest request : readRequests) {
         log.debug("RemoteFetchRequest from : " + remoteNodeLocation + " Start : " + request.backendReadStart +
                 " of length " + request.getBackendReadLength());
@@ -70,17 +66,6 @@ public class RemoteFetchRequestChain extends ReadRequestChain
     catch (Exception e) {
       log.info("Could not initiate parallel warmup in node " + remoteNodeLocation, e);
       throw e;
-    }
-    finally {
-      try {
-        if (client != null) {
-          client.close();
-          client = null;
-        }
-      }
-      catch (IOException ex) {
-        log.error("Could not close bookkeeper client. Exception: ", ex);
-      }
     }
     log.debug("Send request to remote took " + (System.currentTimeMillis() - startTime) + " :msecs");
 
@@ -96,9 +81,7 @@ public class RemoteFetchRequestChain extends ReadRequestChain
   public void updateCacheStatus(String remotePath, long fileSize, long lastModified, int blockSize, Configuration conf)
   {
     if (CacheConfig.isDummyModeEnabled(conf)) {
-      RetryingBookkeeperClient bookKeeperClient = null;
-      try {
-        bookKeeperClient = bookKeeperFactory.createBookKeeperClient(remoteNodeLocation, conf);
+      try (RetryingPooledBookkeeperClient bookKeeperClient = bookKeeperFactory.createBookKeeperClient(remoteNodeLocation, conf)) {
         for (ReadRequest readRequest : readRequests) {
           long startBlock = toBlock(readRequest.getBackendReadStart());
           long endBlock = toBlock(readRequest.getBackendReadEnd() - 1) + 1;
@@ -110,16 +93,6 @@ public class RemoteFetchRequestChain extends ReadRequestChain
       }
       catch (Exception e) {
         log.error("Dummy Mode: Could not update Cache Status for Remote Fetch Request ", e);
-      }
-      finally {
-        try {
-          if (bookKeeperClient != null) {
-            bookKeeperClient.close();
-          }
-        }
-        catch (IOException ex) {
-          log.error("Dummy Mode: Could not close bookkeeper client. Exception: ", ex);
-        }
       }
     }
   }

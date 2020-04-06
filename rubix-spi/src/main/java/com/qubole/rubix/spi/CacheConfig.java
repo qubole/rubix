@@ -38,6 +38,10 @@ public class CacheConfig
   private static final String KEY_CACHE_METADATA_FILE_SUFFIX = "rubix.cache.metadata.file.suffix";
   private static final String KEY_SERVER_CONNECT_TIMEOUT = "rubix.network.server.connect.timeout";
   private static final String KEY_SERVER_SOCKET_TIMEOUT = "rubix.network.server.socket.timeout";
+  private static final String KEY_POOL_MAX_SIZE = "rubix.pool.size.max";
+  private static final String KEY_POOL_MIN_SIZE = "rubix.pool.size.min";
+  private static final String KEY_POOL_DELTA_SIZE = "rubix.pool.delta.size";
+  private static final String KEY_POOL_MAX_WAIT_TIMEOUT = "rubix.pool.wait.timeout";
   private static final String KEY_DATA_CACHE_EXPIRY_AFTER_WRITE = "rubix.cache.expiration.after-write";
   private static final String KEY_DATA_CACHE_DIR_PREFIX = "rubix.cache.dirprefix.list";
   private static final String KEY_DATA_CACHE_DIR_SUFFIX = "rubix.cache.dirsuffix";
@@ -107,6 +111,10 @@ public class CacheConfig
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
   private static final int DEFAULT_SERVER_CONNECT_TIMEOUT = 1000; // ms
   private static final int DEFAULT_SERVER_SOCKET_TIMEOUT = 6000; // ms
+  private static final int DEFAULT_KEY_POOL_MAX_SIZE = 2000;
+  private static final int DEFAULT_KEY_POOL_MIN_SIZE = 100;
+  private static final int DEFAULT_KEY_POOL_DELTA_SIZE = 100;
+  private static final int DEFAULT_POOL_MAX_WAIT_TIMEOUT = 5000; // ms
   private static final String DEFAULT_CACHE_METADATA_FILE_SUFFIX = "_mdfile";
   private static final String DEFAULT_DATA_CACHE_DIR_PREFIX = "/media/ephemeral";
   private static final String DEFAULT_DATA_CACHE_DIR_SUFFIX = "/fcache/";
@@ -261,6 +269,31 @@ public class CacheConfig
   public static int getServerSocketTimeout(Configuration conf)
   {
     return conf.getInt(KEY_SERVER_SOCKET_TIMEOUT, DEFAULT_SERVER_SOCKET_TIMEOUT);
+  }
+
+  public static int getPoolSizeMax(Configuration conf)
+  {
+    return conf.getInt(KEY_POOL_MAX_SIZE, DEFAULT_KEY_POOL_MAX_SIZE);
+  }
+
+  public static int getPoolSizeMin(Configuration conf)
+  {
+    return conf.getInt(KEY_POOL_MIN_SIZE, DEFAULT_KEY_POOL_MIN_SIZE);
+  }
+
+  public static int getPoolDeltaSize(Configuration conf)
+  {
+    return conf.getInt(KEY_POOL_DELTA_SIZE, DEFAULT_KEY_POOL_DELTA_SIZE);
+  }
+
+  public static int getPoolMaxWait(Configuration conf)
+  {
+    return conf.getInt(KEY_POOL_MAX_WAIT_TIMEOUT, DEFAULT_POOL_MAX_WAIT_TIMEOUT);
+  }
+
+  public static int get(Configuration conf)
+  {
+    return conf.getInt(KEY_POOL_DELTA_SIZE, DEFAULT_KEY_POOL_DELTA_SIZE);
   }
 
   public static int getDiskReadBufferSize(Configuration conf)
