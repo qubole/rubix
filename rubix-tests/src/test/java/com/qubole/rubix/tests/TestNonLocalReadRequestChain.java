@@ -323,7 +323,9 @@ public class TestNonLocalReadRequestChain
     if (bookKeeperServer != null) {
       bookKeeperServer.stopServer();
     }
-    LocalDataTransferServer.stopServer();
+    if (LocalDataTransferServer.isServerUp()) {
+      LocalDataTransferServer.stopServer();
+    }
   }
 
   private void prepopulateCache(Configuration conf, int length) throws TException

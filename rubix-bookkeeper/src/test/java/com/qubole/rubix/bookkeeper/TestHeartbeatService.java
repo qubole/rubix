@@ -123,7 +123,7 @@ public class TestHeartbeatService
   public void testHeartbeatRetryLogic_connectAfterRetries() throws BookKeeperInitializationException, IOException
   {
     BaseServerTest.stopBookKeeperServer();
-    // BaseServerTest.startCoordinatorBookKeeperServerWithDelay(conf, new MetricRegistry(), TEST_RETRY_INTERVAL * 4);
+    BaseServerTest.startCoordinatorBookKeeperServerWithDelay(conf, new MetricRegistry(), TEST_RETRY_INTERVAL * 2);
 
     // Disable default reporters for this BookKeeper, since they will conflict with the running server.
     CacheConfig.setMetricsReporters(conf, "");

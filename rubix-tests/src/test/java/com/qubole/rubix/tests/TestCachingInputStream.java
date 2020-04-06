@@ -144,7 +144,9 @@ public class TestCachingInputStream
     if (bookKeeperServer != null) {
       bookKeeperServer.stopServer();
     }
-    LocalDataTransferServer.stopServer();
+    if (LocalDataTransferServer.isServerUp()) {
+      LocalDataTransferServer.stopServer();
+    }
 
     inputStream.close();
     File file = new File(backendFileName);
