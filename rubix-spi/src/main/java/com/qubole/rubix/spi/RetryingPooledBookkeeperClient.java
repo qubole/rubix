@@ -39,7 +39,7 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 
 public class RetryingPooledBookkeeperClient
-        extends RetryingPoolingClient
+        extends RetryingPooledThriftClient
         implements BookKeeperService.Iface
 {
   private static final Log log = LogFactory.getLog(RetryingPooledBookkeeperClient.class);

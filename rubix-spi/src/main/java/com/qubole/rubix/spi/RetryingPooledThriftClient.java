@@ -23,10 +23,10 @@ import org.apache.thrift.transport.TTransport;
 import java.io.Closeable;
 import java.util.concurrent.Callable;
 
-public abstract class RetryingPoolingClient
+public abstract class RetryingPooledThriftClient
     implements Closeable
 {
-  private static final Log log = LogFactory.getLog(RetryingPoolingClient.class);
+  private static final Log log = LogFactory.getLog(RetryingPooledThriftClient.class);
 
   private final int maxRetries;
   private final Configuration conf;
@@ -35,7 +35,7 @@ public abstract class RetryingPoolingClient
   private Poolable<TTransport> transportPoolable;
   protected TServiceClient client;
 
-  public RetryingPoolingClient(int maxRetries, Configuration conf, String host, Poolable<TTransport> transportPoolable)
+  public RetryingPooledThriftClient(int maxRetries, Configuration conf, String host, Poolable<TTransport> transportPoolable)
   {
     this.maxRetries = maxRetries;
     this.conf = conf;

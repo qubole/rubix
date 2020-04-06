@@ -58,7 +58,7 @@ public class TestPoolingClient
       throws TException, InterruptedException
   {
     ObjectPool pool = SocketObjectFactory.createSocketObjectPool(conf, "localhost", PORT);
-    RetryingPoolingTestClient client = new RetryingPoolingTestClient(
+    RetryingPooledThriftTestClient client = new RetryingPooledThriftTestClient(
         20,
         conf,
         "localhost",
@@ -97,7 +97,7 @@ public class TestPoolingClient
       throws TException, InterruptedException
   {
     ObjectPool pool = SocketObjectFactory.createSocketObjectPool(conf, "localhost", PORT);
-    RetryingPoolingTestClient client = new RetryingPoolingTestClient(
+    RetryingPooledThriftTestClient client = new RetryingPooledThriftTestClient(
         1,
         conf,
         "localhost",

@@ -12,7 +12,7 @@
  */
 package com.qubole.rubix.spi.client;
 
-import com.qubole.rubix.spi.RetryingPoolingClient;
+import com.qubole.rubix.spi.RetryingPooledThriftClient;
 import com.qubole.rubix.spi.fop.Poolable;
 import com.qubole.rubix.spi.thrift.Request;
 import com.qubole.rubix.spi.thrift.TestingService;
@@ -24,11 +24,11 @@ import org.apache.thrift.transport.TTransport;
 
 import java.util.concurrent.Callable;
 
-public class RetryingPoolingTestClient
-    extends RetryingPoolingClient
+public class RetryingPooledThriftTestClient
+    extends RetryingPooledThriftClient
     implements TestingService.Iface
 {
-  public RetryingPoolingTestClient(int maxRetries, Configuration conf, String host, Poolable<TTransport> transportPoolable)
+  public RetryingPooledThriftTestClient(int maxRetries, Configuration conf, String host, Poolable<TTransport> transportPoolable)
   {
     super(maxRetries, conf, host, transportPoolable);
   }
