@@ -30,6 +30,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.TException;
+import org.apache.thrift.TServiceClient;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.transport.TTransport;
 
@@ -38,38 +39,30 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 
 public class RetryingPooledBookkeeperClient
-        extends CloseableBookkeeprClient
+        extends RetryingPoolingClient
+        implements BookKeeperService.Iface
 {
   private static final Log log = LogFactory.getLog(RetryingPooledBookkeeperClient.class);
-
-  private final int maxRetries;
-  private final Configuration conf;
-  private final String host;
-
-  private BookKeeperService.Client client;
-  private Poolable<TTransport> transportPoolable;
 
   @VisibleForTesting
   public RetryingPooledBookkeeperClient()
   {
-    this.maxRetries = 1;
-    this.conf = null;
-    this.host = null;
+    super(1, null, null, null);
   }
 
   public RetryingPooledBookkeeperClient(Poolable<TTransport> transportPoolable, String host, Configuration conf)
   {
-    this.maxRetries = CacheConfig.getMaxRetries(conf);
-    this.conf = conf;
-    this.host = host;
-
-    setupClient(transportPoolable);
+    super(CacheConfig.getMaxRetries(conf), conf, host, transportPoolable);
   }
 
-  private void setupClient(Poolable<TTransport> transportPoolable)
+  public TServiceClient setupClient(Poolable<TTransport> transportPoolable)
   {
-    this.transportPoolable = transportPoolable;
-    this.client = new BookKeeperService.Client(new TBinaryProtocol(transportPoolable.getObject()));
+    return new BookKeeperService.Client(new TBinaryProtocol(transportPoolable.getObject()));
+  }
+
+  private BookKeeperService.Client client()
+  {
+    return (BookKeeperService.Client) client;
   }
 
   @Override
@@ -81,7 +74,7 @@ public class RetryingPooledBookkeeperClient
       public List<BlockLocation> call()
           throws TException
       {
-        return client.getCacheStatus(request);
+        return client().getCacheStatus(request);
       }
     });
   }
@@ -95,7 +88,7 @@ public class RetryingPooledBookkeeperClient
       public Void call()
           throws Exception
       {
-        client.setAllCached(request);
+        client().setAllCached(request);
         return null;
       }
     });
@@ -111,7 +104,7 @@ public class RetryingPooledBookkeeperClient
       public Map<String, Double> call()
               throws TException
       {
-        return client.getCacheMetrics();
+        return client().getCacheMetrics();
       }
     });
   }
@@ -126,7 +119,7 @@ public class RetryingPooledBookkeeperClient
       public Boolean call()
               throws TException
       {
-        return client.readData(request);
+        return client().readData(request);
       }
     });
   }
@@ -139,7 +132,7 @@ public class RetryingPooledBookkeeperClient
       @Override
       public Void call() throws Exception
       {
-        client.handleHeartbeat(request);
+        client().handleHeartbeat(request);
         return null;
       }
     });
@@ -155,7 +148,7 @@ public class RetryingPooledBookkeeperClient
       public FileInfo call()
               throws TException
       {
-        return client.getFileInfo(remotePath);
+        return client().getFileInfo(remotePath);
       }
     });
   }
@@ -170,7 +163,7 @@ public class RetryingPooledBookkeeperClient
       public List<ClusterNode> call()
               throws TException
       {
-        return client.getClusterNodes();
+        return client().getClusterNodes();
       }
     });
   }
@@ -185,7 +178,7 @@ public class RetryingPooledBookkeeperClient
       public String call()
               throws TException
       {
-        return client.getOwnerNodeForPath(remotePathKey);
+        return client().getOwnerNodeForPath(remotePathKey);
       }
     });
   }
@@ -200,7 +193,7 @@ public class RetryingPooledBookkeeperClient
       public Boolean call()
               throws TException
       {
-        return client.isBookKeeperAlive();
+        return client().isBookKeeperAlive();
       }
     });
   }
@@ -215,40 +208,9 @@ public class RetryingPooledBookkeeperClient
       public Void call()
               throws TException
       {
-        client.invalidateFileMetadata(remotePath);
+        client().invalidateFileMetadata(remotePath);
         return null;
       }
     });
-  }
-
-  private <V> V retryConnection(Callable<V> callable)
-      throws TException
-  {
-    int errors = 0;
-
-    while (errors < maxRetries) {
-      try {
-        return callable.call();
-      }
-      catch (Exception e) {
-        log.warn("Error while connecting : ", e);
-        errors++;
-        // We dont want to keep the transport around in case of exception to prevent reading old results in transport reuse
-        if (client.getInputProtocol().getTransport().isOpen()) {
-          client.getInputProtocol().getTransport().close();
-        }
-        setupClient(transportPoolable.getPool().borrowObject(host, conf));
-      }
-    }
-
-    throw new TException();
-  }
-
-  @Override
-  public void close()
-  {
-    if (transportPoolable != null && transportPoolable.getObject() != null && transportPoolable.getObject().isOpen()) {
-      BookKeeperFactory.pool.returnObject(transportPoolable);
-    }
   }
 }

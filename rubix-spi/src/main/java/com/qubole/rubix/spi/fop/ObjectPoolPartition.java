@@ -65,7 +65,6 @@ public class ObjectPoolPartition<T>
 
   public synchronized int increaseObjects(int delta)
   {
-    int oldCount = totalCount;
     if (delta + totalCount > config.getMaxSize()) {
       delta = config.getMaxSize() - totalCount;
     }
@@ -82,7 +81,7 @@ public class ObjectPoolPartition<T>
     catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
-    return totalCount - oldCount;
+    return totalCount;
   }
 
   public synchronized boolean decreaseObject(Poolable<T> obj)

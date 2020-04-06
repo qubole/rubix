@@ -176,8 +176,10 @@ public class WorkerBookKeeper extends BookKeeper
               return client.getClusterNodes();
             }
             finally {
-              client.close();
-              client = null;
+              if (client != null) {
+                client.close();
+                client = null;
+              }
             }
           }
         });
@@ -196,7 +198,7 @@ public class WorkerBookKeeper extends BookKeeper
       return nodeStateMap.get("nodes");
     }
     catch (Exception e) {
-      log.error("Could not get node host name from cache with Exception : " + e);
+      log.error("Could not get node host name from cache with Exception : ", e);
     }
 
     return null;

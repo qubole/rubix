@@ -86,8 +86,8 @@ public class ObjectPool<T>
     Poolable<T> freeObject;
     if (subPool.getObjectQueue().size() == 0) {
       // increase objects and return one, it will return null if reach max size
-      int added = subPool.increaseObjects(this.config.getDelta());
-      if (added == 0) {
+      int totalObjects = subPool.increaseObjects(this.config.getDelta());
+      if (totalObjects == 0) {
         // Could not create objects, this is mostly due to connection timeouts hence no point blocking as there is not other producer of sockets
         throw new RuntimeException("Could not add connections to pool");
       }
