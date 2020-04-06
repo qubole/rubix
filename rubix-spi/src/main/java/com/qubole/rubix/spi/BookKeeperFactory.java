@@ -60,7 +60,7 @@ public class BookKeeperFactory
           socket.open();
         }
         catch (TTransportException e) {
-          e.printStackTrace();
+          log.warn("Unable to open connection to host " + host, e);
         }
         return socket;
       }
@@ -75,8 +75,8 @@ public class BookKeeperFactory
       @Override
       public boolean validate(TSocket o)
       {
-        boolean isClosed = o.getSocket().isClosed();
-        log.debug("Is valid object: " + isClosed);
+        boolean isClosed = o != null && o.getSocket().isClosed();
+        log.debug("Is valid object: " + !isClosed);
         return !isClosed;
       }
     };
@@ -108,12 +108,12 @@ public class BookKeeperFactory
     }
 
     if (bookKeeper != null) {
-      return new LocalBookKeeperClient(new Poolable<TTransport>(null, null, null), bookKeeper);
+      return new LocalBookKeeperClient(bookKeeper);
     }
     else {
       Poolable<TTransport> obj;
       obj = pool.borrowObject(host, conf);
-      RetryingPooledBookkeeperClient retryingBookkeeperClient = new RetryingPooledBookkeeperClient(obj, CacheConfig.getMaxRetries(conf));
+      RetryingPooledBookkeeperClient retryingBookkeeperClient = new RetryingPooledBookkeeperClient(obj, host, conf);
       return retryingBookkeeperClient;
     }
   }

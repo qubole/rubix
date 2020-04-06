@@ -68,6 +68,7 @@ public class HeartbeatService extends AbstractScheduledService
   public HeartbeatService(Configuration conf, MetricRegistry metrics, BookKeeperFactory bookKeeperFactory, BookKeeper bookKeeper)
   {
     this.conf = conf;
+    CacheConfig.setTranportPoolMinSize(conf, 1);
     this.bookKeeper = bookKeeper;
     this.heartbeatInitialDelay = CacheConfig.getHeartbeatInitialDelay(conf);
     this.heartbeatInterval = CacheConfig.getHeartbeatInterval(conf);

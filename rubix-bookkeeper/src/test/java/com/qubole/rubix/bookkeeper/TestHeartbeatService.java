@@ -19,10 +19,12 @@ import com.qubole.rubix.common.utils.TestUtil;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
+import com.qubole.rubix.spi.fop.Poolable;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.shaded.transport.TSocket;
+import org.apache.thrift.shaded.transport.TTransport;
 import org.apache.thrift.shaded.transport.TTransportException;
 import org.mockito.ArgumentMatchers;
 import org.testng.annotations.AfterClass;
@@ -102,8 +104,9 @@ public class TestHeartbeatService
     final BookKeeperFactory bookKeeperFactory = mock(BookKeeperFactory.class);
     when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
         new RetryingPooledBookkeeperClient(
-            new TSocket("localhost", CacheConfig.getBookKeeperServerPort(conf), CacheConfig.getServerConnectTimeout(conf)),
-            CacheConfig.getMaxRetries(conf)));
+            new Poolable<TTransport>(new TSocket("localhost", CacheConfig.getBookKeeperServerPort(conf), CacheConfig.getServerConnectTimeout(conf)), null, "localhost"),
+            "localhost",
+            conf));
 
     // Disable default reporters for this BookKeeper, since they will conflict with the running server.
     CacheConfig.setMetricsReporters(conf, "");
@@ -120,7 +123,7 @@ public class TestHeartbeatService
   public void testHeartbeatRetryLogic_connectAfterRetries() throws BookKeeperInitializationException, IOException
   {
     BaseServerTest.stopBookKeeperServer();
-    BaseServerTest.startCoordinatorBookKeeperServerWithDelay(conf, new MetricRegistry(), TEST_RETRY_INTERVAL * 2);
+    // BaseServerTest.startCoordinatorBookKeeperServerWithDelay(conf, new MetricRegistry(), TEST_RETRY_INTERVAL * 4);
 
     // Disable default reporters for this BookKeeper, since they will conflict with the running server.
     CacheConfig.setMetricsReporters(conf, "");
@@ -165,8 +168,9 @@ public class TestHeartbeatService
     final BookKeeperFactory bookKeeperFactory = mock(BookKeeperFactory.class);
     when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
         new RetryingPooledBookkeeperClient(
-            new TSocket("localhost", CacheConfig.getBookKeeperServerPort(conf), CacheConfig.getServerConnectTimeout(conf)),
-            CacheConfig.getMaxRetries(conf)));
+            new Poolable<TTransport>(new TSocket("localhost", CacheConfig.getBookKeeperServerPort(conf), CacheConfig.getServerConnectTimeout(conf)), null, "localhost"),
+            "localhost",
+            conf));
 
     final MetricRegistry metrics = new MetricRegistry();
 
@@ -194,8 +198,9 @@ public class TestHeartbeatService
     final BookKeeperFactory bookKeeperFactory = mock(BookKeeperFactory.class);
     when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
         new RetryingPooledBookkeeperClient(
-            new TSocket("localhost", CacheConfig.getBookKeeperServerPort(conf), CacheConfig.getServerConnectTimeout(conf)),
-            CacheConfig.getMaxRetries(conf)));
+            new Poolable<TTransport>(new TSocket("localhost", CacheConfig.getBookKeeperServerPort(conf), CacheConfig.getServerConnectTimeout(conf)), null, "localhost"),
+            "localhost",
+            conf));
 
     final MetricRegistry metrics = new MetricRegistry();
 

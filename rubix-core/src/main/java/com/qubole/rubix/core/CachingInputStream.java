@@ -318,7 +318,7 @@ public class CachingInputStream extends FSInputStream
                                                 int length,
                                                 long nextReadPosition,
                                                 long nextReadBlock,
-                                                BookKeeperService.Client bookKeeperClient) throws IOException
+                                                BookKeeperService.Iface bookKeeperClient) throws IOException
   {
     DirectReadRequestChain directReadRequestChain = null;
     RemoteReadRequestChain remoteReadRequestChain = null;

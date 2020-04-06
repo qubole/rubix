@@ -845,6 +845,16 @@ public class CacheConfig
     conf.set(KEY_RUBIX_CURRENT_NODE_HOSTNAME, hostName);
   }
 
+  public static void setMaxNetworkRetries(Configuration conf, int count)
+  {
+    conf.setInt(KEY_MAX_RETRIES, count);
+  }
+
+  public static void setTranportPoolMinSize(Configuration conf, int count)
+  {
+    conf.setInt(KEY_POOL_MIN_SIZE, count);
+  }
+
   public static Configuration disableFSCaches(Configuration conf)
   {
     conf.setBoolean("fs.s3.impl.disable.cache", true);

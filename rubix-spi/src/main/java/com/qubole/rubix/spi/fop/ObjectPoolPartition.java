@@ -49,7 +49,10 @@ public class ObjectPoolPartition<T>
     this.socketTimeout = socketTimeout;
     this.connectTimeout = connectTimeout;
     for (int i = 0; i < config.getMinSize(); i++) {
-      objectQueue.add(new Poolable<>(objectFactory.create(host, socketTimeout, connectTimeout), pool, host));
+      T object = objectFactory.create(host, socketTimeout, connectTimeout);
+      if (object != null) {
+        objectQueue.add(new Poolable<>(object, pool, host));
+      }
     }
     totalCount = config.getMinSize();
   }
