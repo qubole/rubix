@@ -60,6 +60,7 @@ public class BookKeeperFactory
           socket.open();
         }
         catch (TTransportException e) {
+          socket = null;
           log.warn("Unable to open connection to host " + host, e);
         }
         return socket;
@@ -125,7 +126,7 @@ public class BookKeeperFactory
       try {
         return this.createBookKeeperClient(host, conf);
       }
-      catch (TTransportException e) {
+      catch (Exception e) {
         log.warn(String.format("Could not create bookkeeper client [%d/%d attempts]", failedStarts, maxRetries));
       }
       try {
