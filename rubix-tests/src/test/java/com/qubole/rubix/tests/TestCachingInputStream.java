@@ -74,6 +74,7 @@ public class TestCachingInputStream
   @AfterClass
   public static void tearDownClass() throws IOException
   {
+    BookKeeperFactory.resetConnectionPool();
     log.info("Deleting files in " + testDirectory);
     Files.walkFileTree(Paths.get(testDirectory), new DeleteFileVisitor());
     Files.deleteIfExists(Paths.get(testDirectory));

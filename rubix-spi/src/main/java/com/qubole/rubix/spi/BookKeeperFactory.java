@@ -12,6 +12,7 @@
  */
 package com.qubole.rubix.spi;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.qubole.rubix.spi.fop.ObjectFactory;
 import com.qubole.rubix.spi.fop.ObjectPool;
 import com.qubole.rubix.spi.fop.PoolConfig;
@@ -88,6 +89,13 @@ public class BookKeeperFactory
 
   public BookKeeperFactory()
   {
+  }
+
+  @VisibleForTesting
+  public static void resetConnectionPool()
+  {
+    initFlag.set(false);
+    pool = null;
   }
 
   public BookKeeperFactory(BookKeeperService.Iface bookKeeper)

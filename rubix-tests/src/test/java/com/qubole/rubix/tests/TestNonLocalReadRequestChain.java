@@ -83,6 +83,7 @@ public class TestNonLocalReadRequestChain
   @AfterClass
   public static void tearDownClass() throws IOException
   {
+    BookKeeperFactory.resetConnectionPool();
     log.info("Deleting files in " + testDirectory);
     Files.walkFileTree(Paths.get(testDirectory), new DeleteFileVisitor());
     Files.deleteIfExists(Paths.get(testDirectory));
@@ -332,6 +333,7 @@ public class TestNonLocalReadRequestChain
   {
     int endBlock = length / CacheConfig.getBlockSize(conf);
     BookKeeperFactory factory = new BookKeeperFactory();
+
     RetryingPooledBookkeeperClient client = factory.createBookKeeperClient("localhost", conf);
     client.readData(new ReadDataRequest(backendPath.toString(), 0, length, backendFile.length(), backendFile.lastModified()));
 
