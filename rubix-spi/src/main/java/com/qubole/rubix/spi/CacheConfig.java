@@ -271,7 +271,7 @@ public class CacheConfig
     return conf.getInt(KEY_SERVER_SOCKET_TIMEOUT, DEFAULT_SERVER_SOCKET_TIMEOUT);
   }
 
-  public static int getPoolSizeMax(Configuration conf)
+  public static int getTranportPoolMaxSize(Configuration conf)
   {
     return conf.getInt(KEY_POOL_MAX_SIZE, DEFAULT_KEY_POOL_MAX_SIZE);
   }
