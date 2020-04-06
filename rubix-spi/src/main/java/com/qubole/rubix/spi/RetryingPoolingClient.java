@@ -68,7 +68,7 @@ public abstract class RetryingPoolingClient
         errors++;
         // We dont want to keep the transport around in case of exception to prevent reading old results in transport reuse
         if (client.getInputProtocol().getTransport().isOpen()) {
-          // Close connection and submit back so that ObjectPool replaces it with new connection later
+          // Close connection and submit back so that ObjectPool to handle decommissioning
           client.getInputProtocol().getTransport().close();
           transportPoolable.getPool().returnObject(transportPoolable);
         }

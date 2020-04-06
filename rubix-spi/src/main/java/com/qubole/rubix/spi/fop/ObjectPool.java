@@ -115,6 +115,11 @@ public class ObjectPool<T>
   public void returnObject(Poolable<T> obj)
   {
     ObjectPoolPartition<T> subPool = this.hostToPoolMap.get(obj.getHost());
+    if (!factory.validate(obj.getObject())) {
+      subPool.decreaseObject(obj);
+      return;
+    }
+
     try {
       log.debug("Returning object to queue. Queue size: " + subPool.getObjectQueue().size() + "host: " + obj.getHost());
       subPool.getObjectQueue().put(obj);
