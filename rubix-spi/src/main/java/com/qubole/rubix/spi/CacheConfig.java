@@ -111,7 +111,7 @@ public class CacheConfig
   private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
   private static final int DEFAULT_SERVER_CONNECT_TIMEOUT = 1000; // ms
   private static final int DEFAULT_SERVER_SOCKET_TIMEOUT = 6000; // ms
-  private static final int DEFAULT_KEY_POOL_MAX_SIZE = 2000;
+  private static final int DEFAULT_KEY_POOL_MAX_SIZE = 200;
   private static final int DEFAULT_KEY_POOL_MIN_SIZE = 50;
   private static final int DEFAULT_KEY_POOL_DELTA_SIZE = 100;
   private static final int DEFAULT_POOL_MAX_WAIT_TIMEOUT = 5000; // ms

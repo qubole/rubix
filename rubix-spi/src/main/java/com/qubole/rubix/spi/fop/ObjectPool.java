@@ -68,7 +68,7 @@ public class ObjectPool<T>
     }
     log.debug("Borrowing object for partition: " + host);
     for (int i = 0; i < 3; i++) { // try at most three times
-      Poolable<T> result = getObject(true, host);
+      Poolable<T> result = getObject(false, host);
       if (factory.validate(result.getObject())) {
         return result;
       }
@@ -118,6 +118,8 @@ public class ObjectPool<T>
     if (!factory.validate(obj.getObject())) {
       log.debug(String.format("Invalid object for host %s removing %s ", obj.getHost(), obj));
       subPool.decreaseObject(obj);
+      // Compensate for the removed object. Needed to prevent endless wait when in parallel a borrowObject is called
+      subPool.increaseObjects(1);
       return;
     }
 

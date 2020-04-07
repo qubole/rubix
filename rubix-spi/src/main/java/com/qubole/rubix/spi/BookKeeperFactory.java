@@ -61,7 +61,7 @@ public class BookKeeperFactory
     if (!initFlag.get()) {
       synchronized (initFlag) {
         if (!initFlag.get()) {
-          pool = createSocketObjectPool(conf, LOCALHOST, CacheConfig.getBookKeeperServerPort(conf));
+          pool = createSocketObjectPool(conf, host, CacheConfig.getBookKeeperServerPort(conf));
           initFlag.set(true);
         }
       }
