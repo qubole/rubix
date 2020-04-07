@@ -48,10 +48,14 @@ public class ObjectPoolPartition<T>
     this.host = host;
     this.socketTimeout = socketTimeout;
     this.connectTimeout = connectTimeout;
+    totalCount = 0;
     for (int i = 0; i < config.getMinSize(); i++) {
-      objectQueue.add(new Poolable<>(objectFactory.create(host, socketTimeout, connectTimeout), pool, host));
+      T object = objectFactory.create(host, socketTimeout, connectTimeout);
+      if (object != null) {
+        objectQueue.add(new Poolable<>(object, pool, host));
+        totalCount++;
+      }
     }
-    totalCount = config.getMinSize();
   }
 
   public BlockingQueue<Poolable<T>> getObjectQueue()
@@ -66,15 +70,18 @@ public class ObjectPoolPartition<T>
     }
     try {
       for (int i = 0; i < delta; i++) {
-        objectQueue.put(new Poolable<>(objectFactory.create(host, socketTimeout, connectTimeout), pool, host));
+        T object = objectFactory.create(host, socketTimeout, connectTimeout);
+        if (object != null) {
+          objectQueue.put(new Poolable<>(object, pool, host));
+          totalCount++;
+        }
       }
-      totalCount += delta;
       log.debug("Increased pool size to: " + totalCount + ", current queue size: " + objectQueue.size());
     }
     catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
-    return delta;
+    return totalCount;
   }
 
   public synchronized boolean decreaseObject(Poolable<T> obj)

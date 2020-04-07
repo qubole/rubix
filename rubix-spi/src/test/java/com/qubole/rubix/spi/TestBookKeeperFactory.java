@@ -66,7 +66,7 @@ public class TestBookKeeperFactory
 
     server = startMockServer(true, NO_DELAY, NO_DELAY);
 
-    final RetryingPooledBookkeeperClient client = createTestBookKeeperClient(socketTimeout, connectTimeout);
+    final RetryingPooledBookkeeperClient client = createTestBookKeeperClient(socketTimeout, connectTimeout, 3);
     assertTrue(client.isBookKeeperAlive());
 
     stopMockServer();
@@ -81,7 +81,7 @@ public class TestBookKeeperFactory
 
     server = startMockServer(true, startDelay, NO_DELAY);
 
-    final RetryingPooledBookkeeperClient client = createTestBookKeeperClient(socketTimeout, connectTimeout);
+    final RetryingPooledBookkeeperClient client = createTestBookKeeperClient(socketTimeout, connectTimeout, 3);
     assertTrue(client.isBookKeeperAlive());
 
     stopMockServer();
@@ -96,7 +96,7 @@ public class TestBookKeeperFactory
 
     server = startMockServer(true, NO_DELAY, aliveCallDelay);
 
-    final RetryingPooledBookkeeperClient client = createTestBookKeeperClient(socketTimeout, connectTimeout);
+    final RetryingPooledBookkeeperClient client = createTestBookKeeperClient(socketTimeout, connectTimeout, 3);
     assertTrue(client.isBookKeeperAlive());
 
     stopMockServer();
@@ -112,25 +112,13 @@ public class TestBookKeeperFactory
 
     server = startMockServer(true, startDelay, aliveCallDelay);
 
-    final RetryingPooledBookkeeperClient client = createTestBookKeeperClient(socketTimeout, connectTimeout);
+    final RetryingPooledBookkeeperClient client = createTestBookKeeperClient(socketTimeout, connectTimeout, 3);
     assertTrue(client.isBookKeeperAlive());
 
     stopMockServer();
   }
 
-  @Test(expectedExceptions = TTransportException.class)
-  public void testCreateBookKeeperClient_unableToConnect_connectTimeout() throws TException, InterruptedException
-  {
-    final int startDelay = 1000;
-    final int connectTimeout = 500;
-    final int socketTimeout = 500;
-
-    server = startMockServer(false, startDelay, NO_DELAY);
-
-    createTestBookKeeperClient(socketTimeout, connectTimeout); // should throw expected exception due to connect timeout
-  }
-
-  @Test(expectedExceptions = TTransportException.class)
+  @Test(expectedExceptions = TException.class)
   public void testCreateBookKeeperClient_unableToConnect_socketTimeout() throws TException, InterruptedException
   {
     final int connectTimeout = 500;
@@ -139,11 +127,11 @@ public class TestBookKeeperFactory
 
     server = startMockServer(true, NO_DELAY, aliveCallDelay);
 
-    final RetryingPooledBookkeeperClient client = createTestBookKeeperClient(socketTimeout, connectTimeout);
+    final RetryingPooledBookkeeperClient client = createTestBookKeeperClient(socketTimeout, connectTimeout, 0);
     client.isBookKeeperAlive(); // should throw expected exception due to socket timeout
   }
 
-  @Test(expectedExceptions = TTransportException.class)
+  @Test(expectedExceptions = TException.class)
   public void testCreateBookKeeperClient_startDelay_unableToConnect_socketTimeout() throws TException, InterruptedException
   {
     final int startDelay = 500;
@@ -153,7 +141,7 @@ public class TestBookKeeperFactory
 
     server = startMockServer(true, startDelay, aliveCallDelay);
 
-    final RetryingPooledBookkeeperClient client = createTestBookKeeperClient(socketTimeout, connectTimeout);
+    final RetryingPooledBookkeeperClient client = createTestBookKeeperClient(socketTimeout, connectTimeout, 0);
     client.isBookKeeperAlive(); // should throw expected exception due to socket timeout
   }
 
@@ -178,10 +166,11 @@ public class TestBookKeeperFactory
     server = null;
   }
 
-  private RetryingPooledBookkeeperClient createTestBookKeeperClient(int socketTimeout, int connectTimeout) throws TTransportException
+  private RetryingPooledBookkeeperClient createTestBookKeeperClient(int socketTimeout, int connectTimeout, int retries) throws TTransportException
   {
     CacheConfig.setServerSocketTimeout(conf, socketTimeout);
     CacheConfig.setServerConnectTimeout(conf, connectTimeout);
+    CacheConfig.setMaxNetworkRetries(conf, retries);
 
     return bookKeeperFactory.createBookKeeperClient(conf);
   }

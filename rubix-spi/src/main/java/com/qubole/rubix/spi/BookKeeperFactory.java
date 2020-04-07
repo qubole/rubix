@@ -12,19 +12,19 @@
  */
 package com.qubole.rubix.spi;
 
-import com.qubole.rubix.spi.fop.ObjectFactory;
+import com.google.common.annotations.VisibleForTesting;
 import com.qubole.rubix.spi.fop.ObjectPool;
-import com.qubole.rubix.spi.fop.PoolConfig;
 import com.qubole.rubix.spi.fop.Poolable;
 import com.qubole.rubix.spi.thrift.BookKeeperService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import static com.qubole.rubix.spi.fop.SocketObjectFactory.createSocketObjectPool;
 
 /**
  * Created by sakshia on 5/10/16.
@@ -34,59 +34,19 @@ public class BookKeeperFactory
   BookKeeperService.Iface bookKeeper;
   private static Log log = LogFactory.getLog(BookKeeperFactory.class.getName());
   private static final AtomicBoolean initFlag = new AtomicBoolean();
-  private static PoolConfig poolConfig;
-  private static ObjectFactory<TSocket> factory;
   static ObjectPool pool;
 
   private static final String LOCALHOST = "localhost";
 
-  private void init(final Configuration conf)
-  {
-    poolConfig = new PoolConfig();
-    poolConfig.setMaxSize(CacheConfig.getPoolSizeMax(conf));
-    poolConfig.setMinSize(CacheConfig.getPoolSizeMin(conf));
-    poolConfig.setDelta(CacheConfig.getPoolDeltaSize(conf));
-    poolConfig.setMaxWaitMilliseconds(CacheConfig.getPoolMaxWait(conf));
-
-    factory = new ObjectFactory<TSocket>()
-    {
-      @Override
-      public TSocket create(String host, int socketTimeout, int connectTimeout)
-      {
-        log.debug("Opening connection to host: " + host);
-        TSocket socket = null;
-        try {
-          socket = new TSocket(host, CacheConfig.getBookKeeperServerPort(conf), socketTimeout, connectTimeout);
-          socket.open();
-        }
-        catch (TTransportException e) {
-          e.printStackTrace();
-        }
-        return socket;
-      }
-
-      @Override
-      public void destroy(TSocket o)
-      {
-        // clean up and release resources
-        o.close();
-      }
-
-      @Override
-      public boolean validate(TSocket o)
-      {
-        boolean isClosed = o.getSocket().isClosed();
-        log.debug("Is valid object: " + isClosed);
-        return !isClosed;
-      }
-    };
-
-    pool = new ObjectPool(poolConfig, factory);
-    pool.registerHost(LOCALHOST, CacheConfig.getServerSocketTimeout(conf), CacheConfig.getServerConnectTimeout(conf));
-  }
-
   public BookKeeperFactory()
   {
+  }
+
+  @VisibleForTesting
+  public static void resetConnectionPool()
+  {
+    initFlag.set(false);
+    pool = null;
   }
 
   public BookKeeperFactory(BookKeeperService.Iface bookKeeper)
@@ -101,19 +61,19 @@ public class BookKeeperFactory
     if (!initFlag.get()) {
       synchronized (initFlag) {
         if (!initFlag.get()) {
-          init(conf);
+          pool = createSocketObjectPool(conf, LOCALHOST, CacheConfig.getBookKeeperServerPort(conf));
           initFlag.set(true);
         }
       }
     }
 
     if (bookKeeper != null) {
-      return new LocalBookKeeperClient(new Poolable<TTransport>(null, null, null), bookKeeper);
+      return new LocalBookKeeperClient(bookKeeper);
     }
     else {
       Poolable<TTransport> obj;
       obj = pool.borrowObject(host, conf);
-      RetryingPooledBookkeeperClient retryingBookkeeperClient = new RetryingPooledBookkeeperClient(obj, CacheConfig.getMaxRetries(conf));
+      RetryingPooledBookkeeperClient retryingBookkeeperClient = new RetryingPooledBookkeeperClient(obj, host, conf);
       return retryingBookkeeperClient;
     }
   }
@@ -125,7 +85,7 @@ public class BookKeeperFactory
       try {
         return this.createBookKeeperClient(host, conf);
       }
-      catch (TTransportException e) {
+      catch (Exception e) {
         log.warn(String.format("Could not create bookkeeper client [%d/%d attempts]", failedStarts, maxRetries));
       }
       try {

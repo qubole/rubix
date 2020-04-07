@@ -20,7 +20,6 @@ import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.common.utils.TestUtil;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
-import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.ClusterNode;
@@ -32,7 +31,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.shaded.TException;
-import org.apache.thrift.shaded.transport.TSocket;
 import org.apache.thrift.shaded.transport.TTransportException;
 import org.mockito.ArgumentMatchers;
 import org.testng.annotations.AfterClass;
@@ -93,6 +91,7 @@ public class TestWorkerBookKeeper
     conf.clear();
 
     BaseServerTest.stopBookKeeperServer();
+    BookKeeperFactory.resetConnectionPool();
   }
 
   @AfterClass
@@ -151,12 +150,6 @@ public class TestWorkerBookKeeper
 
       BookKeeperFactory factory = new BookKeeperFactory();
       final BookKeeperFactory bookKeeperFactory = spy(factory);
-
-      TSocket socket = new TSocket("localhost", 1234, CacheConfig.getServerConnectTimeout(conf));
-      socket.open();
-
-      doReturn(new RetryingPooledBookkeeperClient(socket, CacheConfig.getMaxRetries(conf)))
-          .when(bookKeeperFactory).createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any());
 
       FakeTicker ticker = new FakeTicker();
 

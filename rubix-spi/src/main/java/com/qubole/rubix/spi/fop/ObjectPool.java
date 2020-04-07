@@ -86,7 +86,11 @@ public class ObjectPool<T>
     Poolable<T> freeObject;
     if (subPool.getObjectQueue().size() == 0) {
       // increase objects and return one, it will return null if reach max size
-      subPool.increaseObjects(this.config.getDelta());
+      int totalObjects = subPool.increaseObjects(this.config.getDelta());
+      if (totalObjects == 0) {
+        // Could not create objects, this is mostly due to connection timeouts hence no point blocking as there is not other producer of sockets
+        throw new RuntimeException("Could not add connections to pool");
+      }
     }
 
     try {
@@ -111,8 +115,14 @@ public class ObjectPool<T>
   public void returnObject(Poolable<T> obj)
   {
     ObjectPoolPartition<T> subPool = this.hostToPoolMap.get(obj.getHost());
+    if (!factory.validate(obj.getObject())) {
+      log.debug(String.format("Invalid object for host %s removing %s ", obj.getHost(), obj));
+      subPool.decreaseObject(obj);
+      return;
+    }
+
     try {
-      log.debug("Returning object to queue. Queue size: " + subPool.getObjectQueue().size() + "host: " + obj.getHost());
+      log.debug(String.format("Returning object %s to queue of host %s. Queue size: %d", obj, obj.getHost(), subPool.getObjectQueue().size()));
       subPool.getObjectQueue().put(obj);
     }
     catch (InterruptedException e) {

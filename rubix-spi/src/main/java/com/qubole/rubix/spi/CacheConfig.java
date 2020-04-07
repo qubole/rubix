@@ -112,7 +112,7 @@ public class CacheConfig
   private static final int DEFAULT_SERVER_CONNECT_TIMEOUT = 1000; // ms
   private static final int DEFAULT_SERVER_SOCKET_TIMEOUT = 6000; // ms
   private static final int DEFAULT_KEY_POOL_MAX_SIZE = 2000;
-  private static final int DEFAULT_KEY_POOL_MIN_SIZE = 100;
+  private static final int DEFAULT_KEY_POOL_MIN_SIZE = 50;
   private static final int DEFAULT_KEY_POOL_DELTA_SIZE = 100;
   private static final int DEFAULT_POOL_MAX_WAIT_TIMEOUT = 5000; // ms
   private static final String DEFAULT_CACHE_METADATA_FILE_SUFFIX = "_mdfile";
@@ -271,22 +271,22 @@ public class CacheConfig
     return conf.getInt(KEY_SERVER_SOCKET_TIMEOUT, DEFAULT_SERVER_SOCKET_TIMEOUT);
   }
 
-  public static int getPoolSizeMax(Configuration conf)
+  public static int getTranportPoolMaxSize(Configuration conf)
   {
     return conf.getInt(KEY_POOL_MAX_SIZE, DEFAULT_KEY_POOL_MAX_SIZE);
   }
 
-  public static int getPoolSizeMin(Configuration conf)
+  public static int getTransportPoolMinSize(Configuration conf)
   {
     return conf.getInt(KEY_POOL_MIN_SIZE, DEFAULT_KEY_POOL_MIN_SIZE);
   }
 
-  public static int getPoolDeltaSize(Configuration conf)
+  public static int getTransportPoolDeltaSize(Configuration conf)
   {
     return conf.getInt(KEY_POOL_DELTA_SIZE, DEFAULT_KEY_POOL_DELTA_SIZE);
   }
 
-  public static int getPoolMaxWait(Configuration conf)
+  public static int getTransportPoolMaxWait(Configuration conf)
   {
     return conf.getInt(KEY_POOL_MAX_WAIT_TIMEOUT, DEFAULT_POOL_MAX_WAIT_TIMEOUT);
   }
@@ -843,6 +843,21 @@ public class CacheConfig
   public static void setCurrentNodeHostName(Configuration conf, String hostName)
   {
     conf.set(KEY_RUBIX_CURRENT_NODE_HOSTNAME, hostName);
+  }
+
+  public static void setMaxNetworkRetries(Configuration conf, int count)
+  {
+    conf.setInt(KEY_MAX_RETRIES, count);
+  }
+
+  public static void setTranportPoolMinSize(Configuration conf, int count)
+  {
+    conf.setInt(KEY_POOL_MIN_SIZE, count);
+  }
+
+  public static void setTranportPoolMaxSize(Configuration conf, int count)
+  {
+    conf.setInt(KEY_POOL_MAX_SIZE, count);
   }
 
   public static Configuration disableFSCaches(Configuration conf)
