@@ -65,6 +65,7 @@ public class ObjectPoolPartition<T>
 
   public synchronized int increaseObjects(int delta)
   {
+    int oldCount = totalCount;
     if (delta + totalCount > config.getMaxSize()) {
       delta = config.getMaxSize() - totalCount;
     }
@@ -76,7 +77,7 @@ public class ObjectPoolPartition<T>
           totalCount++;
         }
       }
-      log.debug("Increased pool size to: " + totalCount + ", current queue size: " + objectQueue.size());
+      log.debug("Increased pool size by " + (totalCount - oldCount) + " to new size: " + totalCount + ", current queue size: " + objectQueue.size());
     }
     catch (InterruptedException e) {
       throw new RuntimeException(e);

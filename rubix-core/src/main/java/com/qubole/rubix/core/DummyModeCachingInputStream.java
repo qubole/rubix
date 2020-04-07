@@ -14,13 +14,11 @@ package com.qubole.rubix.core;
 
 import com.google.common.base.Throwables;
 import com.qubole.rubix.spi.BookKeeperFactory;
-import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.thrift.shaded.transport.TTransportException;
 
 import java.io.IOException;
 import java.util.List;
@@ -72,17 +70,13 @@ public class DummyModeCachingInputStream extends CachingInputStream
       @Override
       public void run()
       {
-        try (RetryingPooledBookkeeperClient client = bookKeeperFactory.createBookKeeperClient(conf)) {
+        try {
           long endBlock = ((initPos + (length - 1)) / blockSize) + 1;
           final List<ReadRequestChain> readRequestChains = setupReadRequestChains(buffer, offset, endBlock, length,
-              initPos, initNextReadBlock, client);
+              initPos, initNextReadBlock);
           updateCacheAndStats(readRequestChains);
         }
         catch (IOException e) {
-          throw Throwables.propagate(e);
-        }
-        catch (TTransportException e) {
-          log.warn("Could not create bookkeeper client", e);
           throw Throwables.propagate(e);
         }
       }
