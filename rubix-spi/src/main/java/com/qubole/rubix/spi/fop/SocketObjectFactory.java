@@ -79,9 +79,9 @@ public class SocketObjectFactory
   {
     PoolConfig poolConfig = new PoolConfig();
     poolConfig.setMaxSize(CacheConfig.getTranportPoolMaxSize(conf));
-    poolConfig.setMinSize(CacheConfig.getPoolSizeMin(conf));
-    poolConfig.setDelta(CacheConfig.getPoolDeltaSize(conf));
-    poolConfig.setMaxWaitMilliseconds(CacheConfig.getPoolMaxWait(conf));
+    poolConfig.setMinSize(CacheConfig.getTransportPoolMinSize(conf));
+    poolConfig.setDelta(CacheConfig.getTransportPoolDeltaSize(conf));
+    poolConfig.setMaxWaitMilliseconds(CacheConfig.getTransportPoolMaxWait(conf));
 
     ObjectFactory<TSocket> factory = new SocketObjectFactory(port);
     ObjectPool<TSocket> pool = new ObjectPool(poolConfig, factory);

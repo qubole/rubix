@@ -276,17 +276,17 @@ public class CacheConfig
     return conf.getInt(KEY_POOL_MAX_SIZE, DEFAULT_KEY_POOL_MAX_SIZE);
   }
 
-  public static int getPoolSizeMin(Configuration conf)
+  public static int getTransportPoolMinSize(Configuration conf)
   {
     return conf.getInt(KEY_POOL_MIN_SIZE, DEFAULT_KEY_POOL_MIN_SIZE);
   }
 
-  public static int getPoolDeltaSize(Configuration conf)
+  public static int getTransportPoolDeltaSize(Configuration conf)
   {
     return conf.getInt(KEY_POOL_DELTA_SIZE, DEFAULT_KEY_POOL_DELTA_SIZE);
   }
 
-  public static int getPoolMaxWait(Configuration conf)
+  public static int getTransportPoolMaxWait(Configuration conf)
   {
     return conf.getInt(KEY_POOL_MAX_WAIT_TIMEOUT, DEFAULT_POOL_MAX_WAIT_TIMEOUT);
   }
