@@ -116,12 +116,13 @@ public class ObjectPool<T>
   {
     ObjectPoolPartition<T> subPool = this.hostToPoolMap.get(obj.getHost());
     if (!factory.validate(obj.getObject())) {
+      log.debug(String.format("Invalid object for host %s removing %s ", obj.getHost(), obj));
       subPool.decreaseObject(obj);
       return;
     }
 
     try {
-      log.debug("Returning object to queue. Queue size: " + subPool.getObjectQueue().size() + "host: " + obj.getHost());
+      log.debug(String.format("Returning object %s to queue of host %s. Queue size: %d", obj, obj.getHost(), subPool.getObjectQueue().size()));
       subPool.getObjectQueue().put(obj);
     }
     catch (InterruptedException e) {

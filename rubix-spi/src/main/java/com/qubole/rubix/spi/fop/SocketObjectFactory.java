@@ -71,7 +71,6 @@ public class SocketObjectFactory
       }
     }
 
-    log.debug("Is valid object: " + !isClosed);
     return !isClosed;
   }
 

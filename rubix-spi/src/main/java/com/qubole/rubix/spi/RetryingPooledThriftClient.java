@@ -83,8 +83,6 @@ public abstract class RetryingPooledThriftClient
   public void close()
   {
     if (transportPoolable != null) {
-      // Always return poolable back to pool. If transport is in closed state then next time this poolable is picked
-      // it will be removed from the pool
       transportPoolable.getPool().returnObject(transportPoolable);
     }
   }
