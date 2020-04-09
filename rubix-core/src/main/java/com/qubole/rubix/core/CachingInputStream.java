@@ -21,6 +21,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
+import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
@@ -79,6 +80,7 @@ public class CachingInputStream extends FSInputStream
   Configuration conf;
 
   private boolean strictMode;
+  ClusterType clusterType;
   FileSystem remoteFileSystem;
   FileSystem.Statistics statistics;
 
@@ -91,7 +93,7 @@ public class CachingInputStream extends FSInputStream
   BookKeeperFactory bookKeeperFactory;
 
   public CachingInputStream(FileSystem parentFs, Path backendPath, Configuration conf,
-                            CachingFileSystemStats statsMbean,
+                            CachingFileSystemStats statsMbean, ClusterType clusterType,
                             BookKeeperFactory bookKeeperFactory, FileSystem remoteFileSystem,
                             int bufferSize, FileSystem.Statistics statistics) throws IOException
   {
@@ -116,6 +118,7 @@ public class CachingInputStream extends FSInputStream
     }
 
     this.statsMbean = statsMbean;
+    this.clusterType = clusterType;
     this.bufferSize = bufferSize;
     this.statistics = statistics;
   }
@@ -123,7 +126,7 @@ public class CachingInputStream extends FSInputStream
   @VisibleForTesting
   public CachingInputStream(FSDataInputStream inputStream, Configuration conf, Path backendPath,
                             long size, long lastModified, CachingFileSystemStats statsMbean,
-                            BookKeeperFactory bookKeeperFactory,
+                            ClusterType clusterType, BookKeeperFactory bookKeeperFactory,
                             FileSystem remoteFileSystem, int buffersize, FileSystem.Statistics statistics)
       throws IOException
   {
@@ -135,6 +138,7 @@ public class CachingInputStream extends FSInputStream
     this.fileSize = size;
     this.lastModified = lastModified;
     this.statsMbean = statsMbean;
+    this.clusterType = clusterType;
     this.remoteFileSystem = remoteFileSystem;
     this.bufferSize = bufferSize;
     this.statistics = statistics;
@@ -321,7 +325,8 @@ public class CachingInputStream extends FSInputStream
     List<BlockLocation> isCached = null;
 
     try (RetryingPooledBookkeeperClient bookKeeperClient = bookKeeperFactory.createBookKeeperClient(conf)) {
-      CacheStatusRequest request = new CacheStatusRequest(remotePath, fileSize, lastModified, nextReadBlock, endBlock);
+      CacheStatusRequest request = new CacheStatusRequest(remotePath, fileSize, lastModified,
+          nextReadBlock, endBlock, clusterType.ordinal());
       request.setIncrMetrics(true);
       isCached = bookKeeperClient.getCacheStatus(request);
     }
@@ -362,13 +367,14 @@ public class CachingInputStream extends FSInputStream
 
       lengthAlreadyConsidered += readRequest.getActualReadLength();
 
-      if (isCached == null || isCached.get(idx).getLocation() == Location.UNKNOWN) {
+      if (isCached == null) {
         log.debug(String.format("Sending block %d to DirectReadRequestChain", blockNum));
         if (directReadRequestChain == null) {
           directReadRequestChain = new DirectReadRequestChain(getParentDataInputStream());
         }
         directReadRequestChain.addReadRequest(readRequest);
       }
+
       else if (isCached.get(idx).getLocation() == Location.CACHED) {
         log.debug(String.format("Sending cached block %d to cachedReadRequestChain", blockNum));
         if (directReadBuffer == null) {
@@ -389,7 +395,7 @@ public class CachingInputStream extends FSInputStream
             if (!nonLocalAsyncRequests.containsKey(remoteLocation)) {
               NonLocalRequestChain nonLocalRequestChain =
                   new NonLocalRequestChain(remoteLocation, fileSize, lastModified,
-                      conf, remoteFileSystem, remotePath, strictMode,
+                      conf, remoteFileSystem, remotePath, clusterType.ordinal(), strictMode,
                       statistics, nextReadBlock, endBlock, new BookKeeperFactory());
               nonLocalAsyncRequests.put(remoteLocation, nonLocalRequestChain);
             }
@@ -406,7 +412,7 @@ public class CachingInputStream extends FSInputStream
             if (!nonLocalRequests.containsKey(remoteLocation)) {
               NonLocalReadRequestChain nonLocalReadRequestChain =
                   new NonLocalReadRequestChain(remoteLocation, fileSize, lastModified, conf,
-                      remoteFileSystem, remotePath, strictMode, statistics);
+                      remoteFileSystem, remotePath, clusterType.ordinal(), strictMode, statistics);
               nonLocalRequests.put(remoteLocation, nonLocalReadRequestChain);
             }
             nonLocalRequests.get(remoteLocation).addReadRequest(readRequest);
@@ -424,7 +430,7 @@ public class CachingInputStream extends FSInputStream
 
             if (remoteFetchRequestChain == null) {
               remoteFetchRequestChain = new RemoteFetchRequestChain(remotePath, remoteFileSystem,
-                  "localhost", conf, lastModified, fileSize, bookKeeperFactory);
+                  "localhost", conf, lastModified, fileSize, clusterType.ordinal(), bookKeeperFactory);
             }
 
             directReadRequestChain.addReadRequest(readRequest);

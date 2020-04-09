@@ -31,7 +31,7 @@ Cache
 |                                          | before cached files will start being evicted.                          |                   |                  |               |
 +------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+
 | rubix.cache.strict.mode                  | Propagate exceptions if there is an error while caching data if true;  | boolean           | false            | C             |
-|                                          | otherwise fall back on reading data directly from remote file system.  |                   |                  |               |
+|                                          | otherwise fall back on reading data directly from remote file system   |                   |                  |               |
 +------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+
 | rubix.cache.file.staleness-check.enable  | When true, always check for updates to file metadata from remote       | boolean           | true             | S             |
 |                                          | filesystem. When false, file metadata will be cached for a period of   |                   |                  |               |
@@ -46,7 +46,7 @@ Cache
 | rubix.cache.dummy.mode                   | When true, the cache is not populated with data and queries read data  | boolean           | false            | C             |
 |                                          | directly from the source, but metadata is updated so that statistics   |                   |                  |               |
 |                                          | such as hitrate, cache reads etc. can be collected as if the data was  |                   |                  |               |
-|                                          | cached.                                                                |                   |                  |               |
+|                                          | cached                                                                 |                   |                  |               |
 +------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+
 
 Network
@@ -74,17 +74,11 @@ Cluster
 +------------------------------------------+------------------------------------------------------------------------------------------------+-------------------+-------------------------------------------------+-----------------+
 | Option                                   | Description                                                                                    | Type              | Default                                         | Client / Server |
 +==========================================+================================================================================================+===================+=================================================+=================+
-| rubix.cluster.node.refresh.time          | The frequency at which the cluster node membership will be checked.                            | integer (s)       | 300 sec                                         | C & S           |
+| rubix.cluster.node.refresh.time          | The frequency at which the cluster node membership will be checked                             | integer (s)       | 300 sec                                         | C & S           |
 +------------------------------------------+------------------------------------------------------------------------------------------------+-------------------+-------------------------------------------------+-----------------+
 | rubix.cluster.manager.hadoop.class       | The ``ClusterManager`` class to use for fetching node-related information for Hadoop clusters. | string            | com.qubole.rubix.hadoop2. Hadoop2ClusterManager | C & S           |
 +------------------------------------------+------------------------------------------------------------------------------------------------+-------------------+-------------------------------------------------+-----------------+
 | rubix.cluster.manager.presto.class       | The ``ClusterManager`` class to use for fetching node-related information for Presto clusters. | string            | com.qubole.rubix.presto. PrestoClusterManager   | C & S           |
-+------------------------------------------+------------------------------------------------------------------------------------------------+-------------------+-------------------------------------------------+-----------------|
-| rubix.cluster.type                       | The type of cluster where RubiX is running.                                                    | integer           | 3 (For Test Clusters)                           | S               |
-|                                          | For Hadoop/Spark cluster the value is 0                                                        |                   |                                                 |                 |
-|                                          | For Presto cluster the value is 1                                                              |                   |                                                 |                 |
-+------------------------------------------+------------------------------------------------------------------------------------------------+-------------------+-------------------------------------------------+-----------------+
-| rubix.cluster.workerinfo.expiry.period   | The time after which the worker node info will be evicted from master and fetched again.       | integer (s)       | 300 sec                                         | S               |
 +------------------------------------------+------------------------------------------------------------------------------------------------+-------------------+-------------------------------------------------+-----------------+
 
 Metrics

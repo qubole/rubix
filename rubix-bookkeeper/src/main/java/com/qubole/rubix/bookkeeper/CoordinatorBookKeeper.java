@@ -18,25 +18,14 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ticker;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
-import com.qubole.rubix.bookkeeper.exception.CoordinatorInitializationException;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
-import com.qubole.rubix.common.utils.ClusterUtil;
 import com.qubole.rubix.spi.CacheConfig;
-import com.qubole.rubix.spi.ClusterManager;
-import com.qubole.rubix.spi.ClusterType;
-import com.qubole.rubix.spi.thrift.ClusterNode;
-import com.qubole.rubix.spi.thrift.HeartbeatRequest;
 import com.qubole.rubix.spi.thrift.HeartbeatStatus;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.List;
+import java.io.FileNotFoundException;
 import java.util.concurrent.TimeUnit;
 
 public class CoordinatorBookKeeper extends BookKeeper
@@ -53,97 +42,28 @@ public class CoordinatorBookKeeper extends BookKeeper
   protected Cache<String, Boolean> fileValidatedWorkerCache;
 
   private final boolean isValidationEnabled;
-  private static Integer lock = 1;
-  protected ClusterManager clusterManager;
-  private int clusterType;
 
-  public CoordinatorBookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics) throws BookKeeperInitializationException
+  public CoordinatorBookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics) throws FileNotFoundException
   {
     this(conf, bookKeeperMetrics, Ticker.systemTicker());
   }
 
   @VisibleForTesting
-  public CoordinatorBookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics, Ticker ticker) throws BookKeeperInitializationException
+  public CoordinatorBookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics, Ticker ticker) throws FileNotFoundException
   {
     super(conf, bookKeeperMetrics, ticker);
     this.isValidationEnabled = CacheConfig.isValidationEnabled(conf);
     this.liveWorkerCache = createHealthCache(conf, ticker);
     this.cachingValidatedWorkerCache = createHealthCache(conf, ticker);
     this.fileValidatedWorkerCache = createHealthCache(conf, ticker);
-    this.clusterType = CacheConfig.getClusterType(conf);
 
-    initializeCoordinator();
-  }
-
-  private void initializeCoordinator() throws CoordinatorInitializationException
-  {
-    initializeClusterManager();
-    setCurrentNodeName();
     registerMetrics();
   }
 
-  @VisibleForTesting
-  protected void initializeClusterManager() throws CoordinatorInitializationException
-  {
-    if (this.clusterManager == null) {
-      ClusterManager manager = null;
-      synchronized (lock) {
-        if (this.clusterManager == null) {
-          // TODO throw exception when clustertype is different than the supported one
-          manager = getClusterManagerInstance(ClusterType.findByValue(clusterType), conf);
-          manager.initialize(conf);
-          this.clusterManager = manager;
-        }
-      }
-    }
-  }
-
-  protected ClusterManager getClusterManager()
-  {
-    return this.clusterManager;
-  }
-
-  private void setCurrentNodeName()
-  {
-    try {
-      nodeName = InetAddress.getLocalHost().getHostAddress();
-    }
-    catch (UnknownHostException e) {
-      log.warn("Could not get Host Address", e);
-      nodeName = ClusterUtil.getMasterHostname(conf);
-    }
-  }
-
-  @VisibleForTesting
-  protected ClusterManager getClusterManagerInstance(ClusterType clusterType, Configuration config)
-          throws CoordinatorInitializationException
-  {
-    String clusterManagerClassName = CacheConfig.getClusterManagerClass(conf, clusterType);
-    log.debug("Initializing cluster manager : " + clusterManagerClassName + " for cluster type " + clusterType);
-    ClusterManager manager = null;
-
-    try {
-      Class clusterManagerClass = conf.getClassByName(clusterManagerClassName);
-      Constructor constructor = clusterManagerClass.getConstructor();
-      manager = (ClusterManager) constructor.newInstance();
-    }
-    catch (ClassNotFoundException | NoSuchMethodException | InstantiationException |
-            IllegalAccessException | InvocationTargetException ex) {
-      String errorMessage = String.format("Not able to initialize ClusterManager class : %s ",
-              clusterManagerClassName);
-      log.error(errorMessage);
-      throw new CoordinatorInitializationException(errorMessage, ex);
-    }
-
-    return manager;
-  }
-
   @Override
-  public void handleHeartbeat(HeartbeatRequest request)
+  public void handleHeartbeat(String workerHostname, HeartbeatStatus heartbeatStatus)
   {
     if (CacheConfig.isHeartbeatEnabled(conf) || !CacheConfig.isEmbeddedModeEnabled(conf)) {
-      String workerHostname = request.getWorkerHostname();
-      HeartbeatStatus heartbeatStatus = request.getHeartbeatStatus();
       liveWorkerCache.put(workerHostname, true);
       log.debug("Received heartbeat from " + workerHostname);
 
@@ -163,12 +83,6 @@ public class CoordinatorBookKeeper extends BookKeeper
         }
       }
     }
-  }
-
-  @Override
-  public List<ClusterNode> getClusterNodes()
-  {
-    return getClusterManager().getNodes();
   }
 
   /**

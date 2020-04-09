@@ -13,7 +13,6 @@
 package com.qubole.rubix.prestosql;
 
 import com.qubole.rubix.spi.ClusterManager;
-import com.qubole.rubix.spi.thrift.ClusterNode;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
@@ -44,18 +43,18 @@ public class TestClusterManager
    * Tests that the worker nodes returned are correctly handled by PrestoClusterManager and sorted list of hosts is returned
    */
   public void testGetNodes()
-      throws IOException
+          throws IOException
   {
     HttpServer server = createServer("/v1/node", new MultipleWorkers(), "/v1/node/failed", new NoFailedNode());
 
     log.info("STARTED SERVER");
 
     ClusterManager clusterManager = getPrestoClusterManager();
-    List<ClusterNode> nodes = clusterManager.getNodes();
+    List<String> nodes = clusterManager.getNodes();
     log.info("Got nodes: " + nodes);
 
     assertTrue(nodes.size() == 2, "Should only have two nodes");
-    assertTrue(nodes.get(0).nodeUrl.equals("192.168.2.252") && nodes.get(1).nodeUrl.equals("192.168.1.3"), "Wrong nodes data");
+    assertTrue(nodes.get(0).equals("192.168.1.3") && nodes.get(1).equals("192.168.2.252"), "Wrong nodes data");
 
     server.stop(0);
   }
@@ -65,18 +64,18 @@ public class TestClusterManager
    * Tests that in a single node cluster, master node is returned as worker
    */
   public void testMasterOnlyCluster()
-      throws IOException
+          throws IOException
   {
     HttpServer server = createServer("/v1/node", new NoWorker(), "/v1/node/failed", new NoFailedNode());
 
     log.info("STARTED SERVER");
 
     ClusterManager clusterManager = getPrestoClusterManager();
-    List<ClusterNode> nodes = clusterManager.getNodes();
+    List<String> nodes = clusterManager.getNodes();
     log.info("Got nodes: " + nodes);
 
     assertTrue(nodes.size() == 1, "Should have added localhost in list");
-    assertTrue(nodes.get(0).nodeUrl.equals(InetAddress.getLocalHost().getHostAddress()), "Not added right hostname");
+    assertTrue(nodes.get(0).equals(InetAddress.getLocalHost().getHostAddress()), "Not added right hostname");
     server.stop(0);
   }
 
@@ -85,24 +84,24 @@ public class TestClusterManager
    * Tests that in a cluster with failed node, failed node is not returned
    */
   public void testFailedNodeCluster()
-      throws IOException
+          throws IOException
   {
     HttpServer server = createServer("/v1/node", new MultipleWorkers(), "/v1/node/failed", new OneFailedNode());
 
     log.info("STARTED SERVER");
 
     ClusterManager clusterManager = getPrestoClusterManager();
-    List<ClusterNode> nodes = clusterManager.getNodes();
+    List<String> nodes = clusterManager.getNodes();
     log.info("Got nodes: " + nodes);
 
     assertTrue(nodes.size() == 1, "Should only have two nodes");
-    assertTrue(nodes.get(0).nodeUrl.equals("192.168.2.252"), "Wrong nodes data");
+    assertTrue(nodes.get(0).equals("192.168.2.252"), "Wrong nodes data");
 
     server.stop(0);
   }
 
   private HttpServer createServer(String endpoint1, HttpHandler handler1, String endpoint2, HttpHandler handler2)
-      throws IOException
+          throws IOException
   {
     HttpServer server = HttpServer.create(new InetSocketAddress(45326), 0);
     server.createContext(endpoint1, handler1);

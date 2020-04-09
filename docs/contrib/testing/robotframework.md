@@ -133,6 +133,7 @@ ${request} =  Make read request
 ...  ${endBlock}
 ...  ${fileLength}
 ...  ${lastModified}
+...  ${clusterType}
 ```
 
 or as a batch of requests with similar characteristics:
@@ -144,6 +145,7 @@ or as a batch of requests with similar characteristics:
 ...  ${endBlock}
 ...  ${fileLength}
 ...  ${lastModified}
+...  ${clusterType}
 ```
 
 For read calls, current execution modes include combinations of:
@@ -245,6 +247,7 @@ ${request} =  Create test client read request
 ...  ${endBlock}
 ...  ${fileLength}
 ...  ${lastModified}
+...  ${clusterType}
 ```
 
 Use named arguments for keywords where possible to enhance clarity.

@@ -96,6 +96,7 @@ Test cache eviction
     ...  ${END_BLOCK}
     ...  ${FILE_LENGTH}
     ...  ${LAST_MODIFIED}
+    ...  ${CLUSTER_TYPE}
 
     RUN KEYWORD IF  ${runConcurrently}
     ...  Execute concurrent requests
@@ -135,6 +136,7 @@ Test cache invalidation where last modified does not match
     ...  ${END_BLOCK}
     ...  ${FILE_LENGTH}
     ...  ${LAST_MODIFIED_JAN_1_2018}
+    ...  ${CLUSTER_TYPE}
 
     RUN KEYWORD IF  ${runConcurrently}
     ...  Execute concurrent requests
@@ -202,6 +204,7 @@ Test cache invalidation during async download where MD exists but file does not
     ...  ${END_BLOCK}
     ...  ${FILE_LENGTH}
     ...  ${LAST_MODIFIED_JAN_1_2018}
+    ...  ${CLUSTER_TYPE}
     @{requests} =  CREATE LIST  ${request}
 
     RUN KEYWORD IF  ${runConcurrently}
@@ -247,6 +250,7 @@ Test cache expiry
     ...  ${END_BLOCK}
     ...  ${FILE_LENGTH}
     ...  ${LAST_MODIFIED}
+    ...  ${CLUSTER_TYPE}
 
     RUN KEYWORD IF  ${runConcurrently}
     ...  Execute concurrent requests

@@ -27,7 +27,6 @@ import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.Location;
-import com.qubole.rubix.spi.thrift.ReadDataRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -234,8 +233,8 @@ public class LocalDataTransferServer extends Configured implements Tool
         log.debug(String.format("Trying to read from %s at offset %d and length %d for client %s", remotePath, offset, readLength, localDataTransferClient.getRemoteAddress()));
         try (RetryingPooledBookkeeperClient bookKeeperClient = bookKeeperFactory.createBookKeeperClient(conf)) {
           if (!CacheConfig.isParallelWarmupEnabled(conf)) {
-            ReadDataRequest readDataRequest = new ReadDataRequest(remotePath, offset, readLength, header.getFileSize(), header.getLastModified());
-            if (!bookKeeperClient.readData(readDataRequest)) {
+            if (!bookKeeperClient.readData(remotePath, offset, readLength, header.getFileSize(),
+                    header.getLastModified(), header.getClusterType())) {
               throw new Exception("Could not cache data required by non-local node");
             }
           }
@@ -248,7 +247,7 @@ public class LocalDataTransferServer extends Configured implements Tool
             long endBlock = ((offset + (readLength - 1)) / blockSize) + 1;
 
             CacheStatusRequest request = new CacheStatusRequest(remotePath, header.getFileSize(), header.getLastModified(),
-                startBlock, endBlock);
+                    startBlock, endBlock, header.getClusterType());
             List<BlockLocation> blockLocations = bookKeeperClient.getCacheStatus(request);
 
             long blockNum = startBlock;

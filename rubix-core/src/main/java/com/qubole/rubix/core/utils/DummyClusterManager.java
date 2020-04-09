@@ -14,8 +14,6 @@ package com.qubole.rubix.core.utils;
 
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
-import com.qubole.rubix.spi.thrift.ClusterNode;
-import com.qubole.rubix.spi.thrift.NodeState;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -29,25 +27,49 @@ public class DummyClusterManager extends ClusterManager
 {
   private static long splitSize = 64 * 1024 * 1024;
   @Override
-  public List<ClusterNode> getNodes()
+  public List<String> getNodes()
   {
-    List<ClusterNode> list = new ArrayList<>();
+    List<String> list = new ArrayList<String>();
     String hostName = "";
     try {
-      hostName = InetAddress.getLocalHost().getHostAddress();
+      hostName = InetAddress.getLocalHost().getCanonicalHostName();
     }
     catch (UnknownHostException e) {
       hostName = "localhost";
     }
 
-    list.add(new ClusterNode(hostName, NodeState.ACTIVE));
+    list.add(hostName);
 
     return list;
+  }
+
+  @Override
+  public boolean isMaster()
+  {
+    return false;
   }
 
   @Override
   public ClusterType getClusterType()
   {
     return ClusterType.TEST_CLUSTER_MANAGER;
+  }
+
+  @Override
+  public long getSplitSize()
+  {
+    return splitSize;
+  }
+
+  @Override
+  public Integer getNextRunningNodeIndex(int startIndex)
+  {
+    return startIndex;
+  }
+
+  @Override
+  public Integer getPreviousRunningNodeIndex(int startIndex)
+  {
+    return startIndex;
   }
 }

@@ -17,18 +17,19 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
-import com.qubole.rubix.spi.thrift.ClusterNode;
-import com.qubole.rubix.spi.thrift.NodeState;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 import java.net.InetAddress;
-import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -40,7 +41,8 @@ import java.util.concurrent.TimeUnit;
  */
 public class Hadoop2ClusterManager extends ClusterManager
 {
-  static LoadingCache<String, List<ClusterNode>> nodesCache;
+  private boolean isMaster = true;
+  static LoadingCache<String, List<String>> nodesCache;
   YarnConfiguration yconf;
   private Log log = LogFactory.getLog(Hadoop2ClusterManager.class);
 
@@ -61,24 +63,30 @@ public class Hadoop2ClusterManager extends ClusterManager
     });
     nodesCache = CacheBuilder.newBuilder()
         .refreshAfterWrite(getNodeRefreshTime(), TimeUnit.SECONDS)
-        .build(CacheLoader.asyncReloading(new CacheLoader<String, List<ClusterNode>>()
+        .build(CacheLoader.asyncReloading(new CacheLoader<String, List<String>>()
         {
           @Override
-          public List<ClusterNode> load(String s)
+          public List<String> load(String s)
               throws Exception
           {
+            if (!isMaster) {
+              // First time all nodes start assuming themselves as master and down the line figure out their role
+              // Next time onwards, only master will be fetching the list of nodes
+              return ImmutableList.of();
+            }
             try {
               List<Hadoop2ClusterManagerUtil.Node> allNodes = Hadoop2ClusterManagerUtil.getAllNodes(yconf);
               if (allNodes == null) {
+                isMaster = false;
                 return ImmutableList.of();
               }
 
-              List<ClusterNode> hosts = new ArrayList<>();
+              Set<String> hosts = new HashSet<>();
 
               if (allNodes.isEmpty()) {
                 // Empty result set => server up and only master node running, return localhost has the only node
                 // Do not need to consider failed nodes list as 1node cluster and server is up since it replied to allNodesRequest
-                return ImmutableList.of(new ClusterNode(InetAddress.getLocalHost().getHostAddress(), NodeState.ACTIVE));
+                return ImmutableList.of(InetAddress.getLocalHost().getHostAddress());
               }
 
               for (Hadoop2ClusterManagerUtil.Node node : allNodes) {
@@ -86,7 +94,7 @@ public class Hadoop2ClusterManager extends ClusterManager
                 log.debug("Hostname: " + node.getNodeHostName() + "State: " + state);
                 //keep only healthy data nodes
                 if (state.equalsIgnoreCase("Running") || state.equalsIgnoreCase("New") || state.equalsIgnoreCase("Rebooted")) {
-                  hosts.add(new ClusterNode(node.getNodeHostName(), NodeState.ACTIVE));
+                  hosts.add(node.getNodeHostName());
                 }
               }
 
@@ -94,7 +102,10 @@ public class Hadoop2ClusterManager extends ClusterManager
                 throw new Exception("No healthy data nodes found.");
               }
 
-              return hosts;
+              List<String> hostList = Lists.newArrayList(hosts.toArray(new String[0]));
+              Collections.sort(hostList);
+              log.debug("Hostlist: " + hostList.toString());
+              return hostList;
             }
             catch (Exception e) {
               throw Throwables.propagate(e);
@@ -104,7 +115,16 @@ public class Hadoop2ClusterManager extends ClusterManager
   }
 
   @Override
-  public List<ClusterNode> getNodes()
+  public boolean isMaster()
+      throws ExecutionException
+  {
+    // issue get on nodesSupplier to ensure that isMaster is set correctly
+    nodesCache.get("nodeList");
+    return isMaster;
+  }
+
+  @Override
+  public List<String> getNodes()
   {
     try {
       return nodesCache.get("nodeList");
@@ -114,6 +134,18 @@ public class Hadoop2ClusterManager extends ClusterManager
     }
 
     return null;
+  }
+
+  @Override
+  public Integer getNextRunningNodeIndex(int startIndex)
+  {
+    return startIndex;
+  }
+
+  @Override
+  public Integer getPreviousRunningNodeIndex(int startIndex)
+  {
+    return startIndex;
   }
 
   @Override

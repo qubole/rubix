@@ -77,10 +77,6 @@ public class Hadoop2ClusterManagerUtil
       return null;
     }
 
-    if (response.toString().isEmpty()) {
-      return null;
-    }
-
     Gson gson = new Gson();
     Type type = new TypeToken<NodesResponse>() {
     }.getType();

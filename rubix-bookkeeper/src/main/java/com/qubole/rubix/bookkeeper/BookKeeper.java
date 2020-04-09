@@ -26,24 +26,22 @@ import com.google.common.cache.RemovalNotification;
 import com.google.common.cache.Weigher;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Service;
-import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
-import com.qubole.rubix.bookkeeper.utils.ConsistentHashUtil;
 import com.qubole.rubix.bookkeeper.utils.DiskUtils;
 import com.qubole.rubix.bookkeeper.validation.CachingValidator;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
+import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.core.ReadRequest;
 import com.qubole.rubix.core.RemoteReadRequestChain;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
+import com.qubole.rubix.spi.ClusterManager;
+import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.BookKeeperService;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
-import com.qubole.rubix.spi.thrift.ClusterNode;
 import com.qubole.rubix.spi.thrift.FileInfo;
 import com.qubole.rubix.spi.thrift.Location;
-import com.qubole.rubix.spi.thrift.ReadDataRequest;
-import com.qubole.rubix.spi.thrift.SetCachedRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -56,6 +54,10 @@ import org.apache.thrift.shaded.TException;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -79,6 +81,8 @@ import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.CACH
 import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.NONLOCAL_REQUEST_COUNT;
 import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.REMOTE_REQUEST_COUNT;
 import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.TOTAL_REQUEST_COUNT;
+import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
+import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER_MULTINODE;
 
 /**
  * Created by stagra on 12/2/16.
@@ -89,9 +93,14 @@ public abstract class BookKeeper implements BookKeeperService.Iface
 
   protected static Cache<String, FileMetadata> fileMetadataCache;
   private static LoadingCache<String, FileInfo> fileInfoCache;
+  protected static ClusterManager clusterManager;
   String nodeName;
+  static String nodeHostName;
+  static String nodeHostAddress;
   protected final Configuration conf;
-
+  private static Integer lock = 1;
+  private List<String> nodes;
+  int currentNodeIndex = -1;
   static long splitSize;
   private RemoteFetchProcessor fetchProcessor;
   private final Ticker ticker;
@@ -110,7 +119,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   private Counter cacheRequestCount;
   private Counter nonlocalRequestCount;
 
-  public BookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics) throws BookKeeperInitializationException
+  public BookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics) throws FileNotFoundException
   {
     this(conf, bookKeeperMetrics, Ticker.systemTicker());
   }
@@ -122,31 +131,19 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   }
 
   @VisibleForTesting
-  BookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics, Ticker ticker) throws BookKeeperInitializationException
+  BookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics, Ticker ticker) throws FileNotFoundException
   {
     this.conf = conf;
     this.bookKeeperMetrics = bookKeeperMetrics;
     this.metrics = bookKeeperMetrics.getMetricsRegistry();
     this.ticker = ticker;
-    this.splitSize = CacheConfig.getCacheFileSplitSize(conf);
-    cleanupOldCacheFiles(conf);
-
-    setupCacheDirectory(conf);
     initializeMetrics();
     initializeCache(conf, ticker);
+    cleanupOldCacheFiles(conf);
+
     fetchProcessor = null;
     if (CacheConfig.isParallelWarmupEnabled(conf)) {
       fetchProcessor = new RemoteFetchProcessor(this, metrics, conf);
-    }
-  }
-
-  private void setupCacheDirectory(Configuration conf) throws BookKeeperInitializationException
-  {
-    try {
-      CacheUtil.createCacheDirectories(conf);
-    }
-    catch (FileNotFoundException ex) {
-      throw new BookKeeperInitializationException(ex.toString(), ex);
     }
   }
 
@@ -233,6 +230,24 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   @Override
   public List<BlockLocation> getCacheStatus(CacheStatusRequest request) throws TException
   {
+    try {
+      initializeClusterManager(request.getClusterType());
+    }
+    catch (ClusterManagerInitilizationException ex) {
+      log.error("Not able to initialize ClusterManager for cluster type : " +
+          ClusterType.findByValue(request.getClusterType()) + " with Exception : " + ex);
+      return null;
+    }
+    if (nodeName == null) {
+      log.error("Node name is null for Cluster Type" + ClusterType.findByValue(request.getClusterType()));
+      return null;
+    }
+
+    if (currentNodeIndex == -1 || nodes == null) {
+      log.error("Initialization not done");
+      return null;
+    }
+
     Map<Long, String> blockSplits = new HashMap<>();
     long blockNumber = 0;
 
@@ -241,6 +256,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     long lastModified = request.getLastModified();
     long startBlock = request.getStartBlock();
     long endBlock = request.getEndBlock();
+    boolean incrMetrics = request.isIncrMetrics();
 
     for (long i = 0; i < fileLength; i = i + splitSize) {
       long end = i + splitSize;
@@ -248,8 +264,8 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         end = fileLength;
       }
       String key = remotePath + i + end;
-      String hostName = getOwnerNodeForPath(key);
-      blockSplits.put(blockNumber, hostName);
+      int nodeIndex = clusterManager.getNodeIndex(nodes.size(), key);
+      blockSplits.put(blockNumber, nodes.get(nodeIndex));
       blockNumber++;
     }
 
@@ -280,10 +296,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         totalRequests++;
 
         long split = (blockNum * blockSize) / splitSize;
-        if (blockSplits.get(split) == null) {
-          blockLocations.add(new BlockLocation(Location.UNKNOWN, ""));
-        }
-        else if (!blockSplits.get(split).equalsIgnoreCase(nodeName)) {
+        if (!blockSplits.get(split).equalsIgnoreCase(nodeName)) {
           blockLocations.add(new BlockLocation(Location.NON_LOCAL, blockSplits.get(split)));
           nonLocalRequests++;
         }
@@ -313,30 +326,106 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     return blockLocations;
   }
 
+  private void initializeClusterManager(int clusterType) throws ClusterManagerInitilizationException
+  {
+    if (this.clusterManager == null) {
+      ClusterManager manager = null;
+      synchronized (lock) {
+        if (this.clusterManager == null) {
+          try {
+            nodeHostName = InetAddress.getLocalHost().getCanonicalHostName();
+            nodeHostAddress = InetAddress.getLocalHost().getHostAddress();
+            log.info(" HostName : " + nodeHostName + " HostAddress : " + nodeHostAddress);
+          }
+          catch (UnknownHostException e) {
+            log.warn("Could not get nodeName", e);
+            return;
+          }
+
+          manager = getClusterManagerInstance(ClusterType.findByValue(clusterType), conf);
+          manager.initialize(conf);
+          this.clusterManager = manager;
+          splitSize = clusterManager.getSplitSize();
+
+          if (clusterType == TEST_CLUSTER_MANAGER.ordinal() || clusterType == TEST_CLUSTER_MANAGER_MULTINODE.ordinal()) {
+            currentNodeIndex = 0;
+            nodes = clusterManager.getNodes();
+            nodeName = nodes.get(currentNodeIndex);
+            if (clusterType == TEST_CLUSTER_MANAGER_MULTINODE.ordinal()) {
+              nodes.add(nodeName + "_copy");
+            }
+            return;
+          }
+        }
+      }
+    }
+
+    nodes = clusterManager.getNodes();
+    if (nodes == null || nodes.size() == 0) {
+      log.error("Could not initialize as no cluster node is found");
+    }
+    else if (nodes.indexOf(nodeHostName) >= 0) {
+      currentNodeIndex = nodes.indexOf(nodeHostName);
+      nodeName = nodeHostName;
+    }
+    else if (nodes.indexOf(nodeHostAddress) >= 0) {
+      currentNodeIndex = nodes.indexOf(nodeHostAddress);
+      nodeName = nodeHostAddress;
+    }
+    else {
+      log.error(String.format("Could not initialize cluster nodes=%s nodeHostName=%s nodeHostAddress=%s " +
+          "currentNodeIndex=%d", nodes, nodeHostName, nodeHostAddress, currentNodeIndex));
+    }
+  }
+
+  @VisibleForTesting
+  public ClusterManager getClusterManagerInstance(ClusterType clusterType, Configuration config)
+      throws ClusterManagerInitilizationException
+  {
+    String clusterManagerClassName = CacheConfig.getClusterManagerClass(conf, clusterType);
+    log.info("Initializing cluster manager : " + clusterManagerClassName);
+    ClusterManager manager = null;
+
+    try {
+      Class clusterManagerClass = conf.getClassByName(clusterManagerClassName);
+      Constructor constructor = clusterManagerClass.getConstructor();
+      manager = (ClusterManager) constructor.newInstance();
+    }
+    catch (ClassNotFoundException | NoSuchMethodException | InstantiationException |
+        IllegalAccessException | InvocationTargetException ex) {
+      String errorMessage = String.format("Not able to initialize ClusterManager class : {0} ",
+          clusterManagerClassName);
+      log.error(errorMessage);
+      throw new ClusterManagerInitilizationException(errorMessage, ex);
+    }
+
+    return manager;
+  }
+
   @Override
-  public void setAllCached(SetCachedRequest request)
+  public void setAllCached(String remotePath, long fileLength, long lastModified, long startBlock, long endBlock)
       throws TException
   {
     FileMetadata md;
-    md = fileMetadataCache.getIfPresent(request.getRemotePath());
+    md = fileMetadataCache.getIfPresent(remotePath);
 
     //md will be null when 2 users try to update the file in parallel and both their entries are invalidated.
     // TODO: find a way to optimize this so that the file doesn't have to be read again in next request (new data is stored instead of invalidation)
     if (md == null) {
-      log.warn(String.format("Could not update the metadata for file %s", request.getRemotePath()));
+      log.warn(String.format("Could not update the metadata for file %s", remotePath));
       return;
     }
-    if (isInvalidationRequired(md.getLastModified(), request.getLastModified())) {
-      invalidateFileMetadata(request.getRemotePath());
+    if (isInvalidationRequired(md.getLastModified(), lastModified)) {
+      invalidateFileMetadata(remotePath);
       return;
     }
-    long endBlock = setCorrectEndBlock(request.getEndBlock(), request.getFileSize(), request.getRemotePath());
-    log.debug("Updating cache for " + request.getRemotePath() + " StarBlock : " + request.getStartBlock() + " EndBlock : " + endBlock);
+    endBlock = setCorrectEndBlock(endBlock, fileLength, remotePath);
+    log.debug("Updating cache for " + remotePath + " StarBlock : " + startBlock + " EndBlock : " + endBlock);
 
     try {
-      md.setBlocksCached(request.getStartBlock(), endBlock);
-      long currentFileSize = md.incrementCurrentFileSize((endBlock - request.getStartBlock()) * CacheConfig.getBlockSize(conf));
-      replaceFileMetadata(request.getRemotePath(), currentFileSize, conf);
+      md.setBlocksCached(startBlock, endBlock);
+      long currentFileSize = md.incrementCurrentFileSize((endBlock - startBlock) * CacheConfig.getBlockSize(conf));
+      replaceFileMetadata(remotePath, currentFileSize, conf);
     }
     catch (IOException e) {
       throw new TException(e);
@@ -377,19 +466,17 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   // We cannot make it static because the variable is used in remoteReadRequestChain to write (cache) data to files.
   // So, it has to store the correct value in each thread. getCacheStatus is called twice.
   @Override
-  public boolean readData(ReadDataRequest readDataRequest)
+  public boolean readData(String remotePath, long offset, int length, long fileSize, long lastModified, int clusterType)
       throws TException
   {
     if (CacheConfig.isParallelWarmupEnabled(conf)) {
       startRemoteFetchProcessor();
-      log.debug("Adding to the queue Path : " + readDataRequest.getRemotePath() +
-          " Offset : " + readDataRequest.getReadStart() + " Length " + readDataRequest.getReadLength());
-      fetchProcessor.addToProcessQueue(readDataRequest.getRemotePath(), readDataRequest.getReadStart(),
-          (int) readDataRequest.getReadLength(), readDataRequest.getFileSize(), readDataRequest.getLastModified());
+      log.debug("Adding to the queue Path : " + remotePath + " Offste : " + offset + " Length " + length);
+      fetchProcessor.addToProcessQueue(remotePath, offset, length, fileSize, lastModified);
       return true;
     }
     else {
-      return readDataInternal(readDataRequest);
+      return readDataInternal(remotePath, offset, length, fileSize, lastModified, clusterType);
     }
   }
 
@@ -428,32 +515,12 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     return null;
   }
 
-  public abstract List<ClusterNode> getClusterNodes();
-
-  @Override
-  public String getOwnerNodeForPath(String remotePathKey)
-  {
-    List<ClusterNode> nodeList = getClusterNodes();
-    if (nodeList == null || nodeList.isEmpty()) {
-      return null;
-    }
-
-    String hostName = ConsistentHashUtil.getHashedNodeForKey(nodeList, remotePathKey);
-    return hostName;
-  }
-
-  private boolean readDataInternal(ReadDataRequest readDataRequest) throws TException
+  private boolean readDataInternal(String remotePath, long offset, int length, long fileSize,
+                                   long lastModified, int clusterType) throws TException
   {
     int blockSize = CacheConfig.getBlockSize(conf);
     byte[] buffer = new byte[blockSize];
     ByteBuffer byteBuffer = null;
-
-    String remotePath = readDataRequest.getRemotePath();
-    long offset = readDataRequest.getReadStart();
-    long length = readDataRequest.getReadLength();
-    long fileSize = readDataRequest.getFileSize();
-    long lastModified = readDataRequest.getLastModified();
-
     String localPath = CacheUtil.getLocalPath(remotePath, conf);
     FileSystem fs = null;
     FSDataInputStream inputStream = null;
@@ -462,7 +529,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     long endBlock = ((offset + (length - 1)) / CacheConfig.getBlockSize(conf)) + 1;
     try {
       int idx = 0;
-      CacheStatusRequest request = new CacheStatusRequest(remotePath, fileSize, lastModified, startBlock, endBlock);
+      CacheStatusRequest request = new CacheStatusRequest(remotePath, fileSize, lastModified, startBlock, endBlock, clusterType);
       List<BlockLocation> blockLocations = getCacheStatus(request);
 
       for (long blockNum = startBlock; blockNum < endBlock; blockNum++, idx++) {
@@ -530,7 +597,10 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   }
 
   private static synchronized void initializeCache(final Configuration conf, final Ticker ticker)
+      throws FileNotFoundException
   {
+    CacheUtil.createCacheDirectories(conf);
+
     long avail = 0;
     for (int d = 0; d < CacheUtil.getCacheDiskCount(conf); d++) {
       avail += new File(CacheUtil.getDirPath(d, conf)).getUsableSpace();

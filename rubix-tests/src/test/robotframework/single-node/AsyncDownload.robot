@@ -102,6 +102,7 @@ Test async caching
     ...  ${END_BLOCK}
     ...  ${FILE_LENGTH}
     ...  ${LAST_MODIFIED}
+    ...  ${CLUSTER_TYPE}
 
     RUN KEYWORD IF  ${runConcurrently}
     ...  Execute concurrent requests
@@ -160,6 +161,7 @@ Test async caching with some requests delayed
     ...  ${END_BLOCK}
     ...  ${FILE_LENGTH}
     ...  ${LAST_MODIFIED}
+    ...  ${CLUSTER_TYPE}
 
     RUN KEYWORD IF  ${runConcurrently}
     ...  Execute concurrent requests
@@ -187,6 +189,7 @@ Test async caching with some requests delayed
     ...  ${END_BLOCK}
     ...  ${FILE_LENGTH}
     ...  ${LAST_MODIFIED}
+    ...  ${CLUSTER_TYPE}
 
     RUN KEYWORD IF  ${runConcurrently}
     ...  Execute concurrent requests
@@ -256,12 +259,14 @@ Test async caching with request 1 file date before request 2
     ...  ${END_BLOCK}
     ...  ${FILE_LENGTH}
     ...  ${LAST_MODIFIED_JAN_1_2018}
+    ...  ${CLUSTER_TYPE}
     ${readRequestJan2} =  Make read request
     ...  ${testFile}
     ...  ${START_BLOCK}
     ...  ${END_BLOCK}
     ...  ${FILE_LENGTH}
     ...  ${LAST_MODIFIED_JAN_2_2018}
+    ...  ${CLUSTER_TYPE}
     @{requests} =  CREATE LIST  ${readRequestJan1}  ${readRequestJan2}
 
     RUN KEYWORD IF  ${runConcurrently}
@@ -320,12 +325,14 @@ Test async caching with request 1 file date after request 2
     ...  ${END_BLOCK}
     ...  ${FILE_LENGTH}
     ...  ${LAST_MODIFIED_JAN_2_2018}
+    ...  ${CLUSTER_TYPE}
     ${readRequestJan1} =  Make read request
     ...  ${testFile}
     ...  ${START_BLOCK}
     ...  ${END_BLOCK}
     ...  ${FILE_LENGTH}
     ...  ${LAST_MODIFIED_JAN_1_2018}
+    ...  ${CLUSTER_TYPE}
     @{requests} =  CREATE LIST  ${readRequestJan2}  ${readRequestJan1}
 
     RUN KEYWORD IF  ${runConcurrently}

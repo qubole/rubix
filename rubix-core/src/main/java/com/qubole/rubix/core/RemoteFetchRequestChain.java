@@ -16,8 +16,6 @@ import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
-import com.qubole.rubix.spi.thrift.ReadDataRequest;
-import com.qubole.rubix.spi.thrift.SetCachedRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -34,9 +32,10 @@ public class RemoteFetchRequestChain extends ReadRequestChain
   BookKeeperFactory bookKeeperFactory;
   long lastModified;
   long fileSize;
+  int clusterType;
 
   public RemoteFetchRequestChain(String remotePath, FileSystem remoteFileSystem, String remoteNodeLocation,
-                                 Configuration conf, long lastModified, long fileSize, BookKeeperFactory bookKeeperFactory)
+                                 Configuration conf, long lastModified, long fileSize, int clusterType, BookKeeperFactory bookKeeperFactory)
   {
     this.remotePath = remotePath;
     this.remoteFileSystem = remoteFileSystem;
@@ -44,6 +43,7 @@ public class RemoteFetchRequestChain extends ReadRequestChain
     this.conf = conf;
     this.lastModified = lastModified;
     this.fileSize = fileSize;
+    this.clusterType = clusterType;
     this.bookKeeperFactory = bookKeeperFactory;
   }
 
@@ -59,8 +59,8 @@ public class RemoteFetchRequestChain extends ReadRequestChain
       for (ReadRequest request : readRequests) {
         log.debug("RemoteFetchRequest from : " + remoteNodeLocation + " Start : " + request.backendReadStart +
                 " of length " + request.getBackendReadLength());
-        client.readData(new ReadDataRequest(remotePath, request.backendReadStart, request.getBackendReadLength(),
-            fileSize, lastModified));
+        client.readData(remotePath, request.backendReadStart, request.getBackendReadLength(),
+            fileSize, lastModified, clusterType);
       }
     }
     catch (Exception e) {
@@ -86,9 +86,9 @@ public class RemoteFetchRequestChain extends ReadRequestChain
           long startBlock = toBlock(readRequest.getBackendReadStart());
           long endBlock = toBlock(readRequest.getBackendReadEnd() - 1) + 1;
           // getCacheStatus() call required to create mdfiles before blocks are set as cached
-          CacheStatusRequest request = new CacheStatusRequest(remotePath, fileSize, lastModified, startBlock, endBlock);
+          CacheStatusRequest request = new CacheStatusRequest(remotePath, fileSize, lastModified, startBlock, endBlock, clusterType);
           bookKeeperClient.getCacheStatus(request);
-          bookKeeperClient.setAllCached(new SetCachedRequest(remotePath, fileSize, lastModified, startBlock, endBlock));
+          bookKeeperClient.setAllCached(remotePath, fileSize, lastModified, startBlock, endBlock);
         }
       }
       catch (Exception e) {

@@ -12,12 +12,14 @@
  */
 package com.qubole.rubix.spi;
 
-import com.qubole.rubix.spi.thrift.ClusterNode;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import com.google.common.base.Charsets;
+import com.google.common.hash.HashCode;
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hashing;
 import org.apache.hadoop.conf.Configuration;
 
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Created by stagra on 14/1/16.
@@ -29,18 +31,38 @@ import java.util.List;
  */
 public abstract class ClusterManager
 {
-  private static Log log = LogFactory.getLog(ClusterManager.class.getName());
-
+  private long splitSize;
   private int nodeRefreshTime;
 
-  public ClusterType getClusterType()
-  {
-    return null;
-  }
+  public abstract ClusterType getClusterType();
 
   public void initialize(Configuration conf)
+
   {
+    splitSize = CacheConfig.getCacheFileSplitSize(conf);
     nodeRefreshTime = CacheConfig.getClusterNodeRefreshTime(conf);
+  }
+
+  public int getNodeIndex(int numNodes, String key)
+  {
+    HashFunction hf = Hashing.md5();
+    HashCode hc = hf.hashString(key, Charsets.UTF_8);
+    int initialNodeIndex = Hashing.consistentHash(hc, numNodes);
+    int finalNodeIndex = initialNodeIndex;
+    if (hc.asInt() % 2 == 0) {
+      finalNodeIndex = getNextRunningNodeIndex(initialNodeIndex);
+    }
+    else {
+      finalNodeIndex = getPreviousRunningNodeIndex(initialNodeIndex);
+    }
+
+    return finalNodeIndex;
+  }
+
+  // This is the size in which the file will be logically divided into splits
+  public long getSplitSize()
+  {
+    return splitSize;
   }
 
   public int getNodeRefreshTime()
@@ -48,5 +70,14 @@ public abstract class ClusterManager
     return nodeRefreshTime;
   }
 
-  public abstract List<ClusterNode> getNodes();
+  public abstract boolean isMaster()
+      throws ExecutionException;
+
+  // Nodes format as per the note above
+  // Should return sorted list
+  public abstract List<String> getNodes();
+
+  public abstract Integer getNextRunningNodeIndex(int startIndex);
+
+  public abstract Integer getPreviousRunningNodeIndex(int startIndex);
 }

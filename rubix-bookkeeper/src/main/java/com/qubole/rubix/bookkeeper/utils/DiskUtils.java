@@ -65,6 +65,7 @@ public class DiskUtils
   {
     String cmd = "rm -rf " + path;
     ShellExec se = new ShellExec(cmd);
+    log.debug("Running: " + cmd);
     ShellExec.CommandResult cr = se.runCmd();
   }
 
