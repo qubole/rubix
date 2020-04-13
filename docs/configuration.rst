@@ -41,7 +41,7 @@ Cache
 |                                          | The time file metadata will be cached before it will be fetched again  |                   |                  |               | Yes           |
 |                                          | from the remote filesystem.                                            |                   |                  |               |               |
 +------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+---------------+
-| rubix.cache.parallel.warmup              | When true, cache will be warmed up asynchronously.                     | boolean           | false            | C & S         | Yes           |
+| rubix.cache.parallel.warmup              | When true, cache will be warmed up asynchronously.                     | boolean           | false            | C & S         | No            |
 +------------------------------------------+------------------------------------------------------------------------+-------------------+------------------+---------------+---------------+
 | rubix.cache.dummy.mode                   | When true, the cache is not populated with data and queries read data  | boolean           | false            | C             |               |
 |                                          | directly from the source, but metadata is updated so that statistics   |                   |                  |               | Yes           |
