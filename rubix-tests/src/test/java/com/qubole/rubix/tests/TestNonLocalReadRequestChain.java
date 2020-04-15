@@ -146,7 +146,7 @@ public class TestNonLocalReadRequestChain
   }
 
   @Test
-  private void testRemoteRead()
+  public void testRemoteRead()
       throws Exception
   {
     localDataTransferServer.start();
@@ -159,7 +159,7 @@ public class TestNonLocalReadRequestChain
   }
 
   @Test
-  private void testDirectRead()
+  public void testDirectRead()
       throws Exception
   {
     nonLocalReadRequestChain.strictMode = false;
@@ -167,7 +167,7 @@ public class TestNonLocalReadRequestChain
   }
 
   @Test
-  private void testDirectRead2()
+  public void testDirectRead2()
       throws Exception
   {
     localDataTransferServer.start();
@@ -182,7 +182,7 @@ public class TestNonLocalReadRequestChain
     test(nonLocalReadRequestChain);
   }
 
-  public void test(NonLocalReadRequestChain requestChain) throws Exception
+  private void test(NonLocalReadRequestChain requestChain) throws Exception
   {
     Logger.getRootLogger().setLevel(Level.INFO);
     byte[] buffer = new byte[350];

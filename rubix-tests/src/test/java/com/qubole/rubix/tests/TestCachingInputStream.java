@@ -45,6 +45,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
 
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
 /**
@@ -166,23 +167,44 @@ public class TestCachingInputStream
   public void testCaching() throws IOException, InterruptedException
   {
     // 1. Seek and read
-    testCachingHelper();
+    testCachingHelper(false);
 
     // 2. Delete backend file
     File file = new File(backendFileName);
     file.delete();
 
     // 3. Read the same data to ensure that data read from cache correctly
-    testCachingHelper();
+    testCachingHelper(false);
   }
 
-  private void testCachingHelper()
+  @Test
+  public void testCachingPositionedRead() throws IOException, InterruptedException
+  {
+    // 1. Positioned read
+    testCachingHelper(true);
+
+    // 2. Delete backend file
+    File file = new File(backendFileName);
+    file.delete();
+
+    // 3. Read the same data to ensure that data read from cache correctly
+    testCachingHelper(true);
+  }
+
+  private void testCachingHelper(boolean positionedRead)
       throws IOException
   {
-    inputStream.seek(100);
     byte[] buffer = new byte[1000];
-    int readSize = inputStream.read(buffer, 0, 1000);
-    String output = new String(buffer, Charset.defaultCharset());
+    int readSize;
+    if (positionedRead) {
+      readSize = inputStream.read(100, buffer, 0, 1000);
+      assertEquals(inputStream.getPos(), 0);
+    }
+    else {
+      inputStream.seek(100);
+      readSize = inputStream.read(buffer, 0, 1000);
+      assertEquals(inputStream.getPos(), 100 + readSize);
+    }
     String expectedOutput = DataGen.generateContent().substring(100, 1100);
     assertions(readSize, 1000, buffer, expectedOutput);
   }
@@ -193,7 +215,7 @@ public class TestCachingInputStream
   {
     CacheConfig.setFileStalenessCheck(conf, true);
     // 1. Seek and read some data
-    testCachingHelper();
+    testCachingHelper(false);
 
     // 2. Skip more than a block worth of data
     Thread.sleep(3000); // sleep to give server chance to update cache status
