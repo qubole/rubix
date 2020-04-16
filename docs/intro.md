@@ -11,7 +11,7 @@ thereby improving performance.
 ### Supported Engines and Cloud Stores
 
 #### Amazon S3
-- Presto
+- [Presto](<https://prestosql.io/>)
 - Spark
 - Any engine using Hadoop 2.x (e.g. Hive)
 
