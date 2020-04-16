@@ -1,0 +1,33 @@
+name: ci-tests
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-java@v1
+        with:
+          java-version: 7
+      - uses: codecov/codecov-action@v1
+      - uses: actions/cache@v1
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+      - name: Setup Build
+        env:
+          RUBIX_DOCKER_NETWORK_NAME: "network-rubix-build"
+        run: /bin/bash rubix_setup_build.sh
+      - name: Run Integration Tests
+        env:
+          RUBIX_DOCKER_NETWORK_NAME: "network-rubix-build"
+        run: chmod a+x docker_build_rubix.sh && /bin/bash rubix_run_build.sh mvn integration-test -Pintegration-tests
