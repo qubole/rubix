@@ -1,6 +1,6 @@
 # RubiX
 
-[![Build Status](https://travis-ci.org/qubole/rubix.svg?branch=master)](https://travis-ci.org/qubole/rubix)
+[![Build Status](https://github.com/qubole/rubix/workflows/ci-tests/badge.svg)]
 [![codecov](https://codecov.io/gh/qubole/rubix/branch/master/graph/badge.svg)](https://codecov.io/gh/qubole/rubix)
 
 
