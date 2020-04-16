@@ -13,7 +13,6 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
-import com.qubole.rubix.bookkeeper.exception.BookKeeperInitializationException;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.common.utils.TestUtil;
 import com.qubole.rubix.spi.BookKeeperFactory;
@@ -36,9 +35,7 @@ import org.testng.annotations.Test;
 import java.io.IOException;
 
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
@@ -99,7 +96,7 @@ public class TestHeartbeatService
    * @throws TTransportException if the BookKeeper client cannot be created.
    */
   @Test
-  public void testHeartbeatRetryLogic_noRetriesNeeded() throws TTransportException, BookKeeperInitializationException, IOException
+  public void testHeartbeatRetryLogic_noRetriesNeeded() throws TTransportException, IOException
   {
     final BookKeeperFactory bookKeeperFactory = mock(BookKeeperFactory.class);
     when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenReturn(
@@ -120,7 +117,7 @@ public class TestHeartbeatService
    * Verify that the heartbeat service correctly makes a connection using a BookKeeper client after a number of retries.
    */
   @Test
-  public void testHeartbeatRetryLogic_connectAfterRetries() throws BookKeeperInitializationException, IOException
+  public void testHeartbeatRetryLogic_connectAfterRetries() throws IOException
   {
     BaseServerTest.stopBookKeeperServer();
     BaseServerTest.startCoordinatorBookKeeperServerWithDelay(conf, new MetricRegistry(), TEST_RETRY_INTERVAL * 2);
@@ -139,19 +136,16 @@ public class TestHeartbeatService
    * @throws TTransportException if the BookKeeper client cannot be created.
    */
   @Test(expectedExceptions = RuntimeException.class)
-  public void testHeartbeatRetryLogic_outOfRetries() throws TTransportException, BookKeeperInitializationException, IOException
+  public void testHeartbeatRetryLogic_outOfRetries() throws TTransportException, IOException
   {
-    CacheConfig.setServiceMaxRetries(conf, 3);
-    BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
-    final BookKeeperFactory spyBookKeeperFactory = spy(bookKeeperFactory);
-
-    doThrow(TTransportException.class).when(spyBookKeeperFactory).createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any());
+    final BookKeeperFactory bookKeeperFactory = mock(BookKeeperFactory.class);
+    when(bookKeeperFactory.createBookKeeperClient(anyString(), ArgumentMatchers.<Configuration>any())).thenThrow(TTransportException.class);
 
     // Disable default reporters for this BookKeeper, since they will conflict with the running server.
     CacheConfig.setMetricsReporters(conf, "");
     try (BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, new MetricRegistry())) {
       final BookKeeper bookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics);
-      final HeartbeatService heartbeatService = new HeartbeatService(conf, new MetricRegistry(), spyBookKeeperFactory, bookKeeper);
+      final HeartbeatService heartbeatService = new HeartbeatService(conf, new MetricRegistry(), bookKeeperFactory, bookKeeper);
     }
   }
 
@@ -161,7 +155,7 @@ public class TestHeartbeatService
    * @throws TTransportException if the BookKeeper client cannot be created.
    */
   @Test
-  public void verifyValidationMetricsAreCorrectlyRegistered_validationEnabled() throws TTransportException, BookKeeperInitializationException, IOException
+  public void verifyValidationMetricsAreCorrectlyRegistered_validationEnabled() throws IOException, TTransportException
   {
     CacheConfig.setValidationEnabled(conf, true);
 
@@ -191,7 +185,7 @@ public class TestHeartbeatService
    * @throws TTransportException if the BookKeeper client cannot be created.
    */
   @Test
-  public void verifyValidationMetricsAreCorrectlyRegistered_validationDisabled() throws TTransportException, BookKeeperInitializationException, IOException
+  public void verifyValidationMetricsAreCorrectlyRegistered_validationDisabled() throws IOException, TTransportException
   {
     CacheConfig.setValidationEnabled(conf, false);
 

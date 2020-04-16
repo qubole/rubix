@@ -15,11 +15,8 @@ package com.qubole.rubix.spi;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.BookKeeperService;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
-import com.qubole.rubix.spi.thrift.ClusterNode;
 import com.qubole.rubix.spi.thrift.FileInfo;
-import com.qubole.rubix.spi.thrift.HeartbeatRequest;
-import com.qubole.rubix.spi.thrift.ReadDataRequest;
-import com.qubole.rubix.spi.thrift.SetCachedRequest;
+import com.qubole.rubix.spi.thrift.HeartbeatStatus;
 import org.apache.thrift.TException;
 
 import java.util.List;
@@ -45,10 +42,10 @@ public class LocalBookKeeperClient extends RetryingPooledBookkeeperClient
   }
 
   @Override
-  public void setAllCached(SetCachedRequest request)
+  public void setAllCached(final String remotePath, final long fileLength, final long lastModified, final long startBlock, final long endBlock)
       throws TException
   {
-    bookKeeper.setAllCached(request);
+    bookKeeper.setAllCached(remotePath, fileLength, lastModified, startBlock, endBlock);
   }
 
   @Override
@@ -59,17 +56,17 @@ public class LocalBookKeeperClient extends RetryingPooledBookkeeperClient
   }
 
   @Override
-  public boolean readData(ReadDataRequest request)
+  public boolean readData(String path, long readStart, int length, long fileSize, long lastModified, int clusterType)
           throws TException
   {
-    return bookKeeper.readData(request);
+    return bookKeeper.readData(path, readStart, length, fileSize, lastModified, clusterType);
   }
 
   @Override
-  public void handleHeartbeat(HeartbeatRequest request)
+  public void handleHeartbeat(String workerHostname, HeartbeatStatus heartbeatStatus)
           throws TException
   {
-    bookKeeper.handleHeartbeat(request);
+    bookKeeper.handleHeartbeat(workerHostname, heartbeatStatus);
   }
 
   @Override
@@ -77,20 +74,6 @@ public class LocalBookKeeperClient extends RetryingPooledBookkeeperClient
           throws TException
   {
     return bookKeeper.getFileInfo(remotePath);
-  }
-
-  @Override
-  public List<ClusterNode> getClusterNodes()
-          throws TException
-  {
-    return bookKeeper.getClusterNodes();
-  }
-
-  @Override
-  public String getOwnerNodeForPath(String remotePathKey)
-          throws TException
-  {
-    return bookKeeper.getOwnerNodeForPath(remotePathKey);
   }
 
   @Override

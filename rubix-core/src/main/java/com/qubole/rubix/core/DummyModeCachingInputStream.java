@@ -14,6 +14,7 @@ package com.qubole.rubix.core;
 
 import com.google.common.base.Throwables;
 import com.qubole.rubix.spi.BookKeeperFactory;
+import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -33,13 +34,14 @@ public class DummyModeCachingInputStream extends CachingInputStream
                                      Path backendPath,
                                      Configuration conf,
                                      CachingFileSystemStats statsMbean,
+                                     ClusterType clusterType,
                                      BookKeeperFactory bookKeeperFactory,
                                      FileSystem remoteFileSystem,
                                      int bufferSize,
                                      FileSystem.Statistics statistics)
           throws IOException
   {
-    super(parentFs, backendPath, conf, statsMbean, bookKeeperFactory, remoteFileSystem, bufferSize, statistics);
+    super(parentFs, backendPath, conf, statsMbean, clusterType, bookKeeperFactory, remoteFileSystem, bufferSize, statistics);
   }
 
   @Override

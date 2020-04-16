@@ -21,11 +21,8 @@ import com.qubole.rubix.spi.fop.Poolable;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.BookKeeperService;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
-import com.qubole.rubix.spi.thrift.ClusterNode;
 import com.qubole.rubix.spi.thrift.FileInfo;
-import com.qubole.rubix.spi.thrift.HeartbeatRequest;
-import com.qubole.rubix.spi.thrift.ReadDataRequest;
-import com.qubole.rubix.spi.thrift.SetCachedRequest;
+import com.qubole.rubix.spi.thrift.HeartbeatStatus;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -72,7 +69,7 @@ public class RetryingPooledBookkeeperClient
     {
       @Override
       public List<BlockLocation> call()
-          throws TException
+              throws TException
       {
         return client().getCacheStatus(request);
       }
@@ -80,15 +77,16 @@ public class RetryingPooledBookkeeperClient
   }
 
   @Override
-  public void setAllCached(final SetCachedRequest request) throws TException
+  public void setAllCached(final String remotePath, final long fileLength, final long lastModified,
+          final long startBlock, final long endBlock) throws TException
   {
     retryConnection(new Callable<Void>()
     {
       @Override
       public Void call()
-          throws Exception
+              throws Exception
       {
-        client().setAllCached(request);
+        client().setAllCached(remotePath, fileLength, lastModified, startBlock, endBlock);
         return null;
       }
     });
@@ -110,7 +108,7 @@ public class RetryingPooledBookkeeperClient
   }
 
   @Override
-  public boolean readData(final ReadDataRequest request)
+  public boolean readData(final String path, final long readStart, final int length, final long fileSize, final long lastModified, final int clusterType)
           throws TException
   {
     return retryConnection(new Callable<Boolean>()
@@ -119,20 +117,20 @@ public class RetryingPooledBookkeeperClient
       public Boolean call()
               throws TException
       {
-        return client().readData(request);
+        return client().readData(path, readStart, length, fileSize, lastModified, clusterType);
       }
     });
   }
 
   @Override
-  public void handleHeartbeat(final HeartbeatRequest request) throws TException
+  public void handleHeartbeat(final String workerHostname, final HeartbeatStatus heartbeatStatus) throws TException
   {
     retryConnection(new Callable<Void>()
     {
       @Override
       public Void call() throws Exception
       {
-        client().handleHeartbeat(request);
+        client().handleHeartbeat(workerHostname, heartbeatStatus);
         return null;
       }
     });
@@ -149,36 +147,6 @@ public class RetryingPooledBookkeeperClient
               throws TException
       {
         return client().getFileInfo(remotePath);
-      }
-    });
-  }
-
-  @Override
-  public List<ClusterNode> getClusterNodes()
-          throws TException
-  {
-    return retryConnection(new Callable<List<ClusterNode>>()
-    {
-      @Override
-      public List<ClusterNode> call()
-              throws TException
-      {
-        return client().getClusterNodes();
-      }
-    });
-  }
-
-  @Override
-  public String getOwnerNodeForPath(final String remotePathKey)
-          throws TException
-  {
-    return retryConnection(new Callable<String>()
-    {
-      @Override
-      public String call()
-              throws TException
-      {
-        return client().getOwnerNodeForPath(remotePathKey);
       }
     });
   }

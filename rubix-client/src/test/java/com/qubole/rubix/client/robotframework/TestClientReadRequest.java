@@ -12,6 +12,8 @@
  */
 package com.qubole.rubix.client.robotframework;
 
+import com.qubole.rubix.spi.ClusterType;
+
 public class TestClientReadRequest
 {
   private final String remotePath;
@@ -19,18 +21,21 @@ public class TestClientReadRequest
   private final int readLength;
   private final long fileLength;
   private final long lastModified;
+  private final int clusterType;
 
   public TestClientReadRequest(String remotePath,
                                long readStart,
                                int readLength,
                                long fileLength,
-                               long lastModified)
+                               long lastModified,
+                               int clusterType)
   {
     this.remotePath = remotePath;
     this.readStart = readStart;
     this.readLength = readLength;
     this.fileLength = fileLength;
     this.lastModified = lastModified;
+    this.clusterType = clusterType;
   }
 
   public String getRemotePath()
@@ -58,6 +63,11 @@ public class TestClientReadRequest
     return lastModified;
   }
 
+  public int getClusterType()
+  {
+    return clusterType;
+  }
+
   @Override
   public String toString()
   {
@@ -67,6 +77,7 @@ public class TestClientReadRequest
         readStart,
         readLength,
         fileLength,
-        lastModified);
+        lastModified,
+        ClusterType.findByValue(clusterType));
   }
 }

@@ -18,7 +18,6 @@ import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
-import com.qubole.rubix.spi.thrift.ReadDataRequest;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -58,12 +57,12 @@ public class BookKeeperClientRFLibrary
   {
     try (RetryingPooledBookkeeperClient client = createBookKeeperClient()) {
       return client.readData(
-          new ReadDataRequest(
-              getPathWithFileScheme(readRequest.getRemotePath()),
-              readRequest.getReadStart(),
-              readRequest.getReadLength(),
-              readRequest.getFileLength(),
-              readRequest.getLastModified()));
+          getPathWithFileScheme(readRequest.getRemotePath()),
+          readRequest.getReadStart(),
+          readRequest.getReadLength(),
+          readRequest.getFileLength(),
+          readRequest.getLastModified(),
+          readRequest.getClusterType());
     }
   }
 
@@ -156,7 +155,8 @@ public class BookKeeperClientRFLibrary
           request.getFileLength(),
           request.getLastModified(),
           request.getStartBlock(),
-          request.getEndBlock()));
+          request.getEndBlock(),
+          request.getClusterType()));
     }
   }
 
@@ -226,15 +226,17 @@ public class BookKeeperClientRFLibrary
    * @param readLength    The amount of data to read.
    * @param fileLength    The length of the file.
    * @param lastModified  The time at which the file was last modified.
+   * @param clusterType   The type id of cluster being used.
    * @return The read request.
    */
   public TestClientReadRequest createTestClientReadRequest(String remotePath,
                                                            long readStart,
                                                            int readLength,
                                                            long fileLength,
-                                                           long lastModified)
+                                                           long lastModified,
+                                                           int clusterType)
   {
-    return new TestClientReadRequest(remotePath, readStart, readLength, fileLength, lastModified);
+    return new TestClientReadRequest(remotePath, readStart, readLength, fileLength, lastModified, clusterType);
   }
 
   /**

@@ -12,29 +12,42 @@
  */
 package com.qubole.rubix.core.utils;
 
+import com.google.common.collect.Lists;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
-import com.qubole.rubix.spi.thrift.ClusterNode;
-import com.qubole.rubix.spi.thrift.NodeState;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 public class DockerTestClusterManager extends ClusterManager
 {
   @Override
-  public List<ClusterNode> getNodes()
+  public List<String> getNodes()
   {
-    List<ClusterNode> nodeList = new ArrayList<>();
-    nodeList.add(new ClusterNode("172.18.8.1", NodeState.ACTIVE));
-    nodeList.add(new ClusterNode("172.18.8.2", NodeState.ACTIVE));
-
-    return nodeList;
+    return Lists.newArrayList("172.18.8.1", "172.18.8.2");
   }
 
   @Override
   public ClusterType getClusterType()
   {
     return ClusterType.TEST_CLUSTER_MANAGER;
+  }
+
+  @Override
+  public boolean isMaster() throws ExecutionException
+  {
+    return false;
+  }
+
+  @Override
+  public Integer getNextRunningNodeIndex(int startIndex)
+  {
+    return startIndex;
+  }
+
+  @Override
+  public Integer getPreviousRunningNodeIndex(int startIndex)
+  {
+    return startIndex;
   }
 }

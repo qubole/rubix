@@ -13,7 +13,6 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.testing.FakeTicker;
 import com.qubole.rubix.common.metrics.MetricsReporter;
 import com.qubole.rubix.common.utils.TestUtil;
 import com.qubole.rubix.spi.CacheConfig;
@@ -143,10 +142,7 @@ public class TestBookKeeperServer extends BaseServerTest
   @Test
   public void testValidationMetricsEnabled() throws InterruptedException, MalformedObjectNameException
   {
-    CacheConfig.setMetricsReporters(conf, "");
-    startServer(ServerType.COORDINATOR_BOOKKEEPER, conf, new MetricRegistry(), new FakeTicker());
-    super.testValidationMetrics(ServerType.MOCK_WORKER_BOOKKEEPER_WITH_HEARTBEAT, conf, metrics, true);
-    stopBookKeeperServer();
+    super.testValidationMetrics(ServerType.MOCK_WORKER_BOOKKEEPER, conf, metrics, true);
   }
 
   /**
@@ -155,10 +151,7 @@ public class TestBookKeeperServer extends BaseServerTest
   @Test
   public void testValidationMetricsNotEnabled() throws InterruptedException, MalformedObjectNameException
   {
-    CacheConfig.setMetricsReporters(conf, "");
-    startServer(ServerType.COORDINATOR_BOOKKEEPER, conf, new MetricRegistry(), new FakeTicker());
     super.testValidationMetrics(ServerType.MOCK_WORKER_BOOKKEEPER, conf, metrics, false);
-    stopBookKeeperServer();
   }
 
   /**
@@ -391,6 +384,31 @@ public class TestBookKeeperServer extends BaseServerTest
 
     return true;
   }
+//
+//  /**
+//   * Class to mock the behaviour of {@link BookKeeperServer} for testing registering & reporting metrics.
+//   */
+//  private static class MockBookKeeperServer extends BookKeeperServer
+//  {
+//    public void startServer(Configuration conf, MetricRegistry metricRegistry)
+//    {
+//      try {
+//        new CoordinatorBookKeeper(conf, metricRegistry);
+//      }
+//      catch (FileNotFoundException e) {
+//        log.error("Cache directories could not be created", e);
+//        return;
+//      }
+//
+//      metrics = metricRegistry;
+//      registerMetrics(conf);
+//    }
+//
+//    public void stopServer()
+//    {
+//      removeMetrics();
+//    }
+//  }
 
   /**
    * Thread to capture UDP requests from StatsDReporter intended for StatsD.
