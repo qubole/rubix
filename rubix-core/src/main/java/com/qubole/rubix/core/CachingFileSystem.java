@@ -170,7 +170,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
             IllegalAccessException | InvocationTargetException ex) {
       String errorMessage = String.format("Not able to initialize ClusterManager class : {0} ",
           clusterManagerClassName);
-      log.error(errorMessage);
+      log.error(errorMessage, ex);
       throw new ClusterManagerInitilizationException(errorMessage, ex);
     }
   }
