@@ -79,14 +79,6 @@
         </repository>
     </repositories>
 
-    <pluginRepositories>
-        <pluginRepository>
-            <id>checkstyle-backport-jre6-maven</id>
-            <name>checkstyle-backport-jre6-maven</name>
-            <url>http://rnveach.github.io/checkstyle-backport-jre6/maven2</url>
-        </pluginRepository>
-    </pluginRepositories>
-
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -224,17 +216,10 @@
         <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-checkstyle-plugin</artifactId>
-            <version>3.0.0</version>
+            <version>3.1.1</version>
             <configuration>
                 <includeTestSourceDirectory>true</includeTestSourceDirectory>
             </configuration>
-            <dependencies>
-                <dependency>
-                    <groupId>com.puppycrawl.tools</groupId>
-                    <artifactId>checkstyle-backport-jre6</artifactId>
-                    <version>8.18</version>
-                </dependency>
-            </dependencies>
             <executions>
                 <execution>
                     <id>validate</id>
