@@ -1,10 +1,8 @@
-FROM jamesdbloom/docker-java7-maven
+FROM maven:3.6.3-jdk-8-slim
 MAINTAINER Kamesh Vankayala - Qubole Inc.
 
 ## Install thrift 0.9.3
 ENV THRIFT_VERSION 0.9.3
-
-RUN printf "deb http://archive.debian.org/debian/ jessie main\ndeb-src http://archive.debian.org/debian/ jessie main\ndeb http://security.debian.org jessie/updates main\ndeb-src http://security.debian.org jessie/updates main" > /etc/apt/sources.list
 
 RUN buildDeps=" \
 		automake \
@@ -42,7 +40,7 @@ RUN buildDeps=" \
 	&& apt-get purge -y --auto-remove $buildDeps
 
 ## Install git
-RUN apt-get -y install git
+RUN apt-get update && apt-get install -y git
 
 # install dev tools
 RUN apt-get update
@@ -56,14 +54,14 @@ RUN set -x \
     && tar -xvf /tmp/hadoop.tar.gz -C /usr/lib/ \
     && rm /tmp/hadoop.tar.gz*
 
-ENV HADOOP_PREFIX /usr/lib/hadoop
+ENV HADOOP_HOME /usr/lib/hadoop
 
 RUN cd /usr/lib && mv hadoop-$HADOOP_VERSION hadoop2 && ln -s ./hadoop2 hadoop
 
 ENV HADOOP_CLASSPATH=$HADOOP_CLASSPATH:/usr/lib/hadoop2/share/hadoop/tools/lib/*
 
 ENV USER=root
-ENV PATH $HADOOP_PREFIX/bin/:$PATH
+ENV PATH $HADOOP_HOME/bin/:$PATH
 
 # Install Docker and Docker Compose for integration tests
 RUN set -x \
