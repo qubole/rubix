@@ -25,7 +25,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>19.0</version>
+            <version>${dep.guava.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.hadoop</groupId>
