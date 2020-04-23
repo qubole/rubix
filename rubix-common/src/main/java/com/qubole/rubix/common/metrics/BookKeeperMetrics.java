@@ -245,7 +245,7 @@ public class BookKeeperMetrics implements AutoCloseable
   }
 
   /**
-   * Enum for metrics relating to daemon & service health.
+   * Enum for metrics relating to daemon and service health.
    */
   public enum HealthMetric
   {

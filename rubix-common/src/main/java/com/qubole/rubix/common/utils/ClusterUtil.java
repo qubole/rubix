@@ -28,7 +28,7 @@ public class ClusterUtil
 
   /**
    * Get the hostname for the master node in the cluster.
-   *
+   * @param conf Configuration object
    * @return The hostname of the master node, or "localhost" if the hostname could not be found.
    */
   public static String getMasterHostname(Configuration conf)
