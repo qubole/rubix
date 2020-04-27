@@ -49,7 +49,7 @@
         <dep.prestosql.version>322</dep.prestosql.version>
         <dep.airlift.version>0.98</dep.airlift.version>
         <commons-httpclient.version>3.0.1</commons-httpclient.version>
-        <dep.guava.version>18.0</dep.guava.version>
+        <dep.guava.version>26.0-jre</dep.guava.version>
         <dep.hadoop2.version>2.6.0</dep.hadoop2.version>
         <dep.metrics.version>3.1.0</dep.metrics.version>
         <dep.testng.version>6.9.8</dep.testng.version>
@@ -78,14 +78,6 @@
             <url>https://repo.spring.io/libs-release/</url>
         </repository>
     </repositories>
-
-    <pluginRepositories>
-        <pluginRepository>
-            <id>checkstyle-backport-jre6-maven</id>
-            <name>checkstyle-backport-jre6-maven</name>
-            <url>http://rnveach.github.io/checkstyle-backport-jre6/maven2</url>
-        </pluginRepository>
-    </pluginRepositories>
 
     <dependencyManagement>
         <dependencies>
@@ -200,52 +192,49 @@
     </dependencyManagement>
 
     <build>
+    <pluginManagement>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.1</version>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>3.1.1</version>
+                <configuration>
+                    <includeTestSourceDirectory>true</includeTestSourceDirectory>
+                    <excludes>^target/generated-sources</excludes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>validate</id>
+                        <phase>validate</phase>
+                        <configuration>
+                            <configLocation>src/checkstyle/checks.xml</configLocation>
+                            <encoding>UTF-8</encoding>
+                            <consoleOutput>true</consoleOutput>
+                            <failsOnError>true</failsOnError>
+                        </configuration>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </pluginManagement>
     <plugins>
-        <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-compiler-plugin</artifactId>
-            <version>3.1</version>
-            <configuration>
-                <source>1.7</source>
-                <target>1.7</target>
-            </configuration>
-        </plugin>
 
         <plugin>
             <artifactId>maven-release-plugin</artifactId>
             <!-- Older release-plugin has problems deploying to release repo -->
             <version>2.5.1</version>
-        </plugin>
-
-        <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-checkstyle-plugin</artifactId>
-            <version>3.0.0</version>
-            <configuration>
-                <includeTestSourceDirectory>true</includeTestSourceDirectory>
-            </configuration>
-            <dependencies>
-                <dependency>
-                    <groupId>com.puppycrawl.tools</groupId>
-                    <artifactId>checkstyle-backport-jre6</artifactId>
-                    <version>8.18</version>
-                </dependency>
-            </dependencies>
-            <executions>
-                <execution>
-                    <id>validate</id>
-                    <phase>validate</phase>
-                    <configuration>
-                        <configLocation>src/checkstyle/checks.xml</configLocation>
-                        <encoding>UTF-8</encoding>
-                        <consoleOutput>true</consoleOutput>
-                        <failsOnError>true</failsOnError>
-                    </configuration>
-                    <goals>
-                        <goal>check</goal>
-                    </goals>
-                </execution>
-            </executions>
         </plugin>
 
         <plugin>

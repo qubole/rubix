@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-java@v1
         with:
-          java-version: 7
+          java-version: 1.8
       - uses: codecov/codecov-action@v1
       - uses: actions/cache@v1
         with:
@@ -27,7 +27,7 @@ jobs:
         env:
           RUBIX_DOCKER_NETWORK_NAME: "network-rubix-build"
         run: /bin/bash rubix_setup_build.sh
-      - name: Run Integration Tests
+      - name: Run UTs
         env:
           RUBIX_DOCKER_NETWORK_NAME: "network-rubix-build"
-        run: chmod a+x docker_build_rubix.sh && /bin/bash rubix_run_build.sh mvn integration-test -Pintegration-tests
+        run: chmod a+x docker_build_rubix.sh && /bin/bash rubix_run_build.sh mvn clean install
