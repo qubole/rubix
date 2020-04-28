@@ -278,7 +278,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       }
     }
     catch (ExecutionException e) {
-      log.error(String.format("Could not fetch Metadata for %s : %s", remotePath), e);
+      log.error(String.format("Could not fetch Metadata for %s", remotePath), e);
       throw new TException(e);
     }
     endBlock = setCorrectEndBlock(endBlock, fileLength, remotePath);
@@ -393,7 +393,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     }
     catch (ClassNotFoundException | NoSuchMethodException | InstantiationException |
         IllegalAccessException | InvocationTargetException ex) {
-      String errorMessage = String.format("Not able to initialize ClusterManager class : {0} ",
+      String errorMessage = String.format("Not able to initialize ClusterManager class : %s ",
           clusterManagerClassName);
       log.error(errorMessage);
       throw new ClusterManagerInitilizationException(errorMessage, ex);
@@ -507,7 +507,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         return fileInfoCache.get(remotePath);
       }
       catch (ExecutionException e) {
-        log.error(String.format("Could not fetch FileInfo from Cache for %s : %s", remotePath), e);
+        log.error(String.format("Could not fetch FileInfo from Cache for %s", remotePath), e);
         throw new TException(e);
       }
     }
