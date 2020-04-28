@@ -19,6 +19,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import java.io.IOException;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.lang.String.format;
 
 /**
  * Created by stagra on 17/2/16.
@@ -27,8 +28,8 @@ import static com.google.common.base.Preconditions.checkState;
  */
 public class DirectReadRequestChain extends ReadRequestChain
 {
-  FSDataInputStream inputStream;
-  int totalRead;
+  private final FSDataInputStream inputStream;
+  private int totalRead;
 
   private static final Log log = LogFactory.getLog(DirectReadRequestChain.class);
 
@@ -62,17 +63,14 @@ public class DirectReadRequestChain extends ReadRequestChain
       if (cancelled) {
         propagateCancel(this.getClass().getName());
       }
-      inputStream.seek(readRequest.actualReadStart);
-      int nread = 0;
-      while (nread < readRequest.getActualReadLength()) {
-        int nbytes = inputStream.read(readRequest.getDestBuffer(), readRequest.getDestBufferOffset() + nread, readRequest.getActualReadLength() - nread);
-        if (nbytes < 0) {
-          log.debug(String.format("Returning Read %d bytes directly from remote, no caching", totalRead));
-          return nread;
-        }
-        nread += nbytes;
+      try {
+        inputStream.readFully(readRequest.actualReadStart, readRequest.getDestBuffer(), readRequest.getDestBufferOffset(), readRequest.getActualReadLength());
       }
-      totalRead += nread;
+      catch (Exception e) {
+        log.error(format("Error reading %d bytes directly from remote at position %d", readRequest.getActualReadLength(), readRequest.actualReadStart), e);
+        throw e;
+      }
+      totalRead += readRequest.getActualReadLength();
     }
     log.debug(String.format("Read %d bytes directly from remote, no caching", totalRead));
     log.debug("DirectReadRequest took : " + (System.currentTimeMillis() - startTime) + " msecs ");

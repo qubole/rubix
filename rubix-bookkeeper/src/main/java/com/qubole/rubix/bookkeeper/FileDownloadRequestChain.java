@@ -126,11 +126,7 @@ public class FileDownloadRequestChain extends ReadRequestChain
           propagateCancel(this.getClass().getName());
         }
 
-        int readBytes = 0;
-        inputStream.seek(readRequest.getBackendReadStart());
-        log.debug("Seeking to " + readRequest.getBackendReadStart());
-        readBytes = copyIntoCache(inputStream, fileChannel, readRequest.getBackendReadLength(),
-            readRequest.getBackendReadStart());
+        int readBytes = copyIntoCache(inputStream, fileChannel, readRequest.getBackendReadLength(), readRequest.getBackendReadStart());
         totalRequestedRead += readBytes;
       }
       long endTime = System.currentTimeMillis();
@@ -156,40 +152,27 @@ public class FileDownloadRequestChain extends ReadRequestChain
   private int copyIntoCache(FSDataInputStream inputStream, FileChannel fileChannel, int length,
                             long cacheReadStart) throws IOException
   {
-    byte[] buffer = null;
-    int nread = 0;
-    try {
-      long start = System.nanoTime();
-      buffer = new byte[length];
-      log.debug("Copying data of file " + remotePath + " of length " + length + " from offset " + cacheReadStart);
-      while (nread < length) {
-        int nbytes = inputStream.read(buffer, nread, length - nread);
-        if (nbytes < 0) {
-          break;
-        }
-        nread += nbytes;
-      }
+    long start = System.nanoTime();
+    byte[] buffer = new byte[length];
+    log.debug(String.format("Copying data of file %s of length %d from position %d", remotePath, length, cacheReadStart));
+    inputStream.readFully(cacheReadStart, buffer, 0, length);
 
-      int leftToWrite = length;
-      int writtenSoFar = 0;
+    int leftToWrite = length;
+    int writtenSoFar = 0;
 
-      while (leftToWrite > 0) {
-        int writeInThisCycle = Math.min(leftToWrite, directBuffer.capacity());
-        directBuffer.clear();
-        directBuffer.put(buffer, writtenSoFar, writeInThisCycle);
-        directBuffer.flip();
-        int nwrite = fileChannel.write(directBuffer, cacheReadStart + writtenSoFar);
-        directBuffer.compact();
-        writtenSoFar += nwrite;
-        leftToWrite -= nwrite;
-      }
-      warmupPenalty += System.nanoTime() - start;
-      log.debug("Read " + nread + " for file " + remotePath + " from offset " + cacheReadStart);
+    while (leftToWrite > 0) {
+      int writeInThisCycle = Math.min(leftToWrite, directBuffer.capacity());
+      directBuffer.clear();
+      directBuffer.put(buffer, writtenSoFar, writeInThisCycle);
+      directBuffer.flip();
+      int nwrite = fileChannel.write(directBuffer, cacheReadStart + writtenSoFar);
+      directBuffer.compact();
+      writtenSoFar += nwrite;
+      leftToWrite -= nwrite;
     }
-    finally {
-      buffer = null;
-    }
-    return nread;
+    warmupPenalty += System.nanoTime() - start;
+    log.debug(String.format("Read %d for file %s from offset %d", length, remotePath, cacheReadStart));
+    return length;
   }
 
   @Override

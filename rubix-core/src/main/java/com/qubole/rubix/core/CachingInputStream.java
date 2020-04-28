@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.DirectBufferPool;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
@@ -46,7 +47,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
-import static com.google.common.base.Preconditions.checkState;
+import static org.apache.hadoop.fs.FSExceptionMessages.NEGATIVE_SEEK;
 
 /**
  * Created by stagra on 29/12/15.
@@ -72,7 +73,7 @@ public class CachingInputStream extends FSInputStream
   }));
   private static final Log log = LogFactory.getLog(CachingInputStream.class);
 
-  private String remotePath;
+  protected final String remotePath;
   private long fileSize;
   private String localPath;
   private long lastModified;
@@ -89,7 +90,7 @@ public class CachingInputStream extends FSInputStream
   private ByteBuffer directReadBuffer;
   private byte[] affixBuffer;
   private int diskReadBufferSize;
-  private int bufferSize;
+  private final int bufferSize;
   BookKeeperFactory bookKeeperFactory;
 
   public CachingInputStream(FileSystem parentFs, Path backendPath, Configuration conf,
@@ -127,7 +128,7 @@ public class CachingInputStream extends FSInputStream
   public CachingInputStream(FSDataInputStream inputStream, Configuration conf, Path backendPath,
                             long size, long lastModified, CachingFileSystemStats statsMbean,
                             ClusterType clusterType, BookKeeperFactory bookKeeperFactory,
-                            FileSystem remoteFileSystem, int buffersize, FileSystem.Statistics statistics)
+                            FileSystem remoteFileSystem, int bufferSize, FileSystem.Statistics statistics)
       throws IOException
   {
     initialize(backendPath.toString(), conf, bookKeeperFactory);
@@ -165,11 +166,13 @@ public class CachingInputStream extends FSInputStream
   public void seek(long pos)
       throws IOException
   {
-    checkState(pos >= 0, "Negative Position");
-    log.debug(String.format("Seek request, currentPos: %d currentBlock: %d", nextReadPosition, nextReadBlock));
-    this.nextReadPosition = pos;
-    setNextReadBlock();
-    log.debug(String.format("Seek to %d, setting block location %d", nextReadPosition, nextReadBlock));
+    if (pos < 0L) {
+      throw new EOFException(NEGATIVE_SEEK);
+    }
+    else {
+      this.nextReadPosition = pos;
+      setNextReadBlock();
+    }
   }
 
   @Override
@@ -216,7 +219,7 @@ public class CachingInputStream extends FSInputStream
     }
   }
 
-  int readFullyDirect(byte[] buffer, int offset, int length)
+  protected int readFullyDirect(byte[] buffer, int offset, int length)
       throws IOException
   {
     int nread = 0;
@@ -230,11 +233,33 @@ public class CachingInputStream extends FSInputStream
     return nread;
   }
 
+  @Override
+  public int read(long position, byte[] buffer, int offset, int length)
+          throws IOException
+  {
+    long oldPos = getPos();
+    try {
+      seek(position);
+      return readInternal(buffer, offset, length);
+    }
+    catch (InterruptedException e) {
+      throw Throwables.propagate(e);
+    }
+    catch (Exception e) {
+      log.error(String.format("Failed to read from rubix for file %s position %d length %d. Falling back to remote", remotePath, nextReadPosition, length), e);
+      getParentDataInputStream().readFully(position, buffer, offset, length);
+      return length;
+    }
+    finally {
+      seek(oldPos);
+    }
+  }
+
   private int readInternal(byte[] buffer, int offset, int length)
       throws IOException, InterruptedException, ExecutionException
 
   {
-    log.debug(String.format("Got Read, currentPos: %d currentBlock: %d bufferOffset: %d length: %d of file : %s", nextReadPosition, nextReadBlock, offset, length, CacheUtil.getLocalPath(remotePath, conf)));
+    log.debug(String.format("Got Read, currentPos: %d currentBlock: %d bufferOffset: %d length: %d of file : %s", nextReadPosition, nextReadBlock, offset, length, localPath));
 
     if (nextReadPosition >= fileSize) {
       log.debug("Already at eof, returning");

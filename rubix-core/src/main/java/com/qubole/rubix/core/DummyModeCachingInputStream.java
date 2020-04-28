@@ -24,8 +24,6 @@ import org.apache.hadoop.fs.Path;
 import java.io.IOException;
 import java.util.List;
 
-import static com.google.common.base.Preconditions.checkState;
-
 public class DummyModeCachingInputStream extends CachingInputStream
 {
   private static final Log log = LogFactory.getLog(DummyModeCachingInputStream.class);
@@ -55,18 +53,34 @@ public class DummyModeCachingInputStream extends CachingInputStream
   public void seek(long pos)
           throws IOException
   {
-    checkState(pos >= 0, "Negative Position");
     getParentDataInputStream().seek(pos);
   }
 
   @Override
-  public int read(final byte[] buffer, final int offset, final int length)
+  public int read(byte[] buffer, int offset, int length)
           throws IOException
   {
-    final long initPos = getPos();
-    final long initNextReadBlock = initPos / blockSize;
-    final int read = readFullyDirect(buffer, offset, length);
+    long initPos = getPos();
+    int read = readFullyDirect(buffer, offset, length);
 
+    dummyRead(initPos, buffer, offset, length);
+    return read;
+  }
+
+  @Override
+  public int read(long position, byte[] buffer, int offset, int length)
+          throws IOException
+  {
+    long initPos = getPos();
+    getParentDataInputStream().readFully(position, buffer, offset, length);
+
+    dummyRead(initPos, buffer, offset, length);
+    return length;
+  }
+
+  private void dummyRead(final long initPos, final byte[] buffer, final int offset, final int length)
+  {
+    final long initNextReadBlock = initPos / blockSize;
     readService.execute(new Runnable()
     {
       @Override
@@ -75,7 +89,7 @@ public class DummyModeCachingInputStream extends CachingInputStream
         try {
           long endBlock = ((initPos + (length - 1)) / blockSize) + 1;
           final List<ReadRequestChain> readRequestChains = setupReadRequestChains(buffer, offset, endBlock, length,
-              initPos, initNextReadBlock);
+                  initPos, initNextReadBlock);
           updateCacheAndStats(readRequestChains);
         }
         catch (IOException e) {
@@ -83,6 +97,5 @@ public class DummyModeCachingInputStream extends CachingInputStream
         }
       }
     });
-    return read;
   }
 }
