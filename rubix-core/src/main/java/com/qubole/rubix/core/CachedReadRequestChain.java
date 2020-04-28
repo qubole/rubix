@@ -123,11 +123,7 @@ public class CachedReadRequestChain extends ReadRequestChain
                 readRequest.getDestBufferOffset()));
 
         if (nread != readRequest.getActualReadLength()) {
-          needsInvalidation = true;
-          log.error(String.format("Cached read length didn't match with requested read length for file %s. " +
-                  " Falling back reading from object store.", localCachedFile));
-          directDataRead = readFromRemoteFileSystem();
-          return directDataRead;
+          throw new InvalidationRequiredException("Cached read length didn't match with requested read length for file");
         }
         else {
           read += nread;
@@ -136,6 +132,10 @@ public class CachedReadRequestChain extends ReadRequestChain
       log.debug(String.format("Read %d bytes from cached file", read));
     }
     catch (Exception ex) {
+      if (ex instanceof CancelledException) {
+        throw ex;
+      }
+
       log.error(String.format("Fall back to read from object store for %s .Could not read data from cached file : ", localCachedFile), ex);
       needsInvalidation = true;
       directDataRead = readFromRemoteFileSystem();
@@ -188,6 +188,10 @@ public class CachedReadRequestChain extends ReadRequestChain
   {
     // Setting the cached read data to zero as we are reading the whole request from remote object store
     read = 0;
+
+    if (cancelled) {
+      return 0;
+    }
 
     FSDataInputStream inputStream = remoteFileSystem.open(new Path(remotePath));
     directReadChain = new DirectReadRequestChain(inputStream);

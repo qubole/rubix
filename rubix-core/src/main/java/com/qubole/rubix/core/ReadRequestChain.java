@@ -107,10 +107,19 @@ public abstract class ReadRequestChain implements Callable<Integer>
     throw new CancelledException(className + " Cancelled");
   }
 
-  private class CancelledException
+  protected class CancelledException
       extends IOException
   {
     public CancelledException(String message)
+    {
+      super(message);
+    }
+  }
+
+  protected class InvalidationRequiredException
+    extends IOException
+  {
+    public InvalidationRequiredException(String message)
     {
       super(message);
     }
