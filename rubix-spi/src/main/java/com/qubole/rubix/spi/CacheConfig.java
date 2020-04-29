@@ -35,6 +35,7 @@ public class CacheConfig
 
   private static final String KEY_BLOCK_SIZE = "rubix.cache.block.size";
   private static final String KEY_CACHE_ENABLED = "rubix.cache.enabled";
+  private static final String KEY_DATA_CACHE_ENABLED_ON_MASTER = "rubix.cache.enabled-on-master";
   private static final String KEY_CACHE_METADATA_FILE_SUFFIX = "rubix.cache.metadata.file.suffix";
   private static final String KEY_SERVER_CONNECT_TIMEOUT = "rubix.network.server.connect.timeout";
   private static final String KEY_SERVER_SOCKET_TIMEOUT = "rubix.network.server.socket.timeout";
@@ -115,6 +116,7 @@ public class CacheConfig
   private static final String DEFAULT_DATA_CACHE_DIR_PREFIX = "/media/ephemeral";
   private static final String DEFAULT_DATA_CACHE_DIR_SUFFIX = "/fcache/";
   private static final boolean DEFAULT_DATA_CACHE_ENABLED = true;
+  private static final boolean DEFAULT_DATA_CACHE_ENABLED_ON_MASTER = true;
   private static final int DEFAULT_DATA_CACHE_EXPIRY_AFTER_WRITE = Integer.MAX_VALUE; // ms; infinite by default
   private static final int DEFAULT_DATA_CACHE_FULLNESS = 80; // percent
   private static final String DEFAULT_DATA_CACHE_LOCATION_BLACKLIST = ""; // regex
@@ -406,6 +408,11 @@ public class CacheConfig
   public static boolean isCacheDataEnabled(Configuration conf)
   {
     return conf.getBoolean(KEY_CACHE_ENABLED, DEFAULT_DATA_CACHE_ENABLED);
+  }
+
+  public static boolean isCacheDataOnMasterEnabled(Configuration conf)
+  {
+    return conf.getBoolean(KEY_DATA_CACHE_ENABLED_ON_MASTER, DEFAULT_DATA_CACHE_ENABLED_ON_MASTER);
   }
 
   public static boolean areCacheMetricsEnabled(Configuration conf)
