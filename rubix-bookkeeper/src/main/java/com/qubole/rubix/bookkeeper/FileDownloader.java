@@ -120,19 +120,19 @@ class FileDownloader
     }
 
     long sizeRead = 0;
-    List<Future<Integer>> futures = new ArrayList<Future<Integer>>();
+    List<Future<Long>> futures = new ArrayList<>();
 
     for (FileDownloadRequestChain requestChain : readRequestChainList) {
       requestChain.lock();
-      Future<Integer> result = processService.submit(requestChain);
+      Future<Long> result = processService.submit(requestChain);
       futures.add(result);
     }
 
-    for (Future<Integer> future : futures) {
+    for (Future<Long> future : futures) {
       FileDownloadRequestChain requestChain = readRequestChainList.get(futures.indexOf(future));
       long totalBytesToBeDownloaded = 0;
       for (ReadRequest request : requestChain.getReadRequests()) {
-        totalBytesToBeDownloaded += request.getBackendReadLength();
+        totalBytesToBeDownloaded += request.getBackendReadLengthIntUnsafe();
       }
       try {
         long read = future.get();

@@ -202,7 +202,7 @@ public class TestNonLocalReadRequestChain
     requestChain.lock();
 
     // 2. Execute and verify that buffer has right data
-    int readSize = requestChain.call();
+    long readSize = requestChain.call();
 
     assertTrue(readSize == 350, "Wrong amount of data read " + readSize + " was expecting " + 350);
     String output = new String(buffer, Charset.defaultCharset());

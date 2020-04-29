@@ -27,8 +27,12 @@ import static com.google.common.base.Preconditions.checkState;
  * Created by stagra on 4/1/16.
  * <p>
  * One ReadRequestChain contains ReadRequests for same buffer
+ *
+ * ReadRequestChain works with `long` type, even though reads on input streams are limited by the capacity of `int`, in order
+ * to be generic and be useful in more cases than just reads on input streams. One such use case is of parallel warmup where
+ * reads are accumulated and merged for a period of time which can lead to reads of much bigger size than Integer.MAX_SIZE
  */
-public abstract class ReadRequestChain implements Callable<Integer>
+public abstract class ReadRequestChain implements Callable<Long>
 {
   List<ReadRequest> readRequests = new ArrayList<ReadRequest>();
   ReadRequest lastRequest;

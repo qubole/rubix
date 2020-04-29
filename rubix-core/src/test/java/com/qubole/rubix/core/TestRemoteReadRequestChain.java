@@ -121,7 +121,7 @@ public class TestRemoteReadRequestChain
     remoteReadRequestChain.lock();
 
     // 2. Execute and verify that buffer has right data
-    int readSize = remoteReadRequestChain.call();
+    long readSize = remoteReadRequestChain.call();
 
     assertTrue(readSize == expectedBufferOutput.length(), "Wrong amount of data read " + readSize + " was expecting " + expectedBufferOutput.length());
     String actualBufferOutput = new String(buffer, Charset.defaultCharset());

@@ -48,18 +48,18 @@ public class RemoteFetchRequestChain extends ReadRequestChain
   }
 
   @Override
-  public Integer call() throws Exception
+  public Long call() throws Exception
   {
     if (readRequests.size() == 0) {
-      return 0;
+      return 0L;
     }
     long startTime = System.currentTimeMillis();
 
     try (RetryingPooledBookkeeperClient client = bookKeeperFactory.createBookKeeperClient(remoteNodeLocation, conf)) {
       for (ReadRequest request : readRequests) {
         log.debug("RemoteFetchRequest from : " + remoteNodeLocation + " Start : " + request.backendReadStart +
-                " of length " + request.getBackendReadLength());
-        client.readData(remotePath, request.backendReadStart, request.getBackendReadLength(),
+                " of length " + request.getBackendReadLengthIntUnsafe());
+        client.readData(remotePath, request.backendReadStart, request.getBackendReadLengthIntUnsafe(),
             fileSize, lastModified, clusterType);
       }
     }
@@ -69,7 +69,7 @@ public class RemoteFetchRequestChain extends ReadRequestChain
     }
     log.debug("Send request to remote took " + (System.currentTimeMillis() - startTime) + " :msecs");
 
-    return 0;
+    return 0L;
   }
 
   public ReadRequestChainStats getStats()

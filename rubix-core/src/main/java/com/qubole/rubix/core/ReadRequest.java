@@ -120,14 +120,16 @@ public class ReadRequest
     this.backendFileSize = backendFileSize;
   }
 
-  public int getActualReadLength()
+  // Use this method only when caller is assured of no integer overflows
+  public int getActualReadLengthIntUnsafe()
   {
-    return (int) (actualReadEnd - actualReadStart);
+    return Math.toIntExact(actualReadEnd - actualReadStart);
   }
 
-  public int getBackendReadLength()
+  // Use this method only when caller is assured of no integer overflows
+  public int getBackendReadLengthIntUnsafe()
   {
-    return (int) (backendReadEnd - backendReadStart);
+    return Math.toIntExact(backendReadEnd - backendReadStart);
   }
 
   public ReadRequest clone(boolean createNewBuffer)

@@ -31,10 +31,10 @@ public class ChainedReadRequestChain extends ReadRequestChain
   }
 
   @Override
-  public Integer call()
+  public Long call()
       throws Exception
   {
-    int read = 0;
+    long read = 0;
     for (ReadRequestChain readRequestChain : readRequestChains) {
       readRequestChain.lock();
       read += readRequestChain.call();

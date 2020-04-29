@@ -37,12 +37,12 @@ import static com.google.common.base.Preconditions.checkState;
 public class CachedReadRequestChain extends ReadRequestChain
 {
   private String remotePath;
-  private int read; // data read
+  private long read; // data read
   private FileSystem.Statistics statistics;
   private FileSystem remoteFileSystem;
   private DirectReadRequestChain directReadChain;
   private Configuration conf;
-  private int directDataRead;
+  private long directDataRead;
   private BookKeeperFactory factory;
 
   private ByteBuffer directBuffer;
@@ -73,7 +73,7 @@ public class CachedReadRequestChain extends ReadRequestChain
     //Dummy constructor for testing #testConsequtiveRequest method.
   }
 
-  public Integer call() throws IOException
+  public Long call() throws IOException
   {
     // TODO: any exception here should not cause workload to fail
     // rather should be retried and eventually read from backend
@@ -81,7 +81,7 @@ public class CachedReadRequestChain extends ReadRequestChain
     Thread.currentThread().setName(threadName);
 
     if (readRequests.size() == 0) {
-      return 0;
+      return 0L;
     }
 
     checkState(isLocked, "Trying to execute Chain without locking");
@@ -102,9 +102,9 @@ public class CachedReadRequestChain extends ReadRequestChain
           propagateCancel(this.getClass().getName());
         }
         int nread = 0;
-        int leftToRead = readRequest.getActualReadLength();
+        int leftToRead = readRequest.getActualReadLengthIntUnsafe();
         log.debug(String.format("Processing readrequest %d-%d, length %d", readRequest.actualReadStart, readRequest.actualReadEnd, leftToRead));
-        while (nread < readRequest.getActualReadLength()) {
+        while (nread < readRequest.getActualReadLengthIntUnsafe()) {
           int readInThisCycle = Math.min(leftToRead, directBuffer.capacity());
           directBuffer.clear();
           int nbytes = fileChannel.read(directBuffer, readRequest.getActualReadStart() + nread);
@@ -122,7 +122,7 @@ public class CachedReadRequestChain extends ReadRequestChain
                 readRequest.getActualReadStart() + nread,
                 readRequest.getDestBufferOffset()));
 
-        if (nread != readRequest.getActualReadLength()) {
+        if (nread != readRequest.getActualReadLengthIntUnsafe()) {
           throw new InvalidationRequiredException("Cached read length didn't match with requested read length for file");
         }
         else {
@@ -184,7 +184,7 @@ public class CachedReadRequestChain extends ReadRequestChain
     }
   }
 
-  private int readFromRemoteFileSystem() throws IOException
+  private long readFromRemoteFileSystem() throws IOException
   {
     // Setting the cached read data to zero as we are reading the whole request from remote object store
     read = 0;
@@ -199,7 +199,7 @@ public class CachedReadRequestChain extends ReadRequestChain
       directReadChain.addReadRequest(readRequest);
     }
     directReadChain.lock();
-    int directRead = directReadChain.call();
+    long directRead = directReadChain.call();
     inputStream.close();
     directReadChain = null;
 
