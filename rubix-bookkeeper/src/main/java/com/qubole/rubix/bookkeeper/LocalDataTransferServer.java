@@ -292,7 +292,7 @@ public class LocalDataTransferServer extends Configured implements Tool
 
       try {
         fc = new FileInputStream(filename).getChannel();
-        int maxCount = CacheConfig.getLocalTransferBufferSize(conf);
+        int maxCount = CacheConfig.getDataTransferBufferSize(conf);
         int lengthRemaining = readLength;
         long position = offset;
 

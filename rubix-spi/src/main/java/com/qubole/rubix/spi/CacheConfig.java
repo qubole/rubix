@@ -59,7 +59,7 @@ public class CacheConfig
   private static final String KEY_DISK_READ_BUFFER_SIZE = "rubix.cache.data.disk.read.buffer.size";
   private static final String KEY_HEARTBEAT_INITIAL_DELAY = "rubix.monitor.heartbeat.initial.delay";
   private static final String KEY_HEARTBEAT_INTERVAL = "rubix.monitor.heartbeat.interval";
-  private static final String KEY_LOCAL_TRANSFER_BUFFER_SIZE = "rubix.cache.local.transfer.buffer.size";
+  private static final String KEY_DATA_TRANSFER_BUFFER_SIZE = "rubix.cache.data.transfer.buffer.size";
   private static final String KEY_LOCAL_SERVER_PORT = "rubix.network.local.transfer.server.port";
   private static final String KEY_MAX_RETRIES = "rubix.network.client.num-retries";
   private static final String KEY_METRICS_CACHE_ENABLED = "rubix.metrics.cache.enabled";
@@ -131,7 +131,7 @@ public class CacheConfig
   private static final int DEFAULT_DISK_READ_BUFFER_SIZE = 1024;
   private static final int DEFAULT_HEARTBEAT_INITIAL_DELAY = 30000; // ms
   private static final int DEFAULT_HEARTBEAT_INTERVAL = 30000; // ms
-  private static final int DEFAULT_LOCAL_TRANSFER_BUFFER_SIZE = 10 * 1024 * 1024; // 10MB
+  private static final int DEFAULT_DATA_TRANSFER_BUFFER_SIZE = 10 * 1024 * 1024; // 10MB
   private static final int DEFAULT_MAX_BUFFER_SIZE = 1024;
   private static final int DEFAULT_MAX_RETRIES = 3;
   private static final boolean DEFAULT_METRICS_CACHE_ENABLED = true;
@@ -310,9 +310,9 @@ public class CacheConfig
     return conf.getInt(KEY_LOCAL_SERVER_PORT, DEFAULT_DATA_TRANSFER_SERVER_PORT);
   }
 
-  public static int getLocalTransferBufferSize(Configuration conf)
+  public static int getDataTransferBufferSize (Configuration conf)
   {
-    return conf.getInt(KEY_LOCAL_TRANSFER_BUFFER_SIZE, DEFAULT_LOCAL_TRANSFER_BUFFER_SIZE);
+    return conf.getInt(KEY_DATA_TRANSFER_BUFFER_SIZE, DEFAULT_DATA_TRANSFER_BUFFER_SIZE);
   }
 
   public static int getMaxHeaderSize(Configuration conf)

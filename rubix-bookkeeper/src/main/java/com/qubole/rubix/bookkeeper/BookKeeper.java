@@ -58,7 +58,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -94,7 +93,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
 
   protected static Cache<String, FileMetadata> fileMetadataCache;
   private static LoadingCache<String, FileInfo> fileInfoCache;
-  protected static ClusterManager clusterManager;
+  protected ClusterManager clusterManager;
   String nodeName;
   static String nodeHostName;
   static String nodeHostAddress;
@@ -327,14 +326,27 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     return blockLocations;
   }
 
+  public boolean isInitialized()
+  {
+    return clusterManager != null;
+  }
+
   private void initializeClusterManager(CacheStatusRequest request) throws ClusterManagerInitilizationException
   {
-    if (this.clusterManager == null) {
+    if (!isInitialized()) {
       checkState(request.isSetClusterType(), "Received getCacheStatus without clusterType before BookKeeper is initialized");
-      int clusterType = request.getClusterType();
+    }
+
+    initializeClusterManager(request.getClusterType());
+  }
+
+  @VisibleForTesting
+  public void initializeClusterManager(int clusterType) throws ClusterManagerInitilizationException
+  {
+    if (!isInitialized()) {
       ClusterManager manager = null;
       synchronized (lock) {
-        if (this.clusterManager == null) {
+        if (!isInitialized()) {
           try {
             nodeHostName = InetAddress.getLocalHost().getCanonicalHostName();
             nodeHostAddress = InetAddress.getLocalHost().getHostAddress();
@@ -423,7 +435,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       return;
     }
     endBlock = setCorrectEndBlock(endBlock, fileLength, remotePath);
-    log.debug("Updating cache for " + remotePath + " StarBlock : " + startBlock + " EndBlock : " + endBlock);
+    log.debug("Updating cache for " + remotePath + " StartBlock : " + startBlock + " EndBlock : " + endBlock);
 
     try {
       md.setBlocksCached(startBlock, endBlock);

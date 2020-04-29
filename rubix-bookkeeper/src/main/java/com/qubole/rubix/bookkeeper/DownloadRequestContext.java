@@ -52,7 +52,7 @@ public class DownloadRequestContext
 
   public void addDownloadRange(long startPoint, long endPoint)
   {
-    rangeSet.add(Range.open(startPoint, endPoint));
+    rangeSet.add(Range.closedOpen(startPoint, endPoint));
   }
 
   public RangeSet<Long> getRanges()

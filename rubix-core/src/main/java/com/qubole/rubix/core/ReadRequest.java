@@ -132,6 +132,17 @@ public class ReadRequest
     return Math.toIntExact(backendReadEnd - backendReadStart);
   }
 
+  public long getActualReadLength()
+  {
+    return actualReadEnd - actualReadStart;
+  }
+
+  public long getBackendReadLength()
+  {
+    return backendReadEnd - backendReadStart;
+  }
+
+
   public ReadRequest clone(boolean createNewBuffer)
   {
     ReadRequest otherRequest = new ReadRequest();
