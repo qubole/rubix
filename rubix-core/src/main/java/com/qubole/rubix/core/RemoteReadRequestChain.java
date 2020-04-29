@@ -42,7 +42,7 @@ public class RemoteReadRequestChain extends ReadRequestChain
   private byte[] affixBuffer;
   private int totalPrefixRead;
   private int totalSuffixRead;
-  private int totalRequestedRead;
+  private long totalRequestedRead;
   private long warmupPenalty;
   private int blockSize;
 
@@ -68,7 +68,7 @@ public class RemoteReadRequestChain extends ReadRequestChain
     this(inputStream, fileName, ByteBuffer.allocate(100), new byte[100], new BookKeeperFactory());
   }
 
-  public Integer call()
+  public Long call()
       throws IOException
   {
     log.debug(String.format("Read Request threadName: %s, Remote read Executor threadName: %s", threadName, Thread.currentThread().getName()));
@@ -76,7 +76,7 @@ public class RemoteReadRequestChain extends ReadRequestChain
     checkState(isLocked, "Trying to execute Chain without locking");
 
     if (readRequests.size() == 0) {
-      return 0;
+      return 0L;
     }
 
     // Issue-53 : Open file with the right permissions
@@ -108,8 +108,8 @@ public class RemoteReadRequestChain extends ReadRequestChain
           log.debug(String.format("Copied %d prefix bytes into cache", prefixBufferLength));
         }
 
-        log.debug(String.format("Trying to Read %d bytes into destination buffer", readRequest.getActualReadLength()));
-        int readBytes = readIntoBuffer(readRequest.getDestBuffer(), readRequest.destBufferOffset, readRequest.getActualReadLength());
+        log.debug(String.format("Trying to Read %d bytes into destination buffer", readRequest.getActualReadLengthIntUnsafe()));
+        int readBytes = readIntoBuffer(readRequest.getDestBuffer(), readRequest.destBufferOffset, readRequest.getActualReadLengthIntUnsafe());
         log.debug(String.format("Read %d bytes into destination buffer", readBytes));
         copyIntoCache(fileChannel, readRequest.destBuffer, readRequest.destBufferOffset, readBytes, readRequest.actualReadStart);
         log.debug(String.format("Copied %d requested bytes into cache", readBytes));
@@ -117,7 +117,7 @@ public class RemoteReadRequestChain extends ReadRequestChain
 
         if (suffixBufferLength > 0) {
           // If already in reading actually required data we get a eof, then there should not have been a suffix request
-          checkState(readBytes == readRequest.getActualReadLength(), "Actual read less than required, still requested for suffix");
+          checkState(readBytes == readRequest.getActualReadLengthIntUnsafe(), "Actual read less than required, still requested for suffix");
           log.debug(String.format("Trying to Read %d bytes into suffix buffer", suffixBufferLength));
           totalSuffixRead += readIntoBuffer(affixBuffer, 0, suffixBufferLength);
           log.debug(String.format("Read %d bytes into suffix buffer", suffixBufferLength));

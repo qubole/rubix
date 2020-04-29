@@ -131,15 +131,14 @@ public class NonLocalRequestChain extends ReadRequestChain
   }
 
   @Override
-  public Integer call() throws Exception
+  public Long call() throws Exception
   {
     log.debug(String.format("Read Request threadName: %s, NonLocal Executor threadName: %s", threadName, Thread.currentThread().getName()));
     Thread.currentThread().setName(threadName);
     checkState(isLocked, "Trying to execute Chain without locking");
     long startTime = System.currentTimeMillis();
 
-    int nonLocalReadBytes = 0;
-    int directReadBytes = 0;
+    long nonLocalReadBytes = 0;
 
     log.debug("Executing NonLocalRequestChain ");
 

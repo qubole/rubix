@@ -62,9 +62,9 @@ public class DataGen
     return expected.substring(0, size);
   }
 
-  public static String getExpectedOutput(int size)
+  public static String getExpectedOutput(long size)
   {
-    return getExpectedOutput(size, 100);
+    return getExpectedOutput(Math.toIntExact(size), 100);
   }
 
   public static void populateFile(String filename) throws IOException

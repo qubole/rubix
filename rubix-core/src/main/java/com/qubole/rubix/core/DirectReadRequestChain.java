@@ -29,7 +29,7 @@ import static java.lang.String.format;
 public class DirectReadRequestChain extends ReadRequestChain
 {
   private final FSDataInputStream inputStream;
-  private int totalRead;
+  private long totalRead;
 
   private static final Log log = LogFactory.getLog(DirectReadRequestChain.class);
 
@@ -47,14 +47,14 @@ public class DirectReadRequestChain extends ReadRequestChain
   }
 
   @Override
-  public Integer call() throws IOException
+  public Long call() throws IOException
   {
     log.debug(String.format("Read Request threadName: %s, Direct read Executor threadName: %s", threadName, Thread.currentThread().getName()));
     Thread.currentThread().setName(threadName);
     long startTime = System.currentTimeMillis();
 
     if (readRequests.size() == 0) {
-      return 0;
+      return 0L;
     }
 
     checkState(isLocked, "Trying to execute Chain without locking");
@@ -64,13 +64,13 @@ public class DirectReadRequestChain extends ReadRequestChain
         propagateCancel(this.getClass().getName());
       }
       try {
-        inputStream.readFully(readRequest.actualReadStart, readRequest.getDestBuffer(), readRequest.getDestBufferOffset(), readRequest.getActualReadLength());
+        inputStream.readFully(readRequest.actualReadStart, readRequest.getDestBuffer(), readRequest.getDestBufferOffset(), readRequest.getActualReadLengthIntUnsafe());
       }
       catch (Exception e) {
-        log.error(format("Error reading %d bytes directly from remote at position %d", readRequest.getActualReadLength(), readRequest.actualReadStart), e);
+        log.error(format("Error reading %d bytes directly from remote at position %d", readRequest.getActualReadLengthIntUnsafe(), readRequest.actualReadStart), e);
         throw e;
       }
-      totalRead += readRequest.getActualReadLength();
+      totalRead += readRequest.getActualReadLengthIntUnsafe();
     }
     log.debug(String.format("Read %d bytes directly from remote, no caching", totalRead));
     log.debug("DirectReadRequest took : " + (System.currentTimeMillis() - startTime) + " msecs ");

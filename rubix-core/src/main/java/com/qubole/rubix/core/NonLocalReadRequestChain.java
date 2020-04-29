@@ -46,8 +46,8 @@ public class NonLocalReadRequestChain extends ReadRequestChain
   long lastModified;
   String remoteNodeName;
   Configuration conf;
-  int totalRead;
-  int directRead;
+  long totalRead;
+  long directRead;
   FileSystem remoteFileSystem;
   int clusterType;
   public boolean strictMode;
@@ -82,13 +82,13 @@ public class NonLocalReadRequestChain extends ReadRequestChain
   }
 
   @Override
-  public Integer call()
+  public Long call()
       throws Exception
   {
     log.debug(String.format("Read Request threadName: %s, Non Local read Executor threadName: %s", threadName, Thread.currentThread().getName()));
     Thread.currentThread().setName(threadName);
     if (readRequests.size() == 0) {
-      return 0;
+      return 0L;
     }
     checkState(isLocked, "Trying to execute Chain without locking");
 
@@ -121,12 +121,12 @@ public class NonLocalReadRequestChain extends ReadRequestChain
         ReadableByteChannel wrappedChannel = Channels.newChannel(inStream);
 
         ByteBuffer buf = DataTransferClientHelper.writeHeaders(conf, new DataTransferHeader(readRequest.getActualReadStart(),
-            readRequest.getActualReadLength(), fileSize, lastModified, clusterType, filePath));
+            readRequest.getActualReadLengthIntUnsafe(), fileSize, lastModified, clusterType, filePath));
 
         dataTransferClient.write(buf);
         int bytesread = 0;
         ByteBuffer dst = ByteBuffer.wrap(readRequest.destBuffer, readRequest.getDestBufferOffset(), readRequest.destBuffer.length - readRequest.getDestBufferOffset());
-        while (bytesread != readRequest.getActualReadLength()) {
+        while (bytesread != readRequest.getActualReadLengthIntUnsafe()) {
           nread = wrappedChannel.read(dst);
           bytesread += nread;
           totalRead += nread;
@@ -185,7 +185,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
     }
   }
 
-  private int directReadRequest(int index)
+  private long directReadRequest(int index)
       throws Exception
   {
     FSDataInputStream inputStream = remoteFileSystem.open(new Path(filePath));

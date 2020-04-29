@@ -43,7 +43,7 @@ public class FileDownloadRequestChain extends ReadRequestChain
   private String remotePath;
   private long fileSize;
   private long lastModified;
-  private int totalRequestedRead;
+  private long totalRequestedRead;
   private int warmupPenalty;
   private int blockSize;
   Configuration conf;
@@ -87,7 +87,7 @@ public class FileDownloadRequestChain extends ReadRequestChain
     return this.timeSpentOnDownload;
   }
 
-  public Integer call() throws IOException
+  public Long call() throws IOException
   {
     log.debug(String.format("Read Request threadName: %s, FileDownload Executor threadName: %s", threadName, Thread.currentThread().getName()));
     Thread.currentThread().setName(threadName);
@@ -96,7 +96,7 @@ public class FileDownloadRequestChain extends ReadRequestChain
     List<ReadRequest> readRequests = getReadRequests();
 
     if (readRequests.size() == 0) {
-      return 0;
+      return 0L;
     }
 
     long startTime = System.currentTimeMillis();
@@ -126,7 +126,7 @@ public class FileDownloadRequestChain extends ReadRequestChain
           propagateCancel(this.getClass().getName());
         }
 
-        int readBytes = copyIntoCache(inputStream, fileChannel, readRequest.getBackendReadLength(), readRequest.getBackendReadStart());
+        int readBytes = copyIntoCache(inputStream, fileChannel, readRequest.getBackendReadLengthIntUnsafe(), readRequest.getBackendReadStart());
         totalRequestedRead += readBytes;
       }
       long endTime = System.currentTimeMillis();

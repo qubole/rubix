@@ -47,6 +47,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
+import static com.google.common.base.Preconditions.checkState;
 import static org.apache.hadoop.fs.FSExceptionMessages.NEGATIVE_SEEK;
 
 /**
@@ -288,11 +289,11 @@ public class CachingInputStream extends FSInputStream
       builder.add(readService.submit(readRequestChain));
     }
 
-    List<ListenableFuture<Integer>> futures = builder.build();
-    for (ListenableFuture<Integer> future : futures) {
+    List<ListenableFuture<Long>> futures = builder.build();
+    for (ListenableFuture<Long> future : futures) {
       // exceptions handled in caller
       try {
-        sizeRead += future.get();
+        sizeRead = Math.addExact(sizeRead, Math.toIntExact(future.get()));
       }
       catch (ExecutionException | InterruptedException e) {
         for (ReadRequestChain readRequestChain : readRequestChains) {
@@ -390,7 +391,7 @@ public class CachingInputStream extends FSInputStream
           bufferOffest,
           fileSize);
 
-      lengthAlreadyConsidered += readRequest.getActualReadLength();
+      lengthAlreadyConsidered += readRequest.getActualReadLengthIntUnsafe();
 
       if (isCached == null) {
         log.debug(String.format("Sending block %d to DirectReadRequestChain", blockNum));

@@ -99,7 +99,7 @@ public class TestCachedReadRequestChain
     CachedReadRequestChain cachedReadRequestChain = getCachedReadRequestChain(buffer);
 
     cachedReadRequestChain.lock();
-    int readSize = cachedReadRequestChain.call();
+    long readSize = cachedReadRequestChain.call();
 
     ReadRequestChainStats stats = cachedReadRequestChain.getStats();
 
@@ -123,7 +123,7 @@ public class TestCachedReadRequestChain
     localFile.delete();
 
     cachedReadRequestChain.lock();
-    int readSize = cachedReadRequestChain.call();
+    long readSize = cachedReadRequestChain.call();
 
     ReadRequestChainStats stats = cachedReadRequestChain.getStats();
 
@@ -146,7 +146,7 @@ public class TestCachedReadRequestChain
     DataGen.truncateFile(localCachedFile, 1000);
 
     cachedReadRequestChain.lock();
-    int readSize = cachedReadRequestChain.call();
+    long readSize = cachedReadRequestChain.call();
 
     ReadRequestChainStats stats = cachedReadRequestChain.getStats();
 
@@ -169,7 +169,7 @@ public class TestCachedReadRequestChain
     DataGen.truncateFile(localCachedFile, 1800);
 
     cachedReadRequestChain.lock();
-    int readSize = cachedReadRequestChain.call();
+    long readSize = cachedReadRequestChain.call();
 
     ReadRequestChainStats stats = cachedReadRequestChain.getStats();
 
