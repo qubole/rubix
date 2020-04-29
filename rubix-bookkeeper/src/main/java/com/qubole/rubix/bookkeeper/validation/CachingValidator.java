@@ -114,7 +114,7 @@ public class CachingValidator extends AbstractScheduledService
     final long fileLastModified = tempFile.lastModified();
 
     CacheStatusRequest request = new CacheStatusRequest(VALIDATOR_TEST_FILE_PATH_WITH_SCHEME, fileLength,
-        fileLastModified, VALIDATOR_START_BLOCK, VALIDATOR_END_BLOCK, VALIDATOR_CLUSTER_TYPE);
+        fileLastModified, VALIDATOR_START_BLOCK, VALIDATOR_END_BLOCK).setClusterType(VALIDATOR_CLUSTER_TYPE);
 
     try {
       List<BlockLocation> locations = bookKeeper.getCacheStatus(request);

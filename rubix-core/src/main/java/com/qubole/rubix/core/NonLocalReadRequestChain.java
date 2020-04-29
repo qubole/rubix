@@ -209,7 +209,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
           long startBlock = toBlock(readRequest.getBackendReadStart());
           long endBlock = toBlock(readRequest.getBackendReadEnd() - 1) + 1;
           // getCacheStatus() call required to create mdfiles before blocks are set as cached
-          CacheStatusRequest request = new CacheStatusRequest(remotePath, fileSize, lastModified, startBlock, endBlock, clusterType);
+          CacheStatusRequest request = new CacheStatusRequest(remotePath, fileSize, lastModified, startBlock, endBlock).setClusterType(clusterType);
           bookKeeperClient.getCacheStatus(request);
           bookKeeperClient.setAllCached(remotePath, fileSize, lastModified, startBlock, endBlock);
         }

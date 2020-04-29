@@ -338,7 +338,7 @@ public class TestNonLocalReadRequestChain
         backendFile.lastModified(), ClusterType.TEST_CLUSTER_MANAGER.ordinal());
 
     CacheStatusRequest request = new CacheStatusRequest(backendPath.toString(), backendFile.length(), backendFile.lastModified(),
-        0, endBlock, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+        0, endBlock).setClusterType(ClusterType.TEST_CLUSTER_MANAGER.ordinal());
     List<BlockLocation> blockLocations = client.getCacheStatus(request);
 
     for (BlockLocation location : blockLocations) {

@@ -70,6 +70,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import static com.google.common.base.Preconditions.checkState;
 import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.CACHE_AVAILABLE_SIZE_GAUGE;
 import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.CACHE_EVICTION_COUNT;
 import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.CACHE_EXPIRY_COUNT;
@@ -231,7 +232,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   public List<BlockLocation> getCacheStatus(CacheStatusRequest request) throws TException
   {
     try {
-      initializeClusterManager(request.getClusterType());
+      initializeClusterManager(request);
     }
     catch (ClusterManagerInitilizationException ex) {
       log.error("Not able to initialize ClusterManager for cluster type : " +
@@ -326,9 +327,11 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     return blockLocations;
   }
 
-  private void initializeClusterManager(int clusterType) throws ClusterManagerInitilizationException
+  private void initializeClusterManager(CacheStatusRequest request) throws ClusterManagerInitilizationException
   {
     if (this.clusterManager == null) {
+      checkState(request.isSetClusterType(), "Received getCacheStatus without clusterType before BookKeeper is initialized");
+      int clusterType = request.getClusterType();
       ClusterManager manager = null;
       synchronized (lock) {
         if (this.clusterManager == null) {
@@ -529,7 +532,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     long endBlock = ((offset + (length - 1)) / CacheConfig.getBlockSize(conf)) + 1;
     try {
       int idx = 0;
-      CacheStatusRequest request = new CacheStatusRequest(remotePath, fileSize, lastModified, startBlock, endBlock, clusterType);
+      CacheStatusRequest request = new CacheStatusRequest(remotePath, fileSize, lastModified, startBlock, endBlock).setClusterType(clusterType);
       List<BlockLocation> blockLocations = getCacheStatus(request);
 
       for (long blockNum = startBlock; blockNum < endBlock; blockNum++, idx++) {

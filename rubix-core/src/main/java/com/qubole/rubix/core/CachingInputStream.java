@@ -352,7 +352,7 @@ public class CachingInputStream extends FSInputStream
 
     try (RetryingPooledBookkeeperClient bookKeeperClient = bookKeeperFactory.createBookKeeperClient(conf)) {
       CacheStatusRequest request = new CacheStatusRequest(remotePath, fileSize, lastModified,
-          nextReadBlock, endBlock, clusterType.ordinal());
+          nextReadBlock, endBlock).setClusterType(clusterType.ordinal());
       request.setIncrMetrics(true);
       isCached = bookKeeperClient.getCacheStatus(request);
     }

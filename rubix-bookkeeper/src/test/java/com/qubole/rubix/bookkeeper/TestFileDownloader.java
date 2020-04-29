@@ -135,8 +135,8 @@ public class TestFileDownloader
     final Path backendPath = new Path("file:///" + TEST_BACKEND_FILE_NAME);
     final ConcurrentMap<String, DownloadRequestContext> contextMap = new ConcurrentHashMap<>();
 
-    CacheStatusRequest request = new CacheStatusRequest(backendPath.toString(), file.length(), 1000, 0, 5,
-        ClusterType.TEST_CLUSTER_MANAGER.ordinal());
+    CacheStatusRequest request = new CacheStatusRequest(backendPath.toString(), file.length(), 1000, 0, 5)
+            .setClusterType(ClusterType.TEST_CLUSTER_MANAGER.ordinal());
 
     List<BlockLocation> cacheStatus = bookKeeper.getCacheStatus(request);
 
