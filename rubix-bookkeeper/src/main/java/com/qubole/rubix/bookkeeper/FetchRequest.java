@@ -13,6 +13,8 @@
 
 package com.qubole.rubix.bookkeeper;
 
+import java.util.Objects;
+
 public class FetchRequest
 {
   private String remotePath;
@@ -60,5 +62,29 @@ public class FetchRequest
   public long getRequestedTime()
   {
     return this.requestedTime;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    FetchRequest that = (FetchRequest) o;
+    return offset == that.offset &&
+            length == that.length &&
+            fileSize == that.fileSize &&
+            lastModified == that.lastModified &&
+            remotePath.equals(that.remotePath);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(remotePath, offset, length, fileSize, lastModified);
   }
 }

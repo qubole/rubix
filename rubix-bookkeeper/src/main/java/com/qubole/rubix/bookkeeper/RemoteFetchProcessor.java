@@ -15,6 +15,9 @@ package com.qubole.rubix.bookkeeper;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.BoundType;
+import com.google.common.collect.Range;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.spi.CacheConfig;
@@ -25,11 +28,14 @@ import org.apache.hadoop.conf.Configuration;
 import java.io.IOException;
 import java.util.List;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+
+import static com.google.common.base.Preconditions.checkState;
 
 public class RemoteFetchProcessor extends AbstractScheduledService
 {
@@ -38,6 +44,7 @@ public class RemoteFetchProcessor extends AbstractScheduledService
   private MetricRegistry metrics;
   private Counter totalDownloadRequests;
   private Counter processedRequests;
+  private final BookKeeper bookKeeper;
 
   int processThreadInitalDelay;
   int processThreadInterval;
@@ -58,13 +65,20 @@ public class RemoteFetchProcessor extends AbstractScheduledService
 
     this.processQueue = new ConcurrentLinkedQueue<FetchRequest>();
     this.metrics = metrics;
-    this.downloader = new FileDownloader(bookKeeper, metrics, conf);
+    this.downloader = new FileDownloader(bookKeeper, metrics, conf, this);
+    this.bookKeeper = bookKeeper;
 
     this.processThreadInitalDelay = CacheConfig.getProcessThreadInitialDelay(conf);
     this.processThreadInterval = CacheConfig.getProcessThreadInterval(conf);
     this.requestProcessDelay = CacheConfig.getRemoteFetchProcessInterval(conf);
 
     initializeMetrics();
+  }
+
+  @VisibleForTesting
+  public Queue<FetchRequest> getProcessQueue()
+  {
+    return processQueue;
   }
 
   FileDownloader getFileDownloaderInstance()
@@ -94,12 +108,39 @@ public class RemoteFetchProcessor extends AbstractScheduledService
     totalDownloadRequests.inc();
   }
 
+  public void addToProcessQueueSafe(String remotePath, Set<Range<Long>> closedOpenRanges, long fileSize, long lastModified)
+  {
+    try {
+      addToProcessQueue(remotePath, closedOpenRanges, fileSize, lastModified);
+    }
+    catch (Exception e) {
+      log.warn("Unable to queue ranges for file: " + remotePath);
+    }
+  }
+
+  private void addToProcessQueue(String remotePath, Set<Range<Long>> closedOpenRanges, long fileSize, long lastModified)
+  {
+    closedOpenRanges.stream()
+            .forEach(range -> {
+              checkState(range.lowerBoundType() == BoundType.CLOSED && range.upperBoundType() == BoundType.OPEN,
+                      "Unexpected range type encountered lower=%s and upper=%s", range.lowerBoundType(), range.upperBoundType());
+              long offset = range.lowerEndpoint();
+              long rangeSpan = range.upperEndpoint() - range.lowerEndpoint();
+              while (rangeSpan > 0) {
+                int length = Math.toIntExact(Math.min(rangeSpan, Integer.MAX_VALUE));
+                addToProcessQueue(remotePath, offset, length, fileSize, lastModified);
+                rangeSpan -= length;
+                offset += length;
+              }
+            });
+  }
+
   @Override
   protected void runOneIteration() throws Exception
   {
     long currentTime = System.currentTimeMillis();
 
-    if (!processQueue.isEmpty()) {
+    if (!processQueue.isEmpty() && bookKeeper.isInitialized()) {
       processRequest(currentTime);
     }
   }
@@ -107,7 +148,9 @@ public class RemoteFetchProcessor extends AbstractScheduledService
   protected void processRequest(long currentTime) throws IOException, InterruptedException, ExecutionException
   {
     ConcurrentMap<String, DownloadRequestContext> contextMap = mergeRequests(currentTime);
-    processRemoteFetchRequest(contextMap);
+
+    List<FileDownloadRequestChain> readRequestChainList = downloader.getFileDownloadRequestChains(contextMap);
+    downloader.processDownloadRequests(readRequestChainList);
 
     // After every iteration we are clearing the map
     contextMap.clear();
@@ -157,12 +200,5 @@ public class RemoteFetchProcessor extends AbstractScheduledService
   protected Scheduler scheduler()
   {
     return Scheduler.newFixedDelaySchedule(processThreadInitalDelay, processThreadInterval, TimeUnit.MILLISECONDS);
-  }
-
-  private void processRemoteFetchRequest(ConcurrentMap<String, DownloadRequestContext> contextMap)
-                                        throws IOException, InterruptedException, ExecutionException
-  {
-    List<FileDownloadRequestChain> readRequestChainList = downloader.getFileDownloadRequestChains(contextMap);
-    downloader.processDownloadRequests(readRequestChainList);
   }
 }

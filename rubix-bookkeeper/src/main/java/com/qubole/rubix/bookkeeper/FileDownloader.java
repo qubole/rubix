@@ -17,11 +17,13 @@ import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.Range;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.qubole.rubix.bookkeeper.utils.DiskUtils;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.core.ReadRequest;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
+import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -39,6 +41,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
@@ -52,20 +55,26 @@ class FileDownloader
   private MetricRegistry metrics;
   private Counter totalMBDownloaded;
   private Counter totalTimeToDownload;
-  BookKeeper bookKeeper;
+
+  private final RemoteFetchProcessor remoteFetchProcessor;
+  private final BookKeeper bookKeeper;
 
   private static final Log log = LogFactory.getLog(FileDownloader.class);
   private static DirectBufferPool bufferPool = new DirectBufferPool();
 
-  public FileDownloader(BookKeeper bookKeeper, MetricRegistry metrics, Configuration conf)
+  public FileDownloader(BookKeeper bookKeeper, MetricRegistry metrics, Configuration conf, RemoteFetchProcessor remoteFetchProcessor)
   {
     this.bookKeeper = bookKeeper;
+    this.remoteFetchProcessor = remoteFetchProcessor;
     this.conf = conf;
     this.metrics = metrics;
     int numThreads = CacheConfig.getRemoteFetchThreads(conf);
     this.diskReadBufferSize = CacheConfig.getDiskReadBufferSize(conf);
 
-    ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(numThreads);
+    ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(numThreads, new ThreadFactoryBuilder()
+            .setNameFormat("parallel-warmup-%s")
+            .setDaemon(true)
+            .build());
     processService = MoreExecutors.getExitingExecutorService(executor);
 
     initializeMetrics();
@@ -81,6 +90,7 @@ class FileDownloader
       throws IOException
   {
     List<FileDownloadRequestChain> readRequestChainList = new ArrayList<FileDownloadRequestChain>();
+    int blockSize = CacheConfig.getBlockSize(conf);
     for (Map.Entry<String, DownloadRequestContext> entry : contextMap.entrySet()) {
       Path path = new Path(entry.getKey());
       DownloadRequestContext context = entry.getValue();
@@ -94,13 +104,32 @@ class FileDownloader
       log.debug("Processing Request for File : " + path.toString() + " LocalFile : " + localPath);
       ByteBuffer directWriteBuffer = bufferPool.getBuffer(diskReadBufferSize);
 
+      // Setup file metadata if not there
+      try {
+      bookKeeper.getCacheStatus(new CacheStatusRequest(
+              context.getRemoteFilePath(),
+              context.getFileSize(),
+              context.getLastModifiedTime(),
+              0L,
+              0L));
+      }
+      catch (Exception e) {
+        log.warn("Error communicating with bookKeeper", e);
+        // Exception is not expected as RemoteFetchProcessor ensures to not start processing until BookKeeper has initialized
+        // recover from this, requeue the requests for this file and continue with next file
+        remoteFetchProcessor.addToProcessQueueSafe(context.getRemoteFilePath(), context.getRanges().asRanges(), context.getFileSize(), context.getLastModifiedTime());
+        continue;
+      }
+
       FileDownloadRequestChain requestChain = new FileDownloadRequestChain(bookKeeper, fs, localPath,
           directWriteBuffer, conf, context.getRemoteFilePath(), context.getFileSize(),
           context.getLastModifiedTime());
 
       for (Range<Long> range : context.getRanges().asRanges()) {
-        ReadRequest request = new ReadRequest(range.lowerEndpoint(), range.upperEndpoint(),
-            range.lowerEndpoint(), range.upperEndpoint(), null, 0, context.getFileSize());
+        // align range to block boundary
+        long start = (range.lowerEndpoint() / blockSize) * blockSize;
+        long end = Math.min((((range.upperEndpoint() - 1) / blockSize) + 1) * blockSize, context.getFileSize());
+        ReadRequest request = new ReadRequest(start, end, start, end, null, 0, context.getFileSize());
         requestChain.addReadRequest(request);
       }
 
@@ -132,7 +161,7 @@ class FileDownloader
       FileDownloadRequestChain requestChain = readRequestChainList.get(futures.indexOf(future));
       long totalBytesToBeDownloaded = 0;
       for (ReadRequest request : requestChain.getReadRequests()) {
-        totalBytesToBeDownloaded += request.getBackendReadLengthIntUnsafe();
+        totalBytesToBeDownloaded += request.getBackendReadLength();
       }
       try {
         long read = future.get();

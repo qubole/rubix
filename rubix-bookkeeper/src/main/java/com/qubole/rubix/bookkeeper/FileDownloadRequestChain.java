@@ -34,6 +34,7 @@ import java.nio.channels.FileChannel;
 import java.util.List;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.qubole.rubix.core.RemoteReadRequestChain.readIntoBuffer;
 
 public class FileDownloadRequestChain extends ReadRequestChain
 {
@@ -46,6 +47,7 @@ public class FileDownloadRequestChain extends ReadRequestChain
   private long totalRequestedRead;
   private int warmupPenalty;
   private int blockSize;
+  private final int maxRemoteReadBufferSize;
   Configuration conf;
   ByteBuffer directBuffer;
   private long timeSpentOnDownload;
@@ -65,6 +67,7 @@ public class FileDownloadRequestChain extends ReadRequestChain
     this.lastModified = lastModified;
     this.blockSize = CacheConfig.getBlockSize(conf);
     this.directBuffer = directBuffer;
+    this.maxRemoteReadBufferSize = CacheConfig.getDataTransferBufferSize(conf);
   }
 
   public String getRemotePath()
@@ -87,10 +90,9 @@ public class FileDownloadRequestChain extends ReadRequestChain
     return this.timeSpentOnDownload;
   }
 
+  @Override
   public Long call() throws IOException
   {
-    log.debug(String.format("Read Request threadName: %s, FileDownload Executor threadName: %s", threadName, Thread.currentThread().getName()));
-    Thread.currentThread().setName(threadName);
     checkState(isLocked(), "Trying to execute Chain without locking");
 
     List<ReadRequest> readRequests = getReadRequests();
@@ -103,16 +105,19 @@ public class FileDownloadRequestChain extends ReadRequestChain
     File file = new File(localFile);
     if (!file.exists()) {
       log.debug("Creating localfile : " + localFile);
-      String metadataFilePath = CacheUtil.getMetadataFilePath(remotePath, conf);
-      File mdFile = new File(metadataFilePath);
-      if (mdFile.exists() && mdFile.length() > 0) {
-        // Making sure when a new file gets created, we invalidate the existing metadata file
-        bookKeeper.invalidateFileMetadata(remotePath);
-      }
       file.setWritable(true, false);
       file.setReadable(true, false);
       file.createNewFile();
     }
+
+    long highestReadRequestLength = readRequests
+            .stream()
+            .map(readRequest -> readRequest.getActualReadLength())
+            .max(Long::compareTo)
+            .get();
+    int remoteReadBufferSize = Math.min(maxRemoteReadBufferSize,
+            Math.toIntExact(Math.min(Integer.MAX_VALUE, highestReadRequestLength)));
+    byte[] remoteReadBuffer = new byte[remoteReadBufferSize];
 
     FSDataInputStream inputStream = null;
     FileChannel fileChannel = null;
@@ -126,7 +131,7 @@ public class FileDownloadRequestChain extends ReadRequestChain
           propagateCancel(this.getClass().getName());
         }
 
-        int readBytes = copyIntoCache(inputStream, fileChannel, readRequest.getBackendReadLengthIntUnsafe(), readRequest.getBackendReadStart());
+        long readBytes = copyIntoCache(inputStream, fileChannel, readRequest.getBackendReadStart(), readRequest.getBackendReadLength(), remoteReadBuffer);
         totalRequestedRead += readBytes;
       }
       long endTime = System.currentTimeMillis();
@@ -149,14 +154,40 @@ public class FileDownloadRequestChain extends ReadRequestChain
     }
   }
 
-  private int copyIntoCache(FSDataInputStream inputStream, FileChannel fileChannel, int length,
-                            long cacheReadStart) throws IOException
+  private long copyIntoCache(FSDataInputStream inputStream,
+          FileChannel fileChannel,
+          long cacheReadStart,
+          long length,
+          byte[] remoteReadBuffer) throws IOException
   {
     long start = System.nanoTime();
-    byte[] buffer = new byte[length];
-    log.debug(String.format("Copying data of file %s of length %d from position %d", remotePath, length, cacheReadStart));
-    inputStream.readFully(cacheReadStart, buffer, 0, length);
 
+    log.debug(String.format("Copying data of file %s of length %d from position %d", remotePath, length, cacheReadStart));
+    if (length <= remoteReadBuffer.length) {
+      inputStream.readFully(cacheReadStart, remoteReadBuffer, 0, Math.toIntExact(length));
+      writeToFile(remoteReadBuffer, Math.toIntExact(length), fileChannel, cacheReadStart);
+    }
+    else {
+      // Use streaming reads here as we will be doing multiple iterations
+      long leftToRead = length;
+      while (leftToRead > 0) {
+        int toRead = Math.toIntExact(Math.min(remoteReadBuffer.length, leftToRead));
+        inputStream.seek(cacheReadStart);
+        readIntoBuffer(remoteReadBuffer, 0, toRead, inputStream);
+        writeToFile(remoteReadBuffer, toRead, fileChannel, cacheReadStart);
+        cacheReadStart += toRead;
+        leftToRead -= toRead;
+      }
+    }
+
+    warmupPenalty += System.nanoTime() - start;
+    log.debug(String.format("Copied %d to file %s from position %d", length, remotePath, cacheReadStart));
+    return length;
+  }
+
+  private void writeToFile(byte[] buffer, int length, FileChannel fileChannel, long cacheReadStart)
+          throws IOException
+  {
     int leftToWrite = length;
     int writtenSoFar = 0;
 
@@ -170,16 +201,12 @@ public class FileDownloadRequestChain extends ReadRequestChain
       writtenSoFar += nwrite;
       leftToWrite -= nwrite;
     }
-    warmupPenalty += System.nanoTime() - start;
-    log.debug(String.format("Read %d for file %s from offset %d", length, remotePath, cacheReadStart));
-    return length;
   }
 
   @Override
   public void updateCacheStatus(String remotePath, long fileSize, long lastModified, int blockSize, Configuration conf)
   {
     try {
-      log.debug("Updating cache for FileDownloadRequestChain . Num Requests : " + getReadRequests().size() + " for remotepath : " + remotePath);
       for (ReadRequest readRequest : getReadRequests()) {
         log.debug("Setting cached from : " + toBlock(readRequest.getBackendReadStart()) + " block to : " + (toBlock(readRequest.getBackendReadEnd() - 1) + 1));
         bookKeeper.setAllCached(remotePath, fileSize, lastModified, toBlock(readRequest.getBackendReadStart()), toBlock(readRequest.getBackendReadEnd() - 1) + 1);
