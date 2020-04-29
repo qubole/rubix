@@ -199,11 +199,21 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
                       CacheConfig.getBlockSize(getConf())));
     }
 
-    return new FSDataInputStream(
-        new BufferedFSInputStream(
-            new CachingInputStream(this, originalPath, this.getConf(), statsMBean,
-                clusterManager.getClusterType(), bookKeeperFactory, fs, bufferSize, statistics),
-            CacheConfig.getBlockSize(getConf())));
+    try {
+      return new FSDataInputStream(
+              new BufferedFSInputStream(
+                      new CachingInputStream(this, originalPath, this.getConf(), statsMBean,
+                              clusterManager.getClusterType(), bookKeeperFactory, fs, bufferSize, statistics),
+                      CacheConfig.getBlockSize(getConf())));
+    }
+    catch (Exception e) {
+      if (CacheConfig.isStrictMode(this.getConf())) {
+          log.error("Error in opening Caching Input Stream", e);
+          throw e;
+      }
+      log.warn("Error in opening Caching Input Stream, skipping cache", e);
+      return fs.open(path, bufferSize);
+    }
   }
 
   @Override
