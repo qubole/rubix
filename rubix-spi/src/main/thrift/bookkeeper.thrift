@@ -30,7 +30,7 @@ struct CacheStatusRequest {
 		3: required long lastModified;
 		4: required long startBlock;
 		5: required long endBlock;
-		6: required int clusterType;
+		6: optional int clusterType;
 		7: optional bool incrMetrics = false;
 }
 

@@ -155,8 +155,7 @@ public class BookKeeperClientRFLibrary
           request.getFileLength(),
           request.getLastModified(),
           request.getStartBlock(),
-          request.getEndBlock(),
-          request.getClusterType()));
+          request.getEndBlock()).setClusterType(request.getClusterType()));
     }
   }
 

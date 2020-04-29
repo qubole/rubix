@@ -247,7 +247,7 @@ public class LocalDataTransferServer extends Configured implements Tool
             long endBlock = ((offset + (readLength - 1)) / blockSize) + 1;
 
             CacheStatusRequest request = new CacheStatusRequest(remotePath, header.getFileSize(), header.getLastModified(),
-                    startBlock, endBlock, header.getClusterType());
+                    startBlock, endBlock).setClusterType(header.getClusterType());
             List<BlockLocation> blockLocations = bookKeeperClient.getCacheStatus(request);
 
             long blockNum = startBlock;
