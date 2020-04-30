@@ -635,11 +635,6 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         .build();
   }
 
-  public FileMetadata getEntry(String key, Callable<FileMetadata> callable) throws ExecutionException
-  {
-    return fileMetadataCache.get(key, callable);
-  }
-
   private static void initializeFileInfoCache(final Configuration conf, final Ticker ticker)
   {
     ExecutorService executor = Executors.newSingleThreadExecutor();
