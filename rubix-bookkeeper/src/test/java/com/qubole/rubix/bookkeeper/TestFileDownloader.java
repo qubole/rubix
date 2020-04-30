@@ -211,4 +211,51 @@ public class TestFileDownloader
       assertTrue(actualFetchRequest.equals(expectedFetchRequest), String.format("Actual: %s, Expected: %s", actualFetchRequest, expectedFetchRequest));
     }
   }
+
+  @Test
+  public void testSkippingAlreadyCachedBlocks()
+          throws Exception
+  {
+    DataGen.populateFile(TEST_BACKEND_FILE_NAME);
+    final File file = new File(TEST_BACKEND_FILE_NAME);
+    final Path backendPath = new Path("file:///" + TEST_BACKEND_FILE_NAME);
+    final ConcurrentMap<String, DownloadRequestContext> contextMap = new ConcurrentHashMap<>();
+
+    DownloadRequestContext context = new DownloadRequestContext(backendPath.toString(), file.length(), 1000);
+    contextMap.put(backendPath.toString(), context);
+    context.addDownloadRange(100, 200);
+    context.addDownloadRange(500, 750);
+
+    List<FileDownloadRequestChain> requestChains = downloader.getFileDownloadRequestChains(contextMap);
+
+    int dataDownloaded = (int) downloader.processDownloadRequests(requestChains);
+
+    int expectedDownloadedDataSize = 600;
+    assertTrue(expectedDownloadedDataSize == dataDownloaded, "Download size didn't match");
+
+    assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.ASYNC_DOWNLOADED_MB_COUNT.getMetricName())
+            .getCount() == DiskUtils.bytesToMB(expectedDownloadedDataSize), "Total downloaded bytes didn't match");
+
+    // Now create new fetch requests such that some blocks are overlapping with already fetched blocks
+    contextMap.clear();
+    context = new DownloadRequestContext(backendPath.toString(), file.length(), 1000);
+    contextMap.put(backendPath.toString(), context);
+    context.addDownloadRange(50, 300);  // blocks: [0, 1] of which block 0 should be already cached
+    context.addDownloadRange(450, 1000);  // blocks: [2, 4] of which block 2 and 3 should be a already cached
+
+    requestChains = downloader.getFileDownloadRequestChains(contextMap);
+    dataDownloaded = (int) downloader.processDownloadRequests(requestChains);
+    expectedDownloadedDataSize = 400;
+    assertTrue(expectedDownloadedDataSize == dataDownloaded, "Download size didn't match");
+
+    CacheStatusRequest request = new CacheStatusRequest(backendPath.toString(), file.length(), 1000, 0, 6)
+            .setClusterType(TEST_CLUSTER_MANAGER.ordinal());
+    List<BlockLocation> cacheStatus = bookKeeper.getCacheStatus(request);
+
+    int i = 0;
+    for (i = 0; i < 5; i++) {
+      assertTrue(cacheStatus.get(i).getLocation() == Location.CACHED, "Data is not cached");
+    }
+    assertTrue(cacheStatus.get(i).getLocation() == Location.LOCAL, "Data is cached");
+  }
 }

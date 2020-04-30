@@ -58,11 +58,13 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalInt;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -438,9 +440,11 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     log.debug("Updating cache for " + remotePath + " StartBlock : " + startBlock + " EndBlock : " + endBlock);
 
     try {
-      md.setBlocksCached(startBlock, endBlock);
-      long currentFileSize = md.incrementCurrentFileSize((endBlock - startBlock) * CacheConfig.getBlockSize(conf));
-      replaceFileMetadata(remotePath, currentFileSize, conf);
+      OptionalInt updatedBlocks = md.setBlocksCached(startBlock, endBlock);
+      if (updatedBlocks.isPresent()) {
+        long currentFileSize = md.incrementCurrentFileSize(updatedBlocks.getAsInt() * CacheConfig.getBlockSize(conf));
+        replaceFileMetadata(remotePath, currentFileSize, conf);
+      }
     }
     catch (IOException e) {
       throw new TException(e);
@@ -665,6 +669,12 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         .expireAfterWrite(CacheConfig.getCacheDataExpirationAfterWrite(conf), TimeUnit.MILLISECONDS)
         .removalListener(new CacheRemovalListener())
         .build();
+  }
+
+  @VisibleForTesting
+  public FileMetadata getFileMetadata(String key)
+  {
+    return fileMetadataCache.getIfPresent(key);
   }
 
   private static void initializeFileInfoCache(final Configuration conf, final Ticker ticker)

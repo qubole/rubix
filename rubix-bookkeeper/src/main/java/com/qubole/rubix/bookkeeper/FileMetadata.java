@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.OptionalInt;
 import java.util.concurrent.locks.Lock;
 
 import static com.qubole.rubix.spi.CacheConfig.getBlockSize;
@@ -77,6 +78,12 @@ public class FileMetadata
   {
     this.currentFileSize += incrementBy;
     return this.currentFileSize;
+  }
+
+  @VisibleForTesting
+  public long getCurrentFileSize()
+  {
+    return currentFileSize;
   }
 
   public void setNeedsRefresh()
@@ -132,12 +139,19 @@ public class FileMetadata
     blockBitmap.set((int) blockNumber);
   }
 
-  // Returns true if backing mdfile is updated
-  public synchronized boolean setBlocksCached(long startBlock, long endBlock)
+  /*
+   * Returns number of blocks marked cached that were not in cache already,
+   * empty in case errors
+   */
+  public synchronized OptionalInt setBlocksCached(long startBlock, long endBlock)
       throws IOException
   {
+    int numberOfBlocksUpdated = 0;
     for (long blockNum = startBlock; blockNum < endBlock; blockNum++) {
-      setBlockCached(blockNum);
+      if (!isBlockCached(blockNum)) {
+        numberOfBlocksUpdated++;
+        setBlockCached(blockNum);
+      }
     }
 
     // update mdfile
@@ -147,6 +161,8 @@ public class FileMetadata
       mdFile.close();
     }
     catch (FileNotFoundException e) {
+      numberOfBlocksUpdated = -1;
+
       // it is possible that file is deleted by an old CacheEviction event after this FileMetadata entry was made. See 3.1.2 comment above
       // refresh
       log.error("Could not update mdfile for " + remotePath + ". Trying again", e);
@@ -162,10 +178,10 @@ public class FileMetadata
     }
     catch (IOException e) {
       log.error("Could not update mdfile for " + remotePath, e);
-      return false;
+      numberOfBlocksUpdated = -1;
     }
 
-    return true;
+    return numberOfBlocksUpdated == -1 ? OptionalInt.empty() : OptionalInt.of(numberOfBlocksUpdated);
   }
 
   public void closeAndCleanup(RemovalCause cause, Cache cache)

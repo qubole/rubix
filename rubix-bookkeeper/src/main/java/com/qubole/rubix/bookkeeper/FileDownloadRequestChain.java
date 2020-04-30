@@ -35,6 +35,8 @@ import java.util.List;
 
 import static com.google.common.base.Preconditions.checkState;
 import static com.qubole.rubix.core.RemoteReadRequestChain.readIntoBuffer;
+import static com.qubole.rubix.spi.CommonUtilities.toEndBlock;
+import static com.qubole.rubix.spi.CommonUtilities.toStartBlock;
 
 public class FileDownloadRequestChain extends ReadRequestChain
 {
@@ -46,7 +48,6 @@ public class FileDownloadRequestChain extends ReadRequestChain
   private long lastModified;
   private long totalRequestedRead;
   private int warmupPenalty;
-  private int blockSize;
   private final int maxRemoteReadBufferSize;
   Configuration conf;
   ByteBuffer directBuffer;
@@ -65,7 +66,6 @@ public class FileDownloadRequestChain extends ReadRequestChain
     this.remotePath = remotePath;
     this.fileSize = fileSize;
     this.lastModified = lastModified;
-    this.blockSize = CacheConfig.getBlockSize(conf);
     this.directBuffer = directBuffer;
     this.maxRemoteReadBufferSize = CacheConfig.getDataTransferBufferSize(conf);
   }
@@ -208,8 +208,8 @@ public class FileDownloadRequestChain extends ReadRequestChain
   {
     try {
       for (ReadRequest readRequest : getReadRequests()) {
-        log.debug("Setting cached from : " + toBlock(readRequest.getBackendReadStart()) + " block to : " + (toBlock(readRequest.getBackendReadEnd() - 1) + 1));
-        bookKeeper.setAllCached(remotePath, fileSize, lastModified, toBlock(readRequest.getBackendReadStart()), toBlock(readRequest.getBackendReadEnd() - 1) + 1);
+        log.debug("Setting cached from : " + toStartBlock(readRequest.getBackendReadStart(), blockSize) + " block to : " + (toEndBlock(readRequest.getBackendReadEnd(), blockSize)));
+        bookKeeper.setAllCached(remotePath, fileSize, lastModified, toStartBlock(readRequest.getBackendReadStart(), blockSize), toEndBlock(readRequest.getBackendReadEnd(), blockSize));
       }
     }
     catch (Exception e) {
@@ -223,10 +223,5 @@ public class FileDownloadRequestChain extends ReadRequestChain
         .setRequestedRead(totalRequestedRead)
         .setWarmupPenalty(warmupPenalty)
         .setRemoteReads(requests);
-  }
-
-  private long toBlock(long pos)
-  {
-    return pos / blockSize;
   }
 }
