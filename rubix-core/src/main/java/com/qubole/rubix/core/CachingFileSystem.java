@@ -57,7 +57,6 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
   protected T fs;
   private static ClusterManager clusterManager;
 
-  private boolean cacheSkipped;
   private boolean isRubixSchemeUsed;
   private URI uri;
   private Path workingDir;
@@ -185,12 +184,8 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
   public FSDataInputStream open(Path path, int bufferSize)
       throws IOException
   {
-    FSDataInputStream inputStream = null;
-
     if (skipCache(path.toString(), getConf())) {
-      inputStream = fs.open(path, bufferSize);
-      cacheSkipped = true;
-      return inputStream;
+      return fs.open(path, bufferSize);
     }
 
     Path originalPath = new Path(getOriginalURI(path.toUri()).getScheme(), path.toUri().getAuthority(),
@@ -317,7 +312,12 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
   @Override
   public BlockLocation[] getFileBlockLocations(FileStatus file, long start, long len) throws IOException
   {
-    if (cacheSkipped || (CacheConfig.isEmbeddedModeEnabled(getConf()) && !bookKeeperFactory.isBookKeeperInitialized())) {
+    if (file == null) {
+      return null;
+    }
+
+    if ((CacheConfig.isEmbeddedModeEnabled(getConf()) && !bookKeeperFactory.isBookKeeperInitialized())
+            || skipCache(file.getPath().toString(), getConf())) {
       return fs.getFileBlockLocations(file, start, len);
     }
 
@@ -325,10 +325,6 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
 
     if (nodes == null) {
       return fs.getFileBlockLocations(file, start, len);
-    }
-
-    if (file == null) {
-      return null;
     }
     else if (start >= 0L && len >= 0L) {
       if (file.getLen() < start) {
