@@ -17,6 +17,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.common.utils.DataGen;
 import com.qubole.rubix.common.utils.TestUtil;
+import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
 import org.apache.commons.logging.Log;
@@ -33,6 +34,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentMap;
 
+import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
@@ -65,7 +67,8 @@ public class TestRemoteFetchProcessor
   }
 
   @BeforeMethod
-  public void setUp() throws IOException
+  public void setUp()
+          throws IOException, ClusterManagerInitilizationException
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     CacheConfig.setRemoteFetchProcessInterval(conf, TEST_REMOTE_FETCH_PROCESS_INTERVAL);
@@ -73,6 +76,8 @@ public class TestRemoteFetchProcessor
     metrics = new MetricRegistry();
     bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);
     bookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics);
+    // initialize bookKeeper
+    bookKeeper.initializeClusterManager(TEST_CLUSTER_MANAGER.ordinal());
     processor = bookKeeper.getRemoteFetchProcessorInstance();
   }
 

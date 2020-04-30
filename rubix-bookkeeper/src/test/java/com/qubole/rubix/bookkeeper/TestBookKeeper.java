@@ -491,4 +491,30 @@ public class TestBookKeeper
     assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.CACHE_HIT_RATE_GAUGE.getMetricName()).getValue(), 0.5);
     assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.CACHE_MISS_RATE_GAUGE.getMetricName()).getValue(), 0.5);
   }
+
+  /**
+   * Test that calling setAllCached with blocks which are in cache does not increase file size
+   */
+  @Test
+  public void testSetAllCacheIngoresCachedBlocks() throws Exception
+  {
+    CacheStatusRequest request = new CacheStatusRequest(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
+            TEST_START_BLOCK, TEST_END_BLOCK)
+            .setClusterType(ClusterType.TEST_CLUSTER_MANAGER.ordinal())
+            .setIncrMetrics(true);
+    bookKeeper.getCacheStatus(request);
+
+    long size = bookKeeper.getFileMetadata(TEST_REMOTE_PATH).getCurrentFileSize();
+    assertTrue(size == 0, "Non zero size before any data cached: " + size);
+    bookKeeper.setAllCached(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, TEST_START_BLOCK, TEST_END_BLOCK);
+    size = bookKeeper.getFileMetadata(TEST_REMOTE_PATH).getCurrentFileSize();
+    assertTrue(size == (TEST_END_BLOCK - TEST_START_BLOCK) * CacheConfig.getBlockSize(conf),
+            String.format("Expected size: %s but found %s", (TEST_END_BLOCK - TEST_START_BLOCK) * CacheConfig.getBlockSize(conf), size));
+
+    // Now a overlapping request of 10 new blocks, new size of FileMetadata should only increase for these 10 new blocks
+    bookKeeper.setAllCached(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, TEST_START_BLOCK - 5, TEST_END_BLOCK + 5);
+    long newSize = bookKeeper.getFileMetadata(TEST_REMOTE_PATH).getCurrentFileSize();
+    assertTrue(newSize == size + 10 * CacheConfig.getBlockSize(conf),
+            String.format("Expected size: %s but found %s", (size + 10) * CacheConfig.getBlockSize(conf), newSize));
+  }
 }

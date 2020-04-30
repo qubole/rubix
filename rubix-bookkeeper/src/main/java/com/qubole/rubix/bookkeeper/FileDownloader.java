@@ -23,7 +23,9 @@ import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.core.ReadRequest;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
+import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
+import com.qubole.rubix.spi.thrift.Location;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -43,6 +45,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.stream.Collectors;
+
+import static com.qubole.rubix.spi.CommonUtilities.alignToBlockEndPosition;
+import static com.qubole.rubix.spi.CommonUtilities.alignToBlockStartPosition;
+import static com.qubole.rubix.spi.CommonUtilities.toBlockEndPosition;
+import static com.qubole.rubix.spi.CommonUtilities.toBlockStartPosition;
+import static com.qubole.rubix.spi.CommonUtilities.toEndBlock;
+import static com.qubole.rubix.spi.CommonUtilities.toStartBlock;
 
 /**
  * Created by Abhishek on 3/9/18.
@@ -90,7 +100,6 @@ class FileDownloader
       throws IOException
   {
     List<FileDownloadRequestChain> readRequestChainList = new ArrayList<FileDownloadRequestChain>();
-    int blockSize = CacheConfig.getBlockSize(conf);
     for (Map.Entry<String, DownloadRequestContext> entry : contextMap.entrySet()) {
       Path path = new Path(entry.getKey());
       DownloadRequestContext context = entry.getValue();
@@ -104,39 +113,65 @@ class FileDownloader
       log.debug("Processing Request for File : " + path.toString() + " LocalFile : " + localPath);
       ByteBuffer directWriteBuffer = bufferPool.getBuffer(diskReadBufferSize);
 
-      // Setup file metadata if not there
-      try {
-      bookKeeper.getCacheStatus(new CacheStatusRequest(
-              context.getRemoteFilePath(),
-              context.getFileSize(),
-              context.getLastModifiedTime(),
-              0L,
-              0L));
-      }
-      catch (Exception e) {
-        log.warn("Error communicating with bookKeeper", e);
-        // Exception is not expected as RemoteFetchProcessor ensures to not start processing until BookKeeper has initialized
-        // recover from this, requeue the requests for this file and continue with next file
-        remoteFetchProcessor.addToProcessQueueSafe(context.getRemoteFilePath(), context.getRanges().asRanges(), context.getFileSize(), context.getLastModifiedTime());
-        continue;
-      }
-
       FileDownloadRequestChain requestChain = new FileDownloadRequestChain(bookKeeper, fs, localPath,
           directWriteBuffer, conf, context.getRemoteFilePath(), context.getFileSize(),
           context.getLastModifiedTime());
 
+      Range<Long> previousRange = null;
       for (Range<Long> range : context.getRanges().asRanges()) {
         // align range to block boundary
-        long start = (range.lowerEndpoint() / blockSize) * blockSize;
-        long end = Math.min((((range.upperEndpoint() - 1) / blockSize) + 1) * blockSize, context.getFileSize());
-        ReadRequest request = new ReadRequest(start, end, start, end, null, 0, context.getFileSize());
-        requestChain.addReadRequest(request);
+        long startBlock = toStartBlock(range.lowerEndpoint(), conf);
+        long endBlock = toEndBlock(range.upperEndpoint(), conf);
+
+        // We can get cases where multiple reads are part of same Block
+        Range<Long> currentRange = Range.closedOpen(startBlock, endBlock);
+        if (previousRange != null && previousRange.encloses(currentRange)) {
+          // already covered in previous request
+          continue;
+        }
+
+        previousRange = currentRange;
+
+        // Avoid duplicate warm-ups
+        List<BlockLocation> blockLocations = null;
+
+        try {
+          blockLocations = bookKeeper.getCacheStatus(
+                  new CacheStatusRequest(
+                          context.getRemoteFilePath(),
+                          context.getFileSize(),
+                          context.getLastModifiedTime(),
+                          startBlock,
+                          endBlock));
+        }
+        catch (Exception e) {
+          log.warn("Error communicating with bookKeeper", e);
+          // Exception is not expected as RemoteFetchProcessor ensures to not start processing until BookKeeper has initialized
+          // recover from this, requeue the requests for this file and continue with next file
+          remoteFetchProcessor.addToProcessQueueSafe(context.getRemoteFilePath(), context.getRanges().asRanges(), context.getFileSize(), context.getLastModifiedTime());
+          requestChain = null;
+          break;
+        }
+
+        for (int i = 0; i < blockLocations.size(); i++) {
+          if (!blockLocations.get(i).getLocation().equals(Location.LOCAL)) {
+            continue;
+          }
+
+          long block = startBlock + i;
+          long startPosition = toBlockStartPosition(block, conf);
+          long endPosition = Math.min(toBlockStartPosition(block + 1, conf), context.getFileSize());
+          ReadRequest readRequest = new ReadRequest(startPosition, endPosition, startPosition, endPosition, null, 0, context.getFileSize());
+          requestChain.addReadRequest(readRequest);
+        }
       }
 
-      log.debug("Request added for file: " + requestChain.getRemotePath() + " Number of Requests : " +
-          requestChain.getReadRequests().size());
+      if (requestChain != null) {
+        log.debug("Request added for file: " + requestChain.getRemotePath() + " Number of Requests : " +
+                requestChain.getReadRequests().size());
 
-      readRequestChainList.add(requestChain);
+        readRequestChainList.add(requestChain);
+      }
     }
 
     return readRequestChainList;
