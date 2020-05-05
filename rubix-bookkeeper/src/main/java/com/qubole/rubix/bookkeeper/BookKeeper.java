@@ -49,6 +49,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.DirectBufferPool;
 import org.apache.thrift.shaded.TException;
 
 import java.io.File;
@@ -92,6 +93,7 @@ import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER_MULTINODE;
 public abstract class BookKeeper implements BookKeeperService.Iface
 {
   private static Log log = LogFactory.getLog(BookKeeper.class);
+  private static DirectBufferPool bufferPool = new DirectBufferPool();
 
   protected static Cache<String, FileMetadata> fileMetadataCache;
   private static LoadingCache<String, FileInfo> fileInfoCache;
@@ -539,7 +541,6 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   {
     int blockSize = CacheConfig.getBlockSize(conf);
     byte[] buffer = new byte[blockSize];
-    ByteBuffer byteBuffer = null;
     String localPath = CacheUtil.getLocalPath(remotePath, conf);
     FileSystem fs = null;
     FSDataInputStream inputStream = null;
@@ -555,10 +556,6 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         long readStart = blockNum * blockSize;
         log.debug(" blockLocation is: " + blockLocations.get(idx).getLocation() + " for path " + remotePath + " offset " + offset + " length " + length);
         if (blockLocations.get(idx).getLocation() != Location.CACHED) {
-          if (byteBuffer == null) {
-            byteBuffer = ByteBuffer.allocateDirect(CacheConfig.getDiskReadBufferSize(conf));
-          }
-
           if (fs == null) {
             fs = path.getFileSystem(conf);
             fs.initialize(path.toUri(), conf);
@@ -570,7 +567,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
           // Ue RRRC directly instead of creating instance of CachingFS as in certain circumstances, CachingFS could
           // send this request to NonLocalRRC which would be wrong as that would not cache it on disk
           long expectedBytesToRead = (readStart + blockSize) > fileSize ? (fileSize - readStart) : blockSize;
-          RemoteReadRequestChain remoteReadRequestChain = new RemoteReadRequestChain(inputStream, localPath, byteBuffer, buffer, new BookKeeperFactory(this));
+          RemoteReadRequestChain remoteReadRequestChain = new RemoteReadRequestChain(inputStream, localPath, bufferPool, CacheConfig.getDiskReadBufferSize(conf), buffer, new BookKeeperFactory(this));
           remoteReadRequestChain.addReadRequest(new ReadRequest(readStart, readStart + blockSize, readStart, readStart + blockSize, buffer, 0, fileSize));
           remoteReadRequestChain.lock();
           long dataRead = remoteReadRequestChain.call();

@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.DirectBufferPool;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -45,18 +46,20 @@ public class CachedReadRequestChain extends ReadRequestChain
   private long directDataRead;
   private BookKeeperFactory factory;
 
-  private ByteBuffer directBuffer;
+  private DirectBufferPool bufferPool;
+  private int directBufferSize;
   private int corruptedFileCount;
 
   private static final Log log = LogFactory.getLog(CachedReadRequestChain.class);
 
-  public CachedReadRequestChain(FileSystem remoteFileSystem, String remotePath, ByteBuffer buffer,
+  public CachedReadRequestChain(FileSystem remoteFileSystem, String remotePath, DirectBufferPool bufferPool, int directBufferSize,
                                 FileSystem.Statistics statistics, Configuration conf, BookKeeperFactory factory)
   {
     this.conf = conf;
     this.remotePath = remotePath;
     this.remoteFileSystem = remoteFileSystem;
-    directBuffer = buffer;
+    this.bufferPool = bufferPool;
+    this.directBufferSize = directBufferSize;
     this.statistics = statistics;
     this.factory = factory;
   }
@@ -64,7 +67,7 @@ public class CachedReadRequestChain extends ReadRequestChain
   @VisibleForTesting
   public CachedReadRequestChain(FileSystem remoteFileSystem, String remotePath, Configuration conf, BookKeeperFactory factory)
   {
-    this(remoteFileSystem, remotePath, ByteBuffer.allocate(1024), null, conf, factory);
+    this(remoteFileSystem, remotePath, new DirectBufferPool(), 100, null, conf, factory);
   }
 
   @VisibleForTesting
@@ -92,6 +95,7 @@ public class CachedReadRequestChain extends ReadRequestChain
     boolean needsInvalidation = false;
     String localCachedFile = CacheUtil.getLocalPath(remotePath, conf);
 
+    ByteBuffer directBuffer = bufferPool.getBuffer(directBufferSize);
     try {
       raf = new RandomAccessFile(localCachedFile, "r");
       fis = new FileInputStream(raf.getFD());
@@ -142,6 +146,8 @@ public class CachedReadRequestChain extends ReadRequestChain
       return directDataRead;
     }
     finally {
+      bufferPool.returnBuffer(directBuffer);
+
       if (fis != null) {
         fis.close();
       }

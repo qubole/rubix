@@ -39,7 +39,6 @@ import org.apache.hadoop.util.DirectBufferPool;
 
 import java.io.EOFException;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,7 +46,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
-import static com.google.common.base.Preconditions.checkState;
 import static org.apache.hadoop.fs.FSExceptionMessages.NEGATIVE_SEEK;
 
 /**
@@ -87,8 +85,6 @@ public class CachingInputStream extends FSInputStream
   FileSystem.Statistics statistics;
 
   private static DirectBufferPool bufferPool = new DirectBufferPool();
-  private ByteBuffer directWriteBuffer;
-  private ByteBuffer directReadBuffer;
   private byte[] affixBuffer;
   private int diskReadBufferSize;
   private final int bufferSize;
@@ -403,11 +399,8 @@ public class CachingInputStream extends FSInputStream
 
       else if (isCached.get(idx).getLocation() == Location.CACHED) {
         log.debug(String.format("Sending cached block %d to cachedReadRequestChain", blockNum));
-        if (directReadBuffer == null) {
-          directReadBuffer = bufferPool.getBuffer(diskReadBufferSize);
-        }
         if (cachedReadRequestChain == null) {
-          cachedReadRequestChain = new CachedReadRequestChain(remoteFileSystem, remotePath, directReadBuffer,
+          cachedReadRequestChain = new CachedReadRequestChain(remoteFileSystem, remotePath, bufferPool, diskReadBufferSize,
                   statistics, conf, bookKeeperFactory);
         }
         cachedReadRequestChain.addReadRequest(readRequest);
@@ -445,9 +438,6 @@ public class CachingInputStream extends FSInputStream
           }
         }
         else {
-          if (directWriteBuffer == null) {
-            directWriteBuffer = bufferPool.getBuffer(diskReadBufferSize);
-          }
           if (CacheConfig.isParallelWarmupEnabled(conf)) {
             log.debug(String.format("Sending block %d to remoteFetchRequestChain", blockNum));
             if (directReadRequestChain == null) {
@@ -468,7 +458,7 @@ public class CachingInputStream extends FSInputStream
               affixBuffer = new byte[blockSize];
             }
             if (remoteReadRequestChain == null) {
-              remoteReadRequestChain = new RemoteReadRequestChain(getParentDataInputStream(), localPath, directWriteBuffer, affixBuffer, bookKeeperFactory);
+              remoteReadRequestChain = new RemoteReadRequestChain(getParentDataInputStream(), localPath, bufferPool, diskReadBufferSize, affixBuffer, bookKeeperFactory);
             }
             remoteReadRequestChain.addReadRequest(readRequest);
           }
@@ -528,23 +518,9 @@ public class CachingInputStream extends FSInputStream
     this.nextReadBlock = this.nextReadPosition / blockSize;
   }
 
-  private void returnBuffers()
-  {
-    if (directWriteBuffer != null) {
-      bufferPool.returnBuffer(directWriteBuffer);
-      directWriteBuffer = null;
-    }
-
-    if (directReadBuffer != null) {
-      bufferPool.returnBuffer(directReadBuffer);
-      directReadBuffer = null;
-    }
-  }
-
   @Override
   public void close()
   {
-    returnBuffers();
     try {
       if (inputStream != null) {
         inputStream.close();
