@@ -18,7 +18,7 @@ configuration.
   sudo yum install thrift
   sudo ln -s /usr/bin/thrift /usr/local/bin/thrift
   ```
-* Java JDK 8 needs to be used since JDK versions > 9 don't ship with `tools.jar`. So if you see an error like `Could not find artifact jdk.tools:jdk.tools:jar:1.6 at specified path` then setup your system to use JDK 8 for the build.
+* Java JDK 8 needs to be used since JDK versions > 8 don't ship with `tools.jar`. So if you see an error like `Could not find artifact jdk.tools:jdk.tools:jar:1.6 at specified path` then setup your system to use Java JDK 8 for the build.
 * For generating the RPM you need the `rpmbuild` command available. On Debian-based systems `sudo apt-get install rpmbuild` and on RPM-based systems `sudo yum install rpm-build` make it available.
 
 ## Building
