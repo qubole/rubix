@@ -13,6 +13,8 @@
 package com.qubole.rubix.prestosql;
 
 import com.qubole.rubix.core.CachingFileSystem;
+import com.qubole.rubix.core.ClusterManagerInitilizationException;
+import com.qubole.rubix.spi.ClusterType;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 
@@ -34,7 +36,13 @@ public class CachingPrestoNativeAzureFileSystem extends CachingFileSystem<Native
   @Override
   public void initialize(URI uri, Configuration conf) throws IOException
   {
-    super.initialize(uri, conf);
+    try {
+      initializeClusterManager(conf, ClusterType.PRESTOSQL_CLUSTER_MANAGER);
+      super.initialize(uri, conf);
+    }
+    catch (ClusterManagerInitilizationException ex) {
+      throw new IOException(ex);
+    }
   }
 
   public String getScheme()
