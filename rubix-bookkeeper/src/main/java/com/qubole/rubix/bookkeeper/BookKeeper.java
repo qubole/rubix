@@ -599,6 +599,23 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   private static synchronized void initializeCache(final Configuration conf, final Ticker ticker)
       throws FileNotFoundException
   {
+    if (CacheConfig.isOnMaster(conf) && !CacheConfig.isCacheDataOnMasterEnabled(conf)) {
+      log.info("Cache disabled on master node; skipping initialization");
+      totalAvailableForCache = 0;
+      fileInfoCache = CacheBuilder.newBuilder().build(
+              new CacheLoader<String, FileInfo>()
+              {
+                @Override
+                public FileInfo load(String key) throws Exception
+                {
+                  throw new UnsupportedOperationException(
+                          String.format("unexpected load call for key %s; cache disabled on master node", key));
+                }
+              });
+      fileMetadataCache = new ThrowingEmptyCache<>();
+      return;
+    }
+
     CacheUtil.createCacheDirectories(conf);
 
     long avail = 0;
@@ -633,11 +650,6 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         .expireAfterWrite(CacheConfig.getCacheDataExpirationAfterWrite(conf), TimeUnit.MILLISECONDS)
         .removalListener(new CacheRemovalListener())
         .build();
-  }
-
-  public FileMetadata getEntry(String key, Callable<FileMetadata> callable) throws ExecutionException
-  {
-    return fileMetadataCache.get(key, callable);
   }
 
   private static void initializeFileInfoCache(final Configuration conf, final Ticker ticker)

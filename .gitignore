@@ -21,6 +21,7 @@
 
 # Maven
 target
+dependency-reduced-pom.xml
 
 # Sphinx
 _build
