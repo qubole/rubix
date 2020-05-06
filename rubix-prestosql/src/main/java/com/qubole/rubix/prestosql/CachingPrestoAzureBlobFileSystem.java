@@ -17,18 +17,16 @@ import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.spi.ClusterType;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 
 import java.io.IOException;
 import java.net.URI;
 
-/**
- * Created by abhishek 04/06/2018
- */
-public class CachingPrestoNativeAzureFileSystem extends CachingFileSystem<NativeAzureFileSystem>
+public class CachingPrestoAzureBlobFileSystem extends CachingFileSystem<AzureBlobFileSystem>
 {
-  private static final String SCHEME = "wasb";
+  private static final String SCHEME = "abfs";
 
-  public CachingPrestoNativeAzureFileSystem()
+  public CachingPrestoAzureBlobFileSystem()
   {
     super();
   }
