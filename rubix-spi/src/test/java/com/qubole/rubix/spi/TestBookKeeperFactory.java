@@ -46,6 +46,7 @@ public class TestBookKeeperFactory
   @BeforeMethod
   public void setUp()
   {
+    BookKeeperFactory.resetConnectionPool();
     bookKeeperFactory = new BookKeeperFactory();
   }
 
