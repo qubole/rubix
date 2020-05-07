@@ -85,6 +85,7 @@ public class TestCachingInputStream
   @BeforeMethod
   public void setup() throws IOException, InterruptedException, URISyntaxException
   {
+    BookKeeperFactory.resetConnectionPool();
     conf = new Configuration();
 
     CacheConfig.setOnMaster(conf, true);
@@ -144,7 +145,6 @@ public class TestCachingInputStream
   @AfterMethod
   public void cleanup()
   {
-    BookKeeperFactory.resetConnectionPool();
     if (bookKeeperServer != null) {
       bookKeeperServer.stopServer();
     }
