@@ -109,8 +109,8 @@ public class CacheConfig
   private static final int DEFAULT_SERVER_CONNECT_TIMEOUT = 1000; // ms
   private static final int DEFAULT_SERVER_SOCKET_TIMEOUT = 6000; // ms
   private static final int DEFAULT_KEY_POOL_MAX_SIZE = 200;
-  private static final int DEFAULT_KEY_POOL_MIN_SIZE = 50;
-  private static final int DEFAULT_KEY_POOL_DELTA_SIZE = 100;
+  private static final int DEFAULT_KEY_POOL_MIN_SIZE = 0;
+  private static final int DEFAULT_KEY_POOL_DELTA_SIZE = 1;
   private static final int DEFAULT_POOL_MAX_WAIT_TIMEOUT = 5000; // ms
   private static final String DEFAULT_CACHE_METADATA_FILE_SUFFIX = "_mdfile";
   private static final String DEFAULT_DATA_CACHE_DIR_PREFIX = "/media/ephemeral";
