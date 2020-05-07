@@ -25,6 +25,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
 
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
 /**
@@ -107,6 +108,53 @@ public class TestRemoteReadRequestChain
         expectedBufferOutput,
         generatedTestData);
   }
+
+    @Test
+    public void testSingleRequestWithPrefixAndSuffix()
+            throws IOException
+    {
+        byte[] buffer = new byte[25];
+        ReadRequest rr = new ReadRequest(100, 200, 150, 175, buffer, 0, backendFile.length());
+
+        String generatedTestData = DataGen.generateContent();
+        String expectedBufferOutput = generatedTestData.substring(150, 175);
+        String expectedCacheOutput = generatedTestData.substring(100, 200);
+
+        remoteReadRequestChain.addReadRequest(rr);
+        remoteReadRequestChain.lock();
+
+        // 2. Execute and verify that buffer has right data
+        long readSize = remoteReadRequestChain.call();
+
+        assertEquals(readSize, expectedBufferOutput.length());
+        String actualBufferOutput = new String(buffer, Charset.defaultCharset());
+        assertEquals(actualBufferOutput, expectedBufferOutput, "Wrong data read, expected\n" + expectedBufferOutput + "\nBut got\n" + actualBufferOutput);
+
+        // 3. read from randomAccessFile and verify that it has the right data
+        // data present should be of form 100bytes of data and 100bytes of holes
+        byte[] filledBuffer = new byte[expectedCacheOutput.length()];
+        byte[] emptyBuffer = new byte[100];
+        readSize = 0;
+
+        FileInputStream localFileInputStream = new FileInputStream(new File(localFileName));
+        for (int i = 0; i < 20; i++) {
+            //Expect a hole everywhere except in one block
+            if (i == 1) {
+                readSize += localFileInputStream.read(filledBuffer, 0, 100);
+            }
+            else {
+                // empty buffer
+                localFileInputStream.read(emptyBuffer, 0, 100);
+                for (int j = 0; j < 100; j++) {
+                    assertEquals(emptyBuffer[j], 0, "Got data instead of hole: " + emptyBuffer[j]);
+                }
+            }
+        }
+        localFileInputStream.close();
+        assertEquals(readSize, expectedCacheOutput.length());
+        String actualCacheOutput = new String(filledBuffer, Charset.defaultCharset());
+        assertEquals(actualCacheOutput, expectedCacheOutput, "Wrong data read in local randomAccessFile, expected\n" + expectedCacheOutput + "\nBut got\n" + actualCacheOutput);
+    }
 
   private void testRead(ReadRequest[] readRequests,
                         byte[] buffer,

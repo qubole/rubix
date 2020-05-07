@@ -568,7 +568,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
           // send this request to NonLocalRRC which would be wrong as that would not cache it on disk
           long expectedBytesToRead = (readStart + blockSize) > fileSize ? (fileSize - readStart) : blockSize;
           RemoteReadRequestChain remoteReadRequestChain = new RemoteReadRequestChain(inputStream, localPath, bufferPool, CacheConfig.getDiskReadBufferSize(conf), buffer, new BookKeeperFactory(this));
-          remoteReadRequestChain.addReadRequest(new ReadRequest(readStart, readStart + blockSize, readStart, readStart + blockSize, buffer, 0, fileSize));
+          remoteReadRequestChain.addReadRequest(new ReadRequest(readStart, readStart + expectedBytesToRead, readStart, readStart + expectedBytesToRead, buffer, 0, fileSize));
           remoteReadRequestChain.lock();
           long dataRead = remoteReadRequestChain.call();
           // Making sure the data downloaded matches with the expected bytes. If not, there is some problem with
