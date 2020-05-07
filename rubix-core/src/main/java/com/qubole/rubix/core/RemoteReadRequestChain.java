@@ -21,6 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.util.DirectBufferPool;
 
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -99,35 +100,45 @@ public class RemoteReadRequestChain extends ReadRequestChain
           propagateCancel(this.getClass().getName());
         }
         log.debug(String.format("Executing ReadRequest: [%d, %d, %d, %d, %d]", readRequest.getBackendReadStart(), readRequest.getBackendReadEnd(), readRequest.getActualReadStart(), readRequest.getActualReadEnd(), readRequest.getDestBufferOffset()));
-        inputStream.seek(readRequest.backendReadStart);
-
         int prefixBufferLength = (int) (readRequest.getActualReadStart() - readRequest.getBackendReadStart());
         int suffixBufferLength = (int) (readRequest.getBackendReadEnd() - readRequest.getActualReadEnd());
         log.debug(String.format("PrefixLength: %d SuffixLength: %d", prefixBufferLength, suffixBufferLength));
 
+        // Possible only for first readRequest in chain
         if (prefixBufferLength > 0) {
+          // Streaming read because next read is guaranteed to be contiguous
+          inputStream.seek(readRequest.backendReadStart);
           log.debug(String.format("Trying to Read %d bytes into prefix buffer", prefixBufferLength));
           totalPrefixRead += readIntoBuffer(affixBuffer, 0, prefixBufferLength, inputStream);
-          log.debug(String.format("Read %d bytes into prefix buffer", prefixBufferLength));
-          copyIntoCache(fileChannel, directBuffer, affixBuffer, 0, prefixBufferLength, readRequest.backendReadStart);
-          log.debug(String.format("Copied %d prefix bytes into cache", prefixBufferLength));
+          int written = copyIntoCache(fileChannel, directBuffer, affixBuffer, 0, prefixBufferLength, readRequest.backendReadStart);
+          log.debug(String.format("Copied %d prefix bytes into cache", written));
         }
 
         log.debug(String.format("Trying to Read %d bytes into destination buffer", readRequest.getActualReadLengthIntUnsafe()));
-        int readBytes = readIntoBuffer(readRequest.getDestBuffer(), readRequest.destBufferOffset, readRequest.getActualReadLengthIntUnsafe(), inputStream);
-        log.debug(String.format("Read %d bytes into destination buffer", readBytes));
-        copyIntoCache(fileChannel, directBuffer, readRequest.destBuffer, readRequest.destBufferOffset, readBytes, readRequest.actualReadStart);
-        log.debug(String.format("Copied %d requested bytes into cache", readBytes));
-        totalRequestedRead += readBytes;
+        int readBytes;
+        if (prefixBufferLength > 0 || suffixBufferLength > 0) {
+          // For single readRequest in chain, prefix and suffix both may be present
+          // seek needed in case of just suffix being present, otherwise it is no-op
+          inputStream.seek(readRequest.actualReadStart);
+          readBytes = readIntoBuffer(readRequest.getDestBuffer(), readRequest.destBufferOffset, readRequest.getActualReadLengthIntUnsafe(), inputStream);
+        }
+        else {
+          // Positioned read for all reads between first and last readRequest as these are at least rubix blockSize apart (default 1MB)
+          inputStream.readFully(readRequest.actualReadStart, readRequest.getDestBuffer(), readRequest.destBufferOffset, readRequest.getActualReadLengthIntUnsafe());
+          readBytes = readRequest.getActualReadLengthIntUnsafe();
+        }
+        int written = copyIntoCache(fileChannel, directBuffer, readRequest.destBuffer, readRequest.destBufferOffset, readRequest.getActualReadLengthIntUnsafe(), readRequest.actualReadStart);
+        log.debug(String.format("Copied %d requested bytes into cache", written));
+        totalRequestedRead += readRequest.getActualReadLengthIntUnsafe();
 
+        // Possible only for last readRequest in chain
         if (suffixBufferLength > 0) {
-          // If already in reading actually required data we get a eof, then there should not have been a suffix request
-          checkState(readBytes == readRequest.getActualReadLengthIntUnsafe(), "Actual read less than required, still requested for suffix");
           log.debug(String.format("Trying to Read %d bytes into suffix buffer", suffixBufferLength));
+          // When we reach here it should be in continuation of a streaming read, seek just to be safe
+          inputStream.seek(readRequest.actualReadEnd);
           totalSuffixRead += readIntoBuffer(affixBuffer, 0, suffixBufferLength, inputStream);
-          log.debug(String.format("Read %d bytes into suffix buffer", suffixBufferLength));
-          copyIntoCache(fileChannel, directBuffer, affixBuffer, 0, suffixBufferLength, readRequest.actualReadEnd);
-          log.debug(String.format("Copied %d suffix bytes into cache", suffixBufferLength));
+          written = copyIntoCache(fileChannel, directBuffer, affixBuffer, 0, suffixBufferLength, readRequest.actualReadEnd);
+          log.debug(String.format("Copied %d suffix bytes into cache", written));
         }
       }
       log.debug(String.format("Read %d bytes from remote localFile, added %d to destination buffer", totalPrefixRead + totalRequestedRead + totalSuffixRead, totalRequestedRead));
@@ -146,7 +157,7 @@ public class RemoteReadRequestChain extends ReadRequestChain
     while (nread < length) {
       int nbytes = inputStream.read(destBuffer, destBufferOffset + nread, length - nread);
       if (nbytes < 0) {
-        break;
+        throw new EOFException("End of file reached before reading fully.");
       }
       nread += nbytes;
     }
