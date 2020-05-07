@@ -355,7 +355,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
           String[] name = new String[]{nodes.get(nodeIndex)};
           String[] host = new String[]{nodes.get(nodeIndex)};
           blockLocations[blockNumber++] = new BlockLocation(name, host, i, end - i);
-          log.info(String.format("BlockLocation %s %d %d %s totalHosts: %s", file.getPath().toString(), i, end - i, host[0], nodes.size()));
+          log.debug(String.format("BlockLocation %s %d %d %s totalHosts: %s", file.getPath().toString(), i, end - i, host[0], nodes.size()));
         }
 
         return blockLocations;
