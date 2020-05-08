@@ -6,7 +6,8 @@ configuration.
 
 ## Pre-requisites
 
-* `thrift` binary needs to be available at `/usr/local/bin/thrift`.
+* `thrift` binary needs to be available at `/usr/local/bin/thrift` and the version of thrift should match the version you are going to deploy on. We mostly use thrift 0.9.3. In case you get errors with the thrift version installed by following below steps, please install from source by following the steps [here](https://thrift.apache.org/docs/install/).
+
   For Debian-based systems:
   ```sh
   sudo apt-get install thrift-compiler
