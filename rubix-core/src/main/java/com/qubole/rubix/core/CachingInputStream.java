@@ -12,7 +12,6 @@
  */
 package com.qubole.rubix.core;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -90,27 +89,36 @@ public class CachingInputStream extends FSInputStream
   private final int bufferSize;
   BookKeeperFactory bookKeeperFactory;
 
-  public CachingInputStream(FileSystem parentFs, Path backendPath, Configuration conf,
+  public CachingInputStream(Path backendPath, Configuration conf,
                             CachingFileSystemStats statsMbean, ClusterType clusterType,
                             BookKeeperFactory bookKeeperFactory, FileSystem remoteFileSystem,
                             int bufferSize, FileSystem.Statistics statistics) throws IOException
   {
-    initialize(backendPath.toString(), conf, bookKeeperFactory);
-    this.bookKeeperFactory = bookKeeperFactory;
+    this.conf = conf;
+    this.strictMode = CacheConfig.isStrictMode(conf);
     this.remotePath = backendPath.toString();
+    this.localPath = CacheUtil.getLocalPath(remotePath, conf);
+    this.blockSize = CacheConfig.getBlockSize(conf);
+    this.diskReadBufferSize = CacheConfig.getDiskReadBufferSize(conf);
+    this.bookKeeperFactory = bookKeeperFactory;
     this.remoteFileSystem = remoteFileSystem;
 
-    try (RetryingPooledBookkeeperClient bookKeeperClient = bookKeeperFactory.createBookKeeperClient(conf)) {
-      FileInfo fileInfo = bookKeeperClient.getFileInfo(backendPath.toString());
-      this.fileSize = fileInfo.fileSize;
-      this.lastModified = fileInfo.lastModified;
-    }
-    catch (Exception ex) {
-      if (strictMode) {
-        throw Throwables.propagate(ex);
+    this.fileSize = -1;
+    if (!CacheConfig.isFileStalenessCheckEnabled(conf)) {
+      try (RetryingPooledBookkeeperClient bookKeeperClient = bookKeeperFactory.createBookKeeperClient(conf)) {
+        FileInfo fileInfo = bookKeeperClient.getFileInfo(backendPath.toString());
+        this.fileSize = fileInfo.fileSize;
+        this.lastModified = fileInfo.lastModified;
       }
-      log.error(String.format("Could not get FileInfo for %s. Fetching FileStatus from remote file system :", backendPath.toString()), ex);
-      FileStatus fileStatus = parentFs.getFileStatus(backendPath);
+      catch (Exception ex) {
+        if (strictMode) {
+          throw new RuntimeException(ex);
+        }
+        log.error(String.format("Could not get FileInfo for %s. Fetching FileStatus from remote file system :", backendPath.toString()), ex);
+      }
+    }
+    if (this.fileSize == -1) {
+      FileStatus fileStatus = remoteFileSystem.getFileStatus(backendPath);
       this.fileSize = fileStatus.getLen();
       this.lastModified = fileStatus.getModificationTime();
     }
@@ -119,36 +127,6 @@ public class CachingInputStream extends FSInputStream
     this.clusterType = clusterType;
     this.bufferSize = bufferSize;
     this.statistics = statistics;
-  }
-
-  @VisibleForTesting
-  public CachingInputStream(FSDataInputStream inputStream, Configuration conf, Path backendPath,
-                            long size, long lastModified, CachingFileSystemStats statsMbean,
-                            ClusterType clusterType, BookKeeperFactory bookKeeperFactory,
-                            FileSystem remoteFileSystem, int bufferSize, FileSystem.Statistics statistics)
-      throws IOException
-  {
-    initialize(backendPath.toString(), conf, bookKeeperFactory);
-
-    this.bookKeeperFactory = bookKeeperFactory;
-    this.inputStream = inputStream;
-    this.remotePath = backendPath.toString();
-    this.fileSize = size;
-    this.lastModified = lastModified;
-    this.statsMbean = statsMbean;
-    this.clusterType = clusterType;
-    this.remoteFileSystem = remoteFileSystem;
-    this.bufferSize = bufferSize;
-    this.statistics = statistics;
-  }
-
-  private void initialize(String backendPath, Configuration conf, BookKeeperFactory bookKeeperFactory)
-  {
-    this.conf = conf;
-    this.strictMode = CacheConfig.isStrictMode(conf);
-    this.localPath = CacheUtil.getLocalPath(backendPath, conf);
-    this.blockSize = CacheConfig.getBlockSize(conf);
-    this.diskReadBufferSize = CacheConfig.getDiskReadBufferSize(conf);
   }
 
   FSDataInputStream getParentDataInputStream() throws IOException

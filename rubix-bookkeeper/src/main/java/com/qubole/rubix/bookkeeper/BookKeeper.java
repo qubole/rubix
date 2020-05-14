@@ -511,29 +511,13 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   @Override
   public FileInfo getFileInfo(String remotePath) throws TException
   {
-    if (CacheConfig.isFileStalenessCheckEnabled(conf)) {
-      try {
-        Path path = new Path(remotePath);
-        FileSystem fs = path.getFileSystem(conf);
-        FileStatus status = fs.getFileStatus(path);
-        FileInfo info = new FileInfo(status.getLen(), status.getModificationTime());
-        return info;
-      }
-      catch (Exception e) {
-        log.error(String.format("Could not fetch FileStatus from remote file system for %s", remotePath), e);
-      }
+    try {
+      return fileInfoCache.get(remotePath);
     }
-    else {
-      try {
-        return fileInfoCache.get(remotePath);
-      }
-      catch (ExecutionException e) {
-        log.error(String.format("Could not fetch FileInfo from Cache for %s", remotePath), e);
-        throw new TException(e);
-      }
+    catch (ExecutionException e) {
+      log.error(String.format("Could not fetch FileInfo from Cache for %s", remotePath), e);
+      throw new TException(e);
     }
-
-    return null;
   }
 
   private boolean readDataInternal(String remotePath, long offset, int length, long fileSize,

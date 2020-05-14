@@ -15,7 +15,11 @@ package com.qubole.rubix.core;
 import com.qubole.rubix.common.utils.DataGen;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -51,8 +55,10 @@ public class TestRemoteReadRequestChain
     // Populate File
     DataGen.populateFile(backendFileName);
 
-    LocalFSInputStream localFSInputStream = new LocalFSInputStream(backendFileName);
-    fsDataInputStream = new FSDataInputStream(localFSInputStream);
+    FileSystem localFileSystem = new RawLocalFileSystem();
+    Path backendFilePath = new Path(backendFileName);
+    localFileSystem.initialize(backendFilePath.toUri(), new Configuration());
+    fsDataInputStream = localFileSystem.open(backendFilePath);
 
     remoteReadRequestChain = new RemoteReadRequestChain(fsDataInputStream, localFileName);
   }

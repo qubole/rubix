@@ -19,7 +19,6 @@ import com.qubole.rubix.common.utils.DataGen;
 import com.qubole.rubix.common.utils.DeleteFileVisitor;
 import com.qubole.rubix.core.CachingFileSystemStats;
 import com.qubole.rubix.core.CachingInputStream;
-import com.qubole.rubix.core.LocalFSInputStream;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
@@ -27,9 +26,9 @@ import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
@@ -38,7 +37,6 @@ import org.testng.annotations.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -97,6 +95,7 @@ public class TestCachingInputStream
     CacheConfig.setIsParallelWarmupEnabled(conf, false);
     CacheConfig.setOnMaster(conf, true);
     CacheConfig.setBlockSize(conf, blockSize);
+    CacheConfig.setFileStalenessCheck(conf, true);
 
     Thread server = new Thread()
     {
@@ -122,23 +121,22 @@ public class TestCachingInputStream
       Thread.sleep(200);
       log.info("Waiting for BookKeeper Server to come up");
     }
-    createCachingStream(conf);
+    inputStream = createCachingStream(conf);
     log.info("BackendPath: " + backendPath);
   }
 
-  public void createCachingStream(Configuration conf)
-      throws InterruptedException, IOException, URISyntaxException
+  private CachingInputStream createCachingStream(Configuration conf)
+      throws IOException
   {
-    File file = new File(backendFileName);
-
-    LocalFSInputStream localFSInputStream = new LocalFSInputStream(backendFileName);
-    FSDataInputStream fsDataInputStream = new FSDataInputStream(localFSInputStream);
+    FileSystem localFileSystem = new RawLocalFileSystem();
+    Path backendFilePath = new Path(backendFileName);
+    localFileSystem.initialize(backendFilePath.toUri(), new Configuration());
     CacheConfig.setBlockSize(conf, blockSize);
 
     // This should be after server comes up else client could not be created
-    inputStream = new CachingInputStream(fsDataInputStream, conf, backendPath, file.length(),
-        file.lastModified(), new CachingFileSystemStats(), ClusterType.TEST_CLUSTER_MANAGER,
-        new BookKeeperFactory(), FileSystem.get(new URI(backendFileName), conf),
+    return new CachingInputStream(backendPath, conf,
+        new CachingFileSystemStats(), ClusterType.TEST_CLUSTER_MANAGER,
+        new BookKeeperFactory(), localFileSystem,
         CacheConfig.getBlockSize(conf), null);
   }
 
@@ -191,6 +189,27 @@ public class TestCachingInputStream
     testCachingHelper(true);
   }
 
+  @Test
+  public void testStaleCachedRead() throws IOException, InterruptedException
+  {
+    Configuration staleConf = new Configuration(conf);
+    CacheConfig.setFileStalenessCheck(staleConf, false);
+    try (CachingInputStream inputStream = createCachingStream(staleConf)) {
+      byte[] buffer = new byte[1000];
+      int readSize = inputStream.read(200, buffer, 0, 1000);
+      assertions(readSize, 1000, buffer, DataGen.generateContent().substring(200, 1200));
+
+      Thread.sleep(3000); // sleep to give server chance to update cache status
+
+      //Rewrite the file with half the data
+      DataGen.populateFile(backendFileName, 2);
+
+      // Without staleness check, we should read old data
+      readSize = inputStream.read(200, buffer, 0, 1000);
+      assertions(readSize, 1000, buffer, DataGen.generateContent().substring(200, 1200));
+    }
+  }
+
   private void testCachingHelper(boolean positionedRead)
       throws IOException
   {
@@ -211,9 +230,8 @@ public class TestCachingInputStream
 
   @Test
   public void testChunkCachingAndEviction()
-      throws IOException, InterruptedException, URISyntaxException
+      throws IOException, InterruptedException
   {
-    CacheConfig.setFileStalenessCheck(conf, true);
     // 1. Seek and read some data
     testCachingHelper(false);
 
@@ -243,7 +261,7 @@ public class TestCachingInputStream
     //6. Close existing stream and start a new one to get the new lastModifiedDate of backend file
     inputStream.close();
 
-    createCachingStream(conf);
+    inputStream = createCachingStream(conf);
     log.info("New stream started");
 
     //7. Read the data again and verify that correct, updated data is being read from the backend file and that the previous cache entry is evicted.
