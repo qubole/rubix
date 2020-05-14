@@ -53,27 +53,4 @@ public class MockCachingFileSystem extends CachingFileSystem<RawLocalFileSystem>
   {
     return SCHEME;
   }
-
-  @Override
-  public FSDataInputStream open(Path path, int i)
-      throws IOException
-  {
-    String localPath = path.toUri().getPath();
-    File file = new File(localPath);
-    LocalFSInputStream inputStream = new LocalFSInputStream(localPath);
-    return new FSDataInputStream(
-        new BufferedFSInputStream(
-            new CachingInputStream(new FSDataInputStream(inputStream), conf, path, file.length(),
-                file.lastModified(), new CachingFileSystemStats(),
-                ClusterType.TEST_CLUSTER_MANAGER, bookKeeperFactory, fs,
-                CacheConfig.getBlockSize(conf), statistics),
-            CacheConfig.getBlockSize(conf)));
-  }
-
-  @Override
-  public FSDataInputStream open(Path path) throws IOException
-  {
-    FSDataInputStream stream = fs.open(path, CacheConfig.getBlockSize(conf));
-    return stream;
-  }
 }

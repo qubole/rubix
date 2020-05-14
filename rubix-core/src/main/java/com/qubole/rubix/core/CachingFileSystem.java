@@ -202,7 +202,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
     try {
       return new FSDataInputStream(
               new BufferedFSInputStream(
-                      new CachingInputStream(this, originalPath, this.getConf(), statsMBean,
+                      new CachingInputStream(originalPath, this.getConf(), statsMBean,
                               clusterManager.getClusterType(), bookKeeperFactory, fs, bufferSize, statistics),
                       CacheConfig.getBlockSize(getConf())));
     }

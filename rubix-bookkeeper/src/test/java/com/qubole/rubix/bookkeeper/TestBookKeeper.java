@@ -219,30 +219,6 @@ public class TestBookKeeper
   }
 
   @Test
-  public void testGetFileInfoWithInvalidationEnabled() throws Exception
-  {
-    Path backendFilePath = new Path(TestUtil.getDefaultTestDirectoryPath(conf), BACKEND_FILE_NAME);
-    DataGen.populateFile(backendFilePath.toString());
-    int expectedFileSize = DataGen.generateContent(1).length();
-
-    CacheConfig.setFileStalenessCheck(conf, true);
-
-    FileInfo info = bookKeeper.getFileInfo(backendFilePath.toString());
-
-    assertTrue(info.getFileSize() == expectedFileSize, "FileSize was not equal to the expected value." +
-        " Got FileSize: " + info.getFileSize() + " Expected Value : " + expectedFileSize);
-
-    //Rewrite the file with half the data
-    DataGen.populateFile(backendFilePath.toString(), 2);
-
-    expectedFileSize = DataGen.generateContent(2).length();
-
-    info = bookKeeper.getFileInfo(backendFilePath.toString());
-    assertTrue(info.getFileSize() == expectedFileSize, "FileSize was not equal to the expected value." +
-        " Got FileSize: " + info.getFileSize() + " Expected Value : " + expectedFileSize);
-  }
-
-  @Test
   public void testGetFileInfoWithInvalidationDisabled() throws Exception
   {
     Path backendFilePath = new Path(TestUtil.getDefaultTestDirectoryPath(conf), BACKEND_FILE_NAME);

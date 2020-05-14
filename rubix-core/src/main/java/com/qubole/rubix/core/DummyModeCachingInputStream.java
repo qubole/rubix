@@ -39,7 +39,7 @@ public class DummyModeCachingInputStream extends CachingInputStream
                                      FileSystem.Statistics statistics)
           throws IOException
   {
-    super(parentFs, backendPath, conf, statsMbean, clusterType, bookKeeperFactory, remoteFileSystem, bufferSize, statistics);
+    super(backendPath, conf, statsMbean, clusterType, bookKeeperFactory, remoteFileSystem, bufferSize, statistics);
   }
 
   @Override
