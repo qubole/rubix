@@ -212,21 +212,23 @@ public class CachingInputStream extends FSInputStream
   public int read(long position, byte[] buffer, int offset, int length)
           throws IOException
   {
-    long oldPos = getPos();
-    try {
-      seek(position);
-      return readInternal(buffer, offset, length);
-    }
-    catch (InterruptedException e) {
-      throw Throwables.propagate(e);
-    }
-    catch (Exception e) {
-      log.error(String.format("Failed to read from rubix for file %s position %d length %d. Falling back to remote", remotePath, nextReadPosition, length), e);
-      getParentDataInputStream().readFully(position, buffer, offset, length);
-      return length;
-    }
-    finally {
-      seek(oldPos);
+    synchronized (this) {
+      long oldPos = getPos();
+      try {
+        seek(position);
+        return readInternal(buffer, offset, length);
+      }
+      catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+      catch (Exception e) {
+        log.error(String.format("Failed to read from rubix for file %s position %d length %d. Falling back to remote", remotePath, nextReadPosition, length), e);
+        getParentDataInputStream().readFully(position, buffer, offset, length);
+        return length;
+      }
+      finally {
+        seek(oldPos);
+      }
     }
   }
 
