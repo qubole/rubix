@@ -14,7 +14,6 @@ package com.qubole.rubix.bookkeeper.utils;
 
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
-import org.apache.commons.lang.math.NumberUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -82,6 +81,9 @@ public class DiskUtils
     long cacheSize = 0;
     for (int disk = 0; disk < diskMap.size(); disk++) {
       long cacheDirSize = getDirectorySizeInMB(new File(diskMap.get(disk) + cacheDirSuffix));
+      if (cacheDirSize == -1) {
+        return -1;
+      }
       cacheSize += cacheDirSize;
     }
     return (int) cacheSize;
@@ -111,7 +113,14 @@ public class DiskUtils
     catch (Exception e) {
       log.error(String.format("Exception while calculating the size of the folder %s with exception : %s", dirname.toString(), e.toString()));
     }
-    return NumberUtils.toLong(output.toString().split("\\s+")[0]) / 1024;
+    try {
+      return Long.parseLong(output.toString().split("\\s+")[0]) / 1024;
+    }
+    catch (NumberFormatException e)
+    {
+      log.warn(String.format("Unable to calculate size of directory %s, du output returned: %s", dirname, output.toString()));
+      return -1L;
+    }
   }
 
   public static int getUsedSpaceMB(Configuration conf)
