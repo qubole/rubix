@@ -33,13 +33,6 @@
         </dependency>
 
         <dependency>
-            <groupId>commons-lang</groupId>
-            <artifactId>commons-lang</artifactId>
-            <version>2.4</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
             <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-spi</artifactId>
         </dependency>
@@ -94,6 +87,13 @@
             <groupId>com.google.guava</groupId>
             <artifactId>guava-testlib</artifactId>
             <version>${dep.guava.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <version>2.4</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
