@@ -38,7 +38,7 @@ public class CachingPrestoGoogleHadoopFileSystem extends CachingFileSystem<Googl
   public void initialize(URI uri, Configuration conf) throws IOException
   {
     try {
-      initializeClusterManager(conf, ClusterType.PRESTO_CLUSTER_MANAGER);
+      initializeClusterManager(conf, ClusterType.PRESTOSQL_CLUSTER_MANAGER);
       super.initialize(uri, conf);
     }
     catch (ClusterManagerInitilizationException ex) {
