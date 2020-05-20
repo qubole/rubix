@@ -313,7 +313,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
   private URI getOriginalURI(URI actualURI)
   {
     String actualScheme = actualURI.getScheme();
-    if (!actualScheme.equals(CacheConfig.RUBIX_SCHEME)) {
+    if (!CacheConfig.RUBIX_SCHEME.equals(actualScheme)) {
       return actualURI;
     }
     return URI.create(getScheme() + "://" + actualURI.getAuthority());
