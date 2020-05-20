@@ -13,33 +13,13 @@
 package com.qubole.rubix.spi;
 
 import org.apache.hadoop.conf.Configuration;
-
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
 
 /**
  * Created by sakshia on 21/11/16.
  */
 public class DataTransferClientHelper
 {
-  private DataTransferClientHelper()
-  {
-  }
-
-  public static SocketChannel createDataTransferClient(String remoteNodeName, Configuration conf)
-      throws IOException
-  {
-    SocketAddress sad = new InetSocketAddress(remoteNodeName, CacheConfig.getDataTransferServerPort(conf));
-    SocketChannel sc = SocketChannel.open();
-    sc.socket().setSoTimeout(CacheConfig.getClientReadTimeout(conf));
-    sc.configureBlocking(true);
-    sc.socket().connect(sad, CacheConfig.getServerConnectTimeout(conf));
-    return sc;
-  }
-
     /* order is:
     int : filePathLength
     String : filePath

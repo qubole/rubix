@@ -16,7 +16,6 @@
  */
 package com.qubole.rubix.spi.fop;
 
-import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -31,7 +30,7 @@ import static com.google.common.base.Preconditions.checkState;
  */
 public class ObjectPoolPartition<T>
 {
-  private static final Log log = LogFactory.getLog(RetryingPooledBookkeeperClient.class);
+  private static final Log log = LogFactory.getLog(ObjectPoolPartition.class);
 
   private final ObjectPool<T> pool;
   private final PoolConfig config;
@@ -41,9 +40,10 @@ public class ObjectPoolPartition<T>
   private String host;
   private int socketTimeout;
   private int connectTimeout;
+  private final String name;
 
   public ObjectPoolPartition(ObjectPool<T> pool, PoolConfig config,
-          ObjectFactory<T> objectFactory, BlockingQueue<Poolable<T>> queue, String host, int socketTimeout, int connectTimeout)
+          ObjectFactory<T> objectFactory, BlockingQueue<Poolable<T>> queue, String host, int socketTimeout, int connectTimeout, String name)
   {
     this.pool = pool;
     this.config = config;
@@ -52,6 +52,7 @@ public class ObjectPoolPartition<T>
     this.host = host;
     this.socketTimeout = socketTimeout;
     this.connectTimeout = connectTimeout;
+    this.name = name;
     totalCount = 0;
     for (int i = 0; i < config.getMinSize(); i++) {
       T object = objectFactory.create(host, socketTimeout, connectTimeout);
@@ -65,16 +66,16 @@ public class ObjectPoolPartition<T>
   public void returnObject(Poolable<T> object)
   {
     if (!objectFactory.validate(object.getObject())) {
-      log.debug(String.format("Invalid object for host %s removing %s ", object.getHost(), object));
+      log.debug(String.format("%s : Invalid object for host %s removing %s ", this.name, object.getHost(), object));
       decreaseObject(object);
       // Compensate for the removed object. Needed to prevent endless wait when in parallel a borrowObject is called
       increaseObjects(1, false);
       return;
     }
 
-    log.debug(String.format("Returning object %s to queue of host %s. Queue size: %d", object, object.getHost(), objectQueue.size()));
+    log.debug(String.format("%s : Returning object %s to queue of host %s. Queue size: %d", this.name, object, object.getHost(), objectQueue.size()));
     if (!objectQueue.offer(object)) {
-      log.warn("Created more objects than configured. Created=" + totalCount + " QueueSize=" + objectQueue.size());
+      log.warn(this.name + " : Created more objects than configured. Created=" + totalCount + " QueueSize=" + objectQueue.size());
       decreaseObject(object);
     }
   }
@@ -145,8 +146,8 @@ public class ObjectPoolPartition<T>
         log.warn(String.format("Could not increase pool size. Pool state: totalCount=%d queueSize=%d delta=%d", totalCount, objectQueue.size(), delta));
       }
       else {
-        log.debug(String.format("Increased pool size by %d, to new size: %d, current queue size: %d, delta: %d",
-                totalCount - oldCount, totalCount, objectQueue.size(), delta));
+        log.debug(String.format("%s : Increased pool size by %d, to new size: %d, current queue size: %d, delta: %d",
+                this.name, totalCount - oldCount, totalCount, objectQueue.size(), delta));
       }
     }
     catch (Exception e) {
@@ -169,6 +170,7 @@ public class ObjectPoolPartition<T>
             "Call to free object of wrong partition, current partition=%s requested partition = %s",
             this.host, obj.getHost());
     objectRemoved();
+    log.debug(this.name + " : Decreasing pool size for " + this.host + " , object: " + obj);
     objectFactory.destroy(obj.getObject());
     obj.destroy();
     return true;
@@ -189,6 +191,7 @@ public class ObjectPoolPartition<T>
   {
     int delta = this.totalCount - config.getMinSize();
     if (delta <= 0) {
+      log.debug(this.name + " : Scavenge for delta <= 0, Skipping !!!");
       return;
     }
     int removed = 0;
@@ -198,10 +201,11 @@ public class ObjectPoolPartition<T>
     while (delta-- > 0 && obj != null) {
       // performance trade off: delta always decrease even if the queue is empty,
       // so it could take several intervals to shrink the pool to the configured min value.
-      log.debug(String.format("obj=%s, now-last=%s, max idle=", obj, now - obj.getLastAccessTs(),
+      log.debug(String.format("%s : obj=%s, now-last=%s, max idle=%s", this.name, obj, now - obj.getLastAccessTs(),
               config.getMaxIdleMilliseconds()));
       if (now - obj.getLastAccessTs() > config.getMaxIdleMilliseconds() &&
               ThreadLocalRandom.current().nextDouble(1) < config.getScavengeRatio()) {
+        log.debug(this.name + " : Scavenger removing object: " + obj);
         decreaseObject(obj); // shrink the pool size if the object reaches max idle time
         removed++;
       }
@@ -211,7 +215,7 @@ public class ObjectPoolPartition<T>
       obj = objectQueue.poll();
     }
     if (removed > 0) {
-      log.debug(removed + " objects were scavenged.");
+      log.debug(this.name + " : " + removed + " objects were scavenged.");
     }
   }
 
