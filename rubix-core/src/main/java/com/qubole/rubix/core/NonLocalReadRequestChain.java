@@ -26,15 +26,14 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.SocketChannel;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.qubole.rubix.spi.DataTransferClientFactory.*;
 
 /**
  * Created by sakshia on 31/8/16.
@@ -96,34 +95,20 @@ public class NonLocalReadRequestChain extends ReadRequestChain
       if (cancelled) {
         propagateCancel(this.getClass().getName());
       }
-      SocketChannel dataTransferClient;
-      try {
-        dataTransferClient = DataTransferClientHelper.createDataTransferClient(remoteNodeName, conf);
-      }
-      catch (Exception e) {
-        log.warn("Could not create Data Transfer Client to node " + remoteNodeName, e);
-        if (strictMode) {
-          throw Throwables.propagate(e);
-        }
-        else {
-          return directReadRequest(readRequests.indexOf(readRequest));
-        }
-      }
-      try {
+      try (DataTransferClient dataTransferClient = getClient(remoteNodeName, conf)) {
         int nread = 0;
-
         /*
         SocketChannels does not support timeouts when used directly, because timeout is used only by streams.
         We get this working by wrapping it in ReadableByteChannel.
         Ref - https://technfun.wordpress.com/2009/01/29/networking-in-java-non-blocking-nio-blocking-nio-and-io/
         */
-        InputStream inStream = dataTransferClient.socket().getInputStream();
+        InputStream inStream = dataTransferClient.getSocketChannel().socket().getInputStream();
         ReadableByteChannel wrappedChannel = Channels.newChannel(inStream);
 
         ByteBuffer buf = DataTransferClientHelper.writeHeaders(conf, new DataTransferHeader(readRequest.getActualReadStart(),
             readRequest.getActualReadLengthIntUnsafe(), fileSize, lastModified, clusterType, filePath));
 
-        dataTransferClient.write(buf);
+        dataTransferClient.getSocketChannel().write(buf);
         int bytesread = 0;
         ByteBuffer dst = ByteBuffer.wrap(readRequest.destBuffer, readRequest.getDestBufferOffset(), readRequest.destBuffer.length - readRequest.getDestBufferOffset());
         while (bytesread != readRequest.getActualReadLengthIntUnsafe()) {
@@ -137,22 +122,13 @@ public class NonLocalReadRequestChain extends ReadRequestChain
           dst.position(bytesread + readRequest.getDestBufferOffset());
         }
       }
-      catch (SocketTimeoutException e) {
-        if (strictMode) {
-          log.error(remoteNodeName + ": socket read timed out.", e);
-          throw Throwables.propagate(e);
-        }
-        else {
-          log.warn(remoteNodeName + ": socket read timed out. Using direct reads", e);
-          return directReadRequest(readRequests.indexOf(readRequest));
-        }
-      }
       catch (Exception e) {
         log.warn("Error reading data from node : " + remoteNodeName, e);
         if (strictMode) {
           throw Throwables.propagate(e);
         }
         else {
+          log.warn("Error in reading from node: " + remoteNodeName + " Using direct reads", e);
           return directReadRequest(readRequests.indexOf(readRequest));
         }
       }
@@ -160,15 +136,6 @@ public class NonLocalReadRequestChain extends ReadRequestChain
         log.debug(String.format("Read %d bytes internally from node %s", totalRead, remoteNodeName));
         if (statistics != null) {
           statistics.incrementBytesRead(totalRead);
-        }
-        try {
-          if (dataTransferClient != null) {
-            dataTransferClient.close();
-            dataTransferClient = null;
-          }
-        }
-        catch (IOException e) {
-          log.warn("Error closing Data Transfer client : " + remoteNodeName, e);
         }
       }
     }

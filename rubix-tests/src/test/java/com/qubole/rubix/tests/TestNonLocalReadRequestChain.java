@@ -29,6 +29,7 @@ import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.ClusterType;
+import com.qubole.rubix.spi.DataTransferClientFactory;
 import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
@@ -132,6 +133,7 @@ public class TestNonLocalReadRequestChain
     conf.setClass("fs.testfile.impl", MockCachingFileSystem.class, FileSystem.class);
     nonLocalReadRequestChain = createNewNonLocalReadRequest();
     BookKeeperFactory.resetConnectionPool();
+    DataTransferClientFactory.resetConnectionPool();
   }
 
   private NonLocalReadRequestChain createNewNonLocalReadRequest() throws IOException

@@ -217,52 +217,55 @@ public class LocalDataTransferServer extends Configured implements Tool
     public void run()
     {
       try {
-        log.debug("Connected to node - " + localDataTransferClient.getRemoteAddress());
-        ByteBuffer dataInfo = ByteBuffer.allocate(CacheConfig.getMaxHeaderSize(conf));
+        log.debug("Connected to node - " + localDataTransferClient.getLocalAddress());
 
-        int read = localDataTransferClient.read(dataInfo);
-        if (read == -1) {
-          throw new Exception("Could not read data from Non-local node");
-        }
-        dataInfo.flip();
+        while (localDataTransferClient.isConnected()) {
 
-        DataTransferHeader header = DataTransferClientHelper.readHeaders(dataInfo);
-        long offset = header.getOffset();
-        int readLength = header.getReadLength();
-        String remotePath = header.getFilePath();
-        log.debug(String.format("Trying to read from %s at offset %d and length %d for client %s", remotePath, offset, readLength, localDataTransferClient.getRemoteAddress()));
-        try (RetryingPooledBookkeeperClient bookKeeperClient = bookKeeperFactory.createBookKeeperClient(conf)) {
-          if (!CacheConfig.isParallelWarmupEnabled(conf)) {
-            if (!bookKeeperClient.readData(remotePath, offset, readLength, header.getFileSize(),
-                    header.getLastModified(), header.getClusterType())) {
-              throw new Exception("Could not cache data required by non-local node");
-            }
+          ByteBuffer dataInfo = ByteBuffer.allocate(CacheConfig.getMaxHeaderSize(conf));
+
+          int read = localDataTransferClient.read(dataInfo);
+          if (read == -1) {
+            throw new Exception("Could not read data from Non-local node");
           }
-          else {
-            // Just make sure the requested blocks are present in the cache. If any the blocks is
-            // not presnt in the cache, throw an exception so that the caller NonLocalReadRequestChain
-            // can read the data from the object store
-            long blockSize = CacheConfig.getBlockSize(conf);
-            long startBlock = offset / blockSize;
-            long endBlock = ((offset + (readLength - 1)) / blockSize) + 1;
+          dataInfo.flip();
 
-            CacheStatusRequest request = new CacheStatusRequest(remotePath, header.getFileSize(), header.getLastModified(),
-                    startBlock, endBlock).setClusterType(header.getClusterType());
-            List<BlockLocation> blockLocations = bookKeeperClient.getCacheStatus(request);
+          DataTransferHeader header = DataTransferClientHelper.readHeaders(dataInfo);
+          long offset = header.getOffset();
+          int readLength = header.getReadLength();
+          String remotePath = header.getFilePath();
+          log.info(String.format("Trying to read from %s at offset %d and length %d for client %s", remotePath, offset, readLength, localDataTransferClient.getRemoteAddress()));
+          try (RetryingPooledBookkeeperClient bookKeeperClient = bookKeeperFactory.createBookKeeperClient(conf)) {
+            if (!CacheConfig.isParallelWarmupEnabled(conf)) {
+              if (!bookKeeperClient.readData(remotePath, offset, readLength, header.getFileSize(),
+                      header.getLastModified(), header.getClusterType())) {
+                throw new Exception("Could not cache data required by non-local node");
+              }
+            }
+            else {
+              // Just make sure the requested blocks are present in the cache. If any the blocks is
+              // not presnt in the cache, throw an exception so that the caller NonLocalReadRequestChain
+              // can read the data from the object store
+              long blockSize = CacheConfig.getBlockSize(conf);
+              long startBlock = offset / blockSize;
+              long endBlock = ((offset + (readLength - 1)) / blockSize) + 1;
 
-            long blockNum = startBlock;
-            for (BlockLocation location : blockLocations) {
-              if (location.getLocation() != Location.CACHED) {
-                log.error(String.format("The requested data for block %d of file %s in not in cache. " +
-                    " The data will be read from object store", blockNum, remotePath));
-                throw new Exception("The requested data in not in cache. The data will be read from object store");
+              CacheStatusRequest request = new CacheStatusRequest(remotePath, header.getFileSize(), header.getLastModified(),
+                      startBlock, endBlock).setClusterType(header.getClusterType());
+              List<BlockLocation> blockLocations = bookKeeperClient.getCacheStatus(request);
+
+              long blockNum = startBlock;
+              for (BlockLocation location : blockLocations) {
+                if (location.getLocation() != Location.CACHED) {
+                  log.error(String.format("The requested data for block %d of file %s in not in cache. " +
+                          " The data will be read from object store", blockNum, remotePath));
+                  throw new Exception("The requested data in not in cache. The data will be read from object store");
+                }
               }
               blockNum++;
             }
+            int nread = readDataFromCachedFile(bookKeeperClient, remotePath, offset, readLength);
+            log.info(String.format("Done reading %d from %s at offset %d and length %d for client %s", nread, remotePath, offset, readLength, localDataTransferClient.getRemoteAddress()));
           }
-
-          int nread = readDataFromCachedFile(bookKeeperClient, remotePath, offset, readLength);
-          log.debug(String.format("Done reading %d from %s at offset %d and length %d for client %s", nread, remotePath, offset, readLength, localDataTransferClient.getRemoteAddress()));
         }
       }
       catch (Exception e) {

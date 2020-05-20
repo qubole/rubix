@@ -25,6 +25,7 @@ public class SocketObjectFactory
     implements ObjectFactory<TSocket>
 {
   private static final Log log = LogFactory.getLog(SocketObjectFactory.class.getName());
+  private static final String BKS_POOL = "bks-pool";
 
   private final int port;
 
@@ -36,7 +37,7 @@ public class SocketObjectFactory
   @Override
   public TSocket create(String host, int socketTimeout, int connectTimeout)
   {
-    log.debug("Opening connection to host: " + host);
+    log.debug(BKS_POOL + " : Opening connection to host: " + host);
     TSocket socket = null;
     try {
       socket = new TSocket(host, port, socketTimeout, connectTimeout);
@@ -53,6 +54,7 @@ public class SocketObjectFactory
   public void destroy(TSocket o)
   {
     // clean up and release resources
+    log.debug(BKS_POOL + " : Destroy socket channel: " + o);
     o.close();
   }
 
@@ -70,12 +72,13 @@ public class SocketObjectFactory
         // Let os time it out
       }
     }
-
+    log.debug(BKS_POOL + " : Validate socket channel: " + o + " isvalid: " + !isClosed);
     return !isClosed;
   }
 
   public static ObjectPool<TSocket> createSocketObjectPool(Configuration conf, String host, int port)
   {
+    log.debug(BKS_POOL + " : Creating socket object pool");
     PoolConfig poolConfig = new PoolConfig();
     poolConfig.setMaxSize(CacheConfig.getTranportPoolMaxSize(conf));
     poolConfig.setMinSize(CacheConfig.getTransportPoolMinSize(conf));
@@ -84,7 +87,7 @@ public class SocketObjectFactory
     poolConfig.setScavengeIntervalMilliseconds(60000);
 
     ObjectFactory<TSocket> factory = new SocketObjectFactory(port);
-    ObjectPool<TSocket> pool = new ObjectPool(poolConfig, factory);
+    ObjectPool<TSocket> pool = new ObjectPool(poolConfig, factory, BKS_POOL);
     pool.registerHost(host, CacheConfig.getServerSocketTimeout(conf), CacheConfig.getServerConnectTimeout(conf));
     return pool;
   }

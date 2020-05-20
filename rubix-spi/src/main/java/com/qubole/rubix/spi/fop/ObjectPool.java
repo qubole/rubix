@@ -17,7 +17,6 @@
 package com.qubole.rubix.spi.fop;
 
 import com.qubole.rubix.spi.CacheConfig;
-import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -31,19 +30,21 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ObjectPool<T>
 {
-  private static final Log log = LogFactory.getLog(RetryingPooledBookkeeperClient.class);
+  private static final Log log = LogFactory.getLog(ObjectPool.class);
 
   private final PoolConfig config;
   private final ObjectFactory<T> factory;
   private final ConcurrentHashMap<String, ObjectPoolPartition<T>> hostToPoolMap;
+  private final String name;
   private Scavenger scavenger;
   private volatile boolean shuttingDown;
 
-  public ObjectPool(PoolConfig poolConfig, ObjectFactory<T> objectFactory)
+  public ObjectPool(PoolConfig poolConfig, ObjectFactory<T> objectFactory, String name)
   {
     this.config = poolConfig;
     this.factory = objectFactory;
     this.hostToPoolMap = new ConcurrentHashMap<>();
+    this.name = name;
     if (config.getScavengeIntervalMilliseconds() > 0) {
       this.scavenger = new Scavenger();
       this.scavenger.start();
@@ -52,7 +53,7 @@ public class ObjectPool<T>
 
   public void registerHost(String host, int socketTimeout, int connectTimeout)
   {
-    hostToPoolMap.put(host, new ObjectPoolPartition<>(this, config, factory, createBlockingQueue(config), host, socketTimeout, connectTimeout));
+    hostToPoolMap.put(host, new ObjectPoolPartition<>(this, config, factory, createBlockingQueue(config), host, socketTimeout, connectTimeout, this.name));
   }
 
   protected BlockingQueue<Poolable<T>> createBlockingQueue(PoolConfig poolConfig)
@@ -71,7 +72,7 @@ public class ObjectPool<T>
         }
       }
     }
-    log.debug("Borrowing object for partition: " + host);
+    log.debug(this.name + " : Borrowing object for partition: " + host);
     for (int i = 0; i < 3; i++) { // try at most three times
       Poolable<T> result = getObject(false, host);
       if (factory.validate(result.getObject())) {
@@ -126,16 +127,18 @@ public class ObjectPool<T>
     @Override
     public void run()
     {
+      log.debug("Starting scavenger for connection pool");
       while (!ObjectPool.this.shuttingDown) {
         try {
+          log.debug("Host pool map values: " + hostToPoolMap.values());
           for (ObjectPoolPartition<T> subPool : hostToPoolMap.values()) {
             Thread.sleep(config.getScavengeIntervalMilliseconds());
-            log.debug("scavenge sub pool of host" + subPool.getHost());
+            log.debug("Scavenging sub pool of host: " + subPool.getHost());
             subPool.scavenge();
           }
         }
         catch (InterruptedException e) {
-          log.debug("scavenge for sub pool failed with error", e);
+          log.warn("Scavenge failed with error", e);
         }
       }
     }
