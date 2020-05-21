@@ -81,6 +81,7 @@ public class SocketObjectFactory
     poolConfig.setMinSize(CacheConfig.getTransportPoolMinSize(conf));
     poolConfig.setDelta(CacheConfig.getTransportPoolDeltaSize(conf));
     poolConfig.setMaxWaitMilliseconds(CacheConfig.getTransportPoolMaxWait(conf));
+    poolConfig.setScavengeIntervalMilliseconds(60000);
 
     ObjectFactory<TSocket> factory = new SocketObjectFactory(port);
     ObjectPool<TSocket> pool = new ObjectPool(poolConfig, factory);

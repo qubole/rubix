@@ -22,9 +22,12 @@ package com.qubole.rubix.spi.fop;
 public class PoolConfig
 {
   private int maxWaitMilliseconds = 5000; // when pool is full, wait at most 5 seconds, then throw an exception
+  private int maxIdleMilliseconds = 300000; // objects idle for 5 minutes will be destroyed to shrink the pool size
   private int minSize = 5;
   private int maxSize = 20;
   private int delta = 5;
+  private int scavengeIntervalMilliseconds = -1; // < 0 means disabled by default
+  private double scavengeRatio = 0.5; // to avoid to clean up all connections in the pool at the same time
 
   public int getMaxWaitMilliseconds()
   {
@@ -59,6 +62,17 @@ public class PoolConfig
     return this;
   }
 
+  public int getMaxIdleMilliseconds()
+  {
+    return maxIdleMilliseconds;
+  }
+
+  public PoolConfig setMaxIdleMilliseconds(int maxIdleMilliseconds)
+  {
+    this.maxIdleMilliseconds = maxIdleMilliseconds;
+    return this;
+  }
+
   public int getDelta()
   {
     return delta;
@@ -67,5 +81,38 @@ public class PoolConfig
   public void setDelta(int delta)
   {
     this.delta = delta;
+  }
+
+  public int getScavengeIntervalMilliseconds()
+  {
+    return scavengeIntervalMilliseconds;
+  }
+
+  /**
+   * @param scavengeIntervalMilliseconds set it to zero if you don't want to automatically shrink your pool.
+   *                                     This is useful for fixed-size pool, or pools don't increase too much.
+   */
+  public PoolConfig setScavengeIntervalMilliseconds(int scavengeIntervalMilliseconds)
+  {
+    this.scavengeIntervalMilliseconds = scavengeIntervalMilliseconds;
+    return this;
+  }
+
+  public double getScavengeRatio()
+  {
+    return scavengeRatio;
+  }
+
+  /**
+   *  Each time we shrink a pool, we only scavenge some of the objects to avoid an empty pool
+   * @param scavengeRatio must be a double between (0, 1]
+   */
+  public PoolConfig setScavengeRatio(double scavengeRatio)
+  {
+    if (scavengeRatio <= 0 || scavengeRatio > 1) {
+      throw new IllegalArgumentException("Invalid scavenge ratio: " + scavengeRatio);
+    }
+    this.scavengeRatio = scavengeRatio;
+    return this;
   }
 }

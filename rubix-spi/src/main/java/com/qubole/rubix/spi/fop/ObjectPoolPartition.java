@@ -21,6 +21,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -181,5 +182,54 @@ public class ObjectPoolPartition<T>
   public synchronized int getTotalCount()
   {
     return totalCount;
+  }
+
+  // set the scavenge interval carefully
+  public synchronized void scavenge() throws InterruptedException
+  {
+    int delta = this.totalCount - config.getMinSize();
+    if (delta <= 0) {
+      return;
+    }
+    int removed = 0;
+    long now = System.currentTimeMillis();
+    Poolable<T> obj;
+    obj = objectQueue.poll();
+    while (delta-- > 0 && obj != null) {
+      // performance trade off: delta always decrease even if the queue is empty,
+      // so it could take several intervals to shrink the pool to the configured min value.
+      log.debug(String.format("obj=%s, now-last=%s, max idle=", obj, now - obj.getLastAccessTs(),
+              config.getMaxIdleMilliseconds()));
+      if (now - obj.getLastAccessTs() > config.getMaxIdleMilliseconds() &&
+              ThreadLocalRandom.current().nextDouble(1) < config.getScavengeRatio()) {
+        decreaseObject(obj); // shrink the pool size if the object reaches max idle time
+        removed++;
+      }
+      else {
+        objectQueue.put(obj); //put it back
+      }
+      obj = objectQueue.poll();
+    }
+    if (removed > 0) {
+      log.debug(removed + " objects were scavenged.");
+    }
+  }
+
+  public synchronized int shutdown()
+  {
+    int removed = 0;
+    while (this.totalCount > 0) {
+      Poolable<T> obj = objectQueue.poll();
+      if (obj != null) {
+        decreaseObject(obj);
+        removed++;
+      }
+    }
+    return removed;
+  }
+
+  public String getHost()
+  {
+    return host;
   }
 }

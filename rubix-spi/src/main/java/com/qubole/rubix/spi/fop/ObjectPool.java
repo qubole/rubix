@@ -36,12 +36,18 @@ public class ObjectPool<T>
   private final PoolConfig config;
   private final ObjectFactory<T> factory;
   private final ConcurrentHashMap<String, ObjectPoolPartition<T>> hostToPoolMap;
+  private Scavenger scavenger;
+  private volatile boolean shuttingDown;
 
   public ObjectPool(PoolConfig poolConfig, ObjectFactory<T> objectFactory)
   {
     this.config = poolConfig;
     this.factory = objectFactory;
     this.hostToPoolMap = new ConcurrentHashMap<>();
+    if (config.getScavengeIntervalMilliseconds() > 0) {
+      this.scavenger = new Scavenger();
+      this.scavenger.start();
+    }
   }
 
   public void registerHost(String host, int socketTimeout, int connectTimeout)
@@ -97,5 +103,41 @@ public class ObjectPool<T>
       size += subPool.getTotalCount();
     }
     return size;
+  }
+
+  public synchronized int shutdown()
+          throws InterruptedException
+  {
+    shuttingDown = true;
+    int removed = 0;
+    if (scavenger != null) {
+      scavenger.interrupt();
+      scavenger.join();
+    }
+    for (ObjectPoolPartition<T> subPool : hostToPoolMap.values()) {
+      removed += subPool.shutdown();
+    }
+    return removed;
+  }
+
+  private class Scavenger
+          extends Thread
+  {
+    @Override
+    public void run()
+    {
+      while (!ObjectPool.this.shuttingDown) {
+        try {
+          for (ObjectPoolPartition<T> subPool : hostToPoolMap.values()) {
+            Thread.sleep(config.getScavengeIntervalMilliseconds());
+            log.debug("scavenge sub pool of host" + subPool.getHost());
+            subPool.scavenge();
+          }
+        }
+        catch (InterruptedException e) {
+          log.debug("scavenge for sub pool failed with error", e);
+        }
+      }
+    }
   }
 }
