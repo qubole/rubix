@@ -23,9 +23,9 @@ package com.qubole.rubix.spi.fop;
 public class Poolable<T>
         implements AutoCloseable
 {
-  private final T object;
+  private T object;
   private ObjectPool<T> pool;
-  private final String host;
+  private String host;
   private long lastAccessTs;
 
   public Poolable(T t, ObjectPool<T> pool, String host)
@@ -64,6 +64,13 @@ public class Poolable<T>
   public void setLastAccessTs(long lastAccessTs)
   {
     this.lastAccessTs = lastAccessTs;
+  }
+
+  public void destroy()
+  {
+    this.object = null;
+    this.pool = null;
+    this.host = null;
   }
 
   /**
