@@ -25,7 +25,6 @@ import org.apache.hadoop.conf.Configuration;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 
 /**
  * @author Daniel
@@ -82,57 +81,13 @@ public class ObjectPool<T>
   private Poolable<T> getObject(boolean blocking, String host)
   {
     ObjectPoolPartition<T> subPool = this.hostToPoolMap.get(host);
-
-    Poolable<T> freeObject;
-    if (subPool.getObjectQueue().size() == 0) {
-      // increase objects and return one, it will return null if reach max size
-      int totalObjects = subPool.increaseObjects(this.config.getDelta());
-      if (totalObjects == 0) {
-        // Could not create objects, this is mostly due to connection timeouts hence no point blocking as there is not other producer of sockets
-        throw new RuntimeException("Could not add connections to pool");
-      }
-    }
-
-    try {
-      if (blocking) {
-        freeObject = subPool.getObjectQueue().take();
-      }
-      else {
-        freeObject = subPool.getObjectQueue().poll(config.getMaxWaitMilliseconds(), TimeUnit.MILLISECONDS);
-        if (freeObject == null) {
-          throw new RuntimeException("Cannot get a free object from the pool");
-        }
-      }
-    }
-    catch (InterruptedException e) {
-      throw new RuntimeException(e); // will never happen
-    }
-
-    freeObject.setLastAccessTs(System.currentTimeMillis());
-    return freeObject;
+    return subPool.getObject(blocking);
   }
 
   public void returnObject(Poolable<T> obj)
   {
     ObjectPoolPartition<T> subPool = this.hostToPoolMap.get(obj.getHost());
-    if (!factory.validate(obj.getObject())) {
-      log.debug(String.format("Invalid object for host %s removing %s ", obj.getHost(), obj));
-      subPool.decreaseObject(obj);
-      // Compensate for the removed object. Needed to prevent endless wait when in parallel a borrowObject is called
-      subPool.increaseObjects(1);
-      return;
-    }
-
-    try {
-      log.debug(String.format("Returning object %s to queue of host %s. Queue size: %d", obj, obj.getHost(), subPool.getObjectQueue().size()));
-      if (!subPool.getObjectQueue().offer(obj, 5, TimeUnit.SECONDS)) {
-        log.error("Created more objects than configured: " + subPool.getTotalCount());
-        subPool.decreaseObject(obj);
-      }
-    }
-    catch (InterruptedException e) {
-      throw new RuntimeException(e); // impossible for now, unless there is a bug, e,g. borrow once but return twice.
-    }
+    subPool.returnObject(obj);
   }
 
   public int getSize()
