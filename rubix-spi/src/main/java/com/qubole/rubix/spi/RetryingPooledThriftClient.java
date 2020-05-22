@@ -12,6 +12,7 @@
  */
 package com.qubole.rubix.spi;
 
+import com.qubole.rubix.spi.fop.ObjectPool;
 import com.qubole.rubix.spi.fop.Poolable;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -67,12 +68,18 @@ public abstract class RetryingPooledThriftClient
         log.warn("Error while connecting : ", e);
         errors++;
         // We dont want to keep the transport around in case of exception to prevent reading old results in transport reuse
+        // Get a reference to objectPool before it is destroyed in returnObject
+        ObjectPool<TTransport> objectPool = transportPoolable.getPool();
         if (client.getInputProtocol().getTransport().isOpen()) {
           // Close connection and submit back so that ObjectPool to handle decommissioning
           client.getInputProtocol().getTransport().close();
           transportPoolable.getPool().returnObject(transportPoolable);
         }
-        updateClient(transportPoolable.getPool().borrowObject(host, conf));
+
+        // unset transportPoolable so that close() doesnt return it again to pool if borrowObject hits an exception
+        transportPoolable = null;
+        transportPoolable = objectPool.borrowObject(host, conf);
+        updateClient(transportPoolable);
       }
     }
 

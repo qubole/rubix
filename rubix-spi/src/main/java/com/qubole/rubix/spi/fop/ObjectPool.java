@@ -125,7 +125,10 @@ public class ObjectPool<T>
 
     try {
       log.debug(String.format("Returning object %s to queue of host %s. Queue size: %d", obj, obj.getHost(), subPool.getObjectQueue().size()));
-      subPool.getObjectQueue().put(obj);
+      if (!subPool.getObjectQueue().offer(obj, 5, TimeUnit.SECONDS)) {
+        log.error("Created more objects than configured: " + subPool.getTotalCount());
+        subPool.decreaseObject(obj);
+      }
     }
     catch (InterruptedException e) {
       throw new RuntimeException(e); // impossible for now, unless there is a bug, e,g. borrow once but return twice.

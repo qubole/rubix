@@ -22,6 +22,8 @@ import org.apache.commons.logging.LogFactory;
 
 import java.util.concurrent.BlockingQueue;
 
+import static com.google.common.base.Preconditions.checkState;
+
 /**
  * @author Daniel
  */
@@ -85,11 +87,21 @@ public class ObjectPoolPartition<T>
     return totalCount;
   }
 
-  public synchronized boolean decreaseObject(Poolable<T> obj)
+  public boolean decreaseObject(Poolable<T> obj)
   {
+    checkState(obj.getHost() != null, "Invalid object");
+    checkState(obj.getHost().equals(this.host),
+            "Call to free object of wrong partition, current partition=%s requested partition = %s",
+            this.host, obj.getHost());
+    objectRemoved();
     objectFactory.destroy(obj.getObject());
-    totalCount--;
+    obj.destroy();
     return true;
+  }
+
+  private synchronized void objectRemoved()
+  {
+    totalCount--;
   }
 
   public synchronized int getTotalCount()

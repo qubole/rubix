@@ -57,65 +57,64 @@ public class TestPoolingClient
   public void testRetryHappens()
       throws TException, InterruptedException
   {
-    ObjectPool pool = SocketObjectFactory.createSocketObjectPool(conf, "localhost", PORT);
-    RetryingPooledThriftTestClient client = new RetryingPooledThriftTestClient(
-        20,
-        conf,
-        "localhost",
-        pool.borrowObject("localhost", conf));
+    try (RetryingPooledThriftTestClient client = getClient(20)) {
+      //  issue a request which is sure to hit SocketTimeout exception
+      final Request request = new Request("_Message_", 2);
+      final AtomicReference<String> message = new AtomicReference<>();
 
-    //  issue a request which is sure to hit SocketTimeout exception
-    final Request request = new Request("_Message_", 2);
-    final AtomicReference<String> message = new AtomicReference<>();
-
-    // Start a Thread that removes sleep after some time
-    // If retries are in place, the response will be received after request has been modified
-    new Thread(new Runnable()
-    {
-      @Override
-      public void run()
+      // Start a Thread that removes sleep after some time
+      // If retries are in place, the response will be received after request has been modified
+      new Thread(new Runnable()
       {
-        try {
-          Thread.sleep(2000);
+        @Override
+        public void run ()
+        {
+          try {
+            Thread.sleep(2000);
+          }
+          catch (InterruptedException e) {
+            e.printStackTrace();
+          }
+          assertTrue(message.get() == null, "Request should not have finished");
+          request.setSleepSecs(0);
         }
-        catch (InterruptedException e) {
-          e.printStackTrace();
-        }
-        assertTrue(message.get() == null, "Request should not have finished");
-        request.setSleepSecs(0);
-      }
-    }).start();
+      }).start();
 
-    message.set(client.echo(request));
+      message.set(client.echo(request));
 
-    // given enough retries, we should have the response
-    assertTrue(message.get().equals("_Message_"), "Wrong response read: " + message.get());
+      // given enough retries, we should have the response
+      assertTrue(message.get().equals("_Message_"), "Wrong response read: " + message.get());
+    }
   }
 
   @Test
   public void testNoConnectionReuseOnException()
       throws TException, InterruptedException
   {
+    try (RetryingPooledThriftTestClient client = getClient(1)) {
+      // First issue a request which is sure to hit SocketTimeout exception
+      try {
+        client.echo(new Request("FirstMessage", 10));
+      }
+      catch (TException e) {
+        // expected
+      }
+
+      String message = client.echo(new Request("SecondMessage", 0));
+
+      assertTrue(message.equals("SecondMessage"), "Wrong response read: " + message);
+    }
+  }
+
+  private RetryingPooledThriftTestClient getClient(int retries)
+  {
     ObjectPool pool = SocketObjectFactory.createSocketObjectPool(conf, "localhost", PORT);
-    RetryingPooledThriftTestClient client = new RetryingPooledThriftTestClient(
-        1,
-        conf,
-        "localhost",
-        pool.borrowObject("localhost", conf));
 
-    // First issue a request which is sure to hit SocketTimeout exception
-    try {
-      client.echo(new Request("FirstMessage", 10));
-    }
-    catch (TException e) {
-      // expected
-    }
-
-    // Sleep more than 2 seconds to get the response back from server
-    Thread.sleep(3);
-    String message = client.echo(new Request("SecondMessage", 0));
-
-    assertTrue(message.equals("SecondMessage"), "Wrong response read: " + message);
+    return new RetryingPooledThriftTestClient(
+            retries,
+            conf,
+            "localhost",
+            pool.borrowObject("localhost", conf));
   }
 
   private static void startServerAsync(final Configuration conf)
