@@ -67,7 +67,7 @@ public class ObjectPoolPartition<T>
       log.debug(String.format("Invalid object for host %s removing %s ", object.getHost(), object));
       decreaseObject(object);
       // Compensate for the removed object. Needed to prevent endless wait when in parallel a borrowObject is called
-      increaseObjects(1);
+      increaseObjects(1, false);
       return;
     }
 
@@ -81,12 +81,18 @@ public class ObjectPoolPartition<T>
   public Poolable<T> getObject(boolean blocking)
   {
     if (objectQueue.size() == 0) {
-      // increase objects and return one, it will return null if reach max size
-      int totalObjects = increaseObjects(this.config.getDelta());
-      if (totalObjects == 0) {
+      // increase objects and return one, it will return null if pool reaches max size or if object creation fails
+      Poolable<T> object = increaseObjects(this.config.getDelta(), true);
+
+      if (object != null) {
+        return object;
+      }
+
+      if (totalCount == 0) {
         // Could not create objects, this is mostly due to connection timeouts hence no point blocking as there is not other producer of sockets
         throw new RuntimeException("Could not add connections to pool");
       }
+      // else wait for a connection to get free
     }
 
     Poolable<T> freeObject;
@@ -109,26 +115,50 @@ public class ObjectPoolPartition<T>
     return freeObject;
   }
 
-  private synchronized int increaseObjects(int delta)
+  private synchronized Poolable<T> increaseObjects(int delta, boolean returnObject)
   {
     int oldCount = totalCount;
     if (delta + totalCount > config.getMaxSize()) {
       delta = config.getMaxSize() - totalCount;
     }
+
+    Poolable<T> objectToReturn = null;
     try {
       for (int i = 0; i < delta; i++) {
         T object = objectFactory.create(host, socketTimeout, connectTimeout);
         if (object != null) {
-          objectQueue.put(new Poolable<>(object, pool, host));
+          // Do not put the first object on queue
+          // it will be returned to the caller to ensure it's request is satisfied first if object is requested
+          Poolable<T> poolable = new Poolable<>(object, pool, host);
+          if (objectToReturn == null && returnObject) {
+            objectToReturn = poolable;
+          }
+          else {
+            objectQueue.put(poolable);
+          }
           totalCount++;
         }
       }
-      log.debug("Increased pool size by " + (totalCount - oldCount) + " to new size: " + totalCount + ", current queue size: " + objectQueue.size());
+
+      if (delta > 0 && (totalCount - oldCount) == 0) {
+        log.warn(String.format("Could not increase pool size. Pool state: totalCount=%d queueSize=%d delta=%d", totalCount, objectQueue.size(), delta));
+      }
+      else {
+        log.debug(String.format("Increased pool size by %d, to new size: %d, current queue size: %d, delta: %d",
+                totalCount - oldCount, totalCount, objectQueue.size(), delta));
+      }
     }
-    catch (InterruptedException e) {
+    catch (Exception e) {
+      log.warn(String.format("Unable to increase pool size. Pool state: totalCount=%d queueSize=%d delta=%d", totalCount, objectQueue.size(), delta), e);
+      // objectToReturn is not on the queue hence untracked, clean it up before forwarding exception
+      if (objectToReturn != null) {
+        objectFactory.destroy(objectToReturn.getObject());
+        objectToReturn.destroy();
+      }
       throw new RuntimeException(e);
     }
-    return totalCount;
+
+    return objectToReturn;
   }
 
   public boolean decreaseObject(Poolable<T> obj)
