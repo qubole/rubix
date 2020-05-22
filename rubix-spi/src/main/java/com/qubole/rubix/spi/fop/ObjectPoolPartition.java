@@ -21,6 +21,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkState;
 
@@ -60,12 +61,55 @@ public class ObjectPoolPartition<T>
     }
   }
 
-  public BlockingQueue<Poolable<T>> getObjectQueue()
+  public void returnObject(Poolable<T> object)
   {
-    return objectQueue;
+    if (!objectFactory.validate(object.getObject())) {
+      log.debug(String.format("Invalid object for host %s removing %s ", object.getHost(), object));
+      decreaseObject(object);
+      // Compensate for the removed object. Needed to prevent endless wait when in parallel a borrowObject is called
+      increaseObjects(1);
+      return;
+    }
+
+    log.debug(String.format("Returning object %s to queue of host %s. Queue size: %d", object, object.getHost(), objectQueue.size()));
+    if (!objectQueue.offer(object)) {
+      log.warn("Created more objects than configured. Created=" + totalCount + " QueueSize=" + objectQueue.size());
+      decreaseObject(object);
+    }
   }
 
-  public synchronized int increaseObjects(int delta)
+  public Poolable<T> getObject(boolean blocking)
+  {
+    if (objectQueue.size() == 0) {
+      // increase objects and return one, it will return null if reach max size
+      int totalObjects = increaseObjects(this.config.getDelta());
+      if (totalObjects == 0) {
+        // Could not create objects, this is mostly due to connection timeouts hence no point blocking as there is not other producer of sockets
+        throw new RuntimeException("Could not add connections to pool");
+      }
+    }
+
+    Poolable<T> freeObject;
+    try {
+      if (blocking) {
+        freeObject = objectQueue.take();
+      }
+      else {
+        freeObject = objectQueue.poll(config.getMaxWaitMilliseconds(), TimeUnit.MILLISECONDS);
+        if (freeObject == null) {
+          throw new RuntimeException("Cannot get a free object from the pool");
+        }
+      }
+    }
+    catch (InterruptedException e) {
+      throw new RuntimeException(e); // will never happen
+    }
+
+    freeObject.setLastAccessTs(System.currentTimeMillis());
+    return freeObject;
+  }
+
+  private synchronized int increaseObjects(int delta)
   {
     int oldCount = totalCount;
     if (delta + totalCount > config.getMaxSize()) {
