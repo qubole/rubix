@@ -12,7 +12,10 @@
  */
 package com.qubole.rubix.spi;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.hadoop.conf.Configuration;
+
+import java.util.List;
 
 /**
  * Created by stagra on 14/2/16.
@@ -814,11 +817,10 @@ public class CacheConfig
 
   public static Configuration disableFSCaches(Configuration conf)
   {
-    conf.setBoolean("fs.s3.impl.disable.cache", true);
-    conf.setBoolean("fs.s3n.impl.disable.cache", true);
-    conf.setBoolean("fs.s3a.impl.disable.cache", true);
-    conf.setBoolean("fs.wasb.impl.disable.cache", true);
-    conf.setBoolean("fs.gs.impl.disable.cache", true);
+    List<String> fsSchemes = ImmutableList.of("s3", "s3a", "s3n", "wasb", "wasbs", "abfs", "abfss", "gs", "hdfs");
+    for (String scheme : fsSchemes) {
+      conf.setBoolean(String.format("fs.%s.impl.disable.cache", scheme), true);
+    }
     return conf;
   }
 }
