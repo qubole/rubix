@@ -121,7 +121,7 @@ public class CacheConfig
   private static final String DEFAULT_DATA_CACHE_DIR_SUFFIX = "/fcache/";
   private static final boolean DEFAULT_DATA_CACHE_ENABLED = true;
   private static final boolean DEFAULT_DATA_CACHE_ENABLED_ON_MASTER = true;
-  private static final int DEFAULT_DATA_CACHE_EXPIRY_AFTER_WRITE = Integer.MAX_VALUE; // ms; infinite by default
+  private static final long DEFAULT_DATA_CACHE_EXPIRY_AFTER_WRITE = Long.MAX_VALUE; // ms; infinite by default
   private static final String DEFAULT_DATA_CACHE_LOCATION_BLACKLIST = ""; // regex
   private static final String DEFAULT_DATA_CACHE_LOCATION_WHITELIST = ".*"; // regex
   private static final int DEFAULT_DATA_CACHE_MAX_DISKS = 5;
@@ -193,9 +193,9 @@ public class CacheConfig
     return conf.get(KEY_DATA_CACHE_DIR_SUFFIX, DEFAULT_DATA_CACHE_DIR_SUFFIX);
   }
 
-  public static int getCacheDataExpirationAfterWrite(Configuration conf)
+  public static long getCacheDataExpirationAfterWrite(Configuration conf)
   {
-    return conf.getInt(KEY_DATA_CACHE_EXPIRY_AFTER_WRITE, DEFAULT_DATA_CACHE_EXPIRY_AFTER_WRITE);
+    return conf.getLong(KEY_DATA_CACHE_EXPIRY_AFTER_WRITE, DEFAULT_DATA_CACHE_EXPIRY_AFTER_WRITE);
   }
 
   public static int getCacheDataFullnessPercentage(Configuration conf)
@@ -565,9 +565,9 @@ public class CacheConfig
     conf.setBoolean(KEY_CACHE_ENABLED, cacheEnabled);
   }
 
-  public static void setCacheDataExpirationAfterWrite(Configuration conf, int expiryAfterWrite)
+  public static void setCacheDataExpirationAfterWrite(Configuration conf, long expiryAfterWrite)
   {
-    conf.setInt(KEY_DATA_CACHE_EXPIRY_AFTER_WRITE, expiryAfterWrite);
+    conf.setLong(KEY_DATA_CACHE_EXPIRY_AFTER_WRITE, expiryAfterWrite);
   }
 
   public static void setCacheDataFullnessPercentage(Configuration conf, int dataFullnessPercentage)
