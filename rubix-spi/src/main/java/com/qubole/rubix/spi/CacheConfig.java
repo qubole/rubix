@@ -35,6 +35,7 @@ public class CacheConfig
   public static final int READ_SERVICE_THREAD_POOL_SIZE = 100;
   public static final int DEFAULT_DATA_TRANSFER_SERVER_PORT = 8898;
   public static final int DEFAULT_BOOKKEEPER_SERVER_PORT = 8899;
+  public static final int DEFAULT_DATA_CACHE_FULLNESS = 80; // percent
 
   private static final String KEY_BLOCK_SIZE = "rubix.cache.block.size";
   private static final String KEY_CACHE_ENABLED = "rubix.cache.enabled";
@@ -121,7 +122,6 @@ public class CacheConfig
   private static final boolean DEFAULT_DATA_CACHE_ENABLED = true;
   private static final boolean DEFAULT_DATA_CACHE_ENABLED_ON_MASTER = true;
   private static final int DEFAULT_DATA_CACHE_EXPIRY_AFTER_WRITE = Integer.MAX_VALUE; // ms; infinite by default
-  private static final int DEFAULT_DATA_CACHE_FULLNESS = 80; // percent
   private static final String DEFAULT_DATA_CACHE_LOCATION_BLACKLIST = ""; // regex
   private static final String DEFAULT_DATA_CACHE_LOCATION_WHITELIST = ".*"; // regex
   private static final int DEFAULT_DATA_CACHE_MAX_DISKS = 5;
@@ -568,6 +568,11 @@ public class CacheConfig
   public static void setCacheDataExpirationAfterWrite(Configuration conf, int expiryAfterWrite)
   {
     conf.setInt(KEY_DATA_CACHE_EXPIRY_AFTER_WRITE, expiryAfterWrite);
+  }
+
+  public static void setCacheDataFullnessPercentage(Configuration conf, int dataFullnessPercentage)
+  {
+    conf.setInt(KEY_DATA_CACHE_FULLNESS, dataFullnessPercentage);
   }
 
   public static void setCacheDataLocationWhitelist(Configuration conf, String whitelist)
