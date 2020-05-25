@@ -199,17 +199,16 @@ public class CachedReadRequestChain extends ReadRequestChain
       return 0;
     }
 
-    FSDataInputStream inputStream = remoteFileSystem.open(new Path(remotePath));
-    directReadChain = new DirectReadRequestChain(inputStream);
-    for (ReadRequest readRequest : readRequests) {
-      directReadChain.addReadRequest(readRequest);
+    try (FSDataInputStream inputStream = remoteFileSystem.open(new Path(remotePath))) {
+      directReadChain = new DirectReadRequestChain(inputStream);
+      for (ReadRequest readRequest : readRequests) {
+        directReadChain.addReadRequest(readRequest);
+      }
+      directReadChain.lock();
+      long directRead = directReadChain.call();
+      directReadChain = null;
+      return directRead;
     }
-    directReadChain.lock();
-    long directRead = directReadChain.call();
-    inputStream.close();
-    directReadChain = null;
-
-    return directRead;
   }
 
   public ReadRequestChainStats getStats()
