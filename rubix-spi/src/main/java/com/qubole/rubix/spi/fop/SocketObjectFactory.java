@@ -84,11 +84,13 @@ public class SocketObjectFactory
     poolConfig.setMinSize(CacheConfig.getTransportPoolMinSize(conf));
     poolConfig.setDelta(CacheConfig.getTransportPoolDeltaSize(conf));
     poolConfig.setMaxWaitMilliseconds(CacheConfig.getTransportPoolMaxWait(conf));
-    poolConfig.setScavengeIntervalMilliseconds(60000);
+    poolConfig.setScavengeIntervalMilliseconds(CacheConfig.getScavengeInterval(conf));
+    poolConfig.setConnectTimeoutMilliseconds(CacheConfig.getServerConnectTimeout(conf));
+    poolConfig.setSocketTimeoutMilliseconds(CacheConfig.getServerSocketTimeout(conf));
 
     ObjectFactory<TSocket> factory = new SocketObjectFactory(port);
     ObjectPool<TSocket> pool = new ObjectPool(poolConfig, factory, BKS_POOL);
-    pool.registerHost(host, CacheConfig.getServerSocketTimeout(conf), CacheConfig.getServerConnectTimeout(conf));
+    pool.registerHost(host);
     return pool;
   }
 }

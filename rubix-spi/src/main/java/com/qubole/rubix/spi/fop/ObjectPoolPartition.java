@@ -37,23 +37,23 @@ public class ObjectPoolPartition<T>
   private final BlockingQueue<Poolable<T>> objectQueue;
   private final ObjectFactory<T> objectFactory;
   private int totalCount;
-  private String host;
-  private int socketTimeout;
-  private int connectTimeout;
+  private final String host;
+  private final int socketTimeout;
+  private final int connectTimeout;
   private final String name;
 
   public ObjectPoolPartition(ObjectPool<T> pool, PoolConfig config,
-          ObjectFactory<T> objectFactory, BlockingQueue<Poolable<T>> queue, String host, int socketTimeout, int connectTimeout, String name)
+          ObjectFactory<T> objectFactory, BlockingQueue<Poolable<T>> queue, String host, String name)
   {
     this.pool = pool;
     this.config = config;
     this.objectFactory = objectFactory;
     this.objectQueue = queue;
     this.host = host;
-    this.socketTimeout = socketTimeout;
-    this.connectTimeout = connectTimeout;
     this.name = name;
-    totalCount = 0;
+    this.socketTimeout = config.getSocketTimeoutMilliseconds();
+    this.connectTimeout = config.getConnectTimeoutMilliseconds();
+    this.totalCount = 0;
     for (int i = 0; i < config.getMinSize(); i++) {
       T object = objectFactory.create(host, socketTimeout, connectTimeout);
       if (object != null) {
@@ -215,7 +215,7 @@ public class ObjectPoolPartition<T>
       obj = objectQueue.poll();
     }
     if (removed > 0) {
-      log.debug(this.name + " : " + removed + " objects were scavenged.");
+      log.debug(this.name + " : " + removed + " objects were scavenged for host: " + this.host);
     }
   }
 
