@@ -28,6 +28,8 @@ public class PoolConfig
   private int delta = 5;
   private int scavengeIntervalMilliseconds = -1; // < 0 means disabled by default
   private double scavengeRatio = 0.5; // to avoid to clean up all connections in the pool at the same time
+  private int connectTimeoutMilliseconds = 1000;
+  private int socketTimeoutMilliseconds = 3000;
 
   public int getMaxWaitMilliseconds()
   {
@@ -114,5 +116,25 @@ public class PoolConfig
     }
     this.scavengeRatio = scavengeRatio;
     return this;
+  }
+
+  public int getConnectTimeoutMilliseconds()
+  {
+    return connectTimeoutMilliseconds;
+  }
+
+  public void setConnectTimeoutMilliseconds(int connectTimeoutMilliseconds)
+  {
+    this.connectTimeoutMilliseconds = connectTimeoutMilliseconds;
+  }
+
+  public int getSocketTimeoutMilliseconds()
+  {
+    return socketTimeoutMilliseconds;
+  }
+
+  public void setSocketTimeoutMilliseconds(int socketTimeoutMilliseconds)
+  {
+    this.socketTimeoutMilliseconds = socketTimeoutMilliseconds;
   }
 }

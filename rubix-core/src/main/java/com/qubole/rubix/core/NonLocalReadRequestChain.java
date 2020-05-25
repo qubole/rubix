@@ -26,8 +26,8 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
+import java.io.IOException;
 import java.io.InputStream;
-import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
@@ -108,11 +108,25 @@ public class NonLocalReadRequestChain extends ReadRequestChain
         ByteBuffer buf = DataTransferClientHelper.writeHeaders(conf, new DataTransferHeader(readRequest.getActualReadStart(),
             readRequest.getActualReadLengthIntUnsafe(), fileSize, lastModified, clusterType, filePath));
 
-        dataTransferClient.getSocketChannel().write(buf);
+        try {
+          dataTransferClient.getSocketChannel().write(buf);
+        }
+        catch (IOException e) {
+          log.warn("Error in writing..closing socket channel: " + dataTransferClient.getSocketChannel(), e);
+          dataTransferClient.getSocketChannel().close();
+          throw e;
+        }
         int bytesread = 0;
         ByteBuffer dst = ByteBuffer.wrap(readRequest.destBuffer, readRequest.getDestBufferOffset(), readRequest.destBuffer.length - readRequest.getDestBufferOffset());
         while (bytesread != readRequest.getActualReadLengthIntUnsafe()) {
-          nread = wrappedChannel.read(dst);
+          try {
+            nread = wrappedChannel.read(dst);
+          }
+          catch (IOException e) {
+            log.warn("Error in reading..closing socket channel: " + dataTransferClient.getSocketChannel(), e);
+            dataTransferClient.getSocketChannel().close();
+            throw e;
+          }
           bytesread += nread;
           totalRead += nread;
           if (nread == -1) {
@@ -123,8 +137,8 @@ public class NonLocalReadRequestChain extends ReadRequestChain
         }
       }
       catch (Exception e) {
-        log.warn("Error reading data from node : " + remoteNodeName, e);
         if (strictMode) {
+          log.warn("Error reading data from node : " + remoteNodeName, e);
           throw Throwables.propagate(e);
         }
         else {

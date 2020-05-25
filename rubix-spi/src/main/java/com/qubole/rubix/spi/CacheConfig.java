@@ -120,6 +120,7 @@ public class CacheConfig
   private static final int DEFAULT_KEY_POOL_MIN_SIZE = 0;
   private static final int DEFAULT_KEY_POOL_DELTA_SIZE = 1;
   private static final int DEFAULT_POOL_MAX_WAIT_TIMEOUT = 5000; // ms
+  private static final int DEFAULT_SCAVENGE_INTERVAL = 300000; // ms
   private static final String DEFAULT_CACHE_METADATA_FILE_SUFFIX = "_mdfile";
   private static final String DEFAULT_DATA_CACHE_DIR_PREFIX = "/media/ephemeral";
   private static final String DEFAULT_DATA_CACHE_DIR_SUFFIX = "/fcache/";
@@ -301,6 +302,11 @@ public class CacheConfig
   public static int getTransportPoolMaxWait(Configuration conf)
   {
     return conf.getInt(KEY_POOL_MAX_WAIT_TIMEOUT, DEFAULT_POOL_MAX_WAIT_TIMEOUT);
+  }
+
+  public static int getScavengeInterval(Configuration conf)
+  {
+    return conf.getInt(KEY_POOL_MAX_WAIT_TIMEOUT, DEFAULT_SCAVENGE_INTERVAL);
   }
 
   public static int get(Configuration conf)

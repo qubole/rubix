@@ -16,7 +16,7 @@
  */
 package com.qubole.rubix.spi.fop;
 
-import com.qubole.rubix.spi.CacheConfig;
+import com.google.common.util.concurrent.AbstractScheduledService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Daniel
@@ -47,13 +48,13 @@ public class ObjectPool<T>
     this.name = name;
     if (config.getScavengeIntervalMilliseconds() > 0) {
       this.scavenger = new Scavenger();
-      this.scavenger.start();
+      this.scavenger.startAsync();
     }
   }
 
-  public void registerHost(String host, int socketTimeout, int connectTimeout)
+  public void registerHost(String host)
   {
-    hostToPoolMap.put(host, new ObjectPoolPartition<>(this, config, factory, createBlockingQueue(config), host, socketTimeout, connectTimeout, this.name));
+    hostToPoolMap.put(host, new ObjectPoolPartition<>(this, config, factory, createBlockingQueue(config), host, this.name));
   }
 
   protected BlockingQueue<Poolable<T>> createBlockingQueue(PoolConfig poolConfig)
@@ -66,9 +67,7 @@ public class ObjectPool<T>
     if (!hostToPoolMap.containsKey(host)) {
       synchronized (hostToPoolMap) {
         if (!hostToPoolMap.containsKey(host)) {
-          int socketTimeout = CacheConfig.getServerSocketTimeout(conf);
-          int connectTimeout = CacheConfig.getServerConnectTimeout(conf);
-          registerHost(host, socketTimeout, connectTimeout);
+          registerHost(host);
         }
       }
     }
@@ -112,8 +111,7 @@ public class ObjectPool<T>
     shuttingDown = true;
     int removed = 0;
     if (scavenger != null) {
-      scavenger.interrupt();
-      scavenger.join();
+      scavenger.stopAsync();
     }
     for (ObjectPoolPartition<T> subPool : hostToPoolMap.values()) {
       removed += subPool.shutdown();
@@ -122,24 +120,32 @@ public class ObjectPool<T>
   }
 
   private class Scavenger
-          extends Thread
+          extends AbstractScheduledService
   {
     @Override
-    public void run()
+    protected Scheduler scheduler()
     {
-      log.debug("Starting scavenger for connection pool");
-      while (!ObjectPool.this.shuttingDown) {
-        try {
-          log.debug("Host pool map values: " + hostToPoolMap.values());
-          for (ObjectPoolPartition<T> subPool : hostToPoolMap.values()) {
-            Thread.sleep(config.getScavengeIntervalMilliseconds());
-            log.debug("Scavenging sub pool of host: " + subPool.getHost());
-            subPool.scavenge();
-          }
+      int delay = config.getScavengeIntervalMilliseconds();
+      log.debug("Starting scavenger for connection pool with delay: " + delay + " ms");
+      return Scheduler.newFixedDelaySchedule(delay, delay, TimeUnit.MILLISECONDS);
+    }
+
+    @Override
+    protected void runOneIteration()
+    {
+      if (ObjectPool.this.shuttingDown) {
+        log.debug("Pool is shutting down, skip scavenger");
+        return;
+      }
+      try {
+        log.debug("Host pool map values: " + hostToPoolMap.values());
+        for (ObjectPoolPartition<T> subPool : hostToPoolMap.values()) {
+          log.debug("Scavenging sub pool of host: " + subPool.getHost());
+          subPool.scavenge();
         }
-        catch (InterruptedException e) {
-          log.warn("Scavenge failed with error", e);
-        }
+      }
+      catch (InterruptedException e) {
+        log.warn("Scavenge failed with error", e);
       }
     }
   }

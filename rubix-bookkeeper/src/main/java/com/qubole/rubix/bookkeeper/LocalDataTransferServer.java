@@ -224,9 +224,16 @@ public class LocalDataTransferServer extends Configured implements Tool
 
           ByteBuffer dataInfo = ByteBuffer.allocate(CacheConfig.getMaxHeaderSize(conf));
 
-          int read = localDataTransferClient.read(dataInfo);
-          if (read == -1) {
-            throw new Exception("Could not read data from Non-local node");
+          try {
+            int read = localDataTransferClient.read(dataInfo);
+            if (read == -1) {
+              throw new Exception("Could not read data from Non-local node");
+            }
+          }
+          catch (IOException e)
+          {
+            // Assume the client died and continue silently
+            log.debug("Connection closed by scavenger: ", e);
           }
           dataInfo.flip();
 
