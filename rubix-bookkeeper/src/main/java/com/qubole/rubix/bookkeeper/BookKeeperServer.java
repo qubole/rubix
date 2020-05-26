@@ -27,11 +27,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.thrift.shaded.server.TServer;
-import org.apache.thrift.shaded.server.TThreadPoolServer;
-import org.apache.thrift.shaded.transport.TServerSocket;
-import org.apache.thrift.shaded.transport.TServerTransport;
-import org.apache.thrift.shaded.transport.TTransportException;
+import org.apache.thrift.server.TServer;
+import org.apache.thrift.server.TThreadPoolServer;
+import org.apache.thrift.transport.TServerSocket;
+import org.apache.thrift.transport.TServerTransport;
+import org.apache.thrift.transport.TTransportException;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;

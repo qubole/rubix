@@ -28,7 +28,7 @@ import com.qubole.rubix.spi.thrift.HeartbeatStatus;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.thrift.shaded.TException;
+import org.apache.thrift.TException;
 
 import java.io.IOException;
 import java.net.InetAddress;

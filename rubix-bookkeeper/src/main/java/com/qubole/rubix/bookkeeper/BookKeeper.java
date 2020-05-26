@@ -50,7 +50,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.DirectBufferPool;
-import org.apache.thrift.shaded.TException;
+import org.apache.thrift.TException;
 
 import java.io.File;
 import java.io.FileNotFoundException;

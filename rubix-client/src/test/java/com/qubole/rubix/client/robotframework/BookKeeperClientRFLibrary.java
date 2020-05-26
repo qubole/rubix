@@ -22,8 +22,8 @@ import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.thrift.shaded.TException;
-import org.apache.thrift.shaded.transport.TTransportException;
+import org.apache.thrift.TException;
+import org.apache.thrift.transport.TTransportException;
 
 import java.io.File;
 import java.io.IOException;
