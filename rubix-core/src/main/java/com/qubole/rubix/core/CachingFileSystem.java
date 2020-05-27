@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
@@ -51,10 +52,9 @@ import static com.qubole.rubix.spi.CacheUtil.skipCache;
 /**
  * Created by stagra on 29/12/15.
  */
-public abstract class CachingFileSystem<T extends FileSystem> extends FileSystem
+public abstract class CachingFileSystem<T extends FileSystem> extends FilterFileSystem
 {
   private static final Log log = LogFactory.getLog(CachingFileSystem.class);
-  protected T fs;
   private static ClusterManager clusterManager;
 
   private boolean isRubixSchemeUsed;
