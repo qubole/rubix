@@ -104,8 +104,6 @@ class FileDownloader
       Path path = new Path(entry.getKey());
       DownloadRequestContext context = entry.getValue();
 
-      // Creating a new instance of the filesystem object by calling FileSystem.newInstance
-      // This one makes sure we will get a new instance even if fs.%.impl.disable.cache is set to false
       FileSystem fs = FileSystem.get(path.toUri(), conf);
       fs.initialize(path.toUri(), conf);
 
