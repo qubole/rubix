@@ -37,6 +37,8 @@ public class CacheConfig
   public static final int DEFAULT_BOOKKEEPER_SERVER_PORT = 8899;
   public static final int DEFAULT_DATA_CACHE_FULLNESS = 80; // percent
 
+  private static final String KEY_RUBIX_SITE_LOCATION = "rubix.site.location";
+  private static final String KEY_RUBIX_SITE_CONFIG_APPLIED = "ruibx.site.config.applied";
   private static final String KEY_BLOCK_SIZE = "rubix.cache.block.size";
   private static final String KEY_CACHE_ENABLED = "rubix.cache.enabled";
   private static final String KEY_DATA_CACHE_ENABLED_ON_MASTER = "rubix.cache.enabled-on-master";
@@ -172,10 +174,21 @@ public class CacheConfig
   private static final int DEFAULT_CLUSTER_NODE_REFRESH_TIME = 300; //seconds
   private static final boolean DEFAULT_DUMMY_MODE = false;
   private static final boolean DEFAULT_EMBEDDED_MODE = false;
+  public static final String DEFAULT_RUBIX_SITE_LOCATION = "/usr/lib/rubix/etc/rubix-site.xml";
   private static final boolean DEFAULT_HEARTBEAT_ENABLED = true;
 
   private CacheConfig()
   {
+  }
+
+  public static String getRubixSiteLocation(Configuration conf)
+  {
+    return conf.get(KEY_RUBIX_SITE_LOCATION, DEFAULT_RUBIX_SITE_LOCATION);
+  }
+
+  public static Boolean isRubixSiteConfigApplied(Configuration conf)
+  {
+    return conf.getBoolean(KEY_RUBIX_SITE_CONFIG_APPLIED, false);
   }
 
   public static int getBlockSize(Configuration conf)
@@ -540,6 +553,11 @@ public class CacheConfig
     return conf.get(KEY_RUBIX_CURRENT_NODE_HOSTNAME, null);
   }
 
+  public static void setRubixConfigApplied(Configuration conf, boolean value)
+  {
+    conf.setBoolean(KEY_RUBIX_SITE_CONFIG_APPLIED, value);
+  }
+
   public static void setBlockSize(Configuration conf, int blockSize)
   {
     conf.setInt(KEY_BLOCK_SIZE, blockSize);
@@ -548,6 +566,11 @@ public class CacheConfig
   public static void setCacheDataChosenColumns(Configuration conf, int chosenColumns)
   {
     conf.setInt(KEY_DATA_CACHE_TABLE_COLS_CHOSEN, chosenColumns);
+  }
+
+  public static void setRubixSiteLocation(Configuration conf, String rubixSiteLocation)
+  {
+    conf.set(KEY_RUBIX_SITE_LOCATION, rubixSiteLocation);
   }
 
   public static void setCacheDataDirPrefix(Configuration conf, String dirPrefix)

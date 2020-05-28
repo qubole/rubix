@@ -49,6 +49,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import static com.qubole.rubix.common.utils.ClusterUtil.applyRubixSiteConfig;
+
 /**
  * Created by sakshia on 26/10/16.
  */
@@ -86,7 +88,7 @@ public class LocalDataTransferServer extends Configured implements Tool
   // In embedded mode, this is called directly with local bookKeeper object
   public static void startServer(Configuration conf, MetricRegistry metricRegistry, BookKeeper bookKeeper)
   {
-    conf = new Configuration(conf);
+    conf = new Configuration(applyRubixSiteConfig(conf));
     CacheConfig.setCacheDataEnabled(conf, false);
     metrics = metricRegistry;
     registerMetrics(conf);

@@ -38,6 +38,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
 
+import static com.qubole.rubix.common.utils.ClusterUtil.applyRubixSiteConfig;
 import static com.qubole.rubix.spi.CacheConfig.getBookKeeperServerPort;
 import static com.qubole.rubix.spi.CacheConfig.getServerMaxThreads;
 
@@ -105,7 +106,7 @@ public class BookKeeperServer extends Configured implements Tool
 
   public void setupServer(Configuration conf, MetricRegistry metricsRegistry)
   {
-    conf = new Configuration(conf);
+    conf = new Configuration(applyRubixSiteConfig(conf));
     CacheConfig.setCacheDataEnabled(conf, false);
 
     this.metrics = metricsRegistry;

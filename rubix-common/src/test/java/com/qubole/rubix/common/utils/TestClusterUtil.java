@@ -15,10 +15,15 @@ package com.qubole.rubix.common.utils;
 
 import com.qubole.rubix.spi.CacheConfig;
 import org.apache.hadoop.conf.Configuration;
+import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.Test;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
 
 public class TestClusterUtil
 {
@@ -28,6 +33,9 @@ public class TestClusterUtil
   private static final String TEST_YARN_RESOURCEMANAGER_HOSTNAME = "255.255.255.1";
 
   private final Configuration conf = new Configuration();
+
+  private String workingDirectory = System.getProperty("user.dir");
+  private String rubixSiteXmlName;
 
   @AfterMethod
   public void clearConfiguration()
@@ -68,5 +76,57 @@ public class TestClusterUtil
   {
     final String hostname = ClusterUtil.getMasterHostname(conf);
     assertEquals(hostname, TEST_DEFAULT_MASTER_HOSTNAME, "Unexpected hostname!");
+  }
+
+  @Test
+  public void testPickLastConfigInRubixSiteXML()
+  {
+    Configuration configuration = new Configuration();
+    ClusterUtil.rubixSiteExists = new AtomicReference<>();
+    rubixSiteXmlName = workingDirectory + "/../rubix-common/src/test/resources/rubix-site-duplicate-key.xml";
+    CacheConfig.setRubixSiteLocation(configuration, rubixSiteXmlName);
+    configuration = ClusterUtil.applyRubixSiteConfig(configuration);
+    assertEquals(configuration.get("rubix.cache.parallel.warmup"), "false", "Configuration is returning wrong value");
+    assertNull(configuration.get("qubole.team"), "Configuration is returning wrong value");
+    assertNotNull(ClusterUtil.rubixSiteExists.get(), "ClusterUtil.rubixSiteExists should not be null after applyingRubixConfig");
+  }
+
+  @Test
+  public void testRubixConfigOnReapplying()
+  {
+    Configuration configuration = new Configuration();
+    ClusterUtil.rubixSiteExists = new AtomicReference<>();
+    rubixSiteXmlName = workingDirectory + "/../rubix-common/src/test/resources/rubix-site.xml";
+    CacheConfig.setRubixSiteLocation(configuration, rubixSiteXmlName);
+    configuration = ClusterUtil.applyRubixSiteConfig(configuration);
+    assertEquals(configuration.get("rubix.cache.parallel.warmup"), "true", "Configuration is returning wrong value");
+    assertEquals(configuration.get("rubix.team.example"), "true", "Configuration is returning wrong value");
+    assertNull(configuration.get("qubole.team"), "Configuration is returning wrong value");
+
+    rubixSiteXmlName = workingDirectory + "/../rubix-common/src/test/resources/rubix-site-duplicate-key.xml";
+    CacheConfig.setRubixSiteLocation(configuration, rubixSiteXmlName);
+    configuration = ClusterUtil.applyRubixSiteConfig(configuration);
+    assertEquals(configuration.get("rubix.cache.parallel.warmup"), "true", "Configuration is returning wrong value");
+    assertEquals(configuration.get("rubix.team.example"), "true", "Configuration is returning wrong value");
+    assertNull(configuration.get("qubole.team"), "Configuration is returning wrong value");
+  }
+
+  @Test
+  public void testConfigUnchanged()
+  {
+    Configuration configuration = new Configuration();
+    ClusterUtil.rubixSiteExists = new AtomicReference<>();
+    Configuration configuration2 = ClusterUtil.applyRubixSiteConfig(configuration);
+    assertEquals(configuration, configuration2, "Returned config in no config should be unchanged");
+  }
+
+  @Test
+  public void testEmptyRubixSite()
+  {
+    Configuration configuration = new Configuration();
+    ClusterUtil.rubixSiteExists = new AtomicReference<>();
+    rubixSiteXmlName = workingDirectory + "/../rubix-common/src/test/resources/faulty-rubix-site.xml";
+    CacheConfig.setRubixSiteLocation(configuration, rubixSiteXmlName);
+    Assert.assertThrows(Exception.class, () -> ClusterUtil.applyRubixSiteConfig(configuration));
   }
 }

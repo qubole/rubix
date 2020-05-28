@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<configuration>
+    <property>
+        <name>rubix.cache.parallel.warmup</name>
+        <value>true</value>
+    </property>
+    <property>
+        <name>rubix.cache.parallel.warmup</name>
+        <value>false</value>
+    </property>
+</configuration>
