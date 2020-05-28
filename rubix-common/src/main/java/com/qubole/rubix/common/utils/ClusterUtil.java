@@ -17,10 +17,16 @@ import com.qubole.rubix.spi.CacheConfig;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+
+import java.io.File;
+import java.util.concurrent.atomic.AtomicReference;
+
 
 public class ClusterUtil
 {
   private static final Log log = LogFactory.getLog(ClusterUtil.class.getName());
+  public static volatile AtomicReference<Boolean> rubixSiteExists = new AtomicReference<>();
 
   private ClusterUtil()
   {
@@ -49,5 +55,34 @@ public class ClusterUtil
 
     log.debug("No hostname found in etc/*-site.xml, returning localhost");
     return "localhost";
+  }
+
+  public static Configuration applyRubixSiteConfig(Configuration conf)
+  {
+    if (CacheConfig.isRubixSiteConfigApplied(conf)) {
+      return conf;
+    }
+
+    if (rubixSiteExists.get() == null) {
+      synchronized (rubixSiteExists) {
+        if (rubixSiteExists.get() == null) {
+          String configFileLocation = CacheConfig.getRubixSiteLocation(conf);
+          File configFile = new File(configFileLocation);
+          if (configFile.exists() && configFile.isFile() && configFile.length() != 0) {
+            rubixSiteExists.set(true);
+          }
+          else {
+            rubixSiteExists.set(false);
+          }
+        }
+      }
+    }
+
+    if (rubixSiteExists.get()) {
+      conf.addResource(new Path(CacheConfig.getRubixSiteLocation(conf)));
+      CacheConfig.setRubixConfigApplied(conf, true);
+    }
+
+    return conf;
   }
 }

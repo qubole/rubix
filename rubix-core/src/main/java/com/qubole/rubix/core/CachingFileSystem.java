@@ -49,6 +49,7 @@ import java.lang.reflect.Type;
 import java.net.URI;
 import java.util.List;
 
+import static com.qubole.rubix.common.utils.ClusterUtil.applyRubixSiteConfig;
 import static com.qubole.rubix.spi.CacheUtil.skipCache;
 
 /**
@@ -138,6 +139,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FilterFile
   @Override
   public void initialize(URI uri, Configuration conf) throws IOException
   {
+    conf = applyRubixSiteConfig(conf);
     super.initialize(getOriginalURI(uri), conf);
     if (clusterManager == null) {
       try {
