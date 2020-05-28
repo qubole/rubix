@@ -14,7 +14,7 @@ package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
-import com.qubole.rubix.common.metrics.MetricsReporter;
+import com.qubole.rubix.common.metrics.MetricsReporterType;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
@@ -425,7 +425,7 @@ public class BaseServerTest
    */
   private void checkMetrics(ServerType serverType, Configuration conf, MetricRegistry metrics, Set<String> metricsToVerify, boolean areMetricsEnabled, boolean usePartialMatch) throws InterruptedException, MalformedObjectNameException
   {
-    CacheConfig.setMetricsReporters(conf, MetricsReporter.JMX.name());
+    CacheConfig.setMetricsReporters(conf, MetricsReporterType.JMX.name());
 
     Set<String> metricsNames = getJmxMetricsNames();
     assertDoesNotContainMetrics(metricsNames, metricsToVerify, usePartialMatch);

@@ -13,7 +13,7 @@
 
 package com.qubole.rubix.common.metrics;
 
-public enum MetricsReporter
+public enum MetricsReporterType
 {
   STATSD,
   JMX,

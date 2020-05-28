@@ -89,7 +89,7 @@ public class TestBookKeeperMetrics
   @Test
   public void testInitializeReporters_initializeJMX() throws IOException
   {
-    CacheConfig.setMetricsReporters(conf, MetricsReporter.JMX.name());
+    CacheConfig.setMetricsReporters(conf, MetricsReporterType.JMX.name());
 
     try (final BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, metrics)) {
       assertTrue(containsReporterType(bookKeeperMetrics.reporters, JmxReporter.class));
@@ -104,7 +104,7 @@ public class TestBookKeeperMetrics
   @Test
   public void testInitializeReporters_initializeStatsD() throws IOException
   {
-    CacheConfig.setMetricsReporters(conf, MetricsReporter.STATSD.name());
+    CacheConfig.setMetricsReporters(conf, MetricsReporterType.STATSD.name());
 
     try (final BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, metrics)) {
       assertTrue(containsReporterType(bookKeeperMetrics.reporters, StatsDReporter.class));
@@ -119,7 +119,7 @@ public class TestBookKeeperMetrics
   @Test
   public void testInitializeReporters_initializeGanglia() throws IOException
   {
-    CacheConfig.setMetricsReporters(conf, MetricsReporter.GANGLIA.name());
+    CacheConfig.setMetricsReporters(conf, MetricsReporterType.GANGLIA.name());
 
     try (final BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, metrics)) {
       assertTrue(containsReporterType(bookKeeperMetrics.reporters, GangliaReporter.class));
@@ -134,7 +134,7 @@ public class TestBookKeeperMetrics
   @Test
   public void testInitializeReporters_initializeJMXAndStatsD() throws IOException
   {
-    CacheConfig.setMetricsReporters(conf, Joiner.on(",").join(MetricsReporter.STATSD.name(), MetricsReporter.JMX.name()));
+    CacheConfig.setMetricsReporters(conf, Joiner.on(",").join(MetricsReporterType.STATSD.name(), MetricsReporterType.JMX.name()));
 
     try (final BookKeeperMetrics bookKeeperMetrics = new BookKeeperMetrics(conf, metrics)) {
       assertTrue(containsReporterType(bookKeeperMetrics.reporters, StatsDReporter.class));

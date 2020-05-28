@@ -13,7 +13,7 @@
 package com.qubole.rubix.bookkeeper;
 
 import com.codahale.metrics.MetricRegistry;
-import com.qubole.rubix.common.metrics.MetricsReporter;
+import com.qubole.rubix.common.metrics.MetricsReporterType;
 import com.qubole.rubix.common.utils.TestUtil;
 import com.qubole.rubix.spi.CacheConfig;
 import org.apache.commons.logging.Log;
@@ -268,7 +268,7 @@ public class TestBookKeeperServer extends BaseServerTest
   @Test
   public void verifyMetricsAreReportedToJMX() throws MalformedObjectNameException, InterruptedException
   {
-    CacheConfig.setMetricsReporters(conf, MetricsReporter.JMX.name());
+    CacheConfig.setMetricsReporters(conf, MetricsReporterType.JMX.name());
 
     Set<String> metricsNames = getJmxMetricsNames();
     assertTrue(metricsNames.size() == 0, "Metrics should not be registered with JMX before server starts.");
@@ -316,7 +316,7 @@ public class TestBookKeeperServer extends BaseServerTest
   {
     CacheConfig.setOnMaster(conf, true);
     if (shouldReportMetrics) {
-      CacheConfig.setMetricsReporters(conf, MetricsReporter.STATSD.name());
+      CacheConfig.setMetricsReporters(conf, MetricsReporterType.STATSD.name());
     }
 
     return startServersForTestingStatsDReporter(statsDPort, testCasePort);
@@ -335,7 +335,7 @@ public class TestBookKeeperServer extends BaseServerTest
   {
     CacheConfig.setOnMaster(conf, false);
     if (shouldReportMetrics) {
-      CacheConfig.setMetricsReporters(conf, MetricsReporter.STATSD.name());
+      CacheConfig.setMetricsReporters(conf, MetricsReporterType.STATSD.name());
     }
 
     return startServersForTestingStatsDReporter(statsDPort, testCasePort);
