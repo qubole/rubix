@@ -29,7 +29,9 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FilterFileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
 import org.weakref.jmx.MBeanExporter;
@@ -317,6 +319,33 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FilterFile
       return actualURI;
     }
     return URI.create(getScheme() + "://" + actualURI.getAuthority());
+  }
+
+  @Override
+  public RemoteIterator<LocatedFileStatus> listLocatedStatus(Path path)
+          throws IOException
+  {
+      return new RemoteIterator<LocatedFileStatus>()
+      {
+          private final RemoteIterator<LocatedFileStatus> stats = fs.listLocatedStatus(path);
+
+          @Override
+          public boolean hasNext()
+                  throws IOException
+          {
+              return stats.hasNext();
+          }
+
+          @Override
+          public LocatedFileStatus next()
+                  throws IOException
+          {
+              LocatedFileStatus status = stats.next();
+              // use caching locations explicitly
+              BlockLocation[] locations = status.isFile() ? getFileBlockLocations(status.getPath(), 0, status.getLen()) : null;
+              return new LocatedFileStatus(status, locations);
+          }
+      };
   }
 
   @Override
