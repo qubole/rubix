@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.DirectBufferPool;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -213,7 +214,11 @@ class FileDownloader
         }
       }
       catch (ExecutionException | InterruptedException ex) {
-        log.error(ex);
+        if (ex.getCause() instanceof FileNotFoundException) {
+          log.info("Could not process download request: " + ex.getMessage());
+        } else {
+          log.error("Could not process download request", ex);
+        }
         requestChain.cancel();
       }
     }
