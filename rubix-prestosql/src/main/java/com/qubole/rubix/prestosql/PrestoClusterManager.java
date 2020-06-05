@@ -23,9 +23,13 @@ import com.google.gson.Gson;
 import com.qubole.rubix.common.utils.ClusterUtil;
 import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
+import io.prestosql.spi.Node;
+import io.prestosql.spi.NodeManager;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+
+import javax.annotation.Nullable;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -46,6 +50,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static java.util.Objects.requireNonNull;
+
 /**
  * Created by stagra on 14/1/16.
  */
@@ -58,6 +65,8 @@ public class PrestoClusterManager extends ClusterManager
 
   private Log log = LogFactory.getLog(PrestoClusterManager.class);
 
+  @Nullable
+  private static volatile NodeManager nodeManager;
   public static String serverPortConf = "caching.fs.presto-server-port";
 
   // Safe to use single instance of HttpClient since Supplier.get() provides synchronization
@@ -76,6 +85,10 @@ public class PrestoClusterManager extends ClusterManager
               public List<String> load(String s)
                       throws Exception
               {
+                if (nodeManager != null) {
+                  return getNodesFromNodeManager();
+                }
+
                 if (!isMaster) {
                   // First time all nodes start assuming themselves as master and down the line figure out their role
                   // Next time onwards, only master will be fetching the list of nodes
@@ -193,10 +206,31 @@ public class PrestoClusterManager extends ClusterManager
             }, executor));
   }
 
+  private List<String> getNodesFromNodeManager()
+  {
+    requireNonNull(nodeManager, "nodeManager is null");
+    List<String> workers = nodeManager.getWorkerNodes().stream()
+            .filter(node -> !node.isCoordinator())
+            .map(Node::getHost)
+            .sorted()
+            .collect(toImmutableList());
+
+    if (workers.isEmpty()) {
+      // Empty result set => server up and only master node running, return localhost has the only node
+      return ImmutableList.of(nodeManager.getCurrentNode().getHost());
+    }
+
+    return workers;
+  }
+
   @Override
   public boolean isMaster()
           throws ExecutionException
   {
+    if (nodeManager != null) {
+      return nodeManager.getCurrentNode().isCoordinator();
+    }
+
     // issue get on nodesSupplier to ensure that isMaster is set correctly
     nodesCache.get("nodeList");
     return isMaster;
@@ -239,6 +273,11 @@ public class PrestoClusterManager extends ClusterManager
   public static void setPrestoServerPort(Configuration conf, int port)
   {
     conf.setInt(serverPortConf, port);
+  }
+
+  public static void setNodeManager(NodeManager nodeManager)
+  {
+    PrestoClusterManager.nodeManager = requireNonNull(nodeManager, "nodeManager is null");
   }
 
   private URL getNodeUrl()
