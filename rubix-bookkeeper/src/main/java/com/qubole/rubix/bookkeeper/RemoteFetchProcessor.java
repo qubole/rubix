@@ -138,10 +138,14 @@ public class RemoteFetchProcessor extends AbstractScheduledService
   @Override
   protected void runOneIteration() throws Exception
   {
-    long currentTime = System.currentTimeMillis();
+    try {
+      long currentTime = System.currentTimeMillis();
 
-    if (!processQueue.isEmpty() && bookKeeper.isInitialized()) {
-      processRequest(currentTime);
+      if (!processQueue.isEmpty() && bookKeeper.isInitialized()) {
+        processRequest(currentTime);
+      }
+    } catch (Exception exception) {
+      log.error("Could not process download requests", exception);
     }
   }
 
