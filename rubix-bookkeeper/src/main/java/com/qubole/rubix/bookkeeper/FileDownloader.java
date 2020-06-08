@@ -44,13 +44,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.stream.Collectors;
 
-import static com.qubole.rubix.spi.CommonUtilities.alignToBlockEndPosition;
-import static com.qubole.rubix.spi.CommonUtilities.alignToBlockStartPosition;
-import static com.qubole.rubix.spi.CommonUtilities.toBlockEndPosition;
 import static com.qubole.rubix.spi.CommonUtilities.toBlockStartPosition;
 import static com.qubole.rubix.spi.CommonUtilities.toEndBlock;
 import static com.qubole.rubix.spi.CommonUtilities.toStartBlock;
