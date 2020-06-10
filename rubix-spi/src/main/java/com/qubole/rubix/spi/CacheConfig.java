@@ -565,6 +565,11 @@ public class CacheConfig
     conf.setBoolean(KEY_CACHE_ENABLED, cacheEnabled);
   }
 
+  public static void setCacheDataOnMasterEnabled(Configuration conf, boolean cacheDataOnMasterEnabled)
+  {
+    conf.setBoolean(KEY_DATA_CACHE_ENABLED_ON_MASTER, cacheDataOnMasterEnabled);
+  }
+
   public static void setCacheDataExpirationAfterWrite(Configuration conf, long expiryAfterWrite)
   {
     conf.setLong(KEY_DATA_CACHE_EXPIRY_AFTER_WRITE, expiryAfterWrite);
