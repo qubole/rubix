@@ -100,7 +100,7 @@ public class CacheConfig
   private static final String KEY_ENABLE_FILE_STALESSNESS_CHECK = "rubix.cache.file.staleness-check.enable";
   private static final String KEY_STALE_FILEINFO_EXPIRY_PERIOD = "rubix.cache.stale.fileinfo.expiry.period";
   private static final String KEY_CLEANUP_FILES_DURING_START = "rubix.cache.cleanup.files.during.start";
-  private static final String KEY_MAX_CACHE_SIZE = "rubix.cache.max.size";
+  private static final String KEY_MAX_CACHE_SIZE_IN_MB = "rubix.cache.max.size.mb";
   private static final String KEY_CACHE_FILE_SPLIT_SIZE = "rubix.cache.filesplit.size";
   private static final String KEY_CLUSTER_NODE_REFRESH_TIME = "rubix.cluster.node.refresh.time";
   private static final String KEY_DUMMY_MODE = "rubix.cache.dummy.mode";
@@ -218,9 +218,9 @@ public class CacheConfig
     return conf.getInt(KEY_DATA_CACHE_FULLNESS, DEFAULT_DATA_CACHE_FULLNESS);
   }
 
-  public static long getCacheDataFullnessMaxSize(Configuration conf)
+  public static long getCacheDataFullnessMaxSizeInMB(Configuration conf)
   {
-    return conf.getLong(KEY_MAX_CACHE_SIZE, DEFAULT_MAX_CACHE_SIZE);
+    return conf.getLong(KEY_MAX_CACHE_SIZE_IN_MB, DEFAULT_MAX_CACHE_SIZE);
   }
 
   public static String getCacheDataLocationBlacklist(Configuration conf)
@@ -848,5 +848,10 @@ public class CacheConfig
   public static void setTranportPoolMaxSize(Configuration conf, int count)
   {
     conf.setInt(KEY_POOL_MAX_SIZE, count);
+  }
+
+  public static void setMaxCacheSizeInMB(Configuration conf, long size)
+  {
+    conf.setLong(KEY_MAX_CACHE_SIZE_IN_MB, size);
   }
 }

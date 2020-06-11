@@ -101,14 +101,4 @@ public class DiskUtils
       return -1L;
     }
   }
-
-  public static int getUsedSpaceMB(Configuration conf)
-  {
-    long used = 0;
-    for (int d = 0; d < CacheUtil.getCacheDiskCount(conf); d++) {
-      File localPath = new File(CacheUtil.getDirPath(d, conf));
-      used += localPath.getTotalSpace() - localPath.getUsableSpace();
-    }
-    return (int) BYTES.toMB(used);
-  }
 }
