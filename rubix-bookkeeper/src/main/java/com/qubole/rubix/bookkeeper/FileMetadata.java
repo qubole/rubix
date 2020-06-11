@@ -28,6 +28,7 @@ import java.io.RandomAccessFile;
 import java.util.OptionalInt;
 import java.util.concurrent.locks.Lock;
 
+import static com.qubole.rubix.spi.utils.DataSizeUnits.BYTES;
 import static com.qubole.rubix.spi.CacheConfig.getBlockSize;
 
 /**
@@ -250,6 +251,6 @@ public class FileMetadata
   public int getWeight(Configuration conf)
   {
     // this will return the current downloaded size of the file as weight.
-    return (int) (currentFileSize / 1024 / 1024);
+    return (int) BYTES.toMB(currentFileSize);
   }
 }

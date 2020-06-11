@@ -41,6 +41,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import static com.qubole.rubix.spi.utils.DataSizeUnits.BYTES;
+
 public class BookKeeperClientRFLibrary
 {
   private final BookKeeperFactory factory = new BookKeeperFactory();
@@ -187,7 +189,7 @@ public class BookKeeperClientRFLibrary
       cacheSize += cacheDirSize;
     }
 
-    return (cacheSize / 1024 / 1024);
+    return BYTES.toMB(cacheSize);
   }
 
   /**

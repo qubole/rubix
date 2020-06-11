@@ -17,6 +17,8 @@ import org.apache.hadoop.conf.Configuration;
 
 import java.util.List;
 
+import static com.qubole.rubix.spi.utils.DataSizeUnits.MEGABYTES;
+
 /**
  * Created by stagra on 14/2/16.
  */
@@ -111,7 +113,7 @@ public class CacheConfig
   private static final String KEY_RUBIX_CURRENT_NODE_HOSTNAME = "current.node.hostname";
 
   // default values
-  private static final int DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024; // 1MB
+  private static final int DEFAULT_BLOCK_SIZE = (int) MEGABYTES.toBytes(1);
   private static final int DEFAULT_SERVER_CONNECT_TIMEOUT = 1000; // ms
   private static final int DEFAULT_SERVER_SOCKET_TIMEOUT = 6000; // ms
   private static final int DEFAULT_KEY_POOL_MAX_SIZE = 200;
@@ -136,7 +138,7 @@ public class CacheConfig
   private static final int DEFAULT_DISK_READ_BUFFER_SIZE = 1024;
   private static final int DEFAULT_HEARTBEAT_INITIAL_DELAY = 30000; // ms
   private static final int DEFAULT_HEARTBEAT_INTERVAL = 30000; // ms
-  private static final int DEFAULT_DATA_TRANSFER_BUFFER_SIZE = 10 * 1024 * 1024; // 10MB
+  private static final int DEFAULT_DATA_TRANSFER_BUFFER_SIZE = (int) MEGABYTES.toBytes(10);
   private static final int DEFAULT_MAX_BUFFER_SIZE = 1024;
   private static final int DEFAULT_MAX_RETRIES = 3;
   private static final boolean DEFAULT_METRICS_CACHE_ENABLED = true;
@@ -170,7 +172,7 @@ public class CacheConfig
   private static final int DEFAULT_STALE_FILEINFO_EXPIRY_PERIOD = 36000; // seconds
   private static final boolean DEFAULT_CLEANUP_FILES_DURING_START = true;
   private static final long DEFAULT_MAX_CACHE_SIZE = 0;
-  private static final long DEFAULT_CACHE_FILE_SPLIT_SIZE = 256 * 1024 * 1024;
+  private static final long DEFAULT_CACHE_FILE_SPLIT_SIZE = MEGABYTES.toBytes(256);
   private static final int DEFAULT_CLUSTER_NODE_REFRESH_TIME = 300; //seconds
   private static final boolean DEFAULT_DUMMY_MODE = false;
   private static final boolean DEFAULT_EMBEDDED_MODE = false;

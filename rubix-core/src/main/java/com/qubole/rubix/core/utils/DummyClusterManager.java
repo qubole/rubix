@@ -20,12 +20,14 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.qubole.rubix.spi.utils.DataSizeUnits.MEGABYTES;
+
 /**
  * Created by Abhishek on 6/8/18.
  */
 public class DummyClusterManager extends ClusterManager
 {
-  private static long splitSize = 64 * 1024 * 1024;
+  private static long splitSize = MEGABYTES.toBytes(64);
   @Override
   public List<String> getNodes()
   {

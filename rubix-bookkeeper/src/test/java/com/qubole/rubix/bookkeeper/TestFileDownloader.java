@@ -43,6 +43,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
+import static com.qubole.rubix.spi.utils.DataSizeUnits.BYTES;
 import static org.testng.Assert.assertTrue;
 
 /**
@@ -160,7 +161,7 @@ public class TestFileDownloader
     assertTrue(expectedDownloadedDataSize == dataDownloaded, "Download size didn't match");
 
     assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.ASYNC_DOWNLOADED_MB_COUNT.getMetricName())
-        .getCount() == DiskUtils.bytesToMB(expectedDownloadedDataSize), "Total downloaded bytes didn't match");
+        .getCount() == BYTES.toMB(expectedDownloadedDataSize), "Total downloaded bytes didn't match");
 
     cacheStatus = bookKeeper.getCacheStatus(request);
 
@@ -234,7 +235,7 @@ public class TestFileDownloader
     assertTrue(expectedDownloadedDataSize == dataDownloaded, "Download size didn't match");
 
     assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.ASYNC_DOWNLOADED_MB_COUNT.getMetricName())
-            .getCount() == DiskUtils.bytesToMB(expectedDownloadedDataSize), "Total downloaded bytes didn't match");
+            .getCount() == BYTES.toMB(expectedDownloadedDataSize), "Total downloaded bytes didn't match");
 
     // Now create new fetch requests such that some blocks are overlapping with already fetched blocks
     contextMap.clear();

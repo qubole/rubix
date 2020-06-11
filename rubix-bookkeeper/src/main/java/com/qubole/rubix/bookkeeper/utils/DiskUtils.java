@@ -24,6 +24,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Map;
 
+import static com.qubole.rubix.spi.utils.DataSizeUnits.BYTES;
+import static com.qubole.rubix.spi.utils.DataSizeUnits.KILOBYTES;
+
 /**
  * Created by stagra on 29/1/16.
  */
@@ -34,30 +37,6 @@ public class DiskUtils
   private DiskUtils()
   {
     //
-  }
-
-  /**
-   * Convert bytes to MB.
-   *
-   * @param bytes   The number of bytes.
-   * @return the number of bytes as MB.
-   */
-  public static long bytesToMB(long bytes)
-  {
-    return (bytes / 1024 / 1024);
-  }
-
-  // Return actual size of a sparse file in bytes
-  public static long getActualSize(String path)
-      throws IOException
-  {
-    File file = new File(path);
-    String cmd = "ls -s " + path + " | cut -d ' ' -f 1";
-    ShellExec se = new ShellExec(cmd);
-    log.debug("Running: " + cmd);
-    ShellExec.CommandResult cr = se.runCmd();
-    long size = Long.parseLong(cr.getOut().trim());
-    return size * 1024;
   }
 
   public static void clearDirectory(String path) throws IOException
@@ -114,7 +93,7 @@ public class DiskUtils
       log.error(String.format("Exception while calculating the size of the folder %s with exception : %s", dirname.toString(), e.toString()));
     }
     try {
-      return Long.parseLong(output.toString().split("\\s+")[0]) / 1024;
+      return KILOBYTES.toMB(Long.parseLong(output.toString().split("\\s+")[0]));
     }
     catch (NumberFormatException e)
     {
@@ -130,6 +109,6 @@ public class DiskUtils
       File localPath = new File(CacheUtil.getDirPath(d, conf));
       used += localPath.getTotalSpace() - localPath.getUsableSpace();
     }
-    return (int) bytesToMB(used);
+    return (int) BYTES.toMB(used);
   }
 }

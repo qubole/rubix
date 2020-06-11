@@ -44,6 +44,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
+import static com.qubole.rubix.spi.utils.DataSizeUnits.BYTES;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
@@ -134,7 +135,7 @@ public class TestBookKeeper
 
     bookKeeper.readData(remotePathWithScheme, offset, (int) downloadSize, fileSize, TEST_LAST_MODIFIED, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
     verifyDownloadedData(backendFileName, offset, downloadSize);
-    expectedSparseFileSize = (int) DiskUtils.bytesToMB(downloadSize);
+    expectedSparseFileSize = (int) BYTES.toMB(downloadSize);
 
     if (hasHole) {
       // Create a hole of 5 mb at 34th block
@@ -143,7 +144,7 @@ public class TestBookKeeper
       offset = offset + (int) downloadSize + holeSize; //36MB
       bookKeeper.readData(remotePathWithScheme, offset, (int) downloadSize, fileSize, TEST_LAST_MODIFIED, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
       verifyDownloadedData(backendFileName, offset, downloadSize);
-      expectedSparseFileSize = (int) DiskUtils.bytesToMB(2 * downloadSize);
+      expectedSparseFileSize = (int) BYTES.toMB(2 * downloadSize);
     }
 
     long sparseFileSize = DiskUtils.getDirectorySizeInMB(new File(CacheUtil.getLocalPath(remotePathWithScheme, conf)));
@@ -404,7 +405,7 @@ public class TestBookKeeper
     bookKeeper.readData(remotePathWithScheme, readOffset, readLength, TEST_FILE_LENGTH, TEST_LAST_MODIFIED, ClusterType.TEST_CLUSTER_MANAGER.ordinal());
 
     final long mdSize = FileUtils.sizeOf(new File(CacheUtil.getMetadataFilePath(TEST_REMOTE_PATH, conf)));
-    final int totalCacheSize = (int) DiskUtils.bytesToMB(readLength + mdSize);
+    final int totalCacheSize = (int) BYTES.toMB(readLength + mdSize);
     assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.CACHE_SIZE_GAUGE.getMetricName()).getValue(), totalCacheSize);
   }
 

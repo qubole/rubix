@@ -18,7 +18,6 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.Range;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.qubole.rubix.bookkeeper.utils.DiskUtils;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.core.ReadRequest;
 import com.qubole.rubix.spi.CacheConfig;
@@ -46,6 +45,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 
+import static com.qubole.rubix.spi.utils.DataSizeUnits.BYTES;
 import static com.qubole.rubix.spi.CommonUtilities.toBlockStartPosition;
 import static com.qubole.rubix.spi.CommonUtilities.toEndBlock;
 import static com.qubole.rubix.spi.CommonUtilities.toStartBlock;
@@ -217,7 +217,7 @@ class FileDownloader
         requestChain.cancel();
       }
     }
-    long dataDownloadedInMB = DiskUtils.bytesToMB(sizeRead);
+    long dataDownloadedInMB = BYTES.toMB(sizeRead);
     this.totalMBDownloaded.inc(dataDownloadedInMB);
     return sizeRead;
   }
