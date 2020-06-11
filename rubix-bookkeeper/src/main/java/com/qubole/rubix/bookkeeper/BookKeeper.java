@@ -72,7 +72,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkState;
-import static com.qubole.rubix.spi.utils.DataSizeUnits.BYTES;
 import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.CACHE_AVAILABLE_SIZE_GAUGE;
 import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.CACHE_EVICTION_COUNT;
 import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.CACHE_EXPIRY_COUNT;
@@ -86,6 +85,8 @@ import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.REMO
 import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.TOTAL_REQUEST_COUNT;
 import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
 import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER_MULTINODE;
+import static com.qubole.rubix.spi.utils.DataSizeUnits.BYTES;
+import static com.qubole.rubix.spi.utils.DataSizeUnits.MEGABYTES;
 
 /**
  * Created by stagra on 12/2/16.
@@ -108,7 +109,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   static long splitSize;
   private RemoteFetchProcessor fetchProcessor;
   private final Ticker ticker;
-  private static long totalAvailableForCache;
+  private static long totalAvailableForCacheInMB;
 
   // Registry for gathering & storing necessary metrics
   protected final MetricRegistry metrics;
@@ -226,7 +227,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       @Override
       public Long getValue()
       {
-        return totalAvailableForCache;
+        return totalAvailableForCacheInMB;
       }
     });
   }
@@ -445,12 +446,22 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       OptionalInt updatedBlocks = md.setBlocksCached(startBlock, endBlock);
       if (updatedBlocks.isPresent()) {
         long currentFileSize = md.incrementCurrentFileSize(updatedBlocks.getAsInt() * CacheConfig.getBlockSize(conf));
+        // CurrentFileSize as per Blocks' based computation can cross actual file size
+        // This can only happen when the last block of file is not completely full
+        // as it doesnt align to the block boundary
+        currentFileSize = Math.min(currentFileSize, fileLength);
         replaceFileMetadata(remotePath, currentFileSize, conf);
       }
     }
     catch (IOException e) {
       throw new TException(e);
     }
+  }
+
+  @VisibleForTesting
+  public long getTotalCacheWeight()
+  {
+    return fileMetadataCache.asMap().values().stream().mapToLong(FileMetadata::getWeight).sum();
   }
 
   @Override
@@ -600,7 +611,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   {
     if (CacheConfig.isOnMaster(conf) && !CacheConfig.isCacheDataOnMasterEnabled(conf)) {
       log.info("Cache disabled on master node; skipping initialization");
-      totalAvailableForCache = 0;
+      totalAvailableForCacheInMB = 0;
       fileInfoCache = CacheBuilder.newBuilder().build(
               new CacheLoader<String, FileInfo>()
               {
@@ -627,16 +638,16 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       avail += new File(CacheUtil.getDirPath(d, conf)).getUsableSpace();
     }
     avail = BYTES.toMB(avail);
-    log.info("total free space " + avail + "MB");
 
     // In corner cases evictions might not make enough space for new entries
     // To minimize those cases, consider available space lower than actual
-    final long total = (long) (0.95 * avail);
+    final long totalUsableMBs = (long) (0.95 * avail);
 
-    final long cacheMaxSize = CacheConfig.getCacheDataFullnessMaxSize(conf);
-    totalAvailableForCache = (cacheMaxSize == 0)
-        ? (long) (total * 1.0 * CacheConfig.getCacheDataFullnessPercentage(conf) / 100.0)
-        : cacheMaxSize;
+    final long cacheMaxSizeInMB = CacheConfig.getCacheDataFullnessMaxSizeInMB(conf);
+    totalAvailableForCacheInMB = (cacheMaxSizeInMB == 0)
+        ? (long) (totalUsableMBs * 1.0 * CacheConfig.getCacheDataFullnessPercentage(conf) / 100.0)
+        : cacheMaxSizeInMB;
+    log.info("total free space " + avail + "MB, maximum size of cache " + totalAvailableForCacheInMB + "MB");
 
     initializeFileInfoCache(conf, ticker);
 
@@ -647,10 +658,10 @@ public abstract class BookKeeper implements BookKeeperService.Iface
           @Override
           public int weigh(String key, FileMetadata md)
           {
-            return md.getWeight(conf);
+            return md.getWeight();
           }
         })
-        .maximumWeight(totalAvailableForCache)
+        .maximumWeight(MEGABYTES.toKB(totalAvailableForCacheInMB))
         .expireAfterWrite(CacheConfig.getCacheDataExpirationAfterWrite(conf), TimeUnit.MILLISECONDS)
         .removalListener(new CacheRemovalListener())
         .build();

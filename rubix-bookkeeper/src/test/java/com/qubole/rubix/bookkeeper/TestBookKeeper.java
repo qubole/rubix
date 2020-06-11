@@ -45,6 +45,7 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import static com.qubole.rubix.spi.utils.DataSizeUnits.BYTES;
+import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.CACHE_EVICTION_COUNT;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
@@ -493,5 +494,60 @@ public class TestBookKeeper
     long newSize = bookKeeper.getFileMetadata(TEST_REMOTE_PATH).getCurrentFileSize();
     assertTrue(newSize == size + 10 * CacheConfig.getBlockSize(conf),
             String.format("Expected size: %s but found %s", (size + 10) * CacheConfig.getBlockSize(conf), newSize));
+  }
+
+  @Test
+  /*
+   * This test checks that even with 1MB block size, files lesser than 1MB
+   * do not reflect a weight of 1MB
+   */
+  public void testCacheSizeInKBAccuracy()
+          throws Exception
+  {
+    CacheConfig.setBlockSize(conf, 1024 * 1024);
+    bookKeeperMetrics.close();
+    bookKeeperMetrics = new BookKeeperMetrics(conf, new MetricRegistry());
+    bookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics);
+
+    // Test for a 250KB file, the weight of Cache is 250
+    long fileSize = 250 * 1024;
+    String filePath = "/tmp/test";
+    CacheStatusRequest request = new CacheStatusRequest(filePath, fileSize, TEST_LAST_MODIFIED,
+            0, 1)
+            .setClusterType(ClusterType.TEST_CLUSTER_MANAGER.ordinal())
+            .setIncrMetrics(true);
+    bookKeeper.getCacheStatus(request);
+    bookKeeper.setAllCached(filePath, fileSize, TEST_LAST_MODIFIED, 0, 1);
+    assertEquals(bookKeeper.getTotalCacheWeight(), 250, String.format("Unexpected cache weight '%d', expected 250", bookKeeper.getTotalCacheWeight()));
+  }
+
+  @Test
+  public void testSmallFilesDoNotCauseWrongEvictions()
+          throws Exception
+  {
+    CacheConfig.setBlockSize(conf, 1024 * 1024);
+    CacheConfig.setMaxCacheSizeInMB(conf, 25); // Enough to handle 100 files of 250KB
+    CacheConfig.setValidationEnabled(conf, true);
+    bookKeeperMetrics.close();
+    bookKeeperMetrics = new BookKeeperMetrics(conf, new MetricRegistry());
+    bookKeeper = new CoordinatorBookKeeper(conf, bookKeeperMetrics);
+
+    // Test for a 80 file of size 250KB each, there should be no evictions
+    // Using count as 80 instead of 100 as max segement size will be (25 * 250) as the default concurrency
+    // of cache is 4. So invalidations will start before total cache reaches it limits
+    long fileSize = 250 * 1024;
+    String fileBasePath = "/tmp/test";
+    for (int i = 0; i < 80; i++) {
+      String filePath = fileBasePath + i;
+      CacheStatusRequest request = new CacheStatusRequest(filePath, fileSize, TEST_LAST_MODIFIED,
+              0, 1)
+              .setClusterType(ClusterType.TEST_CLUSTER_MANAGER.ordinal())
+              .setIncrMetrics(true);
+      bookKeeper.getCacheStatus(request);
+      bookKeeper.setAllCached(filePath, fileSize, TEST_LAST_MODIFIED, 0, 1);
+    }
+
+    long evictionCount = bookKeeperMetrics.getMetricsRegistry().getCounters().get(CACHE_EVICTION_COUNT.getMetricName()).getCount();
+    assertEquals(evictionCount, 0, String.format("Unexpected eviction count '%d', expected 0", evictionCount));
   }
 }

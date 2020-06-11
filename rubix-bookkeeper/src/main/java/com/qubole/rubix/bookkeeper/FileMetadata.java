@@ -248,9 +248,9 @@ public class FileMetadata
     }
   }
 
-  public int getWeight(Configuration conf)
+  // Returns the current downloaded fileSize in KB
+  public int getWeight()
   {
-    // this will return the current downloaded size of the file as weight.
-    return (int) BYTES.toMB(currentFileSize);
+    return Math.toIntExact(BYTES.toKB(currentFileSize));
   }
 }
