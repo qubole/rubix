@@ -59,7 +59,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -73,6 +72,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.qubole.rubix.spi.utils.DataSizeUnits.BYTES;
 import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.CACHE_AVAILABLE_SIZE_GAUGE;
 import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.CACHE_EVICTION_COUNT;
 import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.CACHE_EXPIRY_COUNT;
@@ -626,7 +626,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     for (int d = 0; d < cacheDiskCount; d++) {
       avail += new File(CacheUtil.getDirPath(d, conf)).getUsableSpace();
     }
-    avail = DiskUtils.bytesToMB(avail);
+    avail = BYTES.toMB(avail);
     log.info("total free space " + avail + "MB");
 
     // In corner cases evictions might not make enough space for new entries
