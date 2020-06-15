@@ -577,7 +577,6 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       if (inputStream != null) {
         try {
           inputStream.close();
-          fs.close();
         }
         catch (IOException e) {
           log.error("Error closing inputStream", e);

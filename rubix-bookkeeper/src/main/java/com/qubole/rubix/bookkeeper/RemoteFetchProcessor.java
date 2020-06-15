@@ -57,8 +57,6 @@ public class RemoteFetchProcessor extends AbstractScheduledService
     // Initializing a new Config object so that it doesn't interfere with the existing one
     conf = new Configuration(conf);
 
-    // Disabling FileSystem level cache for all the schemes.
-    CacheConfig.disableFSCaches(conf);
 
     // Disable Rubix caching for cases we instantiate CachingFS objects to prevent loops
     CacheConfig.setCacheDataEnabled(conf, false);
