@@ -75,6 +75,12 @@ public class CachingFileSystemStats
     return stats.getCachedReads();
   }
 
+  @Managed(description = "Get the total size in MB that was read directly from original data source")
+  public double getDirectDataRead()
+  {
+    return (double) stats.getDirectDataRead() / bytesInMb;
+  }
+
   @Managed(description = "Gets the time in seconds spent in copying data into cache buffers. This is aggregated across all threads hence not the apparent penalty")
   public long getWarmupPenalty()
   {
