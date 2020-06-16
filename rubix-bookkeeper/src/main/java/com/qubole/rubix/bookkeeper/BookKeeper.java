@@ -82,6 +82,7 @@ import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.CACH
 import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.CACHE_REQUEST_COUNT;
 import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.CACHE_SIZE_GAUGE;
 import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.NONLOCAL_REQUEST_COUNT;
+import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.READ_THROUGH_DOWNLOADED_MB_COUNT;
 import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.REMOTE_REQUEST_COUNT;
 import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.TOTAL_REQUEST_COUNT;
 import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
@@ -122,6 +123,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   private Counter remoteRequestCount;
   private Counter cacheRequestCount;
   private Counter nonlocalRequestCount;
+  private Counter readThroughMBDownloaded;
 
   public BookKeeper(Configuration conf, BookKeeperMetrics bookKeeperMetrics) throws FileNotFoundException
   {
@@ -196,6 +198,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     cacheRequestCount = metrics.counter(CACHE_REQUEST_COUNT.getMetricName());
     nonlocalRequestCount = metrics.counter(NONLOCAL_REQUEST_COUNT.getMetricName());
     remoteRequestCount = metrics.counter(REMOTE_REQUEST_COUNT.getMetricName());
+    readThroughMBDownloaded = metrics.counter(READ_THROUGH_DOWNLOADED_MB_COUNT.getMetricName());
 
     metrics.register(CACHE_HIT_RATE_GAUGE.getMetricName(), new Gauge<Double>()
     {
@@ -555,6 +558,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
           remoteReadRequestChain.addReadRequest(new ReadRequest(readStart, readStart + expectedBytesToRead, readStart, readStart + expectedBytesToRead, buffer, 0, fileSize));
           remoteReadRequestChain.lock();
           long dataRead = remoteReadRequestChain.call();
+          readThroughMBDownloaded.inc(DiskUtils.bytesToMB(dataRead));
           // Making sure the data downloaded matches with the expected bytes. If not, there is some problem with
           // the download this time. So won't update the cache metadata and return false so that client can
           // fall back on the directread
