@@ -36,6 +36,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.DirectBufferPool;
 
+import javax.annotation.Nullable;
+
 import java.io.EOFException;
 import java.io.IOException;
 import java.util.HashMap;
@@ -73,6 +75,7 @@ public class CachingInputStream extends FSInputStream
 
   protected final String remotePath;
   private long fileSize;
+  @Nullable
   private String localPath;
   private long lastModified;
 
@@ -97,7 +100,9 @@ public class CachingInputStream extends FSInputStream
     this.conf = conf;
     this.strictMode = CacheConfig.isStrictMode(conf);
     this.remotePath = backendPath.toString();
-    this.localPath = CacheUtil.getLocalPath(remotePath, conf);
+    if (!CacheConfig.isOnMaster(conf) || CacheConfig.isCacheDataOnMasterEnabled(conf)) {
+      this.localPath = CacheUtil.getLocalPath(remotePath, conf);
+    }
     this.blockSize = CacheConfig.getBlockSize(conf);
     this.diskReadBufferSize = CacheConfig.getDiskReadBufferSize(conf);
     this.bookKeeperFactory = bookKeeperFactory;
