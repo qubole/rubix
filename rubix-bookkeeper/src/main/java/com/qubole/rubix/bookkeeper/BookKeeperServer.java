@@ -107,7 +107,6 @@ public class BookKeeperServer extends Configured implements Tool
   {
     conf = new Configuration(conf);
     CacheConfig.setCacheDataEnabled(conf, false);
-    CacheConfig.disableFSCaches(conf);
 
     this.metrics = metricsRegistry;
     this.bookKeeperMetrics = new BookKeeperMetrics(conf, metrics);

@@ -149,8 +149,6 @@ public class FileDownloadRequestChain extends ReadRequestChain
       if (inputStream != null) {
         inputStream.close();
       }
-
-      fileSystem.close();
     }
   }
 

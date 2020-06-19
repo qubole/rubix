@@ -88,7 +88,6 @@ public class LocalDataTransferServer extends Configured implements Tool
   {
     conf = new Configuration(conf);
     CacheConfig.setCacheDataEnabled(conf, false);
-    CacheConfig.disableFSCaches(conf);
     metrics = metricRegistry;
     registerMetrics(conf);
 
