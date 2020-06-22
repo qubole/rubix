@@ -131,6 +131,7 @@
                                     <shadedPattern>com.google.shaded</shadedPattern>
                                     <excludes>
                                         <exclude>com.google.common.reflect</exclude>
+                                        <exclude>com.google.cloud.**</exclude>
                                     </excludes>
                                 </relocation>
                             </relocations>
