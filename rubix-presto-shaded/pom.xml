@@ -70,6 +70,9 @@
                                 <relocation>
                                     <pattern>com.google</pattern>
                                     <shadedPattern>com.google.shaded</shadedPattern>
+                                    <excludes>
+                                        <exclude>com.google.cloud.**</exclude>
+                                    </excludes>
                                 </relocation>
                             </relocations>
 
