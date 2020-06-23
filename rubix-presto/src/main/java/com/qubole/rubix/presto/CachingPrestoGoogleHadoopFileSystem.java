@@ -15,12 +15,7 @@ package com.qubole.rubix.presto;
 
 import com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem;
 import com.qubole.rubix.core.CachingFileSystem;
-import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.spi.ClusterType;
-import org.apache.hadoop.conf.Configuration;
-
-import java.io.IOException;
-import java.net.URI;
 
 /**
  * Created by Kamesh Vankayala 06/19/2019
@@ -35,15 +30,8 @@ public class CachingPrestoGoogleHadoopFileSystem extends CachingFileSystem<Googl
   }
 
   @Override
-  public void initialize(URI uri, Configuration conf) throws IOException
-  {
-    try {
-      initializeClusterManager(conf, ClusterType.PRESTO_CLUSTER_MANAGER);
-      super.initialize(uri, conf);
-    }
-    catch (ClusterManagerInitilizationException ex) {
-      throw new IOException(ex);
-    }
+  public ClusterType getClusterType() {
+    return ClusterType.PRESTO_CLUSTER_MANAGER;
   }
 
   public String getScheme()

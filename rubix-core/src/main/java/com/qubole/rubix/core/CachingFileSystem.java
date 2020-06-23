@@ -138,16 +138,22 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FilterFile
   @Override
   public void initialize(URI uri, Configuration conf) throws IOException
   {
-    if (clusterManager == null) {
-      throw new IOException("Cluster Manager not set");
-    }
     super.initialize(getOriginalURI(uri), conf);
+    if (clusterManager == null) {
+      try {
+        initializeClusterManager(conf, getClusterType());
+      } catch (ClusterManagerInitilizationException e) {
+        throw new IOException(e);
+      }
+    }
     this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
     this.workingDir = new Path("/user", System.getProperty("user.name")).makeQualified(this);
     isRubixSchemeUsed = uri.getScheme().equals(CacheConfig.RUBIX_SCHEME);
   }
 
-  public synchronized void initializeClusterManager(Configuration conf, ClusterType clusterType)
+  public abstract ClusterType getClusterType();
+
+  private synchronized void initializeClusterManager(Configuration conf, ClusterType clusterType)
       throws ClusterManagerInitilizationException
   {
     if (clusterManager != null) {

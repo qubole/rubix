@@ -14,13 +14,8 @@
 package com.qubole.rubix.prestosql;
 
 import com.qubole.rubix.core.CachingFileSystem;
-import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.spi.ClusterType;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.aliyun.oss.AliyunOSSFileSystem;
-
-import java.io.IOException;
-import java.net.URI;
 
 public class CachingPrestoAliyunOSSFileSystem extends CachingFileSystem<AliyunOSSFileSystem> {
     private static final String SCHEME = "oss";
@@ -29,17 +24,12 @@ public class CachingPrestoAliyunOSSFileSystem extends CachingFileSystem<AliyunOS
         super();
     }
 
-    @Override
-    public void initialize(URI uri, Configuration conf) throws IOException {
-        try {
-            initializeClusterManager(conf, ClusterType.PRESTOSQL_CLUSTER_MANAGER);
-            super.initialize(uri, conf);
-        } catch (ClusterManagerInitilizationException ex) {
-            throw new IOException(ex);
-        }
-    }
-
     public String getScheme() {
         return SCHEME;
+    }
+
+    @Override
+    public ClusterType getClusterType() {
+        return ClusterType.PRESTOSQL_CLUSTER_MANAGER;
     }
 }

@@ -12,14 +12,10 @@
  */
 package com.qubole.rubix.core;
 
-import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.BufferedFSInputStream;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
 
 import java.io.File;
@@ -37,16 +33,8 @@ public class MockCachingFileSystem extends CachingFileSystem<RawLocalFileSystem>
   private static final String SCHEME = "file";
 
   @Override
-  public void initialize(URI uri, Configuration conf) throws IOException
-  {
-    this.conf = conf;
-    try {
-      initializeClusterManager(conf, ClusterType.TEST_CLUSTER_MANAGER);
-      super.initialize(uri, conf);
-    }
-    catch (ClusterManagerInitilizationException ex) {
-      throw new IOException(ex);
-    }
+  public ClusterType getClusterType() {
+    return ClusterType.TEST_CLUSTER_MANAGER;
   }
 
   public String getScheme()
