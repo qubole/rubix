@@ -15,9 +15,7 @@ package com.qubole.rubix.hadoop2;
 
 import com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem;
 import com.qubole.rubix.core.CachingFileSystem;
-import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.spi.ClusterType;
-import org.apache.hadoop.conf.Configuration;
 
 import java.io.IOException;
 import java.net.URI;
@@ -40,14 +38,7 @@ public class CachingGoogleHadoopFileSystem extends CachingFileSystem<GoogleHadoo
   }
 
   @Override
-  public void initialize(URI uri, Configuration conf) throws IOException
-  {
-    try {
-      initializeClusterManager(conf, ClusterType.HADOOP2_CLUSTER_MANAGER);
-      super.initialize(uri, conf);
-    }
-    catch (ClusterManagerInitilizationException ex) {
-      throw new IOException(ex);
-    }
+  public ClusterType getClusterType() {
+    return ClusterType.HADOOP2_CLUSTER_MANAGER;
   }
 }

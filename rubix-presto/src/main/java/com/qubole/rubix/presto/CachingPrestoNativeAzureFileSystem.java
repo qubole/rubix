@@ -13,13 +13,9 @@
 package com.qubole.rubix.presto;
 
 import com.qubole.rubix.core.CachingFileSystem;
-import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.spi.ClusterType;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 
-import java.io.IOException;
-import java.net.URI;
 
 /**
  * Created by abhishek 04/06/2018
@@ -34,15 +30,8 @@ public class CachingPrestoNativeAzureFileSystem extends CachingFileSystem<Native
   }
 
   @Override
-  public void initialize(URI uri, Configuration conf) throws IOException
-  {
-    try {
-      initializeClusterManager(conf, ClusterType.PRESTO_CLUSTER_MANAGER);
-      super.initialize(uri, conf);
-    }
-    catch (ClusterManagerInitilizationException ex) {
-      throw new IOException(ex);
-    }
+  public ClusterType getClusterType() {
+    return ClusterType.PRESTO_CLUSTER_MANAGER;
   }
 
   public String getScheme()

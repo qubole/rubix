@@ -13,15 +13,12 @@
 package com.qubole.rubix.hadoop2;
 
 import com.qubole.rubix.core.CachingFileSystem;
-import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3native.NativeS3FileSystem;
 
 import java.io.IOException;
-import java.net.URI;
 
 /**
  * Created by sakshia on 28/7/16.
@@ -43,15 +40,7 @@ public class CachingNativeS3FileSystem extends CachingFileSystem<NativeS3FileSys
   }
 
   @Override
-  public void initialize(URI uri, Configuration conf)
-      throws IOException
-  {
-    try {
-      initializeClusterManager(conf, ClusterType.HADOOP2_CLUSTER_MANAGER);
-      super.initialize(uri, conf);
-    }
-    catch (ClusterManagerInitilizationException ex) {
-      throw new IOException(ex);
-    }
+  public ClusterType getClusterType() {
+    return ClusterType.HADOOP2_CLUSTER_MANAGER;
   }
 }
