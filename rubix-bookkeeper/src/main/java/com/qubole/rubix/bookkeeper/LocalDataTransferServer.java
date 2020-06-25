@@ -218,7 +218,8 @@ public class LocalDataTransferServer extends Configured implements Tool
     public void run()
     {
       try {
-        log.debug("Connected to node - " + localDataTransferClient.getLocalAddress());
+        log.debug("Connected to node - Local Address: " + localDataTransferClient.getLocalAddress() +
+                " Remote Address: " + localDataTransferClient.getRemoteAddress());
 
         while (localDataTransferClient.isConnected()) {
 
@@ -233,7 +234,7 @@ public class LocalDataTransferServer extends Configured implements Tool
           catch (IOException e)
           {
             // Assume the client died and continue silently
-            log.debug("Connection closed by scavenger: ", e);
+            break;
           }
           dataInfo.flip();
 
