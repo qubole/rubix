@@ -185,7 +185,7 @@ public class ObjectPoolPartition<T>
   }
 
   // set the scavenge interval carefully
-  public synchronized void scavenge() throws InterruptedException
+  public void scavenge() throws InterruptedException
   {
     int delta = this.totalCount - config.getMinSize();
     if (delta <= 0) {
@@ -195,8 +195,11 @@ public class ObjectPoolPartition<T>
     int removed = 0;
     long now = System.currentTimeMillis();
     Poolable<T> obj;
-    obj = objectQueue.poll();
-    while (delta-- > 0 && obj != null) {
+    while (delta-- > 0) {
+      obj = objectQueue.poll();
+      if (obj == null) {
+        break;
+      }
       // performance trade off: delta always decrease even if the queue is empty,
       // so it could take several intervals to shrink the pool to the configured min value.
       log.debug(String.format("obj=%s, now-last=%s, max idle=%s", obj, now - obj.getLastAccessTs(),
@@ -209,8 +212,10 @@ public class ObjectPoolPartition<T>
       }
       else {
         objectQueue.put(obj); //put it back
+        // breaking the loop assuming connections will be in order of their access time in the queue
+        // i.e. older -> new
+        break;
       }
-      obj = objectQueue.poll();
     }
     if (removed > 0) {
       log.debug(removed + " objects were scavenged");
