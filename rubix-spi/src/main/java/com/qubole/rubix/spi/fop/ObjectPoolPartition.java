@@ -30,8 +30,7 @@ import static com.google.common.base.Preconditions.checkState;
  */
 public class ObjectPoolPartition<T>
 {
-  private static final Log log = LogFactory.getLog(ObjectPoolPartition.class);
-
+  private final CustomLogger log;
   private final ObjectPool<T> pool;
   private final PoolConfig config;
   private final BlockingQueue<Poolable<T>> objectQueue;
@@ -40,7 +39,6 @@ public class ObjectPoolPartition<T>
   private final String host;
   private final int socketTimeout;
   private final int connectTimeout;
-  private final String name;
 
   public ObjectPoolPartition(ObjectPool<T> pool, PoolConfig config,
           ObjectFactory<T> objectFactory, BlockingQueue<Poolable<T>> queue, String host, String name)
@@ -50,10 +48,10 @@ public class ObjectPoolPartition<T>
     this.objectFactory = objectFactory;
     this.objectQueue = queue;
     this.host = host;
-    this.name = name;
     this.socketTimeout = config.getSocketTimeoutMilliseconds();
     this.connectTimeout = config.getConnectTimeoutMilliseconds();
     this.totalCount = 0;
+    this.log = new CustomLogger(name, host);
     for (int i = 0; i < config.getMinSize(); i++) {
       T object = objectFactory.create(host, socketTimeout, connectTimeout);
       if (object != null) {
@@ -66,16 +64,16 @@ public class ObjectPoolPartition<T>
   public void returnObject(Poolable<T> object)
   {
     if (!objectFactory.validate(object.getObject())) {
-      log.debug(String.format("%s : Invalid object for host %s removing %s ", this.name, object.getHost(), object));
+      log.debug(String.format("Invalid object...removing: %s ", object));
       decreaseObject(object);
       // Compensate for the removed object. Needed to prevent endless wait when in parallel a borrowObject is called
       increaseObjects(1, false);
       return;
     }
 
-    log.debug(String.format("%s : Returning object %s to queue of host %s. Queue size: %d", this.name, object, object.getHost(), objectQueue.size()));
+    log.debug(String.format("Returning object: %s to queue. Queue size: %d", object, objectQueue.size()));
     if (!objectQueue.offer(object)) {
-      log.warn(this.name + " : Created more objects than configured. Created=" + totalCount + " QueueSize=" + objectQueue.size());
+      log.warn("Created more objects than configured. Created=" + totalCount + " QueueSize=" + objectQueue.size());
       decreaseObject(object);
     }
   }
@@ -146,8 +144,8 @@ public class ObjectPoolPartition<T>
         log.warn(String.format("Could not increase pool size. Pool state: totalCount=%d queueSize=%d delta=%d", totalCount, objectQueue.size(), delta));
       }
       else {
-        log.debug(String.format("%s : Increased pool size by %d, to new size: %d, current queue size: %d, delta: %d",
-                this.name, totalCount - oldCount, totalCount, objectQueue.size(), delta));
+        log.debug(String.format("Increased pool size by %d, to new size: %d, current queue size: %d, delta: %d",
+                totalCount - oldCount, totalCount, objectQueue.size(), delta));
       }
     }
     catch (Exception e) {
@@ -170,7 +168,7 @@ public class ObjectPoolPartition<T>
             "Call to free object of wrong partition, current partition=%s requested partition = %s",
             this.host, obj.getHost());
     objectRemoved();
-    log.debug(this.name + " : Decreasing pool size for " + this.host + " , object: " + obj);
+    log.debug("Decreasing pool size object: " + obj);
     objectFactory.destroy(obj.getObject());
     obj.destroy();
     return true;
@@ -191,7 +189,7 @@ public class ObjectPoolPartition<T>
   {
     int delta = this.totalCount - config.getMinSize();
     if (delta <= 0) {
-      log.debug(this.name + " : Scavenge for delta <= 0, Skipping !!!");
+      log.debug("Scavenge for delta <= 0, Skipping !!!");
       return;
     }
     int removed = 0;
@@ -201,11 +199,11 @@ public class ObjectPoolPartition<T>
     while (delta-- > 0 && obj != null) {
       // performance trade off: delta always decrease even if the queue is empty,
       // so it could take several intervals to shrink the pool to the configured min value.
-      log.debug(String.format("%s : obj=%s, now-last=%s, max idle=%s", this.name, obj, now - obj.getLastAccessTs(),
+      log.debug(String.format("obj=%s, now-last=%s, max idle=%s", obj, now - obj.getLastAccessTs(),
               config.getMaxIdleMilliseconds()));
       if (now - obj.getLastAccessTs() > config.getMaxIdleMilliseconds() &&
               ThreadLocalRandom.current().nextDouble(1) < config.getScavengeRatio()) {
-        log.debug(this.name + " : Scavenger removing object: " + obj);
+        log.debug("Scavenger removing object: " + obj);
         decreaseObject(obj); // shrink the pool size if the object reaches max idle time
         removed++;
       }
@@ -215,7 +213,7 @@ public class ObjectPoolPartition<T>
       obj = objectQueue.poll();
     }
     if (removed > 0) {
-      log.debug(this.name + " : " + removed + " objects were scavenged for host: " + this.host);
+      log.debug(removed + " objects were scavenged");
     }
   }
 
@@ -235,5 +233,44 @@ public class ObjectPoolPartition<T>
   public String getHost()
   {
     return host;
+  }
+
+  private class CustomLogger {
+    private static final String logFormatStr = "Pool: %s : Host: %s : %s";
+
+    private final Log log = LogFactory.getLog(ObjectPoolPartition.class);
+    private final String poolName;
+    private final String hostName;
+
+    public CustomLogger(String poolName, String host)
+    {
+      this.poolName = poolName;
+      this.hostName = host;
+    }
+
+    public void info(String message)
+    {
+      log.info(getLogMessage(message));
+    }
+
+    public void debug(String message)
+    {
+      log.info(getLogMessage(message));
+    }
+
+    public void warn(String message)
+    {
+      log.warn(getLogMessage(message));
+    }
+
+    public void warn(String message, Throwable t)
+    {
+      log.warn(getLogMessage(message), t);
+    }
+
+    private String getLogMessage(String message)
+    {
+      return String.format(logFormatStr, poolName, hostName, message);
+    }
   }
 }
