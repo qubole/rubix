@@ -33,7 +33,8 @@ import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 
 import static com.google.common.base.Preconditions.checkState;
-import static com.qubole.rubix.spi.DataTransferClientFactory.*;
+import static com.qubole.rubix.spi.DataTransferClientFactory.DataTransferClient;
+import static com.qubole.rubix.spi.DataTransferClientFactory.getClient;
 
 /**
  * Created by sakshia on 31/8/16.
@@ -112,7 +113,6 @@ public class NonLocalReadRequestChain extends ReadRequestChain
           dataTransferClient.getSocketChannel().write(buf);
         }
         catch (IOException e) {
-          log.warn("Error in writing..closing socket channel: " + dataTransferClient.getSocketChannel(), e);
           dataTransferClient.getSocketChannel().close();
           throw e;
         }

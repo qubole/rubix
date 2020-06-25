@@ -48,7 +48,6 @@ public class SocketChannelObjectFactory
               " with local socket address: " + socket.socket().getLocalSocketAddress());
     }
     catch (IOException e) {
-      e.printStackTrace();
       log.warn(LDS_POOL + " : Unable to open connection to host " + host, e);
     }
     return socket;
@@ -63,7 +62,7 @@ public class SocketChannelObjectFactory
       o.close();
     }
     catch (IOException e) {
-      e.printStackTrace();
+      log.warn(LDS_POOL + " : Error in closing connection " + o, e);
     }
   }
 
@@ -94,7 +93,7 @@ public class SocketChannelObjectFactory
     poolConfig.setDelta(CacheConfig.getTransportPoolDeltaSize(conf));
     poolConfig.setMaxWaitMilliseconds(CacheConfig.getTransportPoolMaxWait(conf));
     poolConfig.setScavengeIntervalMilliseconds(CacheConfig.getScavengeInterval(conf));
-    poolConfig.setConnectTimeoutMilliseconds(CacheConfig.getClientReadTimeout(conf));
+    poolConfig.setConnectTimeoutMilliseconds(CacheConfig.getServerConnectTimeout(conf));
     poolConfig.setSocketTimeoutMilliseconds(CacheConfig.getClientReadTimeout(conf));
 
     ObjectFactory<SocketChannel> factory = new SocketChannelObjectFactory(port);
