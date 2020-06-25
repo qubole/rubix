@@ -26,6 +26,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
+import static java.lang.Thread.currentThread;
+
 /**
  * @author Daniel
  */
@@ -134,19 +136,21 @@ public class ObjectPool<T>
     protected void runOneIteration()
     {
       if (ObjectPool.this.shuttingDown) {
-        log.debug("Pool is shutting down, skip scavenger");
+        log.debug(name + " : Pool is shutting down, skip scavenger");
         return;
       }
       try {
-        log.debug("Host pool map values: " + hostToPoolMap.values());
+        log.debug(name + " : Host pool map values: " + hostToPoolMap.values());
         for (ObjectPoolPartition<T> subPool : hostToPoolMap.values()) {
-          log.debug("Scavenging sub pool of host: " + subPool.getHost());
+          log.debug(name + " : Scavenging sub pool of host: " + subPool.getHost());
           subPool.scavenge();
         }
       }
       catch (InterruptedException e) {
-        log.warn("Scavenge failed with error", e);
+        log.warn(name + " : Scavenge failed with error", e);
+        currentThread().interrupt();
       }
     }
   }
+
 }
