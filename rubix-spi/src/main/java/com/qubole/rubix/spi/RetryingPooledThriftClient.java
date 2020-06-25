@@ -70,11 +70,9 @@ public abstract class RetryingPooledThriftClient
         // We dont want to keep the transport around in case of exception to prevent reading old results in transport reuse
         // Get a reference to objectPool before it is destroyed in returnObject
         ObjectPool<TTransport> objectPool = transportPoolable.getPool();
-        if (client.getInputProtocol().getTransport().isOpen()) {
-          // Close connection and submit back so that ObjectPool to handle decommissioning
-          client.getInputProtocol().getTransport().close();
-          transportPoolable.getPool().returnObject(transportPoolable);
-        }
+        // Close connection and submit back so that ObjectPool can handle decommissioning
+        transportPoolable.getObject().close();
+        transportPoolable.getPool().returnObject(transportPoolable);
 
         // unset transportPoolable so that close() doesnt return it again to pool if borrowObject hits an exception
         transportPoolable = null;
