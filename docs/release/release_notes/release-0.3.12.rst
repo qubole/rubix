@@ -9,6 +9,7 @@ Fixes and Features
 * Fix over-estimation of disk usage by cache
 * Enable FileSystem object cache in Rubix servers
 * Allow configuring Rubix via a separate xml file. ``rubix.site.location`` can be used to provide location of Rubix configuration file
+* Removed shading of GCS connector to fix caching over GoogleHadoopFileSystem
 
 New Extensions
 --------------
