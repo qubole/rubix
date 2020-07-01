@@ -12,147 +12,181 @@
  */
 package com.qubole.rubix.core;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.ImmutableMap;
+import com.qubole.rubix.spi.BookKeeperFactory;
+import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
+import org.apache.hadoop.conf.Configuration;
+
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
 /**
  * Created by stagra on 28/1/16.
  */
 public class ReadRequestChainStats
 {
-  // All data below in MB
-  // From Remote
-  private long prefixRead;
-  private long suffixRead;
-  private long requestedRead;
-  private long warmupPenalty;
-  private long remoteReads;
+  public static final String DOWNLOADED_FOR_NON_LOCAL_METRIC = "downloaded_for_non_local";
+  public static final String EXTRA_READ_FOR_NON_LOCAL_METRIC = "extra_read_for_non_local";
+  public static final String WARMUP_TIME_NON_LOCAL_METRIC = "warmup_penalty_non_local";
+  public static final String DOWNLOADED_FOR_PARALLEL_WARMUP_METRIC = "downloaded_for_parallel_warmup";
+  public static final String PARALLEL_DOWNLOAD_TIME_METRIC = "parallel_download_time";
 
-  // From cached
-  private long cachedDataRead;
-  private long cachedReads;
+  private static final long UNKNOWN_VALUE = -1;
 
-  private long nonLocalReads;
-  private long nonLocalDataRead;
+  // bookKeeperStats are fetched over thrift in standalone mode
+  // and are usually needed for multiple getters in this class
+  // cache the server response to minimize thrift calls but evict aggressively
+  private static final Cache<String, Map<String, Long>> bookKeeperStats = CacheBuilder
+          .newBuilder()
+          .expireAfterWrite(5, TimeUnit.SECONDS)
+          .build();
+  private static final String STATS_KEY = "stats";
 
-  private long directDataRead;
+  // RemoteRRC
+  private long remoteRRCDataRead;
+  private long remoteRRCExtraDataRead;
+  private long remoteRRCWarmupTime;
+  private long remoteRRCRequests;
+
+  // CachedRRC
+  private long cachedRRCDataRead;
+  private long cachedRRCRequests;
+
+  // DirectRRC
+  private long directRRCDataRead;
+  private long directRRCRequests;
+
+  // NonLocalRRC
+  private long nonLocalRRCDataRead;
+  private long nonLocalRRCRequests;
 
   private int corruptedFileCount;
 
-  public long getPrefixRead()
+  public ReadRequestChainStats add(ReadRequestChainStats other)
   {
-    return prefixRead;
-  }
-
-  public ReadRequestChainStats setPrefixRead(long prefixReadInBytes)
-  {
-    this.prefixRead = prefixReadInBytes;
+    remoteRRCDataRead += other.getRemoteRRCDataRead();
+    remoteRRCExtraDataRead += other.getRemoteRRCExtraDataRead();
+    remoteRRCWarmupTime += other.getRemoteRRCWarmupTime();
+    remoteRRCRequests += other.getRemoteRRCRequests();
+    cachedRRCDataRead += other.getCachedRRCDataRead();
+    cachedRRCRequests += other.getCachedRRCRequests();
+    directRRCDataRead += other.getDirectRRCDataRead();
+    directRRCRequests += other.getDirectRRCRequests();
+    nonLocalRRCDataRead += other.getNonLocalRRCDataRead();
+    nonLocalRRCRequests += other.getNonLocalRRCRequests();
+    corruptedFileCount += other.getCorruptedFileCount();
     return this;
   }
 
-  public long getSuffixRead()
+  public long getRemoteRRCDataRead()
   {
-    return suffixRead;
+    return remoteRRCDataRead;
   }
 
-  public ReadRequestChainStats setSuffixRead(long suffixRead)
+  public ReadRequestChainStats setRemoteRRCDataRead(long remoteRRCDataRead)
   {
-    this.suffixRead = suffixRead;
+    this.remoteRRCDataRead = remoteRRCDataRead;
     return this;
   }
 
-  public long getRequestedRead()
+  public long getRemoteRRCExtraDataRead()
   {
-    return requestedRead;
+    return remoteRRCExtraDataRead;
   }
 
-  public ReadRequestChainStats setRequestedRead(long requestedRead)
+  public ReadRequestChainStats setRemoteRRCExtraDataRead(long remoteRRCExtraDataRead)
   {
-    this.requestedRead = requestedRead;
+    this.remoteRRCExtraDataRead = remoteRRCExtraDataRead;
     return this;
   }
 
-  public long getTotalDownloaded()
+  public long getRemoteRRCWarmupTime()
   {
-    return prefixRead + requestedRead + suffixRead;
+    return remoteRRCWarmupTime;
   }
 
-  public long getExtraRead()
+  public ReadRequestChainStats setRemoteRRCWarmupTime(long remoteRRCWarmupTime)
   {
-    return prefixRead + suffixRead;
-  }
-
-  public ReadRequestChainStats setRemoteReads(long remoteReads)
-  {
-    this.remoteReads = remoteReads;
+    this.remoteRRCWarmupTime = remoteRRCWarmupTime;
     return this;
   }
 
-  public long getRemoteReads()
+  public long getRemoteRRCRequests()
   {
-    return remoteReads;
+    return remoteRRCRequests;
   }
 
-  public long getWarmupPenalty()
+  public ReadRequestChainStats setRemoteRRCRequests(long remoteRRCRequests)
   {
-    return warmupPenalty;
-  }
-
-  public ReadRequestChainStats setWarmupPenalty(long warmupPenalty)
-  {
-    this.warmupPenalty = warmupPenalty;
+    this.remoteRRCRequests = remoteRRCRequests;
     return this;
   }
 
-  public long getCachedDataRead()
+  public long getCachedRRCDataRead()
   {
-    return cachedDataRead;
+    return cachedRRCDataRead;
   }
 
-  public ReadRequestChainStats setCachedDataRead(long cachedDataRead)
+  public ReadRequestChainStats setCachedRRCDataRead(long cachedRRCDataRead)
   {
-    this.cachedDataRead = cachedDataRead;
+    this.cachedRRCDataRead = cachedRRCDataRead;
     return this;
   }
 
-  public ReadRequestChainStats setCachedReads(long cachedReads)
+  public long getCachedRRCRequests()
   {
-    this.cachedReads = cachedReads;
+    return cachedRRCRequests;
+  }
+
+  public ReadRequestChainStats setCachedRRCRequests(long cachedRRCRequests)
+  {
+    this.cachedRRCRequests = cachedRRCRequests;
     return this;
   }
 
-  public long getCachedReads()
+  public long getDirectRRCDataRead()
   {
-    return cachedReads;
+    return directRRCDataRead;
   }
 
-  public ReadRequestChainStats setNonLocalReads(long nonLocalReads)
+  public ReadRequestChainStats setDirectRRCDataRead(long directRRCDataRead)
   {
-    this.nonLocalReads = nonLocalReads;
+    this.directRRCDataRead = directRRCDataRead;
     return this;
   }
 
-  public long getNonLocalReads()
+  public long getDirectRRCRequests()
   {
-    return nonLocalReads;
+    return directRRCRequests;
   }
 
-  public ReadRequestChainStats setNonLocalDataRead(long nonLocalDataRead)
+  public ReadRequestChainStats setDirectRRCRequests(long directRRCRequests)
   {
-    this.nonLocalDataRead = nonLocalDataRead;
+    this.directRRCRequests = directRRCRequests;
     return this;
   }
 
-  public long getNonLocalDataRead()
+  public long getNonLocalRRCDataRead()
   {
-    return nonLocalDataRead;
+    return nonLocalRRCDataRead;
   }
 
-  public long getDirectDataRead()
+  public ReadRequestChainStats setNonLocalRRCDataRead(long nonLocalRRCDataRead)
   {
-    return this.directDataRead;
+    this.nonLocalRRCDataRead = nonLocalRRCDataRead;
+    return this;
   }
 
-  public ReadRequestChainStats setDirectDataRead(long directDataRead)
+  public long getNonLocalRRCRequests()
   {
-    this.directDataRead = directDataRead;
+    return nonLocalRRCRequests;
+  }
+
+  public ReadRequestChainStats setNonLocalRRCRequests(long nonLocalRRCRequests)
+  {
+    this.nonLocalRRCRequests = nonLocalRRCRequests;
     return this;
   }
 
@@ -167,19 +201,43 @@ public class ReadRequestChainStats
     return this;
   }
 
-  public ReadRequestChainStats add(ReadRequestChainStats other)
+  public long getDownloadedFromSourceForNonLocalRequests(BookKeeperFactory bookKeeperFactory, Configuration conf)
   {
-    return new ReadRequestChainStats()
-        .setCachedDataRead(cachedDataRead + other.getCachedDataRead())
-        .setPrefixRead(prefixRead + other.getPrefixRead())
-        .setRequestedRead(requestedRead + other.getRequestedRead())
-        .setSuffixRead(suffixRead + other.getSuffixRead())
-        .setRemoteReads(remoteReads + other.getRemoteReads())
-        .setWarmupPenalty(warmupPenalty + other.getWarmupPenalty())
-        .setCachedReads(cachedReads + other.getCachedReads())
-        .setNonLocalReads(nonLocalReads + other.getNonLocalReads())
-        .setNonLocalDataRead(nonLocalDataRead + other.getNonLocalDataRead())
-        .setDirectDataRead(directDataRead + other.getDirectDataRead())
-        .setCorruptedFileCount(corruptedFileCount + other.getCorruptedFileCount());
+    return getBookKeeperStats(bookKeeperFactory, conf).getOrDefault(DOWNLOADED_FOR_NON_LOCAL_METRIC, UNKNOWN_VALUE);
+  }
+
+  public long getExtraReadFromSourceForNonLocalRequests(BookKeeperFactory bookKeeperFactory, Configuration conf)
+  {
+    return getBookKeeperStats(bookKeeperFactory, conf).getOrDefault(EXTRA_READ_FOR_NON_LOCAL_METRIC, UNKNOWN_VALUE);
+  }
+
+  public long getWarmupTimeForNonLocalRequests(BookKeeperFactory bookKeeperFactory, Configuration conf)
+  {
+    return getBookKeeperStats(bookKeeperFactory, conf).getOrDefault(WARMUP_TIME_NON_LOCAL_METRIC, UNKNOWN_VALUE);
+  }
+
+  public long getDownloadedFromSourceParallel(BookKeeperFactory bookKeeperFactory, Configuration conf)
+  {
+    return getBookKeeperStats(bookKeeperFactory, conf).getOrDefault(DOWNLOADED_FOR_PARALLEL_WARMUP_METRIC, UNKNOWN_VALUE);
+  }
+
+  public long getTotalTimeForParallelDownload(BookKeeperFactory bookKeeperFactory, Configuration conf)
+  {
+    return getBookKeeperStats(bookKeeperFactory, conf).getOrDefault(PARALLEL_DOWNLOAD_TIME_METRIC, UNKNOWN_VALUE);
+  }
+
+  private Map<String, Long> getBookKeeperStats(BookKeeperFactory bookKeeperFactory, Configuration conf)
+  {
+    try {
+      return bookKeeperStats.get(STATS_KEY,() ->
+      {
+        try(RetryingPooledBookkeeperClient client = bookKeeperFactory.createBookKeeperClient(conf)) {
+          return client.getReadRequestChainStats();
+        }
+      });
+    }
+    catch(Exception e) {
+      return ImmutableMap.of();
+    }
   }
 }

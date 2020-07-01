@@ -60,7 +60,7 @@ public class CachingInputStream extends FSInputStream
   private long nextReadPosition;
   private long nextReadBlock;
   int blockSize;
-  private CachingFileSystemStats statsMbean;
+  private CachingFileSystemStatsProvider stats;
 
   static ListeningExecutorService readService = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(CacheConfig.READ_SERVICE_THREAD_POOL_SIZE, new ThreadFactory()
   {
@@ -92,7 +92,7 @@ public class CachingInputStream extends FSInputStream
   BookKeeperFactory bookKeeperFactory;
 
   public CachingInputStream(Path backendPath, Configuration conf,
-                            CachingFileSystemStats statsMbean, ClusterType clusterType,
+                            CachingFileSystemStatsProvider stats, ClusterType clusterType,
                             BookKeeperFactory bookKeeperFactory, FileSystem remoteFileSystem,
                             int bufferSize, FileSystem.Statistics statistics) throws IOException
   {
@@ -124,7 +124,7 @@ public class CachingInputStream extends FSInputStream
       this.lastModified = fileStatus.getModificationTime();
     }
 
-    this.statsMbean = statsMbean;
+    this.stats = stats;
     this.clusterType = clusterType;
     this.bufferSize = bufferSize;
     this.statistics = statistics;
@@ -306,7 +306,7 @@ public class CachingInputStream extends FSInputStream
       readRequestChain.updateCacheStatus(remotePath, fileSize, lastModified, blockSize, conf);
       stats = stats.add(readRequestChain.getStats());
     }
-    statsMbean.addReadRequestChainStats(stats);
+    this.stats.addReadRequestChainStats(stats);
   }
 
   List<ReadRequestChain> setupReadRequestChains(byte[] buffer,

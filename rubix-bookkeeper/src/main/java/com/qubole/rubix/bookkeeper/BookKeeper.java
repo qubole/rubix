@@ -31,8 +31,10 @@ import com.google.common.util.concurrent.Service;
 import com.qubole.rubix.bookkeeper.utils.DiskUtils;
 import com.qubole.rubix.bookkeeper.validation.CachingValidator;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
+import com.qubole.rubix.core.CachingFileSystemStatsProvider;
 import com.qubole.rubix.core.ClusterManagerInitilizationException;
 import com.qubole.rubix.core.ReadRequest;
+import com.qubole.rubix.core.ReadRequestChainStats;
 import com.qubole.rubix.core.RemoteReadRequestChain;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
@@ -89,6 +91,11 @@ import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.NONL
 import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.REMOTE_REQUEST_COUNT;
 import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.TOTAL_REQUEST_COUNT;
 import static com.qubole.rubix.spi.CacheUtil.UNKONWN_GENERATION_NUMBER;
+import static com.qubole.rubix.core.ReadRequestChainStats.DOWNLOADED_FOR_NON_LOCAL_METRIC;
+import static com.qubole.rubix.core.ReadRequestChainStats.DOWNLOADED_FOR_PARALLEL_WARMUP_METRIC;
+import static com.qubole.rubix.core.ReadRequestChainStats.EXTRA_READ_FOR_NON_LOCAL_METRIC;
+import static com.qubole.rubix.core.ReadRequestChainStats.PARALLEL_DOWNLOAD_TIME_METRIC;
+import static com.qubole.rubix.core.ReadRequestChainStats.WARMUP_TIME_NON_LOCAL_METRIC;
 import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
 import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER_MULTINODE;
 import static com.qubole.rubix.spi.utils.DataSizeUnits.BYTES;
@@ -103,6 +110,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   private static final double FILE_ACCESSED_FILTER_FPP = 0.01;
   private static Log log = LogFactory.getLog(BookKeeper.class);
   private static DirectBufferPool bufferPool = new DirectBufferPool();
+  private static final CachingFileSystemStatsProvider warmupStats = new CachingFileSystemStatsProvider();
 
   protected static Cache<String, FileMetadata> fileMetadataCache;
   private static LoadingCache<String, FileInfo> fileInfoCache;
@@ -160,7 +168,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
 
     fetchProcessor = null;
     if (CacheConfig.isParallelWarmupEnabled(conf)) {
-      fetchProcessor = new RemoteFetchProcessor(this, metrics, conf);
+      fetchProcessor = new RemoteFetchProcessor(this, metrics, conf, warmupStats);
     }
   }
 
@@ -523,6 +531,26 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     return cacheMetrics.build();
   }
 
+  @Override
+  public Map<String, Long> getReadRequestChainStats()
+  {
+    ImmutableMap.Builder<String, Long> stats = ImmutableMap.builder();
+    ReadRequestChainStats readRequestChainStats = warmupStats.getStats();
+    // Differentiate parallel warmup case because in that case caching for data owned by current node is also done by RemoteFetchProcessor
+    // While in the case of read-through warmup, caching for data owned by current node is done by the client
+    // Hence DOWNLOADED_FOR_PARALLEL_WARMUP contains data for both local and non-local warmup
+    if (CacheConfig.isParallelWarmupEnabled(conf)) {
+      stats.put(DOWNLOADED_FOR_PARALLEL_WARMUP_METRIC, readRequestChainStats.getRemoteRRCDataRead());
+      stats.put(PARALLEL_DOWNLOAD_TIME_METRIC, readRequestChainStats.getRemoteRRCWarmupTime());
+    }
+    else {
+      stats.put(DOWNLOADED_FOR_NON_LOCAL_METRIC, readRequestChainStats.getRemoteRRCDataRead());
+      stats.put(EXTRA_READ_FOR_NON_LOCAL_METRIC, readRequestChainStats.getRemoteRRCExtraDataRead());
+      stats.put(WARMUP_TIME_NON_LOCAL_METRIC, readRequestChainStats.getRemoteRRCWarmupTime());
+    }
+    return stats.build();
+  }
+
   //This method is to ensure that data required by another node is cached before it is read by that node
   //using localTransferServer.
   // If the data is not already cached, remoteReadRequest for that block is sent and data is cached.
@@ -609,6 +637,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
           // fall back on the directread
           if (dataRead == expectedBytesToRead) {
             remoteReadRequestChain.updateCacheStatus(remotePath, fileSize, lastModified, blockSize, conf);
+            warmupStats.addReadRequestChainStats(remoteReadRequestChain.getStats());
           }
           else {
             log.error("Not able to download requested bytes. Not updating the cache for block " + blockNum);

@@ -46,7 +46,6 @@ public class FileDownloadRequestChain extends ReadRequestChain
   private long fileSize;
   private long lastModified;
   private long totalRequestedRead;
-  private int warmupPenalty;
   private final int maxRemoteReadBufferSize;
   Configuration conf;
   ByteBuffer directBuffer;
@@ -161,8 +160,6 @@ public class FileDownloadRequestChain extends ReadRequestChain
           long length,
           byte[] remoteReadBuffer) throws IOException
   {
-    long start = System.nanoTime();
-
     log.debug(String.format("Copying data of file %s of length %d from position %d", remotePath, length, cacheReadStart));
     if (length <= remoteReadBuffer.length) {
       inputStream.readFully(cacheReadStart, remoteReadBuffer, 0, Math.toIntExact(length));
@@ -181,7 +178,6 @@ public class FileDownloadRequestChain extends ReadRequestChain
       }
     }
 
-    warmupPenalty += System.nanoTime() - start;
     log.debug(String.format("Copied %d to file %s from position %d", length, remotePath, cacheReadStart));
     return length;
   }
@@ -225,9 +221,9 @@ public class FileDownloadRequestChain extends ReadRequestChain
 
   public ReadRequestChainStats getStats()
   {
+    // Update same stats that RemoteRRC updates
     return new ReadRequestChainStats()
-        .setRequestedRead(totalRequestedRead)
-        .setWarmupPenalty(warmupPenalty)
-        .setRemoteReads(requests);
+            .setRemoteRRCDataRead(totalRequestedRead)
+            .setRemoteRRCWarmupTime(timeSpentOnDownload);
   }
 }

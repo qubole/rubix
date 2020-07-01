@@ -78,7 +78,8 @@ public class RemoteFetchRequestChain extends ReadRequestChain
 
   public ReadRequestChainStats getStats()
   {
-    return new ReadRequestChainStats().setRemoteReads(requests);
+    // This chain doesnt do any data related work, return empty stats
+    return new ReadRequestChainStats();
   }
 
   @Override

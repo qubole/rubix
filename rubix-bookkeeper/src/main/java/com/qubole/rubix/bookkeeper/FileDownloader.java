@@ -19,6 +19,7 @@ import com.google.common.collect.Range;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
+import com.qubole.rubix.core.CachingFileSystemStatsProvider;
 import com.qubole.rubix.core.ReadRequest;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
@@ -66,11 +67,12 @@ class FileDownloader
 
   private final RemoteFetchProcessor remoteFetchProcessor;
   private final BookKeeper bookKeeper;
+  private final CachingFileSystemStatsProvider stats;
 
   private static final Log log = LogFactory.getLog(FileDownloader.class);
   private static DirectBufferPool bufferPool = new DirectBufferPool();
 
-  public FileDownloader(BookKeeper bookKeeper, MetricRegistry metrics, Configuration conf, RemoteFetchProcessor remoteFetchProcessor)
+  public FileDownloader(BookKeeper bookKeeper, MetricRegistry metrics, Configuration conf, RemoteFetchProcessor remoteFetchProcessor, CachingFileSystemStatsProvider stats)
   {
     this.bookKeeper = bookKeeper;
     this.remoteFetchProcessor = remoteFetchProcessor;
@@ -84,6 +86,7 @@ class FileDownloader
             .setDaemon(true)
             .build());
     processService = MoreExecutors.getExitingExecutorService(executor);
+    this.stats = stats;
 
     initializeMetrics();
   }
@@ -217,6 +220,7 @@ class FileDownloader
         if (read == totalBytesToBeDownloaded) {
           requestChain.updateCacheStatus(requestChain.getRemotePath(), requestChain.getFileSize(),
               requestChain.getLastModified(), CacheConfig.getBlockSize(conf), conf);
+          stats.addReadRequestChainStats(requestChain.getStats());
           sizeRead += read;
           this.totalTimeToDownload.inc(requestChain.getTimeSpentOnDownload());
         }

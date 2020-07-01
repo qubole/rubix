@@ -228,8 +228,8 @@ public class TestNonLocalReadRequestChain
     NonLocalReadRequestChain request = createNewNonLocalReadRequest();
     test(request);
 
-    assertTrue(request.getStats().getNonLocalDataRead() == 350, "Total non-local data read didn't match");
-    assertTrue(request.getStats().getRequestedRead() == 0, "Total direct data read didn't match");
+    assertTrue(request.getStats().getNonLocalRRCDataRead() == 350, "Total non-local data read didn't match");
+    assertTrue(request.getStats().getDirectRRCDataRead() == 0, "Total direct data read didn't match");
   }
 
   @Test(expectedExceptions = Exception.class)
@@ -267,8 +267,8 @@ public class TestNonLocalReadRequestChain
     request.strictMode = false;
     test(request);
 
-    assertTrue(request.getStats().getNonLocalDataRead() == 250, "Total non-local data read didn't match");
-    assertTrue(request.getStats().getRequestedRead() == 100, "Total direct data read didn't match");
+    assertTrue(request.getStats().getNonLocalRRCDataRead() == 250, "Total non-local data read didn't match");
+    assertTrue(request.getStats().getDirectRRCDataRead() == 100, "Total direct data read didn't match");
   }
 
   @Test
@@ -289,8 +289,8 @@ public class TestNonLocalReadRequestChain
 
     test(request);
 
-    assertTrue(request.getStats().getNonLocalDataRead() == 350, "Total non-local data read didn't match");
-    assertTrue(request.getStats().getRequestedRead() == 0, "Total direct data read didn't match");
+    assertTrue(request.getStats().getNonLocalRRCDataRead() == 350, "Total non-local data read didn't match");
+    assertTrue(request.getStats().getDirectRRCDataRead() == 0, "Total direct data read didn't match");
   }
 
   private void startAllServers() throws InterruptedException

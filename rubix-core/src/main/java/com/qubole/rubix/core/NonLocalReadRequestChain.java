@@ -33,10 +33,10 @@ import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 
 import static com.google.common.base.Preconditions.checkState;
-import static com.qubole.rubix.spi.DataTransferClientFactory.DataTransferClient;
-import static com.qubole.rubix.spi.DataTransferClientFactory.getClient;
 import static com.qubole.rubix.spi.CacheUtil.DUMMY_MODE_GENERATION_NUMBER;
 import static com.qubole.rubix.spi.CacheUtil.UNKONWN_GENERATION_NUMBER;
+import static com.qubole.rubix.spi.DataTransferClientFactory.DataTransferClient;
+import static com.qubole.rubix.spi.DataTransferClientFactory.getClient;
 
 /**
  * Created by sakshia on 31/8/16.
@@ -48,8 +48,9 @@ public class NonLocalReadRequestChain extends ReadRequestChain
   long lastModified;
   String remoteNodeName;
   Configuration conf;
-  long totalRead;
+  long readFromNonLocalCache;
   long directRead;
+  long directReadRequests;
   FileSystem remoteFileSystem;
   int clusterType;
   public boolean strictMode;
@@ -79,9 +80,10 @@ public class NonLocalReadRequestChain extends ReadRequestChain
   public ReadRequestChainStats getStats()
   {
     return new ReadRequestChainStats()
-        .setNonLocalReads(requests)
-        .setRequestedRead(directRead)
-        .setNonLocalDataRead(totalRead);
+            .setNonLocalRRCDataRead(readFromNonLocalCache)
+            .setNonLocalRRCRequests(directReadRequests == 0 ? requests : requests - directReadRequests)
+            .setDirectRRCDataRead(directRead)
+            .setDirectRRCRequests(directReadRequests);
   }
 
   @Override
@@ -96,7 +98,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
     checkState(isLocked, "Trying to execute Chain without locking");
     int dataReadInPreviousCycle = 0;
     for (ReadRequest readRequest : readRequests) {
-      totalRead += dataReadInPreviousCycle;
+      readFromNonLocalCache += dataReadInPreviousCycle;
       if (cancelled) {
         propagateCancel(this.getClass().getName());
       }
@@ -149,14 +151,14 @@ public class NonLocalReadRequestChain extends ReadRequestChain
         }
       }
       finally {
-        log.debug(String.format("Read %d bytes internally from node %s", totalRead, remoteNodeName));
+        log.debug(String.format("Read %d bytes internally from node %s", readFromNonLocalCache, remoteNodeName));
         if (statistics != null) {
-          statistics.incrementBytesRead(totalRead);
+          statistics.incrementBytesRead(readFromNonLocalCache);
         }
       }
     }
-    totalRead += dataReadInPreviousCycle;
-    return totalRead;
+    readFromNonLocalCache += dataReadInPreviousCycle;
+    return readFromNonLocalCache;
   }
 
   @Override
@@ -175,12 +177,13 @@ public class NonLocalReadRequestChain extends ReadRequestChain
       directReadChain = new DirectReadRequestChain(inputStream);
       for (ReadRequest readRequest : readRequests.subList(index, readRequests.size())) {
         directReadChain.addReadRequest(readRequest);
+        directReadRequests++;
       }
       directReadChain.lock();
       directRead = directReadChain.call();
       directReadChain = null;
     }
-    return (totalRead + directRead);
+    return (readFromNonLocalCache + directRead);
   }
 
   @Override

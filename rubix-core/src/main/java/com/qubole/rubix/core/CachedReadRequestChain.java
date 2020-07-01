@@ -39,7 +39,7 @@ import static com.qubole.rubix.spi.CacheUtil.UNKONWN_GENERATION_NUMBER;
 public class CachedReadRequestChain extends ReadRequestChain
 {
   private String remotePath;
-  private long read; // data read
+  private long readFromCache; // data read
   private FileSystem.Statistics statistics;
   private FileSystem remoteFileSystem;
   private DirectReadRequestChain directReadChain;
@@ -139,10 +139,10 @@ public class CachedReadRequestChain extends ReadRequestChain
           throw new InvalidationRequiredException("Cached read length didn't match with requested read length for file");
         }
         else {
-          read += nread;
+          readFromCache += nread;
         }
       }
-      log.debug(String.format("Read %d bytes from cached file", read));
+      log.debug(String.format("Read %d bytes from cached file", readFromCache));
     }
     catch (Exception ex) {
       if (ex instanceof CancelledException) {
@@ -174,10 +174,10 @@ public class CachedReadRequestChain extends ReadRequestChain
       }
 
       if (statistics != null) {
-        statistics.incrementBytesRead(read);
+        statistics.incrementBytesRead(readFromCache);
       }
     }
-    return read;
+    return readFromCache;
   }
 
   @Override
@@ -202,7 +202,7 @@ public class CachedReadRequestChain extends ReadRequestChain
   private long readFromRemoteFileSystem() throws IOException
   {
     // Setting the cached read data to zero as we are reading the whole request from remote object store
-    read = 0;
+    readFromCache = 0;
 
     if (cancelled) {
       return 0;
@@ -223,9 +223,10 @@ public class CachedReadRequestChain extends ReadRequestChain
   public ReadRequestChainStats getStats()
   {
     return new ReadRequestChainStats()
-        .setDirectDataRead(directDataRead)
-        .setCachedDataRead(read)
-        .setCachedReads(requests)
-        .setCorruptedFileCount(corruptedFileCount);
+            .setCachedRRCDataRead(directDataRead == 0 ? readFromCache : 0)  // If read directly then do not report it under cached reads
+            .setCachedRRCRequests(directDataRead == 0 ? requests : 0)
+            .setDirectRRCDataRead(directDataRead)
+            .setDirectRRCRequests(directDataRead == 0 ? 0 : requests)
+            .setCorruptedFileCount(corruptedFileCount);
   }
 }

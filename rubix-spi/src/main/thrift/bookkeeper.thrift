@@ -52,6 +52,9 @@ service BookKeeperService
 
     map<string,double> getCacheMetrics()
 
+    // Light weight stats pulled by clients for JMX queries
+    map<string,long> getReadRequestChainStats()
+
     ReadResponse readData(1:string path, 2:long readStart, 3:int length, 4:long fileSize, 5:long lastModified, 6:int clusterType)
 
     oneway void handleHeartbeat(1:string workerHostname, 2:HeartbeatStatus heartbeatStatus)

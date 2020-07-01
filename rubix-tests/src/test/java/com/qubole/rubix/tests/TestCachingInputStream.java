@@ -17,7 +17,7 @@ import com.qubole.rubix.bookkeeper.BookKeeperServer;
 import com.qubole.rubix.bookkeeper.LocalDataTransferServer;
 import com.qubole.rubix.common.utils.DataGen;
 import com.qubole.rubix.common.utils.DeleteFileVisitor;
-import com.qubole.rubix.core.CachingFileSystemStats;
+import com.qubole.rubix.core.CachingFileSystemStatsProvider;
 import com.qubole.rubix.core.CachingInputStream;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
@@ -136,7 +136,7 @@ public class TestCachingInputStream
 
     // This should be after server comes up else client could not be created
     return new CachingInputStream(backendPath, conf,
-        new CachingFileSystemStats(), ClusterType.TEST_CLUSTER_MANAGER,
+        new CachingFileSystemStatsProvider(), ClusterType.TEST_CLUSTER_MANAGER,
         new BookKeeperFactory(), localFileSystem,
         CacheConfig.getBlockSize(conf), null);
   }

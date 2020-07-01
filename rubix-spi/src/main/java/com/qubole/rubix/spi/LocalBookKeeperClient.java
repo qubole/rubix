@@ -91,6 +91,13 @@ public class LocalBookKeeperClient extends RetryingPooledBookkeeperClient
   }
 
   @Override
+  public Map<String, Long> getReadRequestChainStats()
+          throws TException
+  {
+    return bookKeeper.getReadRequestChainStats();
+  }
+
+  @Override
   public void close()
   {
     // no-op

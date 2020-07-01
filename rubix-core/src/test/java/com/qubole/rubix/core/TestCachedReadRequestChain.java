@@ -108,8 +108,8 @@ public class TestCachedReadRequestChain
     String output = new String(buffer, Charset.defaultCharset());
     String expectedOutput = DataGen.getExpectedOutput(readSize);
     assertTrue(expectedOutput.equals(output), "Wrong data read, expected\n" + expectedOutput + "\nBut got\n" + output);
-    assertTrue(stats.getCachedDataRead() == readSize, "All data should be read from cache");
-    assertTrue(stats.getDirectDataRead() == 0, "No data should be read from object store");
+    assertTrue(stats.getCachedRRCDataRead() == readSize, "All data should be read from cache");
+    assertTrue(stats.getDirectRRCDataRead() == 0, "No data should be read from object store");
   }
 
   @Test
@@ -132,8 +132,8 @@ public class TestCachedReadRequestChain
     String output = new String(buffer, Charset.defaultCharset());
     String expectedOutput = DataGen.getExpectedOutput(readSize);
     assertTrue(expectedOutput.equals(output), "Wrong data read, expected\n" + expectedOutput + "\nBut got\n" + output);
-    assertTrue(stats.getCachedDataRead() == 0, "No data should be read from cache");
-    assertTrue(stats.getDirectDataRead() == readSize, "All data should be read from object store");
+    assertTrue(stats.getCachedRRCDataRead() == 0, "No data should be read from cache");
+    assertTrue(stats.getDirectRRCDataRead() == readSize, "All data should be read from object store");
   }
 
   @Test
@@ -155,8 +155,8 @@ public class TestCachedReadRequestChain
     String output = new String(buffer, Charset.defaultCharset());
     String expectedOutput = DataGen.getExpectedOutput(readSize);
     assertTrue(expectedOutput.equals(output), "Wrong data read, expected\n" + expectedOutput + "\nBut got\n" + output);
-    assertTrue(stats.getCachedDataRead() == 0, "No data should be read from cache");
-    assertTrue(stats.getDirectDataRead() == 1000, "Data read from object store didn't match");
+    assertTrue(stats.getCachedRRCDataRead() == 0, "No data should be read from cache");
+    assertTrue(stats.getDirectRRCDataRead() == 1000, "Data read from object store didn't match");
   }
 
   @Test
@@ -178,8 +178,8 @@ public class TestCachedReadRequestChain
     String output = new String(buffer, Charset.defaultCharset());
     String expectedOutput = DataGen.getExpectedOutput(readSize);
     assertTrue(expectedOutput.equals(output), "Wrong data read, expected\n" + expectedOutput + "\nBut got\n" + output);
-    assertTrue(stats.getCachedDataRead() == 0, "No data should be read from cache");
-    assertTrue(stats.getDirectDataRead() == 1000, "Data read from object store didn't match");
+    assertTrue(stats.getCachedRRCDataRead() == 0, "No data should be read from cache");
+    assertTrue(stats.getDirectRRCDataRead() == 1000, "Data read from object store didn't match");
   }
 
   private CachedReadRequestChain getCachedReadRequestChain(byte[] buffer) throws IOException
