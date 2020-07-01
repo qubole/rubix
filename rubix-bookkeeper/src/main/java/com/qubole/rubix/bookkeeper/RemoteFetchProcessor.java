@@ -20,6 +20,7 @@ import com.google.common.collect.BoundType;
 import com.google.common.collect.Range;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import com.qubole.rubix.common.metrics.BookKeeperMetrics;
+import com.qubole.rubix.core.CachingFileSystemStatsProvider;
 import com.qubole.rubix.spi.CacheConfig;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -52,7 +53,7 @@ public class RemoteFetchProcessor extends AbstractScheduledService
 
   private static final Log log = LogFactory.getLog(RemoteFetchProcessor.class);
 
-  public RemoteFetchProcessor(BookKeeper bookKeeper, MetricRegistry metrics, Configuration conf)
+  public RemoteFetchProcessor(BookKeeper bookKeeper, MetricRegistry metrics, Configuration conf, CachingFileSystemStatsProvider stats)
   {
     // Initializing a new Config object so that it doesn't interfere with the existing one
     conf = new Configuration(conf);
@@ -63,7 +64,7 @@ public class RemoteFetchProcessor extends AbstractScheduledService
 
     this.processQueue = new ConcurrentLinkedQueue<FetchRequest>();
     this.metrics = metrics;
-    this.downloader = new FileDownloader(bookKeeper, metrics, conf, this);
+    this.downloader = new FileDownloader(bookKeeper, metrics, conf, this, stats);
     this.bookKeeper = bookKeeper;
 
     this.processThreadInitalDelay = CacheConfig.getProcessThreadInitialDelay(conf);

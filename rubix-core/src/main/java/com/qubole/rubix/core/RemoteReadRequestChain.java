@@ -45,8 +45,7 @@ public class RemoteReadRequestChain extends ReadRequestChain
   private DirectBufferPool bufferPool;
   private int directBufferSize;
   private byte[] affixBuffer;
-  private int totalPrefixRead;
-  private int totalSuffixRead;
+  private long extraRead;
   private long totalRequestedRead;
   private long warmupPenalty;
   private int blockSize;
@@ -116,7 +115,7 @@ public class RemoteReadRequestChain extends ReadRequestChain
           // Streaming read because next read is guaranteed to be contiguous
           inputStream.seek(readRequest.backendReadStart);
           log.debug(String.format("Trying to Read %d bytes into prefix buffer", prefixBufferLength));
-          totalPrefixRead += readIntoBuffer(affixBuffer, 0, prefixBufferLength, inputStream);
+          extraRead += readIntoBuffer(affixBuffer, 0, prefixBufferLength, inputStream);
           int written = copyIntoCache(fileChannel, directBuffer, affixBuffer, 0, prefixBufferLength, readRequest.backendReadStart);
           log.debug(String.format("Copied %d prefix bytes into cache", written));
         }
@@ -143,12 +142,12 @@ public class RemoteReadRequestChain extends ReadRequestChain
           log.debug(String.format("Trying to Read %d bytes into suffix buffer", suffixBufferLength));
           // When we reach here it should be in continuation of a streaming read, seek just to be safe
           inputStream.seek(readRequest.actualReadEnd);
-          totalSuffixRead += readIntoBuffer(affixBuffer, 0, suffixBufferLength, inputStream);
+          extraRead += readIntoBuffer(affixBuffer, 0, suffixBufferLength, inputStream);
           written = copyIntoCache(fileChannel, directBuffer, affixBuffer, 0, suffixBufferLength, readRequest.actualReadEnd);
           log.debug(String.format("Copied %d suffix bytes into cache", written));
         }
       }
-      log.debug(String.format("Read %d bytes from remote localFile, added %d to destination buffer", totalPrefixRead + totalRequestedRead + totalSuffixRead, totalRequestedRead));
+      log.debug(String.format("Read %d bytes from remote localFile, added %d to destination buffer", extraRead + totalRequestedRead, totalRequestedRead));
       return totalRequestedRead;
     }
     finally {
@@ -194,11 +193,10 @@ public class RemoteReadRequestChain extends ReadRequestChain
   public ReadRequestChainStats getStats()
   {
     return new ReadRequestChainStats()
-        .setPrefixRead(totalPrefixRead)
-        .setRequestedRead(totalRequestedRead)
-        .setSuffixRead(totalSuffixRead)
-        .setWarmupPenalty(warmupPenalty)
-        .setRemoteReads(requests);
+            .setRemoteRRCDataRead(extraRead + totalRequestedRead)
+            .setRemoteRRCExtraDataRead(extraRead)
+            .setRemoteRRCWarmupTime(warmupPenalty)
+            .setRemoteRRCRequests(requests);
   }
 
   @Override

@@ -48,7 +48,9 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.net.URI;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
+import static com.google.common.base.Preconditions.checkState;
 import static com.qubole.rubix.common.utils.ClusterUtil.applyRubixSiteConfig;
 import static com.qubole.rubix.spi.CacheUtil.skipCache;
 
@@ -58,26 +60,89 @@ import static com.qubole.rubix.spi.CacheUtil.skipCache;
 public abstract class CachingFileSystem<T extends FileSystem> extends FilterFileSystem
 {
   private static final Log log = LogFactory.getLog(CachingFileSystem.class);
+  private static BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
+
+  // statics that need to initialized after the configuration object is available
+  private static final AtomicBoolean initialized = new AtomicBoolean(false);
+  private static String statsMBeanName = "rubix:name=stats";
+  private static String detailedStatsMBeanName = "rubix:name=stats,type=detailed";
   private static ClusterManager clusterManager;
+  private static CachingFileSystemStatsProvider stats;
 
   private boolean isRubixSchemeUsed;
   private URI uri;
   private Path workingDir;
 
-  private static CachingFileSystemStats statsMBean;
-  public static BookKeeperFactory bookKeeperFactory;
+  private static void initialize(Configuration conf, ClusterType clusterType)
+          throws IOException
+  {
+    if (initialized.get()) {
+      return;
+    }
 
-  public static String statsMBeanBaseName = "rubix:name=stats";
-  static {
+    synchronized (initialized) {
+      if (initialized.get()) {
+        return;
+      }
+
+      initializeStats(conf);
+      try {
+        initializeClusterManager(conf, clusterType);
+      } catch (ClusterManagerInitilizationException e) {
+        throw new IOException(e);
+      }
+
+      initialized.set(true);
+    }
+  }
+
+  private static void initializeStats(Configuration conf)
+  {
     MBeanExporter exporter = new MBeanExporter(ManagementFactory.getPlatformMBeanServer());
-    statsMBean = new CachingFileSystemStats();
+    stats = new CachingFileSystemStatsProvider();
     try {
-      if (!ManagementFactory.getPlatformMBeanServer().isRegistered(new ObjectName(statsMBeanBaseName))) {
-        exporter.export(statsMBeanBaseName, statsMBean);
+      if (ManagementFactory.getPlatformMBeanServer().isRegistered(new ObjectName(statsMBeanName))) {
+        exporter.unexport(statsMBeanName);
+      }
+      if (!ManagementFactory.getPlatformMBeanServer().isRegistered(new ObjectName(statsMBeanName))) {
+        exporter.export(statsMBeanName, new BasicCachingFileSystemStats(stats, bookKeeperFactory, conf));
+      }
+
+      if (ManagementFactory.getPlatformMBeanServer().isRegistered(new ObjectName(detailedStatsMBeanName))) {
+        exporter.unexport(detailedStatsMBeanName);
+      }
+      if (!ManagementFactory.getPlatformMBeanServer().isRegistered(new ObjectName(detailedStatsMBeanName))) {
+        exporter.export(detailedStatsMBeanName, new DetailedCachingFileSystemStats(stats, bookKeeperFactory, conf));
       }
     }
     catch (MalformedObjectNameException e) {
-      throw new RuntimeException("Could not load MBean");
+      throw new RuntimeException("Could not load MBean", e);
+    }
+  }
+
+  private static void initializeClusterManager(Configuration conf, ClusterType clusterType)
+          throws ClusterManagerInitilizationException
+  {
+    if (clusterManager != null) {
+      return;
+    }
+
+    String clusterManagerClassName = CacheConfig.getClusterManagerClass(conf, clusterType);
+    log.info("Initializing cluster manager : " + clusterManagerClassName);
+
+    try {
+      Class clusterManagerClass = conf.getClassByName(clusterManagerClassName);
+      Constructor constructor = clusterManagerClass.getConstructor();
+      ClusterManager manager = (ClusterManager) constructor.newInstance();
+
+      manager.initialize(conf);
+      clusterManager = manager;
+    }
+    catch (ClassNotFoundException | NoSuchMethodException | InstantiationException |
+            IllegalAccessException | InvocationTargetException ex) {
+      String errorMessage = "Not able to initialize ClusterManager class: " + clusterManagerClassName;
+      log.error(errorMessage, ex);
+      throw new ClusterManagerInitilizationException(errorMessage, ex);
     }
   }
 
@@ -94,9 +159,6 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FilterFile
   {
     try {
       this.fs = getTypeParameterClass().newInstance();
-      if (bookKeeperFactory == null) {
-        bookKeeperFactory = new BookKeeperFactory();
-      }
     }
     catch (InstantiationException | IllegalAccessException e) {
       log.error("cannot instantiate base filesystem ", e);
@@ -113,74 +175,26 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FilterFile
   {
     bookKeeperFactory = new BookKeeperFactory(bookKeeper);
     if (!Strings.isNullOrEmpty(statsMbeanSuffix)) {
-      String mBeanName = statsMBeanBaseName + "," + statsMbeanSuffix;
-      MBeanExporter exporter = new MBeanExporter(ManagementFactory.getPlatformMBeanServer());
-      try {
-        if (ManagementFactory.getPlatformMBeanServer().isRegistered(new ObjectName(statsMBeanBaseName))) {
-          exporter.unexport(statsMBeanBaseName);
-        }
-        if (!ManagementFactory.getPlatformMBeanServer().isRegistered(new ObjectName(mBeanName))) {
-          exporter.export(mBeanName, statsMBean);
-        }
-      }
-      catch (MalformedObjectNameException e) {
-        log.error("Could not export stats mbean", e);
-      }
+      statsMBeanName = statsMBeanName + "," + statsMbeanSuffix;
+      detailedStatsMBeanName = detailedStatsMBeanName + "," + statsMbeanSuffix;
     }
+    checkState(!initialized.get(), "LocalBookKeeper should be set before opening up the Filesystem to clients");
   }
 
   public abstract String getScheme();
-
-  public void setClusterManager(ClusterManager clusterManager)
-  {
-    this.clusterManager = clusterManager;
-  }
 
   @Override
   public void initialize(URI uri, Configuration conf) throws IOException
   {
     conf = applyRubixSiteConfig(conf);
+    initialize(conf, getClusterType());
     super.initialize(getOriginalURI(uri), conf);
-    if (clusterManager == null) {
-      try {
-        initializeClusterManager(conf, getClusterType());
-      } catch (ClusterManagerInitilizationException e) {
-        throw new IOException(e);
-      }
-    }
     this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
     this.workingDir = new Path("/user", System.getProperty("user.name")).makeQualified(this);
     isRubixSchemeUsed = uri.getScheme().equals(CacheConfig.RUBIX_SCHEME);
   }
 
   public abstract ClusterType getClusterType();
-
-  private synchronized void initializeClusterManager(Configuration conf, ClusterType clusterType)
-      throws ClusterManagerInitilizationException
-  {
-    if (clusterManager != null) {
-      return;
-    }
-
-    String clusterManagerClassName = CacheConfig.getClusterManagerClass(conf, clusterType);
-    log.info("Initializing cluster manager : " + clusterManagerClassName);
-
-    try {
-      Class clusterManagerClass = conf.getClassByName(clusterManagerClassName);
-      Constructor constructor = clusterManagerClass.getConstructor();
-      ClusterManager manager = (ClusterManager) constructor.newInstance();
-
-      manager.initialize(conf);
-      setClusterManager(manager);
-    }
-    catch (ClassNotFoundException | NoSuchMethodException | InstantiationException |
-            IllegalAccessException | InvocationTargetException ex) {
-      String errorMessage = String.format("Not able to initialize ClusterManager class : {0} ",
-          clusterManagerClassName);
-      log.error(errorMessage, ex);
-      throw new ClusterManagerInitilizationException(errorMessage, ex);
-    }
-  }
 
   @Override
   public URI getUri()
@@ -202,7 +216,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FilterFile
     if (CacheConfig.isDummyModeEnabled(this.getConf())) {
       return new FSDataInputStream(
               new BufferedFSInputStream(
-                      new DummyModeCachingInputStream(this, originalPath, this.getConf(), statsMBean,
+                      new DummyModeCachingInputStream(this, originalPath, this.getConf(), stats,
                               clusterManager.getClusterType(), bookKeeperFactory, fs, bufferSize, statistics),
                       CacheConfig.getBlockSize(getConf())));
     }
@@ -210,7 +224,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FilterFile
     try {
       return new FSDataInputStream(
               new BufferedFSInputStream(
-                      new CachingInputStream(originalPath, this.getConf(), statsMBean,
+                      new CachingInputStream(originalPath, this.getConf(), stats,
                               clusterManager.getClusterType(), bookKeeperFactory, fs, bufferSize, statistics),
                       CacheConfig.getBlockSize(getConf())));
     }

@@ -31,7 +31,7 @@ public class DummyModeCachingInputStream extends CachingInputStream
   public DummyModeCachingInputStream(FileSystem parentFs,
                                      Path backendPath,
                                      Configuration conf,
-                                     CachingFileSystemStats statsMbean,
+                                     CachingFileSystemStatsProvider statsMbean,
                                      ClusterType clusterType,
                                      BookKeeperFactory bookKeeperFactory,
                                      FileSystem remoteFileSystem,

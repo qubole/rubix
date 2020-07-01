@@ -46,10 +46,10 @@ public class NonLocalRequestChain extends ReadRequestChain
   NonLocalReadRequestChain nonLocalReadRequestChain;
   RemoteFetchRequestChain remoteFetchRequestChain;
   FileSystem.Statistics statistics;
-  boolean needDirectReadRequest;
   List<BlockLocation> isCached;
   long startBlockForCacheStatus;
   long endBlockForCacheStatus;
+  long nonLocalReadBytes = 0;
 
   public NonLocalRequestChain(String remoteNodeName, long fileSize, long lastModified, Configuration conf,
                               FileSystem remoteFileSystem, String remoteFilePath, int clusterType,
@@ -92,10 +92,9 @@ public class NonLocalRequestChain extends ReadRequestChain
   public ReadRequestChainStats getStats()
   {
     if (nonLocalReadRequestChain != null) {
-      return new ReadRequestChainStats().setNonLocalReads(nonLocalReadRequestChain.requests);
+      return nonLocalReadRequestChain.getStats();
     }
     else {
-      // TODO: ReadRequestChainStats could collect number of direct reads from here
       return new ReadRequestChainStats();
     }
   }
@@ -105,7 +104,6 @@ public class NonLocalRequestChain extends ReadRequestChain
     long blockNum = readRequest.backendReadStart / blockSize;
 
     if (!needDirectReadRequest(blockNum)) {
-      needDirectReadRequest = false;
       if (nonLocalReadRequestChain == null) {
         nonLocalReadRequestChain = new NonLocalReadRequestChain(remoteNodeName, fileSize, lastModified, conf,
             remoteFileSystem, remoteFilePath, clusterType, strictMode, statistics);
@@ -113,7 +111,6 @@ public class NonLocalRequestChain extends ReadRequestChain
       nonLocalReadRequestChain.addReadRequest(readRequest);
     }
     else {
-      needDirectReadRequest = true;
       if (remoteFetchRequestChain == null) {
         remoteFetchRequestChain = new RemoteFetchRequestChain(remoteFilePath, remoteFileSystem, remoteNodeName,
             conf, lastModified, fileSize, clusterType, bookKeeperFactory);
@@ -139,8 +136,6 @@ public class NonLocalRequestChain extends ReadRequestChain
     Thread.currentThread().setName(threadName);
     checkState(isLocked, "Trying to execute Chain without locking");
     long startTime = System.currentTimeMillis();
-
-    long nonLocalReadBytes = 0;
 
     log.debug("Executing NonLocalRequestChain ");
 

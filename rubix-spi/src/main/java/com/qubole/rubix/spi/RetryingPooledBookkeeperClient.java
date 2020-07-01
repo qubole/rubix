@@ -82,6 +82,13 @@ public class RetryingPooledBookkeeperClient
   }
 
   @Override
+  public Map<String, Long> getReadRequestChainStats()
+          throws TException
+  {
+    return retryConnection(() -> client().getReadRequestChainStats());
+  }
+
+  @Override
   public ReadResponse readData(final String path, final long readStart, final int length, final long fileSize, final long lastModified, final int clusterType)
           throws TException
   {
