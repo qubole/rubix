@@ -160,17 +160,22 @@ public class LocalDataTransferServer extends Configured implements Tool
     {
       this.conf = conf;
       this.bookKeeperFactory = bookKeeperFactory;
+
+      int port = CacheConfig.getDataTransferServerPort(conf);
+      log.info("Starting LocalDataTransferServer on port " + port);
+      try {
+        listener = ServerSocketChannel.open();
+        listener.bind(new InetSocketAddress(port), Integer.MAX_VALUE);
+      } catch (IOException e) {
+        throw new RuntimeException("Error starting Local Transfer server", e);
+      }
     }
 
     @Override
     public void run()
     {
-      int port = CacheConfig.getDataTransferServerPort(conf);
       ExecutorService threadPool = Executors.newCachedThreadPool();
       try {
-        listener = ServerSocketChannel.open();
-        listener.bind(new InetSocketAddress(port), Integer.MAX_VALUE);
-        log.info("Started LocalDataTransferServer on port " + port);
         while (true) {
           SocketChannel clientSocket = listener.accept();
           ClientServiceThread cliThread = new ClientServiceThread(clientSocket, conf, bookKeeperFactory);
@@ -181,7 +186,7 @@ public class LocalDataTransferServer extends Configured implements Tool
         log.warn("Stopping Local Transfer server", e);
       }
       catch (IOException e) {
-        log.error("Error starting Local Transfer server", e);
+        log.error("Error accepting Local Transfer connection", e);
       }
     }
 
