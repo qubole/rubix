@@ -88,17 +88,19 @@ public class BookKeeperServer extends Configured implements Tool
   {
     setupServer(conf, metricsRegistry);
     if (CacheConfig.isEmbeddedModeEnabled(conf)) {
+      createThriftServer(conf, localBookKeeper);
       new Thread(new Runnable()
       {
         @Override
         public void run()
         {
-          startThriftServer(conf, localBookKeeper);
+          startThriftServer();
         }
       }).start();
     }
     else {
-      startThriftServer(conf, localBookKeeper);
+      createThriftServer(conf, localBookKeeper);
+      startThriftServer();
     }
 
     return localBookKeeper;
@@ -127,8 +129,7 @@ public class BookKeeperServer extends Configured implements Tool
     }
   }
 
-  private void startThriftServer(Configuration conf, BookKeeper bookKeeper)
-  {
+  private void createThriftServer(Configuration conf, BookKeeper bookKeeper) {
     processor = new BookKeeperService.Processor(bookKeeper);
     log.info("Starting BookKeeperServer on port " + getBookKeeperServerPort(conf));
     try {
@@ -138,12 +139,15 @@ public class BookKeeperServer extends Configured implements Tool
           .Args(serverTransport)
           .processor(processor)
           .maxWorkerThreads(getServerMaxThreads(conf)));
-
-      server.serve();
     }
     catch (TTransportException e) {
-      log.error(Throwables.getStackTraceAsString(e));
+      throw new RuntimeException("Error starting BookKeeperServer", e);
     }
+  }
+
+  private void startThriftServer()
+  {
+    server.serve();
   }
 
   /**
