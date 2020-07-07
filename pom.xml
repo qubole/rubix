@@ -45,12 +45,12 @@
     <properties>
         <main.basedir>${project.basedir}</main.basedir>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <dep.presto.version>0.193</dep.presto.version>
+        <dep.presto.version>0.208</dep.presto.version>
         <dep.prestosql.version>322</dep.prestosql.version>
-        <dep.airlift.version>0.98</dep.airlift.version>
         <commons-httpclient.version>3.0.1</commons-httpclient.version>
         <dep.guava.version>26.0-jre</dep.guava.version>
-        <dep.hadoop2.version>2.6.0</dep.hadoop2.version>
+        <dep.hadoop.version>3.2.0</dep.hadoop.version>
+        <dep.gcs.version>2.0.0</dep.gcs.version>
         <dep.metrics.version>3.1.0</dep.metrics.version>
         <dep.testng.version>6.9.8</dep.testng.version>
         <dep.mockito.version>2.18.3</dep.mockito.version>
@@ -144,25 +144,25 @@
             <dependency>
                 <groupId>org.apache.hadoop</groupId>
                 <artifactId>hadoop-aws</artifactId>
-                <version>${dep.hadoop2.version}</version>
+                <version>${dep.hadoop.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>org.apache.hadoop</groupId>
                 <artifactId>hadoop-common</artifactId>
-                <version>${dep.hadoop2.version}</version>
+                <version>${dep.hadoop.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>org.apache.hadoop</groupId>
-                <artifactId>hadoop-hdfs</artifactId>
-                <version>${dep.hadoop2.version}</version>
+                <artifactId>hadoop-hdfs-client</artifactId>
+                <version>${dep.hadoop.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>org.apache.hadoop</groupId>
                 <artifactId>hadoop-yarn-api</artifactId>
-                <version>${dep.hadoop2.version}</version>
+                <version>${dep.hadoop.version}</version>
             </dependency>
 
             <dependency>

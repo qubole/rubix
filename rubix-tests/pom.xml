@@ -61,6 +61,12 @@
             <artifactId>slf4j-api</artifactId>
             <version>1.7.5</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-common</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <profiles>
