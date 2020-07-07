@@ -47,9 +47,14 @@ import java.nio.channels.SocketChannel;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import static com.qubole.rubix.common.utils.ClusterUtil.applyRubixSiteConfig;
+import static com.qubole.rubix.spi.CacheConfig.getLocalTransferServerMaxThreads;
+import static com.qubole.rubix.spi.CacheConfig.getServerMaxThreads;
+import static com.qubole.rubix.spi.CommonUtilities.threadsNamed;
 
 /**
  * Created by sakshia on 26/10/16.
@@ -174,7 +179,11 @@ public class LocalDataTransferServer extends Configured implements Tool
     @Override
     public void run()
     {
-      ExecutorService threadPool = Executors.newCachedThreadPool();
+      ExecutorService threadPool = new ThreadPoolExecutor(
+              0, getLocalTransferServerMaxThreads(conf),
+              60L, TimeUnit.SECONDS,
+              new SynchronousQueue<>(),
+              threadsNamed("lds-worker-%s"));
       try {
         while (true) {
           SocketChannel clientSocket = listener.accept();

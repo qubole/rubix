@@ -69,6 +69,7 @@ public class CacheConfig
   private static final String KEY_HEARTBEAT_INTERVAL = "rubix.monitor.heartbeat.interval";
   private static final String KEY_DATA_TRANSFER_BUFFER_SIZE = "rubix.cache.data.transfer.buffer.size";
   private static final String KEY_LOCAL_SERVER_PORT = "rubix.network.local.transfer.server.port";
+  private static final String KEY_LOCAL_SERVER_MAX_THREADS = "rubix.local.transfer.max-threads";
   private static final String KEY_MAX_RETRIES = "rubix.network.client.num-retries";
   private static final String KEY_METRICS_CACHE_ENABLED = "rubix.metrics.cache.enabled";
   private static final String KEY_METRICS_HEALTH_ENABLED = "rubix.metrics.health.enabled";
@@ -157,7 +158,7 @@ public class CacheConfig
   private static final int DEFAULT_REMOTE_FETCH_PROCESS_INTERVAL = 10000; // ms
   private static final int DEFAULT_REMOTE_FETCH_THREADS = 10;
   private static final boolean DEFAULT_RUBIX_ON_MASTER = false;
-  private static final int DEFAULT_SERVER_MAX_THREADS = Integer.MAX_VALUE;
+  private static final int DEFAULT_SERVER_MAX_THREADS = 4096;
   private static final int DEFAULT_SERVICE_RETRY_INTERVAL = 30000; // ms
   private static final int DEFAULT_SERVICE_MAX_RETRIES = 100;
   private static final int DEFAULT_CLIENT_READ_TIMEOUT = 3000; // ms
@@ -327,6 +328,11 @@ public class CacheConfig
   public static int getHeartbeatInterval(Configuration conf)
   {
     return conf.getInt(KEY_HEARTBEAT_INTERVAL, DEFAULT_HEARTBEAT_INTERVAL);
+  }
+
+  public static int getLocalTransferServerMaxThreads(Configuration conf)
+  {
+    return conf.getInt(KEY_LOCAL_SERVER_MAX_THREADS, DEFAULT_SERVER_MAX_THREADS);
   }
 
   public static int getDataTransferServerPort(Configuration conf)
