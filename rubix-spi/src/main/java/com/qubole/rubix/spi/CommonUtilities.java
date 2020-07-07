@@ -12,7 +12,12 @@
  */
 package com.qubole.rubix.spi;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
+
+import java.util.concurrent.ThreadFactory;
+
+import static java.util.concurrent.Executors.defaultThreadFactory;
 
 public class CommonUtilities
 {
@@ -69,5 +74,22 @@ public class CommonUtilities
     public static long toEndBlock(long endPosition, int blockSize)
     {
         return ((endPosition - 1) / blockSize) + 1;
+    }
+
+    /**
+     * Creates a {@link ThreadFactory} that creates named threads
+     * using the specified naming format.
+     *
+     * @param nameFormat a {@link String#format(String, Object...)}-compatible
+     * format string, to which a string will be supplied as the single
+     * parameter. This string will be unique to this instance of the
+     * ThreadFactory and will be assigned sequentially.
+     * @return the created ThreadFactory
+     */
+    public static ThreadFactory threadsNamed(String nameFormat)
+    {
+        return new ThreadFactoryBuilder()
+                .setNameFormat(nameFormat)
+                .build();
     }
 }
