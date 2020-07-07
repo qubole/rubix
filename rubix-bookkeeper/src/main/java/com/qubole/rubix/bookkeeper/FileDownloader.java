@@ -210,7 +210,7 @@ class FileDownloader
       }
       catch (ExecutionException | InterruptedException ex) {
         if (ex.getCause() instanceof FileNotFoundException) {
-          log.info("Could not process download request: " + ex.getCause().getMessage());
+          log.debug("Could not process download request: " + ex.getCause().getMessage());
         } else {
           log.error("Could not process download request", ex);
         }
