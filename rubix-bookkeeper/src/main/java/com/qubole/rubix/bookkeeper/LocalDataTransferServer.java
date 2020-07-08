@@ -26,7 +26,9 @@ import com.qubole.rubix.spi.DataTransferHeader;
 import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
+import com.qubole.rubix.spi.thrift.CacheStatusResponse;
 import com.qubole.rubix.spi.thrift.Location;
+import com.qubole.rubix.spi.thrift.ReadResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -55,6 +57,7 @@ import static com.qubole.rubix.common.utils.ClusterUtil.applyRubixSiteConfig;
 import static com.qubole.rubix.spi.CacheConfig.getLocalTransferServerMaxThreads;
 import static com.qubole.rubix.spi.CacheConfig.getServerMaxThreads;
 import static com.qubole.rubix.spi.CommonUtilities.threadsNamed;
+import static com.qubole.rubix.spi.CacheUtil.UNKONWN_GENERATION_NUMBER;
 
 /**
  * Created by sakshia on 26/10/16.
@@ -257,10 +260,13 @@ public class LocalDataTransferServer extends Configured implements Tool
           int readLength = header.getReadLength();
           String remotePath = header.getFilePath();
           log.info(String.format("Trying to read from %s at offset %d and length %d for client %s", remotePath, offset, readLength, localDataTransferClient.getRemoteAddress()));
+          int generationNumber = UNKONWN_GENERATION_NUMBER;
           try (RetryingPooledBookkeeperClient bookKeeperClient = bookKeeperFactory.createBookKeeperClient(conf)) {
             if (!CacheConfig.isParallelWarmupEnabled(conf)) {
-              if (!bookKeeperClient.readData(remotePath, offset, readLength, header.getFileSize(),
-                      header.getLastModified(), header.getClusterType())) {
+              ReadResponse response = bookKeeperClient.readData(remotePath, offset, readLength, header.getFileSize(),
+                  header.getLastModified(), header.getClusterType());
+              generationNumber = response.getGenerationNumber();
+              if (!response.isStatus()) {
                 throw new Exception("Could not cache data required by non-local node");
               }
             }
@@ -274,7 +280,9 @@ public class LocalDataTransferServer extends Configured implements Tool
 
               CacheStatusRequest request = new CacheStatusRequest(remotePath, header.getFileSize(), header.getLastModified(),
                       startBlock, endBlock).setClusterType(header.getClusterType());
-              List<BlockLocation> blockLocations = bookKeeperClient.getCacheStatus(request);
+              CacheStatusResponse response = bookKeeperClient.getCacheStatus(request);
+              List<BlockLocation> blockLocations = response.getBlocks();
+              generationNumber = response.getGenerationNumber();
 
               long blockNum = startBlock;
               for (BlockLocation location : blockLocations) {
@@ -286,7 +294,7 @@ public class LocalDataTransferServer extends Configured implements Tool
               }
               blockNum++;
             }
-            int nread = readDataFromCachedFile(bookKeeperClient, remotePath, offset, readLength);
+            int nread = readDataFromCachedFile(bookKeeperClient, remotePath, generationNumber, offset, readLength);
             log.info(String.format("Done reading %d from %s at offset %d and length %d for client %s", nread, remotePath, offset, readLength, localDataTransferClient.getRemoteAddress()));
           }
         }
@@ -310,11 +318,11 @@ public class LocalDataTransferServer extends Configured implements Tool
       }
     }
 
-    private int readDataFromCachedFile(RetryingPooledBookkeeperClient bookKeeperClient, String remotePath, long offset, int readLength) throws IOException, TException
+    private int readDataFromCachedFile(RetryingPooledBookkeeperClient bookKeeperClient, String remotePath, int generationNumber, long offset, int readLength) throws IOException, TException
     {
       FileChannel fc = null;
       int nread = 0;
-      String filename = CacheUtil.getLocalPath(remotePath, conf);
+      String filename = CacheUtil.getLocalPath(remotePath, conf, generationNumber);
 
       try {
         fc = new FileInputStream(filename).getChannel();
@@ -341,7 +349,13 @@ public class LocalDataTransferServer extends Configured implements Tool
       catch (FileNotFoundException ex) {
         log.error(String.format("Could not create file channel for %s. Invalidating missing remote file %s", filename, remotePath));
         bookKeeperClient.invalidateFileMetadata(remotePath);
-        throw new IOException(String.format("File not found %s ", filename));
+        throw new IOException(String.format("File not found %s ", filename), ex);
+      }
+      catch (Exception e) {
+        if (e instanceof IOException) {
+          throw (IOException) e;
+        }
+        throw new IOException(e);
       }
       finally {
         if (fc != null) {

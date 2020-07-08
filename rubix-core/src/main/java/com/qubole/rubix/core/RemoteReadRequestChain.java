@@ -14,6 +14,8 @@ package com.qubole.rubix.core;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.qubole.rubix.spi.BookKeeperFactory;
+import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -55,21 +57,28 @@ public class RemoteReadRequestChain extends ReadRequestChain
 
   private String localFile;
 
-  public RemoteReadRequestChain(FSDataInputStream inputStream, String localfile, DirectBufferPool bufferPool, int directBufferSize, byte[] affixBuffer, BookKeeperFactory bookKeeperFactory)
+  public RemoteReadRequestChain(FSDataInputStream inputStream,
+      String remotePath,
+      int generationNumber,
+      DirectBufferPool bufferPool,
+      Configuration conf,
+      byte[] affixBuffer,
+      BookKeeperFactory bookKeeperFactory)
   {
+    super(generationNumber);
     this.inputStream = inputStream;
     this.bufferPool = bufferPool;
-    this.directBufferSize = directBufferSize;
+    this.directBufferSize = CacheConfig.getDiskReadBufferSize(conf);
     this.affixBuffer = affixBuffer;
     this.blockSize = affixBuffer.length;
-    this.localFile = localfile;
+    this.localFile = CacheUtil.getLocalPath(remotePath, conf, generationNumber);
     this.bookKeeperFactory = bookKeeperFactory;
   }
 
   @VisibleForTesting
-  public RemoteReadRequestChain(FSDataInputStream inputStream, String fileName)
+  public RemoteReadRequestChain(FSDataInputStream inputStream, String remoteFileName, int generationNumber, Configuration conf)
   {
-    this(inputStream, fileName, new DirectBufferPool(), 100, new byte[100], new BookKeeperFactory());
+    this(inputStream, remoteFileName, generationNumber, new DirectBufferPool(), conf, new byte[100], new BookKeeperFactory());
   }
 
   public Long call()
@@ -86,9 +95,7 @@ public class RemoteReadRequestChain extends ReadRequestChain
     // Issue-53 : Open file with the right permissions
     File file = new File(localFile);
     if (!file.exists()) {
-      file.createNewFile();
-      file.setWritable(true, false);
-      file.setReadable(true, false);
+      throw new IOException(String.format("File does not exists %s", localFile));
     }
 
     FileChannel fileChannel = new FileOutputStream(new RandomAccessFile(file, "rw").getFD()).getChannel();
@@ -200,7 +207,7 @@ public class RemoteReadRequestChain extends ReadRequestChain
     try (RetryingPooledBookkeeperClient client = bookKeeperFactory.createBookKeeperClient(conf)) {
       for (ReadRequest readRequest : readRequests) {
         log.debug("Setting cached from : " + toBlock(readRequest.getBackendReadStart()) + " block to : " + (toBlock(readRequest.getBackendReadEnd() - 1) + 1));
-        client.setAllCached(remotePath, fileSize, lastModified, toBlock(readRequest.getBackendReadStart()), toBlock(readRequest.getBackendReadEnd() - 1) + 1);
+        client.setAllCached(remotePath, fileSize, lastModified, toBlock(readRequest.getBackendReadStart()), toBlock(readRequest.getBackendReadEnd() - 1) + 1, generationNumber);
       }
     }
     catch (Exception e) {

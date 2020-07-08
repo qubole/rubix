@@ -38,15 +38,17 @@ public abstract class ReadRequestChain implements Callable<Long>
   ReadRequest lastRequest;
   boolean isLocked;
   boolean cancelled;
+  protected final int generationNumber;
 
   protected String threadName;
   protected long requests;
 
   private static final Log log = LogFactory.getLog(ReadRequestChain.class);
 
-  public ReadRequestChain()
+  public ReadRequestChain(int generationNumber)
   {
     super();
+    this.generationNumber = generationNumber;
     this.threadName = Thread.currentThread().getName();
   }
 

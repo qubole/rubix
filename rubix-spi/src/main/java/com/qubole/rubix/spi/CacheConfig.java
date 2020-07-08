@@ -122,7 +122,7 @@ public class CacheConfig
   private static final int DEFAULT_KEY_POOL_DELTA_SIZE = 1;
   private static final int DEFAULT_POOL_MAX_WAIT_TIMEOUT = 5000; // ms
   private static final int DEFAULT_SCAVENGE_INTERVAL = 300000; // ms
-  private static final String DEFAULT_CACHE_METADATA_FILE_SUFFIX = "_mdfile";
+  private static final String DEFAULT_CACHE_METADATA_FILE_SUFFIX = "_mdfile_g";
   private static final String DEFAULT_DATA_CACHE_DIR_PREFIX = "/media/ephemeral";
   private static final String DEFAULT_DATA_CACHE_DIR_SUFFIX = "/fcache/";
   private static final boolean DEFAULT_DATA_CACHE_ENABLED = true;

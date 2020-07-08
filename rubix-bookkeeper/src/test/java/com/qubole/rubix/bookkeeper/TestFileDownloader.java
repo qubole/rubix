@@ -145,7 +145,7 @@ public class TestFileDownloader
     CacheStatusRequest request = new CacheStatusRequest(backendPath.toString(), file.length(), 1000, 0, 5)
             .setClusterType(TEST_CLUSTER_MANAGER.ordinal());
 
-    List<BlockLocation> cacheStatus = bookKeeper.getCacheStatus(request);
+    List<BlockLocation> cacheStatus = bookKeeper.getCacheStatus(request).getBlocks();
 
     DownloadRequestContext context = new DownloadRequestContext(backendPath.toString(), file.length(), 1000);
     contextMap.put(backendPath.toString(), context);
@@ -163,7 +163,7 @@ public class TestFileDownloader
     assertTrue(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.ASYNC_DOWNLOADED_MB_COUNT.getMetricName())
         .getCount() == BYTES.toMB(expectedDownloadedDataSize), "Total downloaded bytes didn't match");
 
-    cacheStatus = bookKeeper.getCacheStatus(request);
+    cacheStatus = bookKeeper.getCacheStatus(request).getBlocks();
 
     int i = 0;
     for (i = 0; i < 4; i++) {
@@ -251,7 +251,7 @@ public class TestFileDownloader
 
     CacheStatusRequest request = new CacheStatusRequest(backendPath.toString(), file.length(), 1000, 0, 6)
             .setClusterType(TEST_CLUSTER_MANAGER.ordinal());
-    List<BlockLocation> cacheStatus = bookKeeper.getCacheStatus(request);
+    List<BlockLocation> cacheStatus = bookKeeper.getCacheStatus(request).getBlocks();
 
     int i = 0;
     for (i = 0; i < 5; i++) {

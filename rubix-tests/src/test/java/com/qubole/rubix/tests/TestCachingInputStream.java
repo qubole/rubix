@@ -43,6 +43,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
 
+import static com.qubole.rubix.spi.CacheUtil.UNKONWN_GENERATION_NUMBER;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
@@ -152,10 +153,10 @@ public class TestCachingInputStream
     File file = new File(backendFileName);
     file.delete();
 
-    File mdFile = new File(CacheUtil.getMetadataFilePath(backendPath.toString(), conf));
+    File mdFile = new File(CacheUtil.getMetadataFilePath(backendPath.toString(), conf, UNKONWN_GENERATION_NUMBER + 1));
     mdFile.delete();
 
-    File localFile = new File(CacheUtil.getLocalPath(backendPath.toString(), conf));
+    File localFile = new File(CacheUtil.getLocalPath(backendPath.toString(), conf, UNKONWN_GENERATION_NUMBER + 1));
     localFile.delete();
 
     conf.clear();

@@ -35,6 +35,8 @@ import java.nio.channels.ReadableByteChannel;
 import static com.google.common.base.Preconditions.checkState;
 import static com.qubole.rubix.spi.DataTransferClientFactory.DataTransferClient;
 import static com.qubole.rubix.spi.DataTransferClientFactory.getClient;
+import static com.qubole.rubix.spi.CacheUtil.DUMMY_MODE_GENERATION_NUMBER;
+import static com.qubole.rubix.spi.CacheUtil.UNKONWN_GENERATION_NUMBER;
 
 /**
  * Created by sakshia on 31/8/16.
@@ -62,6 +64,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
                                   FileSystem remoteFileSystem, String remotePath, int clusterType,
                                   boolean strictMode, FileSystem.Statistics statistics)
   {
+    super(UNKONWN_GENERATION_NUMBER);
     this.remoteNodeName = remoteLocation;
     this.remoteFileSystem = remoteFileSystem;
     this.lastModified = lastModified;
@@ -91,8 +94,9 @@ public class NonLocalReadRequestChain extends ReadRequestChain
       return 0L;
     }
     checkState(isLocked, "Trying to execute Chain without locking");
-
+    int dataReadInPreviousCycle = 0;
     for (ReadRequest readRequest : readRequests) {
+      totalRead += dataReadInPreviousCycle;
       if (cancelled) {
         propagateCancel(this.getClass().getName());
       }
@@ -105,7 +109,6 @@ public class NonLocalReadRequestChain extends ReadRequestChain
         */
         InputStream inStream = dataTransferClient.getSocketChannel().socket().getInputStream();
         ReadableByteChannel wrappedChannel = Channels.newChannel(inStream);
-
         ByteBuffer buf = DataTransferClientHelper.writeHeaders(conf, new DataTransferHeader(readRequest.getActualReadStart(),
             readRequest.getActualReadLengthIntUnsafe(), fileSize, lastModified, clusterType, filePath));
 
@@ -127,14 +130,13 @@ public class NonLocalReadRequestChain extends ReadRequestChain
             dataTransferClient.getSocketChannel().close();
             throw e;
           }
-          bytesread += nread;
-          totalRead += nread;
           if (nread == -1) {
-            totalRead -= bytesread;
             throw new Exception("Error reading from Local Transfer Server");
           }
+          bytesread += nread;
           dst.position(bytesread + readRequest.getDestBufferOffset());
         }
+        dataReadInPreviousCycle = bytesread;
       }
       catch (Exception e) {
         if (strictMode) {
@@ -153,7 +155,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
         }
       }
     }
-
+    totalRead += dataReadInPreviousCycle;
     return totalRead;
   }
 
@@ -192,7 +194,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
           // getCacheStatus() call required to create mdfiles before blocks are set as cached
           CacheStatusRequest request = new CacheStatusRequest(remotePath, fileSize, lastModified, startBlock, endBlock).setClusterType(clusterType);
           bookKeeperClient.getCacheStatus(request);
-          bookKeeperClient.setAllCached(remotePath, fileSize, lastModified, startBlock, endBlock);
+          bookKeeperClient.setAllCached(remotePath, fileSize, lastModified, startBlock, endBlock, DUMMY_MODE_GENERATION_NUMBER);
         }
       }
       catch (Exception e) {

@@ -13,6 +13,8 @@
 package com.qubole.rubix.core;
 
 import com.qubole.rubix.common.utils.DataGen;
+import com.qubole.rubix.spi.CacheConfig;
+import com.qubole.rubix.spi.CacheUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -29,8 +31,10 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
 
+import static com.qubole.rubix.spi.CacheUtil.UNKONWN_GENERATION_NUMBER;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
+
 
 /**
  * Created by stagra on 15/1/16.
@@ -57,10 +61,18 @@ public class TestRemoteReadRequestChain
 
     FileSystem localFileSystem = new RawLocalFileSystem();
     Path backendFilePath = new Path(backendFileName);
+    Configuration conf = new Configuration();
+    CacheConfig.setCacheDataDirPrefix(conf, "/tmp");
+    CacheUtil.createCacheDirectories(conf);
     localFileSystem.initialize(backendFilePath.toUri(), new Configuration());
     fsDataInputStream = localFileSystem.open(backendFilePath);
+    localFileName = CacheUtil.getLocalPath(backendFileName, conf, UNKONWN_GENERATION_NUMBER + 1);
+    File file = new File(localFileName);
+    file.createNewFile();
+    file.setWritable(true, false);
+    file.setReadable(true, false);
 
-    remoteReadRequestChain = new RemoteReadRequestChain(fsDataInputStream, localFileName);
+    remoteReadRequestChain = new RemoteReadRequestChain(fsDataInputStream, backendFileName, UNKONWN_GENERATION_NUMBER + 1, conf);
   }
 
   @Test

@@ -31,6 +31,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.qubole.rubix.spi.CacheUtil.UNKONWN_GENERATION_NUMBER;
 
 /**
  * Created by stagra on 4/1/16.
@@ -52,9 +53,16 @@ public class CachedReadRequestChain extends ReadRequestChain
 
   private static final Log log = LogFactory.getLog(CachedReadRequestChain.class);
 
-  public CachedReadRequestChain(FileSystem remoteFileSystem, String remotePath, DirectBufferPool bufferPool, int directBufferSize,
-                                FileSystem.Statistics statistics, Configuration conf, BookKeeperFactory factory)
+  public CachedReadRequestChain(FileSystem remoteFileSystem,
+      String remotePath,
+      DirectBufferPool bufferPool,
+      int directBufferSize,
+      FileSystem.Statistics statistics,
+      Configuration conf,
+      BookKeeperFactory factory,
+      int generationNumber)
   {
+    super(generationNumber);
     this.conf = conf;
     this.remotePath = remotePath;
     this.remoteFileSystem = remoteFileSystem;
@@ -65,15 +73,16 @@ public class CachedReadRequestChain extends ReadRequestChain
   }
 
   @VisibleForTesting
-  public CachedReadRequestChain(FileSystem remoteFileSystem, String remotePath, Configuration conf, BookKeeperFactory factory)
+  public CachedReadRequestChain(FileSystem remoteFileSystem, String remotePath, Configuration conf, BookKeeperFactory factory, int generationNumber)
   {
-    this(remoteFileSystem, remotePath, new DirectBufferPool(), 100, null, conf, factory);
+    this(remoteFileSystem, remotePath, new DirectBufferPool(), 100, null, conf, factory, generationNumber);
   }
 
   @VisibleForTesting
   public CachedReadRequestChain()
   {
     //Dummy constructor for testing #testConsequtiveRequest method.
+    super(UNKONWN_GENERATION_NUMBER);
   }
 
   public Long call() throws IOException
@@ -93,7 +102,7 @@ public class CachedReadRequestChain extends ReadRequestChain
     FileInputStream fis = null;
     FileChannel fileChannel = null;
     boolean needsInvalidation = false;
-    String localCachedFile = CacheUtil.getLocalPath(remotePath, conf);
+    String localCachedFile = CacheUtil.getLocalPath(remotePath, conf, generationNumber);
 
     ByteBuffer directBuffer = bufferPool.getBuffer(directBufferSize);
     try {

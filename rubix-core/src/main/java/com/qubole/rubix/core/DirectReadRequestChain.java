@@ -19,6 +19,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import java.io.IOException;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.qubole.rubix.spi.CacheUtil.UNKONWN_GENERATION_NUMBER;
 import static java.lang.String.format;
 
 /**
@@ -35,6 +36,7 @@ public class DirectReadRequestChain extends ReadRequestChain
 
   public DirectReadRequestChain(FSDataInputStream inputStream)
   {
+    super(UNKONWN_GENERATION_NUMBER);
     this.inputStream = inputStream;
   }
 

@@ -15,7 +15,10 @@ package com.qubole.rubix.bookkeeper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.cache.Cache;
 import com.google.common.cache.RemovalCause;
+import com.google.common.hash.BloomFilter;
+import com.google.common.io.Closer;
 import com.google.common.util.concurrent.Striped;
+import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -26,10 +29,13 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.OptionalInt;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.locks.Lock;
 
 import static com.qubole.rubix.spi.utils.DataSizeUnits.BYTES;
 import static com.qubole.rubix.spi.CacheConfig.getBlockSize;
+import static com.qubole.rubix.spi.CacheUtil.DUMMY_MODE_GENERATION_NUMBER;
+import static com.qubole.rubix.spi.CacheUtil.UNKONWN_GENERATION_NUMBER;
 
 /**
  * Created by stagra on 29/12/15.
@@ -42,8 +48,8 @@ public class FileMetadata
   private long size;
   private long lastModified;
   private long currentFileSize;
-
   private boolean needsRefresh = true;
+  private int generationNumber;
 
   int bitmapFileSizeBytes;
   ByteBufferBitmap blockBitmap;
@@ -52,20 +58,40 @@ public class FileMetadata
 
   private static Log log = LogFactory.getLog(FileMetadata.class.getName());
 
-  public FileMetadata()
+  // This constructor should not be called in parallel for same remotePath
+  public FileMetadata(String remotePath,
+      long fileLength,
+      long lastModified,
+      long currentFileSize,
+      Configuration conf,
+      Cache<String, Integer> generationNumberCache,
+      BloomFilter fileAccessedBloomFilter)
+      throws ExecutionException, IOException
   {
+    this(remotePath,
+        fileLength,
+        lastModified,
+        currentFileSize,
+        conf,
+        findGenerationNumber(remotePath, conf, generationNumberCache, fileAccessedBloomFilter));
+    createLocalFiles();
   }
 
-  public FileMetadata(String remotePath, long fileLength, long lastModified, long currentFileSize, Configuration conf)
-      throws IOException
+
+  public FileMetadata(String remotePath,
+      long fileLength,
+      long lastModified,
+      long currentFileSize,
+      Configuration conf,
+      int generationNumber)
   {
     this.remotePath = remotePath;
     this.size = fileLength;
     this.lastModified = lastModified;
     this.currentFileSize = currentFileSize;
-    localPath = CacheUtil.getLocalPath(remotePath, conf);
-    mdFilePath = CacheUtil.getMetadataFilePath(remotePath, conf);
-
+    this.generationNumber = generationNumber;
+    localPath = CacheUtil.getLocalPath(remotePath, conf, generationNumber);
+    mdFilePath = CacheUtil.getMetadataFilePath(remotePath, conf, generationNumber);
     int bitsRequired = (int) Math.ceil((double) size / getBlockSize(conf)); //numBlocks
     bitmapFileSizeBytes = (int) Math.ceil((double) bitsRequired / 8);
 
@@ -73,6 +99,100 @@ public class FileMetadata
      * Caution: Do no call refreshBitmap in constructor as it breaks the assumptions in delete path and it could
      * cause race conditions
      */
+  }
+
+  /**
+   * BKS is responsible for creating new files (data + mdfiles) via FileMetadata in all cases.
+   * RRCs should never create new files, if they ever hit a case of FNF then
+   * they should fail the request as it points to invalidations.
+   */
+  private void createLocalFiles()
+      throws IOException
+  {
+    log.debug(String.format("Creating Local Files %s and %s ", localPath, mdFilePath));
+    File file = new File(localPath);
+    file.createNewFile();
+    file.setWritable(true, false);
+    file.setReadable(true, false);
+    file = new File(mdFilePath);
+    file.createNewFile();
+    file.setWritable(true, false);
+    file.setReadable(true, false);
+  }
+
+  // Should not be called in parallel for the same remotePath
+  private static int findGenerationNumber(String remotePath,
+      Configuration conf,
+      Cache<String, Integer> generationNumberCache,
+      BloomFilter fileAccessedBloomFilter)
+      throws ExecutionException
+  {
+    // For Dummy-Mode, stay at fixed generationNumber to avoid complications of fetching generation number
+    // in updateCacheStatus calls of NonLocalReads
+    if (CacheConfig.isDummyModeEnabled(conf)) {
+      return DUMMY_MODE_GENERATION_NUMBER;
+    }
+
+    int genNumber;
+    Closer oldFilesRemover = Closer.create();
+
+    if (!fileAccessedBloomFilter.mightContain(remotePath)) {
+      // first access to the file since BKS started
+
+      // Find the highest genNumber based on files on disk
+      int highestGenNumberOnDisk = UNKONWN_GENERATION_NUMBER + 1;
+      while (new File(CacheUtil.getLocalPath(remotePath, conf, highestGenNumberOnDisk)).exists() ||
+              new File(CacheUtil.getMetadataFilePath(remotePath, conf, highestGenNumberOnDisk)).exists()) {
+        highestGenNumberOnDisk++;
+      }
+      highestGenNumberOnDisk--;
+      if (CacheConfig.isCleanupFilesDuringStartEnabled(conf)) {
+        // Pick the generationNumber as one more than the highestGenNumberOnDisk
+        addFilesForDeletion(oldFilesRemover, highestGenNumberOnDisk, remotePath, conf);
+        genNumber = highestGenNumberOnDisk + 1;
+      }
+      else {
+        // If no files exists for this path on disk then start with genNum = 1
+        if (highestGenNumberOnDisk == UNKONWN_GENERATION_NUMBER) {
+          genNumber = 1;
+        }
+        // If both datafile and mdfile exist for highestGenNumberOnDisk, use that as genNumber
+        else if (new File(CacheUtil.getLocalPath(remotePath, conf, highestGenNumberOnDisk)).exists() &&
+                new File(CacheUtil.getMetadataFilePath(remotePath, conf, highestGenNumberOnDisk)).exists()) {
+          addFilesForDeletion(oldFilesRemover, highestGenNumberOnDisk - 1, remotePath, conf);
+          genNumber = highestGenNumberOnDisk;
+        }
+        else {
+          addFilesForDeletion(oldFilesRemover, highestGenNumberOnDisk, remotePath, conf);
+          genNumber = highestGenNumberOnDisk + 1;
+        }
+      }
+      fileAccessedBloomFilter.put(remotePath);
+    }
+    else {
+      genNumber = generationNumberCache.get(remotePath, () -> UNKONWN_GENERATION_NUMBER) + 1;
+      while (new File(CacheUtil.getLocalPath(remotePath, conf, genNumber)).exists() ||
+              new File(CacheUtil.getMetadataFilePath(remotePath, conf, genNumber)).exists()) {
+        genNumber++;
+      }
+      addFilesForDeletion(oldFilesRemover, genNumber - 1, remotePath, conf);
+    }
+    generationNumberCache.put(remotePath, genNumber);
+    try {
+      oldFilesRemover.close();
+    }
+    catch (IOException e) {
+      log.warn("Exception while deleting old files", e);
+    }
+    return genNumber;
+  }
+
+  private static void addFilesForDeletion(Closer fileRemover, int generationNumber, String remotePath, Configuration conf)
+  {
+    for (int i = 1; i <= generationNumber; i++) {
+      fileRemover.register(new File(CacheUtil.getLocalPath(remotePath, conf, i))::delete);
+      fileRemover.register(new File(CacheUtil.getMetadataFilePath(remotePath, conf, i))::delete);
+    }
   }
 
   long incrementCurrentFileSize(long incrementBy)
@@ -154,7 +274,6 @@ public class FileMetadata
         setBlockCached(blockNum);
       }
     }
-
     // update mdfile
     try {
       RandomAccessFile mdFile = new RandomAccessFile(mdFilePath, "rw");
@@ -252,5 +371,10 @@ public class FileMetadata
   public int getWeight()
   {
     return Math.toIntExact(BYTES.toKB(currentFileSize));
+  }
+
+  public int getGenerationNumber()
+  {
+    return generationNumber;
   }
 }

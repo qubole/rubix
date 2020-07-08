@@ -18,9 +18,10 @@ package com.qubole.rubix.spi;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.qubole.rubix.spi.fop.Poolable;
-import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.BookKeeperService;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
+import com.qubole.rubix.spi.thrift.CacheStatusResponse;
+import com.qubole.rubix.spi.thrift.ReadResponse;
 import com.qubole.rubix.spi.thrift.FileInfo;
 import com.qubole.rubix.spi.thrift.HeartbeatStatus;
 import org.apache.commons.logging.Log;
@@ -31,7 +32,6 @@ import org.apache.thrift.TServiceClient;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.transport.TTransport;
 
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
@@ -63,13 +63,13 @@ public class RetryingPooledBookkeeperClient
   }
 
   @Override
-  public List<BlockLocation> getCacheStatus(final CacheStatusRequest request) throws TException
+  public CacheStatusResponse getCacheStatus(final CacheStatusRequest request) throws TException
   {
-    return retryConnection(new Callable<List<BlockLocation>>()
+    return retryConnection(new Callable<CacheStatusResponse>()
     {
       @Override
-      public List<BlockLocation> call()
-              throws TException
+      public CacheStatusResponse call()
+          throws TException
       {
         return client().getCacheStatus(request);
       }
@@ -78,7 +78,7 @@ public class RetryingPooledBookkeeperClient
 
   @Override
   public void setAllCached(final String remotePath, final long fileLength, final long lastModified,
-          final long startBlock, final long endBlock) throws TException
+                           final long startBlock, final long endBlock, final int generationNumber) throws TException
   {
     retryConnection(new Callable<Void>()
     {
@@ -86,7 +86,7 @@ public class RetryingPooledBookkeeperClient
       public Void call()
               throws Exception
       {
-        client().setAllCached(remotePath, fileLength, lastModified, startBlock, endBlock);
+        client().setAllCached(remotePath, fileLength, lastModified, startBlock, endBlock, generationNumber);
         return null;
       }
     });
@@ -108,13 +108,13 @@ public class RetryingPooledBookkeeperClient
   }
 
   @Override
-  public boolean readData(final String path, final long readStart, final int length, final long fileSize, final long lastModified, final int clusterType)
+  public ReadResponse readData(final String path, final long readStart, final int length, final long fileSize, final long lastModified, final int clusterType)
           throws TException
   {
-    return retryConnection(new Callable<Boolean>()
+    return retryConnection(new Callable<ReadResponse>()
     {
       @Override
-      public Boolean call()
+      public ReadResponse call()
               throws TException
       {
         return client().readData(path, readStart, length, fileSize, lastModified, clusterType);

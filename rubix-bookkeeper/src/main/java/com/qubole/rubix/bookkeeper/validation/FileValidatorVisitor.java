@@ -50,8 +50,9 @@ public class FileValidatorVisitor extends SimpleFileVisitor<Path>
   {
     if (!CacheUtil.isMetadataFile(file.toString(), conf)) {
       totalCacheFiles++;
-
-      Path mdFile = file.resolveSibling(file.getFileName() + metadataFileSuffix);
+      String fileName = file.toString();
+      int generationNumber = Integer.parseInt(fileName.substring(fileName.indexOf("_g") + 2));
+      Path mdFile = file.resolveSibling(file.getFileName() + metadataFileSuffix + generationNumber);
       if (Files.exists(mdFile)) {
         successes++;
       }
