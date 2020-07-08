@@ -17,7 +17,6 @@ import com.qubole.rubix.core.ReadRequest;
 import com.qubole.rubix.core.ReadRequestChain;
 import com.qubole.rubix.core.ReadRequestChainStats;
 import com.qubole.rubix.spi.CacheConfig;
-import com.qubole.rubix.spi.CacheUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -55,10 +54,17 @@ public class FileDownloadRequestChain extends ReadRequestChain
 
   private static final Log log = LogFactory.getLog(FileDownloadRequestChain.class);
 
-  public FileDownloadRequestChain(BookKeeper bookKeeper, FileSystem remoteFileSystem, String localfile,
-                                  ByteBuffer directBuffer, Configuration conf, String remotePath,
-                                  long fileSize, long lastModified)
+  public FileDownloadRequestChain(BookKeeper bookKeeper,
+      FileSystem remoteFileSystem,
+      String localfile,
+      ByteBuffer directBuffer,
+      Configuration conf,
+      String remotePath,
+      long fileSize,
+      long lastModified,
+      int generationNumber)
   {
+    super(generationNumber);
     this.bookKeeper = bookKeeper;
     this.remoteFileSystem = remoteFileSystem;
     this.localFile = localfile;
@@ -104,10 +110,7 @@ public class FileDownloadRequestChain extends ReadRequestChain
     long startTime = System.currentTimeMillis();
     File file = new File(localFile);
     if (!file.exists()) {
-      log.debug("Creating localfile : " + localFile);
-      file.setWritable(true, false);
-      file.setReadable(true, false);
-      file.createNewFile();
+      throw new IOException(String.format("File does not exists %s", localFile));
     }
 
     long highestReadRequestLength = readRequests
@@ -207,7 +210,12 @@ public class FileDownloadRequestChain extends ReadRequestChain
     try {
       for (ReadRequest readRequest : getReadRequests()) {
         log.debug("Setting cached from : " + toStartBlock(readRequest.getBackendReadStart(), blockSize) + " block to : " + (toEndBlock(readRequest.getBackendReadEnd(), blockSize)));
-        bookKeeper.setAllCached(remotePath, fileSize, lastModified, toStartBlock(readRequest.getBackendReadStart(), blockSize), toEndBlock(readRequest.getBackendReadEnd(), blockSize));
+        bookKeeper.setAllCached(remotePath,
+            fileSize,
+            lastModified,
+            toStartBlock(readRequest.getBackendReadStart(), blockSize),
+            toEndBlock(readRequest.getBackendReadEnd(), blockSize),
+            generationNumber);
       }
     }
     catch (Exception e) {

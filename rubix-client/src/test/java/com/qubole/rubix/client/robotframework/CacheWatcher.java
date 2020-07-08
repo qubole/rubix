@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import static com.qubole.rubix.spi.CacheUtil.UNKONWN_GENERATION_NUMBER;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
@@ -124,7 +125,7 @@ public class CacheWatcher
     Map<Path, Boolean> fileCacheStatus = new HashMap<>();
 
     for (TestClientReadRequest request : requests) {
-      Path cacheFile = Paths.get(CacheUtil.getLocalPath(request.getRemotePath(), conf));
+      Path cacheFile = Paths.get(CacheUtil.getLocalPath(request.getRemotePath(), conf, UNKONWN_GENERATION_NUMBER + 1));
       int expectedSize = request.getReadLength();
 
       if (Files.exists(cacheFile)) {

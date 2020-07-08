@@ -113,12 +113,12 @@ public class ValidatorFileGen
     final String mdFileSuffix = CacheConfig.getCacheMetadataFileSuffix(conf);
 
     for (int fileNum = 0; fileNum < files; fileNum++) {
-      String fileName = RandomStringUtils.random(FILE_NAME_LENGTH, true, true);
+      String fileName = RandomStringUtils.random(FILE_NAME_LENGTH, true, true) + "_g" + fileNum;
       Path filePath = parentDirPath.resolve(fileName);
       Files.createFile(filePath);
 
       if ((fileNum % mdStep == 0)) {
-        Path mdFilePath = filePath.resolveSibling(filePath.getFileName() + mdFileSuffix);
+        Path mdFilePath = filePath.resolveSibling(filePath.getFileName() + mdFileSuffix + fileNum);
         Files.createFile(mdFilePath);
         mdFilesCreated++;
       }
@@ -128,7 +128,6 @@ public class ValidatorFileGen
 
       filesCreated++;
     }
-
     return new FileGenResult(filesCreated, mdFilesCreated, filesWithoutMD);
   }
 

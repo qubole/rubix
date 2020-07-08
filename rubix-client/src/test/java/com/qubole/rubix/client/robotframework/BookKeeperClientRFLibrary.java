@@ -18,6 +18,7 @@ import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
 import com.qubole.rubix.spi.thrift.BlockLocation;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
+import com.qubole.rubix.spi.thrift.ReadResponse;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -42,6 +43,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import static com.qubole.rubix.spi.utils.DataSizeUnits.BYTES;
+import static com.qubole.rubix.spi.CacheUtil.UNKONWN_GENERATION_NUMBER;
 
 public class BookKeeperClientRFLibrary
 {
@@ -64,7 +66,7 @@ public class BookKeeperClientRFLibrary
           readRequest.getReadLength(),
           readRequest.getFileLength(),
           readRequest.getLastModified(),
-          readRequest.getClusterType());
+          readRequest.getClusterType()).isStatus();
     }
   }
 
@@ -157,7 +159,8 @@ public class BookKeeperClientRFLibrary
           request.getFileLength(),
           request.getLastModified(),
           request.getStartBlock(),
-          request.getEndBlock()).setClusterType(request.getClusterType()));
+          request.getEndBlock()).setClusterType(request.getClusterType()))
+          .getBlocks();
     }
   }
 
@@ -213,7 +216,7 @@ public class BookKeeperClientRFLibrary
    */
   public String generateTestMDFile(String filename) throws IOException
   {
-    String mdPath = CacheUtil.getMetadataFilePath(filename, conf);
+    String mdPath = CacheUtil.getMetadataFilePath(filename, conf, UNKONWN_GENERATION_NUMBER + 1);
     // Certain tests require a non-empty metadata file.
     Files.write(Paths.get(mdPath), "0101010101".getBytes());
     return mdPath;

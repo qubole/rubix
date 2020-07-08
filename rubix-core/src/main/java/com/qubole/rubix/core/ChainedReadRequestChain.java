@@ -17,12 +17,19 @@ import org.apache.hadoop.conf.Configuration;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.qubole.rubix.spi.CacheUtil.UNKONWN_GENERATION_NUMBER;
+
 /**
  * Created by qubole on 14/9/16.
  */
 public class ChainedReadRequestChain extends ReadRequestChain
 {
   private List<ReadRequestChain> readRequestChains = new ArrayList<>();
+
+  public ChainedReadRequestChain()
+  {
+    super(UNKONWN_GENERATION_NUMBER);
+  }
 
   public ChainedReadRequestChain addReadRequestChain(ReadRequestChain readRequestChain)
   {

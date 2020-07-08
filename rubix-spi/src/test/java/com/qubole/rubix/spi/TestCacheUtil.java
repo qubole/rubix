@@ -32,6 +32,7 @@ import java.nio.file.attribute.PosixFilePermissions;
 import java.util.HashMap;
 import java.util.Set;
 
+import static com.qubole.rubix.spi.CacheUtil.UNKONWN_GENERATION_NUMBER;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -153,8 +154,8 @@ public class TestCacheUtil
 
     createCacheDirectoriesForTest(conf);
 
-    String localPath = CacheUtil.getLocalPath(remotePath, conf);
-    assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + localRelPath, "Paths not equal!");
+    String localPath = CacheUtil.getLocalPath(remotePath, conf, UNKONWN_GENERATION_NUMBER + 1);
+    assertEquals(localPath, getExpectedPath(cacheTestDirPrefix, localRelPath, false), "Paths not equal!");
   }
 
   @Test
@@ -167,8 +168,8 @@ public class TestCacheUtil
 
     createCacheDirectoriesForTest(conf);
 
-    String localPath = CacheUtil.getLocalPath(localRelPath, conf);
-    assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + localRelPath, "Paths not equal!");
+    String localPath = CacheUtil.getLocalPath(localRelPath, conf, UNKONWN_GENERATION_NUMBER + 1);
+    assertEquals(localPath, getExpectedPath(cacheTestDirPrefix, localRelPath, false), "Paths not equal!");
   }
 
   @Test
@@ -176,13 +177,13 @@ public class TestCacheUtil
   {
     String localRelPath = "testbucket";
     CacheConfig.setCacheDataDirPrefix(conf, cacheTestDirPrefix);
-    CacheConfig.setCacheDataDirSuffix(conf, "/fcache/");
+    CacheConfig.setCacheDataDirSuffix(conf, "/fcache");
     CacheConfig.setMaxDisks(conf, 1);
 
     createCacheDirectoriesForTest(conf);
 
-    String localPath = CacheUtil.getLocalPath(localRelPath, conf);
-    assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache//" + localRelPath, "Paths not equal!");
+    String localPath = CacheUtil.getLocalPath(localRelPath, conf, UNKONWN_GENERATION_NUMBER + 1);
+    assertEquals(localPath, getExpectedPath(cacheTestDirPrefix, localRelPath, false), "Paths not equal!");
   }
 
   @Test
@@ -196,13 +197,13 @@ public class TestCacheUtil
 
     createCacheDirectoriesForTest(conf);
 
-    String localPath = CacheUtil.getMetadataFilePath(remotePath, conf);
-    assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + localRelPath + "_mdfile", "Paths not equal!");
+    String localPath = CacheUtil.getMetadataFilePath(remotePath, conf, UNKONWN_GENERATION_NUMBER + 1);
+    assertEquals(localPath, getExpectedPath(cacheTestDirPrefix, localRelPath, true), "Paths not equal!");
 
     localRelPath = "tesbucket/123";
     remotePath = "s3://" + localRelPath;
-    localPath = CacheUtil.getMetadataFilePath(remotePath, conf);
-    assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + localRelPath + "_mdfile", "Paths not equal!");
+    localPath = CacheUtil.getMetadataFilePath(remotePath, conf, UNKONWN_GENERATION_NUMBER + 1);
+    assertEquals(localPath, getExpectedPath(cacheTestDirPrefix, localRelPath, true), "Paths not equal!");
   }
 
   @Test
@@ -216,8 +217,8 @@ public class TestCacheUtil
 
     createCacheDirectoriesForTest(conf);
 
-    String localPath = CacheUtil.getMetadataFilePath(remotePath, conf);
-    assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + localRelPath + "_mdfile", "Paths not equal!");
+    String localPath = CacheUtil.getMetadataFilePath(remotePath, conf, UNKONWN_GENERATION_NUMBER + 1);
+    assertEquals(localPath, getExpectedPath(cacheTestDirPrefix, localRelPath, true), "Paths not equal!");
   }
 
   @Test
@@ -231,8 +232,18 @@ public class TestCacheUtil
 
     createCacheDirectoriesForTest(conf);
 
-    String localPath = CacheUtil.getMetadataFilePath(remotePath, conf);
-    assertEquals(localPath, cacheTestDirPrefix + "0" + "/fcache/" + localRelPath + "_mdfile", "Paths not equal!");
+    String localPath = CacheUtil.getMetadataFilePath(remotePath, conf, UNKONWN_GENERATION_NUMBER + 1);
+    assertEquals(localPath, getExpectedPath(cacheTestDirPrefix, localRelPath, true), "Paths not equal!");
+  }
+
+  String getExpectedPath(String cacheTestDirPrefix, String localRelPath, boolean mdFile)
+  {
+    String metadataPrefix = "";
+    if (mdFile)
+    {
+      metadataPrefix = "_mdfile";
+    }
+    return String.format("%s0/fcache/%s%s_g%d", cacheTestDirPrefix, localRelPath, metadataPrefix, UNKONWN_GENERATION_NUMBER + 1);
   }
 
   @Test

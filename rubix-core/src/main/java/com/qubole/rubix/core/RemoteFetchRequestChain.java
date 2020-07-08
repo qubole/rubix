@@ -21,6 +21,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 
+import static com.qubole.rubix.spi.CacheUtil.DUMMY_MODE_GENERATION_NUMBER;
+import static com.qubole.rubix.spi.CacheUtil.UNKONWN_GENERATION_NUMBER;
+
 public class RemoteFetchRequestChain extends ReadRequestChain
 {
   private static final Log log = LogFactory.getLog(RemoteFetchRequestChain.class);
@@ -37,6 +40,7 @@ public class RemoteFetchRequestChain extends ReadRequestChain
   public RemoteFetchRequestChain(String remotePath, FileSystem remoteFileSystem, String remoteNodeLocation,
                                  Configuration conf, long lastModified, long fileSize, int clusterType, BookKeeperFactory bookKeeperFactory)
   {
+    super(UNKONWN_GENERATION_NUMBER);
     this.remotePath = remotePath;
     this.remoteFileSystem = remoteFileSystem;
     this.remoteNodeLocation = remoteNodeLocation;
@@ -88,7 +92,7 @@ public class RemoteFetchRequestChain extends ReadRequestChain
           // getCacheStatus() call required to create mdfiles before blocks are set as cached
           CacheStatusRequest request = new CacheStatusRequest(remotePath, fileSize, lastModified, startBlock, endBlock).setClusterType(clusterType);
           bookKeeperClient.getCacheStatus(request);
-          bookKeeperClient.setAllCached(remotePath, fileSize, lastModified, startBlock, endBlock);
+          bookKeeperClient.setAllCached(remotePath, fileSize, lastModified, startBlock, endBlock, DUMMY_MODE_GENERATION_NUMBER);
         }
       }
       catch (Exception e) {

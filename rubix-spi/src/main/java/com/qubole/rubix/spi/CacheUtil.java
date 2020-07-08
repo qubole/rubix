@@ -30,8 +30,12 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
+import static com.google.common.base.Preconditions.checkState;
+
 public class CacheUtil
 {
+  public static final int UNKONWN_GENERATION_NUMBER = 0;
+  public static final int DUMMY_MODE_GENERATION_NUMBER = UNKONWN_GENERATION_NUMBER + 1;
   private static final Log log = LogFactory.getLog(CacheUtil.class.getName());
 
   private CacheUtil()
@@ -152,20 +156,14 @@ public class CacheUtil
    *
    * @param remotePath  The path for a remote location.
    * @param conf        The current Hadoop configuration.
+   * @param generationNumber the generation number for local file corresponding to remote location
    * @return The local path location.
    */
-  public static String getLocalPath(String remotePath, Configuration conf)
+  public static String getLocalPath(String remotePath, Configuration conf, int generationNumber)
   {
+    checkState(generationNumber != UNKONWN_GENERATION_NUMBER, "generationNumber is " + UNKONWN_GENERATION_NUMBER);
     final String absLocation = getDirectory(remotePath, conf);
-    return absLocation + "/" + getName(remotePath);
-  }
-
-  public static String getRemotePath(String localPath, Configuration conf)
-  {
-    String cacheSuffix = CacheConfig.getCacheDataDirSuffix(conf);
-    int index = localPath.indexOf(cacheSuffix);
-    String remotePath = localPath.substring(index + cacheSuffix.length() - 1);
-    return remotePath;
+    return String.format("%s/%s_g%d", absLocation, getName(remotePath), generationNumber);
   }
 
   /**
@@ -173,12 +171,14 @@ public class CacheUtil
    *
    * @param remotePath  The path for a remote location.
    * @param conf        The current Hadoop configuration.
+   * @param generationNumber the generation number for local file corresponding to remote location
    * @return The metadata file path.
    */
-  public static String getMetadataFilePath(String remotePath, Configuration conf)
+  public static String getMetadataFilePath(String remotePath, Configuration conf, int generationNumber)
   {
+    checkState(generationNumber != UNKONWN_GENERATION_NUMBER, "generationNumber is " + UNKONWN_GENERATION_NUMBER);
     final String absLocation = getDirectory(remotePath, conf);
-    return absLocation + "/" + getName(remotePath) + CacheConfig.getCacheMetadataFileSuffix(conf);
+    return String.format("%s/%s%s%d",absLocation, getName(remotePath), CacheConfig.getCacheMetadataFileSuffix(conf), generationNumber);
   }
 
   /**
@@ -190,7 +190,7 @@ public class CacheUtil
    */
   public static boolean isMetadataFile(String filePath, Configuration conf)
   {
-    return filePath.endsWith(CacheConfig.getCacheMetadataFileSuffix(conf));
+    return filePath.matches(".*" + CacheConfig.getCacheMetadataFileSuffix(conf) + "[0-9]+$");
   }
 
   /**

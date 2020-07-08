@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FileSystem;
 import java.util.List;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.qubole.rubix.spi.CacheUtil.UNKONWN_GENERATION_NUMBER;
 
 public class NonLocalRequestChain extends ReadRequestChain
 {
@@ -55,6 +56,7 @@ public class NonLocalRequestChain extends ReadRequestChain
                               boolean strictMode, FileSystem.Statistics statistics, long startBlock,
                               long endBlock, BookKeeperFactory bookKeeperFactory)
   {
+    super(UNKONWN_GENERATION_NUMBER);
     this.remoteNodeName = remoteNodeName;
     this.remoteFileSystem = remoteFileSystem;
     this.lastModified = lastModified;
@@ -76,7 +78,7 @@ public class NonLocalRequestChain extends ReadRequestChain
 
       CacheStatusRequest request = new CacheStatusRequest(remoteFilePath, fileSize, lastModified, startBlock,
           endBlock).setClusterType(clusterType);
-      isCached = bookKeeperClient.getCacheStatus(request);
+      isCached = bookKeeperClient.getCacheStatus(request).getBlocks();
       log.debug("Cache Status : " + isCached);
     }
     catch (Exception e) {
