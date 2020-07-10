@@ -128,7 +128,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FilterFile
     }
 
     String clusterManagerClassName = CacheConfig.getClusterManagerClass(conf, clusterType);
-    log.info("Initializing cluster manager : " + clusterManagerClassName);
+    log.debug("Initializing cluster manager : " + clusterManagerClassName);
 
     try {
       Class clusterManagerClass = conf.getClassByName(clusterManagerClassName);

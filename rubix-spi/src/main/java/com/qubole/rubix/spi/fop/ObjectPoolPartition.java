@@ -260,7 +260,7 @@ public class ObjectPoolPartition<T>
 
     public void debug(String message)
     {
-      log.info(getLogMessage(message));
+      log.debug(getLogMessage(message));
     }
 
     public void warn(String message)

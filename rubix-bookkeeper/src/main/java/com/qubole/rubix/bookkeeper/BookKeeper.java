@@ -390,7 +390,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
           try {
             nodeHostName = InetAddress.getLocalHost().getCanonicalHostName();
             nodeHostAddress = InetAddress.getLocalHost().getHostAddress();
-            log.info(" HostName : " + nodeHostName + " HostAddress : " + nodeHostAddress);
+            log.debug(" HostName : " + nodeHostName + " HostAddress : " + nodeHostAddress);
           }
           catch (UnknownHostException e) {
             log.warn("Could not get nodeName", e);
@@ -438,7 +438,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       throws ClusterManagerInitilizationException
   {
     String clusterManagerClassName = CacheConfig.getClusterManagerClass(conf, clusterType);
-    log.info("Initializing cluster manager : " + clusterManagerClassName);
+    log.debug("Initializing cluster manager : " + clusterManagerClassName);
     ClusterManager manager = null;
 
     try {
@@ -468,7 +468,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     // different generation number means invalidation has occurred
     // TODO: find a way to optimize this so that the file doesn't have to be read again in next request (new data is stored instead of invalidation)
     if (md == null) {
-      log.warn(String.format("Could not update the metadata for file %s", remotePath));
+      log.debug(String.format("Could not update the metadata for file %s", remotePath));
       return;
     }
     if (md.getGenerationNumber() != generationNumber)

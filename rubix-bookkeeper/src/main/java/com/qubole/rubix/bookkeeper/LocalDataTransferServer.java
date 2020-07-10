@@ -170,7 +170,7 @@ public class LocalDataTransferServer extends Configured implements Tool
       this.bookKeeperFactory = bookKeeperFactory;
 
       int port = CacheConfig.getDataTransferServerPort(conf);
-      log.info("Starting LocalDataTransferServer on port " + port);
+      log.debug("Starting LocalDataTransferServer on port " + port);
       try {
         listener = ServerSocketChannel.open();
         listener.bind(new InetSocketAddress(port), Integer.MAX_VALUE);
@@ -259,7 +259,7 @@ public class LocalDataTransferServer extends Configured implements Tool
           long offset = header.getOffset();
           int readLength = header.getReadLength();
           String remotePath = header.getFilePath();
-          log.info(String.format("Trying to read from %s at offset %d and length %d for client %s", remotePath, offset, readLength, localDataTransferClient.getRemoteAddress()));
+          log.debug(String.format("Trying to read from %s at offset %d and length %d for client %s", remotePath, offset, readLength, localDataTransferClient.getRemoteAddress()));
           int generationNumber = UNKONWN_GENERATION_NUMBER;
           try (RetryingPooledBookkeeperClient bookKeeperClient = bookKeeperFactory.createBookKeeperClient(conf)) {
             if (!CacheConfig.isParallelWarmupEnabled(conf)) {
@@ -287,15 +287,16 @@ public class LocalDataTransferServer extends Configured implements Tool
               long blockNum = startBlock;
               for (BlockLocation location : blockLocations) {
                 if (location.getLocation() != Location.CACHED) {
-                  log.error(String.format("The requested data for block %d of file %s in not in cache. " +
-                          " The data will be read from object store", blockNum, remotePath));
+                  // Block ownership could have changed due to change in cluster members
+                  log.warn(String.format("The requested data for block %d of file %s is not in cache. " +
+                          " The data will be read from object store. Status: %s %s", blockNum, remotePath, location.getLocation(), location.getRemoteLocation()));
                   throw new Exception("The requested data in not in cache. The data will be read from object store");
                 }
+                blockNum++;
               }
-              blockNum++;
             }
             int nread = readDataFromCachedFile(bookKeeperClient, remotePath, generationNumber, offset, readLength);
-            log.info(String.format("Done reading %d from %s at offset %d and length %d for client %s", nread, remotePath, offset, readLength, localDataTransferClient.getRemoteAddress()));
+            log.debug(String.format("Done reading %d from %s at offset %d and length %d for client %s", nread, remotePath, offset, readLength, localDataTransferClient.getRemoteAddress()));
           }
         }
       }
