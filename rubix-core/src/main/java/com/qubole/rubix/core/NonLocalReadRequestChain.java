@@ -151,13 +151,13 @@ public class NonLocalReadRequestChain extends ReadRequestChain
         }
       }
       finally {
-        log.debug(String.format("Read %d bytes internally from node %s", readFromNonLocalCache, remoteNodeName));
         if (statistics != null) {
           statistics.incrementBytesRead(readFromNonLocalCache);
         }
       }
     }
     readFromNonLocalCache += dataReadInPreviousCycle;
+    log.debug(String.format("Read %d bytes internally from node %s", readFromNonLocalCache, remoteNodeName));
     return readFromNonLocalCache;
   }
 
