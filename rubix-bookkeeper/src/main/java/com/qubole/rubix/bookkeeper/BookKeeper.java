@@ -290,7 +290,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     //  If multiple threads call get of guava cache, then all but one get blocked and computation is done for it
     //  and values is returned to other blocked threads.
     try {
-      md = fileMetadataCache.get(remotePath, new CreateFileMetadataCallable(
+      md = fileMetadataCache.get(remotePath, () -> new FileMetadata(
               remotePath,
               fileLength,
               lastModified,
@@ -300,7 +300,8 @@ public abstract class BookKeeper implements BookKeeperService.Iface
               fileAccessedBloomFilter));
       if (isInvalidationRequired(md.getLastModified(), lastModified)) {
         invalidateFileMetadata(remotePath);
-        md = fileMetadataCache.get(remotePath, new CreateFileMetadataCallable(remotePath,
+        md = fileMetadataCache.get(remotePath, () -> new FileMetadata(
+                remotePath,
                 fileLength,
                 lastModified,
                 0,
@@ -690,14 +691,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
 
     fileMetadataCache = CacheBuilder.newBuilder()
         .ticker(ticker)
-        .weigher(new Weigher<String, FileMetadata>()
-        {
-          @Override
-          public int weigh(String key, FileMetadata md)
-          {
-            return md.getWeight();
-          }
-        })
+        .weigher((Weigher<String, FileMetadata>) (key, md) -> md.getWeight())
         .maximumWeight(MEGABYTES.toKB(totalAvailableForCacheInMB))
         .expireAfterWrite(CacheConfig.getCacheDataExpirationAfterWrite(conf), TimeUnit.MILLISECONDS)
         .removalListener(new CacheRemovalListener())
@@ -750,62 +744,22 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     public void onRemoval(RemovalNotification<String, FileMetadata> notification)
     {
       FileMetadata md = notification.getValue();
-      try {
-        md.closeAndCleanup(notification.getCause(), fileMetadataCache);
-        if (!isValidatingCachingBehavior(md.getRemotePath())) {
-          switch (notification.getCause()) {
-            case EXPLICIT:
-              cacheInvalidationCount.inc();
-              break;
-            case SIZE:
-              cacheEvictionCount.inc();
-              break;
-            case EXPIRED:
-              cacheExpiryCount.inc();
-              break;
-            default:
-              break;
-          }
+      md.closeAndCleanup(notification.getCause(), fileMetadataCache);
+      if (!isValidatingCachingBehavior(md.getRemotePath())) {
+        switch (notification.getCause()) {
+          case EXPLICIT:
+            cacheInvalidationCount.inc();
+            break;
+          case SIZE:
+            cacheEvictionCount.inc();
+            break;
+          case EXPIRED:
+            cacheExpiryCount.inc();
+            break;
+          default:
+            break;
         }
       }
-      catch (IOException e) {
-        log.warn("Could not cleanup FileMetadata for " + notification.getKey(), e);
-      }
-    }
-  }
-
-  private static class CreateFileMetadataCallable
-      implements Callable<FileMetadata>
-  {
-    String path;
-    Configuration conf;
-    long fileLength;
-    long lastModified;
-    long currentFileSize;
-    Cache<String, Integer> generationNumberCache;
-    BloomFilter fileAccessedBloomFilter;
-
-    public CreateFileMetadataCallable(String path,
-        long fileLength,
-        long lastModified,
-        long currentFileSize,
-        Configuration conf,
-        Cache<String, Integer> generationNumberCache,
-        BloomFilter fileAccessedBloomFilter)
-    {
-      this.path = path;
-      this.conf = conf;
-      this.fileLength = fileLength;
-      this.lastModified = lastModified;
-      this.currentFileSize = currentFileSize;
-      this.generationNumberCache = generationNumberCache;
-      this.fileAccessedBloomFilter = fileAccessedBloomFilter;
-    }
-
-    public FileMetadata call()
-        throws Exception
-    {
-      return new FileMetadata(path, fileLength, lastModified, currentFileSize, conf, generationNumberCache, fileAccessedBloomFilter);
     }
   }
 
@@ -815,16 +769,11 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   {
     // We might come in here with cache not initialized e.g. fs.create
     if (fileMetadataCache != null) {
-      FileMetadata metadata = fileMetadataCache.getIfPresent(key);
-      if (metadata != null) {
-        log.debug("Invalidating file " + key + " from metadata cache");
-        fileMetadataCache.invalidate(key);
-      }
+      fileMetadataCache.invalidate(key);
     }
   }
 
   private void replaceFileMetadata(String key, long currentFileSize, Configuration conf)
-      throws IOException
   {
     if (fileMetadataCache != null) {
       FileMetadata metadata = fileMetadataCache.getIfPresent(key);
@@ -842,11 +791,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
 
   private boolean isInvalidationRequired(long metadataLastModifiedTime, long remoteLastModifiedTime)
   {
-    if (CacheConfig.isFileStalenessCheckEnabled(conf) && (metadataLastModifiedTime != remoteLastModifiedTime)) {
-      return true;
-    }
-
-    return false;
+    return CacheConfig.isFileStalenessCheckEnabled(conf) && (metadataLastModifiedTime != remoteLastModifiedTime);
   }
 
   private static boolean isValidatingCachingBehavior(String remotePath)
