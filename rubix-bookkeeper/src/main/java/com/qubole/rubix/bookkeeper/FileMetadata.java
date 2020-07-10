@@ -42,21 +42,21 @@ import static com.qubole.rubix.spi.CacheUtil.UNKONWN_GENERATION_NUMBER;
  */
 public class FileMetadata
 {
-  private String remotePath;
-  private String localPath;
-  private String mdFilePath;
-  private long size;
-  private long lastModified;
+  private final String remotePath;
+  private final String localPath;
+  private final String mdFilePath;
+  private final long size;
+  private final long lastModified;
   private long currentFileSize;
   private boolean needsRefresh = true;
-  private int generationNumber;
+  private final int generationNumber;
 
   int bitmapFileSizeBytes;
   ByteBufferBitmap blockBitmap;
 
-  static Striped<Lock> stripes = Striped.lock(20000);
+  private static final Striped<Lock> stripes = Striped.lock(20000);
 
-  private static Log log = LogFactory.getLog(FileMetadata.class.getName());
+  private static final Log log = LogFactory.getLog(FileMetadata.class.getName());
 
   // This constructor should not be called in parallel for same remotePath
   public FileMetadata(String remotePath,
@@ -305,10 +305,9 @@ public class FileMetadata
   }
 
   public void closeAndCleanup(RemovalCause cause, Cache cache)
-      throws IOException
   {
     if (cause != RemovalCause.REPLACED) {
-      log.warn("Evicting " + getRemotePath().toString() + " due to " + cause);
+      log.warn("Evicting " + getRemotePath() + " due to " + cause);
       deleteFiles(cache);
     }
   }
@@ -352,10 +351,14 @@ public class FileMetadata
       lock.lock();
 
       File mdFile = new File(mdFilePath);
-      mdFile.delete();
+      if (!mdFile.delete()) {
+        log.error("Failed to delete metadata file " + mdFilePath);
+      }
 
       File localFile = new File(localPath);
-      localFile.delete();
+      if (!localFile.delete()) {
+        log.error("Failed to delete local file " + localPath);
+      }
     }
     finally {
       lock.unlock();
