@@ -76,8 +76,11 @@ public class ObjectPool<T>
     }
     log.debug(this.name + " : Borrowing object for partition: " + host);
     for (int i = 0; i < 3; i++) { // try at most three times
-      Poolable<T> result = getObject(false, host);
-      if (factory.validate(result.getObject())) {
+      Poolable<T> result = getObject(host);
+      if (result == null) {
+        continue;
+      }
+      else if (factory.validate(result.getObject())) {
         return result;
       }
       else {
@@ -87,10 +90,10 @@ public class ObjectPool<T>
     throw new RuntimeException("Cannot find a valid object");
   }
 
-  private Poolable<T> getObject(boolean blocking, String host)
+  private Poolable<T> getObject(String host)
   {
     ObjectPoolPartition<T> subPool = this.hostToPoolMap.get(host);
-    return subPool.getObject(blocking);
+    return subPool.getObject();
   }
 
   public void returnObject(Poolable<T> obj)
@@ -103,7 +106,7 @@ public class ObjectPool<T>
   {
     int size = 0;
     for (ObjectPoolPartition<T> subPool : hostToPoolMap.values()) {
-      size += subPool.getTotalCount();
+      size += subPool.getAliveObjectCount();
     }
     return size;
   }

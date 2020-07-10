@@ -21,7 +21,8 @@ package com.qubole.rubix.spi.fop;
  */
 public interface ObjectFactory<T>
 {
-  T create(String host, int socketTimeout, int connectTimeout);
+  T create(String host, int socketTimeout, int connectTimeout)
+          throws Exception;
 
   void destroy(T t);
 

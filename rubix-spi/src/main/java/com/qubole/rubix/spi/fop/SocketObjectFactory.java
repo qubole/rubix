@@ -36,16 +36,17 @@ public class SocketObjectFactory
 
   @Override
   public TSocket create(String host, int socketTimeout, int connectTimeout)
+          throws TTransportException
   {
     log.debug(BKS_POOL + " : Opening connection to host: " + host);
-    TSocket socket = null;
+    TSocket socket;
     try {
       socket = new TSocket(host, port, socketTimeout, connectTimeout);
       socket.open();
     }
     catch (TTransportException e) {
-      socket = null;
       log.warn("Unable to open connection to host " + host, e);
+      throw e;
     }
     return socket;
   }
