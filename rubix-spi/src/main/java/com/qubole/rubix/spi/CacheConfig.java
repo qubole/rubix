@@ -152,7 +152,7 @@ public class CacheConfig
   private static final String DEFAULT_METRICS_GANGLIA_HOST = "127.0.0.1"; // localhost
   private static final int DEFAULT_METRICS_GANGLIA_PORT = 8649; // default Ganglia port
   private static final String DEFAULT_METRICS_REPORTERS = "JMX, GANGLIA";
-  private static final boolean DEFAULT_PARALLEL_WARMUP = false;
+  private static final boolean DEFAULT_PARALLEL_WARMUP = true;
   private static final int DEFAULT_PROCESS_THREAD_INITIAL_DELAY = 1000; // ms
   private static final int DEFAULT_PROCESS_THREAD_INTERVAL = 1000; // ms
   private static final int DEFAULT_REMOTE_FETCH_PROCESS_INTERVAL = 10000; // ms
