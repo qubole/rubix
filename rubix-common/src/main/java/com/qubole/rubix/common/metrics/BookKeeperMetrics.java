@@ -215,7 +215,8 @@ public class BookKeeperMetrics implements AutoCloseable
     PROCESSED_ASYNC_REQUEST_COUNT("rubix.bookkeeper.count.processed_async_request"),
     ASYNC_QUEUE_SIZE_GAUGE("rubix.bookkeeper.gauge.async_queue_size"),
     ASYNC_DOWNLOADED_MB_COUNT("rubix.bookkeeper.count.async_downloaded_mb"),
-    ASYNC_DOWNLOAD_TIME_COUNT("rubix.bookkeeper.count.async_download_time");
+    ASYNC_DOWNLOAD_TIME_COUNT("rubix.bookkeeper.count.async_download_time"),
+    LDTS_CACHING_EXCEPTION("caching_exception_while_transferring_data");
 
     private final String metricName;
 

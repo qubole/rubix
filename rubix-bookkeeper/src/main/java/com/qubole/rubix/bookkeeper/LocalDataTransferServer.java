@@ -12,6 +12,7 @@
  */
 package com.qubole.rubix.bookkeeper;
 
+import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.jvm.CachedThreadStatesGaugeSet;
 import com.codahale.metrics.jvm.GarbageCollectorMetricSet;
@@ -53,9 +54,9 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.LDTS_CACHING_EXCEPTION;
 import static com.qubole.rubix.common.utils.ClusterUtil.applyRubixSiteConfig;
 import static com.qubole.rubix.spi.CacheConfig.getLocalTransferServerMaxThreads;
-import static com.qubole.rubix.spi.CacheConfig.getServerMaxThreads;
 import static com.qubole.rubix.spi.CommonUtilities.threadsNamed;
 import static com.qubole.rubix.spi.CacheUtil.UNKONWN_GENERATION_NUMBER;
 
@@ -70,6 +71,7 @@ public class LocalDataTransferServer extends Configured implements Tool
   private static LocalServer localServer;
   private static MetricRegistry metrics;
   private static BookKeeperMetrics bookKeeperMetrics;
+  private static Counter cachingExceptionCounter;
 
   private LocalDataTransferServer()
   {
@@ -117,6 +119,8 @@ public class LocalDataTransferServer extends Configured implements Tool
     metrics.register(BookKeeperMetrics.LDTSJvmMetric.LDTS_JVM_GC_PREFIX.getMetricName(), new GarbageCollectorMetricSet());
     metrics.register(BookKeeperMetrics.LDTSJvmMetric.LDTS_JVM_THREADS_PREFIX.getMetricName(), new CachedThreadStatesGaugeSet(CacheConfig.getMetricsReportingInterval(conf), TimeUnit.MILLISECONDS));
     metrics.register(BookKeeperMetrics.LDTSJvmMetric.LDTS_JVM_MEMORY_PREFIX.getMetricName(), new MemoryUsageGaugeSet());
+
+    cachingExceptionCounter = metrics.counter(LDTS_CACHING_EXCEPTION.getMetricName());
   }
 
   public static void stopServer()
@@ -303,6 +307,7 @@ public class LocalDataTransferServer extends Configured implements Tool
       catch (Exception e) {
         try {
           log.warn("Error in Local Data Transfer Server for client: " + localDataTransferClient.getRemoteAddress(), e);
+          cachingExceptionCounter.inc();
         }
         catch (IOException e1) {
           log.warn("Error in Local Data Transfer Server for client: ", e);

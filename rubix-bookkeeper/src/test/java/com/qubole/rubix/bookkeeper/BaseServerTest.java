@@ -81,6 +81,7 @@ public class BaseServerTest
       case MOCK_COORDINATOR_BOOKKEEPER:
       case MOCK_WORKER_BOOKKEEPER:
         metricsToVerify = BookKeeperMetrics.CacheMetric.getAllNames();
+        metricsToVerify.remove(BookKeeperMetrics.CacheMetric.LDTS_CACHING_EXCEPTION.getMetricName());
         break;
       default:
         throw new IllegalArgumentException("Invalid server type " + serverType.name());

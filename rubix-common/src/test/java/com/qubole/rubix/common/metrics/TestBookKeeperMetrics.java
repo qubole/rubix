@@ -194,7 +194,8 @@ public class TestBookKeeperMetrics
         BookKeeperMetrics.CacheMetric.PROCESSED_ASYNC_REQUEST_COUNT.getMetricName(),
         BookKeeperMetrics.CacheMetric.ASYNC_QUEUE_SIZE_GAUGE.getMetricName(),
         BookKeeperMetrics.CacheMetric.ASYNC_DOWNLOADED_MB_COUNT.getMetricName(),
-        BookKeeperMetrics.CacheMetric.ASYNC_DOWNLOAD_TIME_COUNT.getMetricName());
+        BookKeeperMetrics.CacheMetric.ASYNC_DOWNLOAD_TIME_COUNT.getMetricName(),
+        BookKeeperMetrics.CacheMetric.LDTS_CACHING_EXCEPTION.getMetricName());
 
     assertEquals(cacheMetricsNames, BookKeeperMetrics.CacheMetric.getAllNames());
   }
