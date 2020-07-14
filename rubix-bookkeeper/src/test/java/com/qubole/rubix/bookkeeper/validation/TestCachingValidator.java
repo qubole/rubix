@@ -69,6 +69,7 @@ public class TestCachingValidator
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     CacheConfig.setMaxDisks(conf, TEST_MAX_DISKS);
+    CacheConfig.setIsParallelWarmupEnabled(conf, false);
 
     TestUtil.createCacheParentDirectories(conf, TEST_MAX_DISKS);
   }

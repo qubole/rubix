@@ -80,6 +80,7 @@ public class TestBookKeeper
   {
     CacheConfig.setCacheDataDirPrefix(conf, TEST_CACHE_DIR_PREFIX);
     CacheConfig.setBlockSize(conf, TEST_BLOCK_SIZE);
+    CacheConfig.setIsParallelWarmupEnabled(conf, false);
 
     TestUtil.createCacheParentDirectories(conf, TEST_MAX_DISKS);
 
