@@ -348,7 +348,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FilterFile
           {
               LocatedFileStatus status = stats.next();
               // use caching locations explicitly
-              BlockLocation[] locations = status.isFile() ? getFileBlockLocations(status.getPath(), 0, status.getLen()) : null;
+              BlockLocation[] locations = status.isFile() ? getFileBlockLocations(status, 0, status.getLen()) : null;
               return new LocatedFileStatus(status, locations);
           }
       };
