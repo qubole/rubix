@@ -245,7 +245,7 @@ public class LocalDataTransferServer extends Configured implements Tool
           try {
             int read = localDataTransferClient.read(dataInfo);
             if (read == -1) {
-              throw new Exception("Could not read data from Non-local node");
+              throw new IOException("Could not read data from Non-local node");
             }
           }
           catch (IOException e)
