@@ -133,7 +133,9 @@ public class NonLocalReadRequestChain extends ReadRequestChain
             throw e;
           }
           if (nread == -1) {
-            throw new Exception("Error reading from Local Transfer Server");
+            log.warn("Error reading from Local Transfer Server");
+            dataTransferClient.getSocketChannel().close();
+            throw new IOException("Error reading from Local Transfer Server");
           }
           bytesread += nread;
           dst.position(bytesread + readRequest.getDestBufferOffset());
