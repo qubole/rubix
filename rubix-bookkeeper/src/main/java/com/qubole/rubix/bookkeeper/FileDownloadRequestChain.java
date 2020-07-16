@@ -110,7 +110,7 @@ public class FileDownloadRequestChain extends ReadRequestChain
     long startTime = System.currentTimeMillis();
     File file = new File(localFile);
     if (!file.exists()) {
-      throw new IOException(String.format("File does not exists %s", localFile));
+      throw new FileNotFoundException(String.format("File does not exists %s", localFile));
     }
 
     long highestReadRequestLength = readRequests
