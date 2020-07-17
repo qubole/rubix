@@ -60,14 +60,14 @@ import static com.qubole.rubix.spi.CacheUtil.skipCache;
 public abstract class CachingFileSystem<T extends FileSystem> extends FilterFileSystem
 {
   private static final Log log = LogFactory.getLog(CachingFileSystem.class);
-  private static BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
+  private static volatile BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
 
   // statics that need to initialized after the configuration object is available
   private static final AtomicBoolean initialized = new AtomicBoolean(false);
-  private static String statsMBeanName = "rubix:name=stats";
-  private static String detailedStatsMBeanName = "rubix:name=stats,type=detailed";
-  private static ClusterManager clusterManager;
-  private static CachingFileSystemStatsProvider stats;
+  private static volatile String statsMBeanName = "rubix:name=stats";
+  private static volatile String detailedStatsMBeanName = "rubix:name=stats,type=detailed";
+  private static volatile ClusterManager clusterManager;
+  private static volatile CachingFileSystemStatsProvider stats;
 
   private boolean isRubixSchemeUsed;
   private URI uri;
