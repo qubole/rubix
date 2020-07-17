@@ -17,6 +17,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.qubole.rubix.common.metrics.CustomMetricsReporterProvider;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterType;
@@ -47,6 +48,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
+import static com.qubole.rubix.common.metrics.CachingFileSystemMetrics.POSITIONAL_READ_FAILURE;
 import static com.qubole.rubix.spi.CacheUtil.UNKONWN_GENERATION_NUMBER;
 import static org.apache.hadoop.fs.FSExceptionMessages.NEGATIVE_SEEK;
 
@@ -185,6 +187,7 @@ public class CachingInputStream extends FSInputStream
     }
     catch (Exception e) {
       log.error(String.format("Failed to read from rubix for file %s position %d length %d. Falling back to remote", remotePath, nextReadPosition, length), e);
+      CustomMetricsReporterProvider.getCustomMetricsReporter().addMetric(POSITIONAL_READ_FAILURE);
       getParentDataInputStream().seek(nextReadPosition);
       int read = readFullyDirect(buffer, offset, length);
       if (read > 0) {

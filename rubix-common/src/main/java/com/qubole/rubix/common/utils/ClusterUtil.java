@@ -13,6 +13,7 @@
 
 package com.qubole.rubix.common.utils;
 
+import com.qubole.rubix.common.metrics.MetricsReporterType;
 import com.qubole.rubix.spi.CacheConfig;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -20,7 +21,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
 import java.io.File;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 public class ClusterUtil
@@ -84,5 +88,15 @@ public class ClusterUtil
     }
 
     return conf;
+  }
+
+  public static Set<MetricsReporterType> getMetricsReporters(Configuration configuration)
+  {
+    return Stream.of(CacheConfig.getMetricsReporters(configuration).split(","))
+            .map(String::trim)
+            .filter(s -> !s.isEmpty())
+            .map(String::toUpperCase)
+            .map(MetricsReporterType::valueOf)
+            .collect(Collectors.toSet());
   }
 }

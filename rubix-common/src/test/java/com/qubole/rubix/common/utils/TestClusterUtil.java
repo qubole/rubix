@@ -13,17 +13,21 @@
 
 package com.qubole.rubix.common.utils;
 
+import com.qubole.rubix.common.metrics.MetricsReporterType;
 import com.qubole.rubix.spi.CacheConfig;
 import org.apache.hadoop.conf.Configuration;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.Test;
 
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static com.qubole.rubix.common.utils.ClusterUtil.getMetricsReporters;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
+import static org.testng.Assert.assertTrue;
 
 public class TestClusterUtil
 {
@@ -128,5 +132,16 @@ public class TestClusterUtil
     rubixSiteXmlName = workingDirectory + "/../rubix-common/src/test/resources/faulty-rubix-site.xml";
     CacheConfig.setRubixSiteLocation(configuration, rubixSiteXmlName);
     Assert.assertThrows(Exception.class, () -> ClusterUtil.applyRubixSiteConfig(configuration));
+  }
+
+  @Test
+  public void testGetMetricReportors()
+  {
+    Configuration conf = new Configuration();
+    CacheConfig.setMetricsReporters(conf, "JmX, , ganglia   , , ,,");
+    Set<MetricsReporterType> reporterSet = getMetricsReporters(conf);
+    assertEquals(reporterSet.size(), 2, "Number of reporter not correct");
+    assertTrue(reporterSet.contains(MetricsReporterType.JMX), "Metrics reporters not resolved correctly");
+    assertTrue(reporterSet.contains(MetricsReporterType.GANGLIA), "Metrics reporters not resolved correctly");
   }
 }

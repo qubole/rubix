@@ -16,7 +16,6 @@ package com.qubole.rubix.common.metrics;
 import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.ganglia.GangliaReporter;
-import com.google.common.base.Splitter;
 import com.qubole.rubix.common.utils.ClusterUtil;
 import com.qubole.rubix.spi.CacheConfig;
 import com.readytalk.metrics.StatsDReporter;
@@ -28,8 +27,11 @@ import org.apache.hadoop.conf.Configuration;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+
+import static com.qubole.rubix.common.utils.ClusterUtil.getMetricsReporters;
 
 public class BookKeeperMetrics implements AutoCloseable
 {
@@ -63,12 +65,7 @@ public class BookKeeperMetrics implements AutoCloseable
    */
   protected void initializeReporters()
   {
-    final Iterable<String> metricsReporterNames = Splitter.on(",").trimResults().omitEmptyStrings().split(CacheConfig.getMetricsReporters(conf));
-
-    final Set<MetricsReporterType> metricsReporterTypes = new HashSet<>();
-    for (String reporterName : metricsReporterNames) {
-      metricsReporterTypes.add(MetricsReporterType.valueOf(reporterName.toUpperCase()));
-    }
+    final Set<MetricsReporterType> metricsReporterTypes = getMetricsReporters(conf);
 
     for (MetricsReporterType reporter : metricsReporterTypes) {
       switch (reporter) {
@@ -110,6 +107,10 @@ public class BookKeeperMetrics implements AutoCloseable
                   .build(ganglia);
           gangliaReporter.start(CacheConfig.getMetricsReportingInterval(conf), TimeUnit.MILLISECONDS);
           reporters.add(gangliaReporter);
+          break;
+        case CUSTOM:
+          CustomMetricsReporterProvider.initialize(conf, Optional.of(metrics));
+          reporters.add(CustomMetricsReporterProvider.getCustomMetricsReporter());
           break;
       }
     }
@@ -216,7 +217,7 @@ public class BookKeeperMetrics implements AutoCloseable
     ASYNC_QUEUE_SIZE_GAUGE("rubix.bookkeeper.gauge.async_queue_size"),
     ASYNC_DOWNLOADED_MB_COUNT("rubix.bookkeeper.count.async_downloaded_mb"),
     ASYNC_DOWNLOAD_TIME_COUNT("rubix.bookkeeper.count.async_download_time"),
-    LDTS_CACHING_EXCEPTION("caching_exception_while_transferring_data");
+    LDTS_CACHING_EXCEPTION("rubix.ldts.exception.trasnsferdata");
 
     private final String metricName;
 
