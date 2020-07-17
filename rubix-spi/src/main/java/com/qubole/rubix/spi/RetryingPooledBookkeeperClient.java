@@ -21,11 +21,9 @@ import com.qubole.rubix.spi.fop.Poolable;
 import com.qubole.rubix.spi.thrift.BookKeeperService;
 import com.qubole.rubix.spi.thrift.CacheStatusRequest;
 import com.qubole.rubix.spi.thrift.CacheStatusResponse;
-import com.qubole.rubix.spi.thrift.ReadResponse;
 import com.qubole.rubix.spi.thrift.FileInfo;
 import com.qubole.rubix.spi.thrift.HeartbeatStatus;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import com.qubole.rubix.spi.thrift.ReadResponse;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.TException;
 import org.apache.thrift.TServiceClient;
@@ -39,8 +37,6 @@ public class RetryingPooledBookkeeperClient
         extends RetryingPooledThriftClient
         implements BookKeeperService.Iface
 {
-  private static final Log log = LogFactory.getLog(RetryingPooledBookkeeperClient.class);
-
   @VisibleForTesting
   public RetryingPooledBookkeeperClient()
   {
@@ -65,30 +61,16 @@ public class RetryingPooledBookkeeperClient
   @Override
   public CacheStatusResponse getCacheStatus(final CacheStatusRequest request) throws TException
   {
-    return retryConnection(new Callable<CacheStatusResponse>()
-    {
-      @Override
-      public CacheStatusResponse call()
-          throws TException
-      {
-        return client().getCacheStatus(request);
-      }
-    });
+    return retryConnection(() -> client().getCacheStatus(request));
   }
 
   @Override
   public void setAllCached(final String remotePath, final long fileLength, final long lastModified,
                            final long startBlock, final long endBlock, final int generationNumber) throws TException
   {
-    retryConnection(new Callable<Void>()
-    {
-      @Override
-      public Void call()
-              throws Exception
-      {
-        client().setAllCached(remotePath, fileLength, lastModified, startBlock, endBlock, generationNumber);
-        return null;
-      }
+    retryConnection((Callable<Void>) () -> {
+      client().setAllCached(remotePath, fileLength, lastModified, startBlock, endBlock, generationNumber);
+      return null;
     });
   }
 
@@ -96,43 +78,22 @@ public class RetryingPooledBookkeeperClient
   public Map<String, Double> getCacheMetrics()
           throws TException
   {
-    return retryConnection(new Callable<Map<String, Double>>()
-    {
-      @Override
-      public Map<String, Double> call()
-              throws TException
-      {
-        return client().getCacheMetrics();
-      }
-    });
+    return retryConnection(() -> client().getCacheMetrics());
   }
 
   @Override
   public ReadResponse readData(final String path, final long readStart, final int length, final long fileSize, final long lastModified, final int clusterType)
           throws TException
   {
-    return retryConnection(new Callable<ReadResponse>()
-    {
-      @Override
-      public ReadResponse call()
-              throws TException
-      {
-        return client().readData(path, readStart, length, fileSize, lastModified, clusterType);
-      }
-    });
+    return retryConnection(() -> client().readData(path, readStart, length, fileSize, lastModified, clusterType));
   }
 
   @Override
   public void handleHeartbeat(final String workerHostname, final HeartbeatStatus heartbeatStatus) throws TException
   {
-    retryConnection(new Callable<Void>()
-    {
-      @Override
-      public Void call() throws Exception
-      {
-        client().handleHeartbeat(workerHostname, heartbeatStatus);
-        return null;
-      }
+    retryConnection((Callable<Void>) () -> {
+      client().handleHeartbeat(workerHostname, heartbeatStatus);
+      return null;
     });
   }
 
@@ -140,45 +101,23 @@ public class RetryingPooledBookkeeperClient
   public FileInfo getFileInfo(final String remotePath)
           throws TException
   {
-    return retryConnection(new Callable<FileInfo>()
-    {
-      @Override
-      public FileInfo call()
-              throws TException
-      {
-        return client().getFileInfo(remotePath);
-      }
-    });
+    return retryConnection(() -> client().getFileInfo(remotePath));
   }
 
   @Override
   public boolean isBookKeeperAlive()
           throws TException
   {
-    return retryConnection(new Callable<Boolean>()
-    {
-      @Override
-      public Boolean call()
-              throws TException
-      {
-        return client().isBookKeeperAlive();
-      }
-    });
+    return retryConnection(() -> client().isBookKeeperAlive());
   }
 
   @Override
   public void invalidateFileMetadata(final String remotePath)
           throws TException
   {
-    retryConnection(new Callable<Void>()
-    {
-      @Override
-      public Void call()
-              throws TException
-      {
-        client().invalidateFileMetadata(remotePath);
-        return null;
-      }
+    retryConnection((Callable<Void>) () -> {
+      client().invalidateFileMetadata(remotePath);
+      return null;
     });
   }
 }
