@@ -13,6 +13,8 @@
 package com.qubole.rubix.core;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.qubole.rubix.common.metrics.CachingFileSystemMetrics;
+import com.qubole.rubix.common.metrics.CustomMetricsReporterProvider;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
@@ -148,8 +150,8 @@ public class CachedReadRequestChain extends ReadRequestChain
       if (ex instanceof CancelledException) {
         throw ex;
       }
-
       log.error(String.format("Fall back to read from object store for %s .Could not read data from cached file : ", localCachedFile), ex);
+      CustomMetricsReporterProvider.getCustomMetricsReporter().addMetric(CachingFileSystemMetrics.LOCAL_FALLBACK_TO_DIRECT_READ);
       needsInvalidation = true;
       directDataRead = readFromRemoteFileSystem();
       return directDataRead;

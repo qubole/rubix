@@ -13,6 +13,7 @@
 package com.qubole.rubix.core;
 
 import com.google.common.base.Throwables;
+import com.qubole.rubix.common.metrics.CustomMetricsReporterProvider;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.DataTransferClientHelper;
@@ -35,6 +36,7 @@ import java.nio.channels.ReadableByteChannel;
 import static com.google.common.base.Preconditions.checkState;
 import static com.qubole.rubix.spi.CacheUtil.DUMMY_MODE_GENERATION_NUMBER;
 import static com.qubole.rubix.spi.CacheUtil.UNKONWN_GENERATION_NUMBER;
+import static com.qubole.rubix.common.metrics.CachingFileSystemMetrics.NON_LOCAL_FALLBACK_TO_DIRECT_READ;
 import static com.qubole.rubix.spi.DataTransferClientFactory.DataTransferClient;
 import static com.qubole.rubix.spi.DataTransferClientFactory.getClient;
 
@@ -149,6 +151,7 @@ public class NonLocalReadRequestChain extends ReadRequestChain
         }
         else {
           log.warn("Error in reading from node: " + remoteNodeName + " Using direct reads", e);
+          CustomMetricsReporterProvider.getCustomMetricsReporter().addMetric(NON_LOCAL_FALLBACK_TO_DIRECT_READ);
           return directReadRequest(readRequests.indexOf(readRequest));
         }
       }

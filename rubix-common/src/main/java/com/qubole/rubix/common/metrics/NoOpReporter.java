@@ -10,13 +10,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-
 package com.qubole.rubix.common.metrics;
 
-public enum MetricsReporterType
-{
-  STATSD,
-  JMX,
-  GANGLIA,
-  CUSTOM
+import java.io.IOException;
+
+public class NoOpReporter implements CustomMetricsReporter {
+    public NoOpReporter() {
+    }
+
+    @Override
+    public void start() {
+    }
+
+    @Override
+    public void addMetric(CachingFileSystemMetrics cachingFileSystemMetrics) {
+    }
+
+    @Override
+    public void close() throws IOException {
+    }
 }

@@ -43,6 +43,7 @@ public class CacheConfig
   private static final String KEY_RUBIX_SITE_CONFIG_APPLIED = "ruibx.site.config.applied";
   private static final String KEY_BLOCK_SIZE = "rubix.cache.block.size";
   private static final String KEY_CACHE_ENABLED = "rubix.cache.enabled";
+  private static final String RUBIX_METRIC_COLLECTOR_IMPL = "rubix.metric-collector.impl";
   private static final String KEY_DATA_CACHE_ENABLED_ON_MASTER = "rubix.cache.enabled-on-master";
   private static final String KEY_CACHE_METADATA_FILE_SUFFIX = "rubix.cache.metadata.file.suffix";
   private static final String KEY_SERVER_CONNECT_TIMEOUT = "rubix.network.server.connect.timeout";
@@ -170,6 +171,7 @@ public class CacheConfig
   private static final String DEFAULT_PRESTOSQL_CLUSTER_MANAGER = "com.qubole.rubix.prestosql.PrestoClusterManager";
   private static final String DEFAULT_HADOOP_CLUSTER_MANAGER = "com.qubole.rubix.hadoop2.Hadoop2ClusterManager";
   private static final String DEFAULT_DUMMY_CLUSTER_MANAGER = "com.qubole.rubix.core.utils.DummyClusterManager";
+  private static final String DEFAULT_METRIC_REPORTER_IMPL = "com.qubole.rubix.common.metrics.NoOpReporter";
   private static final boolean DEFAULT_ENABLE_FILE_STALESSNESS_CHECK = true;
   private static final int DEFAULT_STALE_FILEINFO_EXPIRY_PERIOD = 36000; // seconds
   private static final boolean DEFAULT_CLEANUP_FILES_DURING_START = true;
@@ -557,6 +559,11 @@ public class CacheConfig
     return conf.get(KEY_RUBIX_CLUSTER_MASTER_HOSTNAME, null);
   }
 
+  public static String getRubixMetricCollectorImpl(Configuration conf)
+  {
+    return conf.get(RUBIX_METRIC_COLLECTOR_IMPL, DEFAULT_METRIC_REPORTER_IMPL);
+  }
+
   public static String getResourceManagerAddress(Configuration conf)
   {
     return conf.get(KEY_YARN_RESOURCEMANAGER_ADDRESS, null);
@@ -620,6 +627,11 @@ public class CacheConfig
   public static void setCacheDataLocationWhitelist(Configuration conf, String whitelist)
   {
     conf.set(KEY_DATA_CACHE_LOCATION_WHITELIST, whitelist);
+  }
+
+  public static void setMetricReporterImpl(Configuration conf, String className)
+  {
+    conf.set(RUBIX_METRIC_COLLECTOR_IMPL, className);
   }
 
   public static void setCacheDataLocationBlacklist(Configuration conf, String blacklist)

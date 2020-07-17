@@ -10,13 +10,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-
 package com.qubole.rubix.common.metrics;
 
-public enum MetricsReporterType
-{
-  STATSD,
-  JMX,
-  GANGLIA,
-  CUSTOM
+import java.io.Closeable;
+
+public interface CustomMetricsReporter extends Closeable {
+
+    public void start();
+
+    public void addMetric(CachingFileSystemMetrics cachingFileSystemMetrics);
 }

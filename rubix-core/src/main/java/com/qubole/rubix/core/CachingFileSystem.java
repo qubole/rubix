@@ -14,6 +14,7 @@ package com.qubole.rubix.core;
 
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
+import com.qubole.rubix.common.metrics.CustomMetricsReporterProvider;
 import com.qubole.rubix.spi.BookKeeperFactory;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterManager;
@@ -189,6 +190,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FilterFile
     conf = applyRubixSiteConfig(conf);
     initialize(conf, getClusterType());
     super.initialize(getOriginalURI(uri), conf);
+    CustomMetricsReporterProvider.initialize(conf);
     this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
     this.workingDir = new Path("/user", System.getProperty("user.name")).makeQualified(this);
     isRubixSchemeUsed = uri.getScheme().equals(CacheConfig.RUBIX_SCHEME);
