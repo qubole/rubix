@@ -6,4 +6,5 @@
 Label issues with `doc` 
 * Contributions to documentation is accepted as a Pull Request. 
 * Choose Markdown if you will add new pages
-* Choose Rich Structured Text (rst) for indexes or if the documentation needs tables. 
+* Choose Rich Structured Text (rst) for indexes or if the documentation needs tables.
+* To locally test docs changes run `python -msphinx . _build` inside `docs` directory

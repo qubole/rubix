@@ -10,6 +10,7 @@
    
 * Adhere to code standards.
 * Include tests and ensure they pass.
+* Add release notes, if required, in (next-release) rst file under `docs/release/release_notes/`
 
 ### 3. Commit
 
