@@ -24,6 +24,9 @@ import org.apache.hadoop.conf.Configuration;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.Thread.currentThread;
@@ -49,7 +52,7 @@ public class ObjectPool<T>
     this.hostToPoolMap = new ConcurrentHashMap<>();
     this.name = name;
     if (config.getScavengeIntervalMilliseconds() > 0) {
-      this.scavenger = new Scavenger();
+      this.scavenger = new Scavenger(name);
       this.scavenger.startAsync();
     }
   }
@@ -124,6 +127,23 @@ public class ObjectPool<T>
   private class Scavenger
           extends AbstractScheduledService
   {
+    private final String poolName;
+
+    public Scavenger(String poolName)
+    {
+      this.poolName = poolName;
+    }
+
+    @Override
+    protected ScheduledExecutorService executor() {
+      return Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread t = Executors.defaultThreadFactory().newThread(r);
+        t.setName("scavenger-" + poolName);
+        t.setDaemon(true);
+        return t;
+      });
+    }
+
     @Override
     protected Scheduler scheduler()
     {
