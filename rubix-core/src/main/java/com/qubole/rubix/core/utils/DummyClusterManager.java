@@ -47,4 +47,10 @@ public class DummyClusterManager extends ClusterManager
   {
     return ClusterType.TEST_CLUSTER_MANAGER;
   }
+
+  @Override
+  public int getCurrentNodeIndex()
+  {
+    return 0;
+  }
 }

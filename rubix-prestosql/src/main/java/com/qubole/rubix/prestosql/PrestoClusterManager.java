@@ -36,6 +36,7 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -179,6 +180,32 @@ public class PrestoClusterManager extends ClusterManager
             .collect(Collectors.toList());
 
     return workers;
+  }
+
+  @Override
+  protected String getCurrentNodeHostname()
+  {
+    if (nodeManager != null) {
+      return nodeManager.getCurrentNode().getHost();
+    }
+
+    return super.getCurrentNodeHostname();
+  }
+
+  @Override
+  protected String getCurrentNodeHostAddress()
+  {
+    if (nodeManager != null) {
+      try {
+        return nodeManager.getCurrentNode().getHostAndPort().toInetAddress().getHostAddress();
+      }
+      catch (UnknownHostException e) {
+        log.warn("Could not get HostAddress from NodeManager", e);
+        // fallback
+      }
+    }
+
+    return super.getCurrentNodeHostAddress();
   }
 
   @Override

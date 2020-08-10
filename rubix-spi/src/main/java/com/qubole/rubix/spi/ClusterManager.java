@@ -22,9 +22,12 @@ import com.google.common.collect.Lists;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -46,6 +49,11 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public abstract class ClusterManager
 {
+  private static Log log = LogFactory.getLog(ClusterManager.class);
+
+  private int currentNodeIndex = -1;
+  private String nodeHostname;
+  private String nodeHostAddress;
   private final AtomicReference<LoadingCache<String, List<String>>> nodesCache = new AtomicReference<>();
 
   public abstract ClusterType getClusterType();
@@ -57,12 +65,56 @@ public abstract class ClusterManager
    */
   protected abstract List<String> getNodesInternal();
 
+  protected String getCurrentNodeHostname()
+  {
+    return nodeHostname;
+  }
+
+  protected String getCurrentNodeHostAddress()
+  {
+    return nodeHostAddress;
+  }
+
+  private List<String> getNodesAndUpdateState()
+  {
+    List<String> nodes = getNodesInternal();
+    if (nodes == null) {
+      nodes = ImmutableList.of();
+    } else if (nodes.isEmpty()) {
+      // Empty result set => server up and only master node running, return localhost has the only node
+      // Do not need to consider failed nodes list as 1node cluster and server is up since it replied to allNodesRequest
+      nodes = ImmutableList.of(getCurrentNodeHostAddress());
+    } else {
+      Collections.sort(nodes);
+    }
+
+    currentNodeIndex = nodes.indexOf(getCurrentNodeHostname());
+    if (currentNodeIndex == -1) {
+      currentNodeIndex = nodes.indexOf(getCurrentNodeHostAddress());
+    }
+    if (currentNodeIndex == -1) {
+      log.error(String.format("Could not initialize cluster nodes=%s nodeHostName=%s nodeHostAddress=%s " +
+              "currentNodeIndex=%d", nodes, getCurrentNodeHostname(), getCurrentNodeHostAddress(), currentNodeIndex));
+    }
+    return nodes;
+  }
+
   public void initialize(Configuration conf)
   {
     if (nodesCache.get() == null) {
       synchronized (nodesCache) {
         if (nodesCache.get() == null) {
           int nodeRefreshTime = CacheConfig.getClusterNodeRefreshTime(conf);
+
+          try {
+            nodeHostname = InetAddress.getLocalHost().getCanonicalHostName();
+            nodeHostAddress = InetAddress.getLocalHost().getHostAddress();
+          }
+          catch (UnknownHostException e) {
+            log.warn("Could not get nodeName", e);
+            return;
+          }
+
           ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
             Thread t = Executors.defaultThreadFactory().newThread(r);
             t.setName("rubix-get-nodes-thread");
@@ -78,19 +130,7 @@ public abstract class ClusterManager
                     @Override
                     public List<String> load(String s)
                     {
-                      List<String> allNodes = getNodesInternal();
-                      if (allNodes == null) {
-                        return ImmutableList.of();
-                      }
-
-                      if (allNodes.isEmpty()) {
-                        // Empty result set => server up and only master node running, return localhost has the only node
-                        // Do not need to consider failed nodes list as 1node cluster and server is up since it replied to allNodesRequest
-                        return ImmutableList.of(InetAddress.getLocalHost().getHostAddress());
-                      }
-
-                      Collections.sort(allNodes);
-                      return allNodes;
+                      return getNodesAndUpdateState();
                     }
                   }, executor)));
         }
@@ -109,5 +149,12 @@ public abstract class ClusterManager
   public List<String> getNodes()
   {
     return nodesCache.get().getUnchecked("nodes");
+  }
+
+  public int getCurrentNodeIndex()
+  {
+    // Update the node list which will update nodeIndex as appropriate
+    getNodes();
+    return currentNodeIndex;
   }
 }
