@@ -13,13 +13,28 @@
 package com.qubole.rubix.spi;
 
 import com.google.common.base.Charsets;
+import com.google.common.base.Throwables;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import org.apache.hadoop.conf.Configuration;
 
+import java.net.InetAddress;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Created by stagra on 14/1/16.
@@ -31,14 +46,56 @@ import java.util.concurrent.ExecutionException;
  */
 public abstract class ClusterManager
 {
-  private int nodeRefreshTime;
+  private final AtomicReference<LoadingCache<String, List<String>>> nodesCache = new AtomicReference<>();
 
   public abstract ClusterType getClusterType();
 
-  public void initialize(Configuration conf)
+  /*
+   * gets the nodes as per the engine
+   * returns null in case node list cannot be fetched
+   * returns empty in case of master-only setup
+   */
+  protected abstract List<String> getNodesInternal();
 
+  public void initialize(Configuration conf)
   {
-    nodeRefreshTime = CacheConfig.getClusterNodeRefreshTime(conf);
+    if (nodesCache.get() == null) {
+      synchronized (nodesCache) {
+        if (nodesCache.get() == null) {
+          int nodeRefreshTime = CacheConfig.getClusterNodeRefreshTime(conf);
+          ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
+            Thread t = Executors.defaultThreadFactory().newThread(r);
+            t.setName("rubix-get-nodes-thread");
+            t.setDaemon(true);
+            return t;
+          });
+
+          nodesCache.set(
+                  CacheBuilder.newBuilder()
+                  .refreshAfterWrite(nodeRefreshTime, TimeUnit.SECONDS)
+                  .build(CacheLoader.asyncReloading(new CacheLoader<String, List<String>>()
+                  {
+                    @Override
+                    public List<String> load(String s)
+                    {
+                      List<String> allNodes = getNodesInternal();
+                      if (allNodes == null) {
+                        return ImmutableList.of();
+                      }
+
+                      if (allNodes.isEmpty()) {
+                        // Empty result set => server up and only master node running, return localhost has the only node
+                        // Do not need to consider failed nodes list as 1node cluster and server is up since it replied to allNodesRequest
+                        return ImmutableList.of(InetAddress.getLocalHost().getHostAddress());
+                      }
+
+                      Collections.sort(allNodes);
+                      return allNodes;
+                    }
+                  }, executor)));
+        }
+      }
+    }
   }
 
   public int getNodeIndex(int numNodes, String key)
@@ -48,15 +105,9 @@ public abstract class ClusterManager
     return Hashing.consistentHash(hc, numNodes);
   }
 
-  public int getNodeRefreshTime()
+  // Returns sorted list of nodes in the cluster
+  public List<String> getNodes()
   {
-    return nodeRefreshTime;
+    return nodesCache.get().getUnchecked("nodes");
   }
-
-  public abstract boolean isMaster()
-      throws ExecutionException;
-
-  // Nodes format as per the note above
-  // Should return sorted list
-  public abstract List<String> getNodes();
 }

@@ -17,12 +17,11 @@ import com.qubole.rubix.spi.ClusterManager;
 import com.qubole.rubix.spi.ClusterType;
 
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 
 public class DockerTestClusterManager extends ClusterManager
 {
   @Override
-  public List<String> getNodes()
+  public List<String> getNodesInternal()
   {
     return Lists.newArrayList("172.18.8.1", "172.18.8.2");
   }
@@ -31,11 +30,5 @@ public class DockerTestClusterManager extends ClusterManager
   public ClusterType getClusterType()
   {
     return ClusterType.TEST_CLUSTER_MANAGER;
-  }
-
-  @Override
-  public boolean isMaster() throws ExecutionException
-  {
-    return false;
   }
 }

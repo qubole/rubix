@@ -13,9 +13,6 @@
 package com.qubole.rubix.presto;
 
 import com.google.common.base.Throwables;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.reflect.TypeToken;
@@ -32,29 +29,21 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
-import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Created by stagra on 14/1/16.
  */
 public class PrestoClusterManager extends ClusterManager
 {
-  private boolean isMaster = true;
   private int serverPort = 8081;
   private String serverAddress = "localhost";
-  static LoadingCache<String, List<String>> nodesCache;
 
   private Log log = LogFactory.getLog(PrestoClusterManager.class);
 
@@ -69,155 +58,108 @@ public class PrestoClusterManager extends ClusterManager
     super.initialize(conf);
     this.serverPort = conf.getInt(serverPortConf, serverPort);
     this.serverAddress = ClusterUtil.getMasterHostname(conf);
-    ExecutorService executor = Executors.newSingleThreadExecutor();
-    nodesCache = CacheBuilder.newBuilder()
-        .refreshAfterWrite(getNodeRefreshTime(), TimeUnit.SECONDS)
-        .build(CacheLoader.asyncReloading(new CacheLoader<String, List<String>>()
-        {
-          @Override
-          public List<String> load(String s)
-              throws Exception
-          {
-            if (!isMaster) {
-              // First time all nodes start assuming themselves as master and down the line figure out their role
-              // Next time onwards, only master will be fetching the list of nodes
-              return ImmutableList.of();
-            }
-
-            try {
-              URL allNodesRequest = getNodeUrl();
-              URL failedNodesRequest = getFailedNodeUrl();
-
-              HttpURLConnection allHttpCon = (HttpURLConnection) allNodesRequest.openConnection();
-              allHttpCon.setConnectTimeout(500); //ms
-              allHttpCon.setRequestMethod("GET");
-
-              int allNodesResponseCode = allHttpCon.getResponseCode();
-
-              StringBuffer allResponse = new StringBuffer();
-              StringBuffer failedResponse = new StringBuffer();
-              try {
-                if (allNodesResponseCode == HttpURLConnection.HTTP_OK) {
-                  isMaster = true;
-                  BufferedReader in = new BufferedReader(new InputStreamReader(allHttpCon.getInputStream()));
-                  String inputLine = "";
-                  try {
-                    while ((inputLine = in.readLine()) != null) {
-                      allResponse.append(inputLine);
-                    }
-                  }
-                  catch (IOException e) {
-                    throw new IOException(e);
-                  }
-                  finally {
-                    in.close();
-                  }
-                }
-                else {
-                  log.warn(String.format("v1/node failed with code: setting this node as worker "));
-                  isMaster = false;
-                  return ImmutableList.of();
-                }
-              }
-              catch (IOException e) {
-                throw new IOException(e);
-              }
-              finally {
-                allHttpCon.disconnect();
-              }
-
-              HttpURLConnection failHttpConn = (HttpURLConnection) failedNodesRequest.openConnection();
-              failHttpConn.setConnectTimeout(500);    //ms
-              failHttpConn.setRequestMethod("GET");
-              int failedNodesResponseCode = failHttpConn.getResponseCode();
-              // check on failed nodes
-              try {
-                if (failedNodesResponseCode == HttpURLConnection.HTTP_OK) {
-                  BufferedReader in = new BufferedReader(new InputStreamReader(failHttpConn.getInputStream()));
-                  String inputLine;
-                  try {
-                    while ((inputLine = in.readLine()) != null) {
-                      failedResponse.append(inputLine);
-                    }
-                  }
-                  catch (IOException e) {
-                    throw new IOException(e);
-                  }
-                  finally {
-                    in.close();
-                  }
-                }
-              }
-              catch (IOException e) {
-                throw new IOException(e);
-              }
-              finally {
-                failHttpConn.disconnect();
-              }
-
-              Gson gson = new Gson();
-              Type type = new TypeToken<List<Stats>>()
-              {
-              }.getType();
-
-              List<Stats> allNodes = gson.fromJson(allResponse.toString(), type);
-              List<Stats> failedNodes = gson.fromJson(failedResponse.toString(), type);
-              if (allNodes.isEmpty()) {
-                // Empty result set => server up and only master node running, return localhost has the only node
-                // Do not need to consider failed nodes list as 1node cluster and server is up since it replied to allNodesRequest
-                return ImmutableList.of(InetAddress.getLocalHost().getHostAddress());
-              }
-
-              if (failedNodes.isEmpty()) {
-                failedNodes = ImmutableList.of();
-              }
-
-              // keep only the healthy nodes
-              allNodes.removeAll(failedNodes);
-
-              Set<String> hosts = new HashSet<String>();
-
-              for (Stats node : allNodes) {
-                hosts.add(node.getUri().getHost());
-              }
-              if (hosts.isEmpty()) {
-                // case of master only cluster
-                hosts.add(InetAddress.getLocalHost().getHostAddress());
-              }
-              List<String> hostList = Lists.newArrayList(hosts.toArray(new String[0]));
-              Collections.sort(hostList);
-              return hostList;
-            }
-            catch (IOException e) {
-              throw Throwables.propagate(e);
-            }
-          }
-        }, executor));
   }
 
   @Override
-  public boolean isMaster()
-      throws ExecutionException
-  {
-    // issue get on nodesSupplier to ensure that isMaster is set correctly
-    nodesCache.get("nodeList");
-    return isMaster;
-  }
-
-  /*
-   * This returns list of worker nodes when there are worker nodes in the cluster
-   * If it is a single node cluster, it will return localhost information
-   */
-  @Override
-  public List<String> getNodes()
+  public List<String> getNodesInternal()
   {
     try {
-      return nodesCache.get("nodeList");
+      URL allNodesRequest = getNodeUrl();
+      URL failedNodesRequest = getFailedNodeUrl();
+
+      HttpURLConnection allHttpCon = (HttpURLConnection) allNodesRequest.openConnection();
+      allHttpCon.setConnectTimeout(500); //ms
+      allHttpCon.setRequestMethod("GET");
+
+      int allNodesResponseCode = allHttpCon.getResponseCode();
+
+      StringBuilder allResponse = new StringBuilder();
+      StringBuilder failedResponse = new StringBuilder();
+      try {
+        if (allNodesResponseCode == HttpURLConnection.HTTP_OK) {
+          BufferedReader in = new BufferedReader(new InputStreamReader(allHttpCon.getInputStream()));
+          String inputLine = "";
+          try {
+            while ((inputLine = in.readLine()) != null) {
+              allResponse.append(inputLine);
+            }
+          }
+          catch (IOException e) {
+            throw new IOException(e);
+          }
+          finally {
+            in.close();
+          }
+        }
+        else {
+          log.warn("v1/node failed with code: " + allNodesResponseCode);
+          return null;
+        }
+      }
+      catch (IOException e) {
+        throw new IOException(e);
+      }
+      finally {
+        allHttpCon.disconnect();
+      }
+
+      HttpURLConnection failHttpConn = (HttpURLConnection) failedNodesRequest.openConnection();
+      failHttpConn.setConnectTimeout(500);    //ms
+      failHttpConn.setRequestMethod("GET");
+      int failedNodesResponseCode = failHttpConn.getResponseCode();
+      // check on failed nodes
+      try {
+        if (failedNodesResponseCode == HttpURLConnection.HTTP_OK) {
+          BufferedReader in = new BufferedReader(new InputStreamReader(failHttpConn.getInputStream()));
+          String inputLine;
+          try {
+            while ((inputLine = in.readLine()) != null) {
+              failedResponse.append(inputLine);
+            }
+          }
+          catch (IOException e) {
+            throw new IOException(e);
+          }
+          finally {
+            in.close();
+          }
+        }
+      }
+      catch (IOException e) {
+        throw new IOException(e);
+      }
+      finally {
+        failHttpConn.disconnect();
+      }
+
+      Gson gson = new Gson();
+      Type type = new TypeToken<List<Stats>>()
+      {
+      }.getType();
+
+      List<Stats> allNodes = gson.fromJson(allResponse.toString(), type);
+      List<Stats> failedNodes = gson.fromJson(failedResponse.toString(), type);
+      if (allNodes.isEmpty()) {
+        return ImmutableList.of();
+      }
+
+      if (failedNodes.isEmpty()) {
+        failedNodes = ImmutableList.of();
+      }
+
+      // keep only the healthy nodes
+      allNodes.removeAll(failedNodes);
+
+      Set<String> hosts = new HashSet<String>();
+
+      for (Stats node : allNodes) {
+        hosts.add(node.getUri().getHost());
+      }
+      return Lists.newArrayList(hosts);
     }
-    catch (ExecutionException e) {
-      log.warn("Error fetching node list : ", e);
+    catch (IOException e) {
+      throw Throwables.propagate(e);
     }
-    return null;
   }
 
   @Override
