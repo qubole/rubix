@@ -27,7 +27,6 @@ import static com.qubole.rubix.spi.utils.DataSizeUnits.MEGABYTES;
  */
 public class DummyClusterManager extends ClusterManager
 {
-  private static long splitSize = MEGABYTES.toBytes(64);
   @Override
   public List<String> getNodes()
   {
@@ -55,12 +54,6 @@ public class DummyClusterManager extends ClusterManager
   public ClusterType getClusterType()
   {
     return ClusterType.TEST_CLUSTER_MANAGER;
-  }
-
-  @Override
-  public long getSplitSize()
-  {
-    return splitSize;
   }
 
   @Override

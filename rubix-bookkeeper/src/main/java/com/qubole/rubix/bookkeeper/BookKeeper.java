@@ -121,7 +121,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   private static Integer lock = 1;
   private List<String> nodes;
   int currentNodeIndex = -1;
-  static long splitSize;
+  private long splitSize;
   private RemoteFetchProcessor fetchProcessor;
   private final Ticker ticker;
   private static long totalAvailableForCacheInMB;
@@ -161,6 +161,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     this.bookKeeperMetrics = bookKeeperMetrics;
     this.metrics = bookKeeperMetrics.getMetricsRegistry();
     this.ticker = ticker;
+    this.splitSize = CacheConfig.getCacheFileSplitSize(conf);
     initializeMetrics();
     initializeCache(conf, ticker);
     cleanupOldCacheFiles(conf);
@@ -395,7 +396,6 @@ public abstract class BookKeeper implements BookKeeperService.Iface
           manager = getClusterManagerInstance(ClusterType.findByValue(clusterType), conf);
           manager.initialize(conf);
           this.clusterManager = manager;
-          splitSize = clusterManager.getSplitSize();
 
           if (clusterType == TEST_CLUSTER_MANAGER.ordinal() || clusterType == TEST_CLUSTER_MANAGER_MULTINODE.ordinal()) {
             currentNodeIndex = 0;
