@@ -12,6 +12,7 @@
  */
 package com.qubole.rubix.presto;
 
+import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterManager;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;

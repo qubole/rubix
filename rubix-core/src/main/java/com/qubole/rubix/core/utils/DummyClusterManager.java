@@ -20,15 +20,13 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.qubole.rubix.spi.utils.DataSizeUnits.MEGABYTES;
-
 /**
  * Created by Abhishek on 6/8/18.
  */
 public class DummyClusterManager extends ClusterManager
 {
   @Override
-  public List<String> getNodes()
+  public List<String> getNodesInternal()
   {
     List<String> list = new ArrayList<String>();
     String hostName = "";
@@ -42,12 +40,6 @@ public class DummyClusterManager extends ClusterManager
     list.add(hostName);
 
     return list;
-  }
-
-  @Override
-  public boolean isMaster()
-  {
-    return false;
   }
 
   @Override
