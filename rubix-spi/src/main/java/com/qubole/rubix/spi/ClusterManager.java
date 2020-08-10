@@ -31,7 +31,6 @@ import java.util.concurrent.ExecutionException;
  */
 public abstract class ClusterManager
 {
-  private long splitSize;
   private int nodeRefreshTime;
 
   public abstract ClusterType getClusterType();
@@ -39,7 +38,6 @@ public abstract class ClusterManager
   public void initialize(Configuration conf)
 
   {
-    splitSize = CacheConfig.getCacheFileSplitSize(conf);
     nodeRefreshTime = CacheConfig.getClusterNodeRefreshTime(conf);
   }
 
@@ -57,12 +55,6 @@ public abstract class ClusterManager
     }
 
     return finalNodeIndex;
-  }
-
-  // This is the size in which the file will be logically divided into splits
-  public long getSplitSize()
-  {
-    return splitSize;
   }
 
   public int getNodeRefreshTime()

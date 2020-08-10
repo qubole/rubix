@@ -73,6 +73,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FilterFile
   private boolean isRubixSchemeUsed;
   private URI uri;
   private Path workingDir;
+  private long splitSize;
 
   private static void initialize(Configuration conf, ClusterType clusterType)
           throws IOException
@@ -194,6 +195,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FilterFile
     this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
     this.workingDir = new Path("/user", System.getProperty("user.name")).makeQualified(this);
     isRubixSchemeUsed = uri.getScheme().equals(CacheConfig.RUBIX_SCHEME);
+    this.splitSize = CacheConfig.getCacheFileSplitSize(conf);
   }
 
   public abstract ClusterType getClusterType();
@@ -394,10 +396,10 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FilterFile
       else {
         // Using similar logic of returning all Blocks as FileSystem.getFileBlockLocations does instead of only returning blocks from start till len
 
-        BlockLocation[] blockLocations = new BlockLocation[(int) Math.ceil((double) file.getLen() / clusterManager.getSplitSize())];
+        BlockLocation[] blockLocations = new BlockLocation[(int) Math.ceil((double) file.getLen() / splitSize)];
         int blockNumber = 0;
-        for (long i = 0; i < file.getLen(); i = i + clusterManager.getSplitSize()) {
-          long end = i + clusterManager.getSplitSize();
+        for (long i = 0; i < file.getLen(); i = i + splitSize) {
+          long end = i + splitSize;
           if (end > file.getLen()) {
             end = file.getLen();
           }
