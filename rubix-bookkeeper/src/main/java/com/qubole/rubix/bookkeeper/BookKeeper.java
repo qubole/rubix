@@ -120,7 +120,6 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   protected final Configuration conf;
   private static Integer lock = 1;
   private List<String> nodes;
-  int currentNodeIndex = -1;
   private long splitSize;
   private RemoteFetchProcessor fetchProcessor;
   private final Ticker ticker;
@@ -264,6 +263,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       return null;
     }
 
+    int currentNodeIndex = clusterManager.getCurrentNodeIndex();
     if (currentNodeIndex == -1 || nodes == null) {
       log.error("Initialization not done for Cluster Type" + ClusterType.findByValue(request.getClusterType()));
       return null;
@@ -398,10 +398,9 @@ public abstract class BookKeeper implements BookKeeperService.Iface
           this.clusterManager = manager;
 
           if (clusterType == TEST_CLUSTER_MANAGER.ordinal() || clusterType == TEST_CLUSTER_MANAGER_MULTINODE.ordinal()) {
-            currentNodeIndex = 0;
             nodes = clusterManager.getNodes();
             if (clusterType == TEST_CLUSTER_MANAGER_MULTINODE.ordinal()) {
-              nodes.add(nodes.get(currentNodeIndex) + "_copy");
+              nodes.add(nodes.get(clusterManager.getCurrentNodeIndex()) + "_copy");
             }
             return;
           }
@@ -410,19 +409,6 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     }
 
     nodes = clusterManager.getNodes();
-    if (nodes == null || nodes.size() == 0) {
-      log.error("Could not initialize as no cluster node is found");
-    }
-    else if (nodes.indexOf(nodeHostName) >= 0) {
-      currentNodeIndex = nodes.indexOf(nodeHostName);
-    }
-    else if (nodes.indexOf(nodeHostAddress) >= 0) {
-      currentNodeIndex = nodes.indexOf(nodeHostAddress);
-    }
-    else {
-      log.error(String.format("Could not initialize cluster nodes=%s nodeHostName=%s nodeHostAddress=%s " +
-          "currentNodeIndex=%d", nodes, nodeHostName, nodeHostAddress, currentNodeIndex));
-    }
   }
 
   @VisibleForTesting
