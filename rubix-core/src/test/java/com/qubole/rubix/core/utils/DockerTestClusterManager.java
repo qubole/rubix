@@ -38,16 +38,4 @@ public class DockerTestClusterManager extends ClusterManager
   {
     return false;
   }
-
-  @Override
-  public Integer getNextRunningNodeIndex(int startIndex)
-  {
-    return startIndex;
-  }
-
-  @Override
-  public Integer getPreviousRunningNodeIndex(int startIndex)
-  {
-    return startIndex;
-  }
 }

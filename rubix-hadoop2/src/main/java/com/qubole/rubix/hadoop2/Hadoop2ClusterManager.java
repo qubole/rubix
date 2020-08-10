@@ -137,18 +137,6 @@ public class Hadoop2ClusterManager extends ClusterManager
   }
 
   @Override
-  public Integer getNextRunningNodeIndex(int startIndex)
-  {
-    return startIndex;
-  }
-
-  @Override
-  public Integer getPreviousRunningNodeIndex(int startIndex)
-  {
-    return startIndex;
-  }
-
-  @Override
   public ClusterType getClusterType()
   {
     return ClusterType.HADOOP2_CLUSTER_MANAGER;
