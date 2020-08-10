@@ -55,16 +55,4 @@ public class DummyClusterManager extends ClusterManager
   {
     return ClusterType.TEST_CLUSTER_MANAGER;
   }
-
-  @Override
-  public Integer getNextRunningNodeIndex(int startIndex)
-  {
-    return startIndex;
-  }
-
-  @Override
-  public Integer getPreviousRunningNodeIndex(int startIndex)
-  {
-    return startIndex;
-  }
 }
