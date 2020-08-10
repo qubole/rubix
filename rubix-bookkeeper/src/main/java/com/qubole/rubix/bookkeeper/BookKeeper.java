@@ -115,7 +115,6 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   protected static Cache<String, FileMetadata> fileMetadataCache;
   private static LoadingCache<String, FileInfo> fileInfoCache;
   protected ClusterManager clusterManager;
-  String nodeName;
   static String nodeHostName;
   static String nodeHostAddress;
   protected final Configuration conf;
@@ -263,17 +262,13 @@ public abstract class BookKeeper implements BookKeeperService.Iface
           ClusterType.findByValue(request.getClusterType()) + " with Exception : " + ex);
       return null;
     }
-    if (nodeName == null) {
-      log.error("Node name is null for Cluster Type" + ClusterType.findByValue(request.getClusterType()));
-      return null;
-    }
 
     if (currentNodeIndex == -1 || nodes == null) {
-      log.error("Initialization not done");
+      log.error("Initialization not done for Cluster Type" + ClusterType.findByValue(request.getClusterType()));
       return null;
     }
 
-    Map<Long, String> blockSplits = new HashMap<>();
+    Map<Long, Integer> blockSplits = new HashMap<>();
     long blockNumber = 0;
 
     long fileLength = request.getFileLength();
@@ -290,7 +285,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       }
       String key = remotePath + i + end;
       int nodeIndex = clusterManager.getNodeIndex(nodes.size(), key);
-      blockSplits.put(blockNumber, nodes.get(nodeIndex));
+      blockSplits.put(blockNumber, nodeIndex);
       blockNumber++;
     }
 
@@ -337,17 +332,17 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         totalRequests++;
 
         long split = (blockNum * blockSize) / splitSize;
-        if (!blockSplits.get(split).equalsIgnoreCase(nodeName)) {
-          blockLocations.add(new BlockLocation(Location.NON_LOCAL, blockSplits.get(split)));
+        if (!blockSplits.get(split).equals(currentNodeIndex)) {
+          blockLocations.add(new BlockLocation(Location.NON_LOCAL, nodes.get(blockSplits.get(split))));
           nonLocalRequests++;
         }
         else {
           if (md.isBlockCached(blockNum)) {
-            blockLocations.add(new BlockLocation(Location.CACHED, blockSplits.get(split)));
+            blockLocations.add(new BlockLocation(Location.CACHED, nodes.get(blockSplits.get(split))));
             cacheRequests++;
           }
           else {
-            blockLocations.add(new BlockLocation(Location.LOCAL, blockSplits.get(split)));
+            blockLocations.add(new BlockLocation(Location.LOCAL, nodes.get(blockSplits.get(split))));
             remoteRequests++;
           }
         }
@@ -405,9 +400,8 @@ public abstract class BookKeeper implements BookKeeperService.Iface
           if (clusterType == TEST_CLUSTER_MANAGER.ordinal() || clusterType == TEST_CLUSTER_MANAGER_MULTINODE.ordinal()) {
             currentNodeIndex = 0;
             nodes = clusterManager.getNodes();
-            nodeName = nodes.get(currentNodeIndex);
             if (clusterType == TEST_CLUSTER_MANAGER_MULTINODE.ordinal()) {
-              nodes.add(nodeName + "_copy");
+              nodes.add(nodes.get(currentNodeIndex) + "_copy");
             }
             return;
           }
@@ -421,11 +415,9 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     }
     else if (nodes.indexOf(nodeHostName) >= 0) {
       currentNodeIndex = nodes.indexOf(nodeHostName);
-      nodeName = nodeHostName;
     }
     else if (nodes.indexOf(nodeHostAddress) >= 0) {
       currentNodeIndex = nodes.indexOf(nodeHostAddress);
-      nodeName = nodeHostAddress;
     }
     else {
       log.error(String.format("Could not initialize cluster nodes=%s nodeHostName=%s nodeHostAddress=%s " +
