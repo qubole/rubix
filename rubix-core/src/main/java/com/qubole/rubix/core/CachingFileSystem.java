@@ -12,6 +12,7 @@
  */
 package com.qubole.rubix.core;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.qubole.rubix.common.metrics.CustomMetricsReporterProvider;
@@ -63,10 +64,13 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FilterFile
   private static final Log log = LogFactory.getLog(CachingFileSystem.class);
   private static volatile BookKeeperFactory bookKeeperFactory = new BookKeeperFactory();
 
+  public static final String STATS_MBEAN_NAME_BASE = "rubix:name=stats";
+  public static final String DETAILED_STATS_MBEAN_NAME_BASE = "rubix:name=stats,type=detailed";
+
   // statics that need to initialized after the configuration object is available
   private static final AtomicBoolean initialized = new AtomicBoolean(false);
-  private static volatile String statsMBeanName = "rubix:name=stats";
-  private static volatile String detailedStatsMBeanName = "rubix:name=stats,type=detailed";
+  private static volatile String statsMBeanName = STATS_MBEAN_NAME_BASE;
+  private static volatile String detailedStatsMBeanName = DETAILED_STATS_MBEAN_NAME_BASE;
   private static volatile ClusterManager clusterManager;
   private static volatile CachingFileSystemStatsProvider stats;
 
@@ -100,6 +104,16 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FilterFile
 
       initialized.set(true);
     }
+  }
+
+  // Deinitialization rouitne for unit test which needs reinitialize CachingFileSystem multiple times with
+  // different configurations.
+  @VisibleForTesting
+  public static void deinitialize() {
+    clusterManager = null;
+    statsMBeanName = STATS_MBEAN_NAME_BASE;
+    detailedStatsMBeanName = DETAILED_STATS_MBEAN_NAME_BASE;
+    initialized.set(false);
   }
 
   private static void initializeStats(Configuration conf)
