@@ -174,12 +174,12 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FilterFile
 
   public static void setLocalBookKeeper(BookKeeperService.Iface bookKeeper, String statsMbeanSuffix)
   {
+    checkState(!initialized.get(), "LocalBookKeeper should be set before opening up the Filesystem to clients");
     bookKeeperFactory = new BookKeeperFactory(bookKeeper);
     if (!Strings.isNullOrEmpty(statsMbeanSuffix)) {
       statsMBeanName = statsMBeanName + "," + statsMbeanSuffix;
       detailedStatsMBeanName = detailedStatsMBeanName + "," + statsMbeanSuffix;
     }
-    checkState(!initialized.get(), "LocalBookKeeper should be set before opening up the Filesystem to clients");
   }
 
   public abstract String getScheme();
