@@ -86,7 +86,11 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FilterFile
         return;
       }
 
-      initializeStats(conf);
+      if (!CacheConfig.isEmbeddedModeEnabled(conf)) {
+        // do not initialize stats automatically in embedded mode.
+        // it will be done in setLocalBookKeeper
+        initializeStats(conf);
+      }
       try {
         initializeClusterManager(conf, clusterType);
       } catch (ClusterManagerInitilizationException e) {
@@ -172,7 +176,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FilterFile
     return fs;
   }
 
-  public static void setLocalBookKeeper(BookKeeperService.Iface bookKeeper, String statsMbeanSuffix)
+  public static void setLocalBookKeeper(Configuration configuration, BookKeeperService.Iface bookKeeper, String statsMbeanSuffix)
   {
     checkState(!initialized.get(), "LocalBookKeeper should be set before opening up the Filesystem to clients");
     bookKeeperFactory = new BookKeeperFactory(bookKeeper);
@@ -180,6 +184,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FilterFile
       statsMBeanName = statsMBeanName + "," + statsMbeanSuffix;
       detailedStatsMBeanName = detailedStatsMBeanName + "," + statsMbeanSuffix;
     }
+    initializeStats(configuration);
   }
 
   public abstract String getScheme();
