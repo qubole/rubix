@@ -72,7 +72,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalInt;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -90,14 +89,12 @@ import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.CACH
 import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.NONLOCAL_REQUEST_COUNT;
 import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.REMOTE_REQUEST_COUNT;
 import static com.qubole.rubix.common.metrics.BookKeeperMetrics.CacheMetric.TOTAL_REQUEST_COUNT;
-import static com.qubole.rubix.spi.CacheUtil.UNKONWN_GENERATION_NUMBER;
 import static com.qubole.rubix.core.ReadRequestChainStats.DOWNLOADED_FOR_NON_LOCAL_METRIC;
 import static com.qubole.rubix.core.ReadRequestChainStats.DOWNLOADED_FOR_PARALLEL_WARMUP_METRIC;
 import static com.qubole.rubix.core.ReadRequestChainStats.EXTRA_READ_FOR_NON_LOCAL_METRIC;
 import static com.qubole.rubix.core.ReadRequestChainStats.PARALLEL_DOWNLOAD_TIME_METRIC;
 import static com.qubole.rubix.core.ReadRequestChainStats.WARMUP_TIME_NON_LOCAL_METRIC;
-import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER;
-import static com.qubole.rubix.spi.ClusterType.TEST_CLUSTER_MANAGER_MULTINODE;
+import static com.qubole.rubix.spi.CacheUtil.UNKONWN_GENERATION_NUMBER;
 import static com.qubole.rubix.spi.utils.DataSizeUnits.BYTES;
 import static com.qubole.rubix.spi.utils.DataSizeUnits.MEGABYTES;
 
@@ -115,11 +112,8 @@ public abstract class BookKeeper implements BookKeeperService.Iface
   protected static Cache<String, FileMetadata> fileMetadataCache;
   private static LoadingCache<String, FileInfo> fileInfoCache;
   protected ClusterManager clusterManager;
-  static String nodeHostName;
-  static String nodeHostAddress;
   protected final Configuration conf;
   private static Integer lock = 1;
-  private List<String> nodes;
   private long splitSize;
   private RemoteFetchProcessor fetchProcessor;
   private final Ticker ticker;
@@ -263,7 +257,9 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       return null;
     }
 
-    int currentNodeIndex = clusterManager.getCurrentNodeIndex();
+    ClusterManager.ClusterInfo clusterInfo = clusterManager.getClusterInfo();
+    List<String> nodes = clusterInfo.getNodes();
+    int currentNodeIndex = clusterInfo.getCurrentNodeIndex();
     if (currentNodeIndex == -1 || nodes == null) {
       log.error("Initialization not done for Cluster Type" + ClusterType.findByValue(request.getClusterType()));
       return null;
@@ -383,32 +379,12 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       ClusterManager manager = null;
       synchronized (lock) {
         if (!isInitialized()) {
-          try {
-            nodeHostName = InetAddress.getLocalHost().getCanonicalHostName();
-            nodeHostAddress = InetAddress.getLocalHost().getHostAddress();
-            log.debug(" HostName : " + nodeHostName + " HostAddress : " + nodeHostAddress);
-          }
-          catch (UnknownHostException e) {
-            log.warn("Could not get nodeName", e);
-            return;
-          }
-
           manager = getClusterManagerInstance(ClusterType.findByValue(clusterType), conf);
           manager.initialize(conf);
           this.clusterManager = manager;
-
-          if (clusterType == TEST_CLUSTER_MANAGER.ordinal() || clusterType == TEST_CLUSTER_MANAGER_MULTINODE.ordinal()) {
-            nodes = clusterManager.getNodes();
-            if (clusterType == TEST_CLUSTER_MANAGER_MULTINODE.ordinal()) {
-              nodes.add(nodes.get(clusterManager.getCurrentNodeIndex()) + "_copy");
-            }
-            return;
-          }
         }
       }
     }
-
-    nodes = clusterManager.getNodes();
   }
 
   @VisibleForTesting

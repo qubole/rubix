@@ -151,10 +151,32 @@ public abstract class ClusterManager
     return nodesCache.get().getUnchecked("nodes");
   }
 
-  public int getCurrentNodeIndex()
+  public ClusterInfo getClusterInfo()
   {
-    // Update the node list which will update nodeIndex as appropriate
-    getNodes();
-    return currentNodeIndex;
+    // getNodes() updates the currentNodeIndex
+    List<String> nodes = getNodes();
+    return new ClusterInfo(nodes, currentNodeIndex);
+  }
+
+  public static class ClusterInfo
+  {
+    private final List<String> nodes;
+    private final int currentNodeIndex;
+
+    public ClusterInfo(List<String> nodes, int currentNodeIndex)
+    {
+      this.nodes = nodes;
+      this.currentNodeIndex = currentNodeIndex;
+    }
+
+    public List<String> getNodes()
+    {
+      return nodes;
+    }
+
+    public int getCurrentNodeIndex()
+    {
+      return currentNodeIndex;
+    }
   }
 }
