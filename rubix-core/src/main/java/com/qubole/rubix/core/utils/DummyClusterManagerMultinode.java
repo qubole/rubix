@@ -20,37 +20,29 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Created by Abhishek on 6/8/18.
- */
-public class DummyClusterManager extends ClusterManager
+public class DummyClusterManagerMultinode extends ClusterManager
 {
-  @Override
-  public List<String> getNodesInternal()
-  {
-    List<String> list = new ArrayList<String>();
-    String hostName = "";
-    try {
-      hostName = InetAddress.getLocalHost().getCanonicalHostName();
+    @Override
+    public List<String> getNodesInternal()
+    {
+        List<String> list = new ArrayList<String>();
+        String hostName = "";
+        try {
+            hostName = InetAddress.getLocalHost().getCanonicalHostName();
+        }
+        catch (UnknownHostException e) {
+            hostName = "localhost";
+        }
+
+        list.add(hostName);
+        list.add(hostName + "_copy");
+
+        return list;
     }
-    catch (UnknownHostException e) {
-      hostName = "localhost";
+
+    @Override
+    public ClusterType getClusterType()
+    {
+        return ClusterType.TEST_CLUSTER_MANAGER;
     }
-
-    list.add(hostName);
-
-    return list;
-  }
-
-  @Override
-  public ClusterType getClusterType()
-  {
-    return ClusterType.TEST_CLUSTER_MANAGER;
-  }
-
-  @Override
-  public ClusterInfo getClusterInfo()
-  {
-    return new ClusterInfo(getNodes(), 0);
-  }
 }
