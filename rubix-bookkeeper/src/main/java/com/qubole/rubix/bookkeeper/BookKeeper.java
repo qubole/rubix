@@ -380,7 +380,12 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       synchronized (lock) {
         if (!isInitialized()) {
           manager = getClusterManagerInstance(ClusterType.findByValue(clusterType), conf);
-          manager.initialize(conf);
+          try {
+            manager.initialize(conf);
+          }
+          catch (UnknownHostException e) {
+            throw new ClusterManagerInitilizationException("Unable to initialize cluster manager", e);
+          }
           this.clusterManager = manager;
         }
       }
