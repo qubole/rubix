@@ -32,6 +32,7 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -54,6 +55,7 @@ public class PrestoClusterManager extends ClusterManager
   // Safe to use single instance of HttpClient since Supplier.get() provides synchronization
   @Override
   public void initialize(Configuration conf)
+          throws UnknownHostException
   {
     super.initialize(conf);
     this.serverPort = conf.getInt(serverPortConf, serverPort);

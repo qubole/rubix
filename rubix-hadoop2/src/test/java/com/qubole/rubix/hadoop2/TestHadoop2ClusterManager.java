@@ -23,6 +23,7 @@ import org.testng.annotations.Test;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.List;
 
 import static org.testng.Assert.assertTrue;
@@ -49,6 +50,7 @@ public class TestHadoop2ClusterManager
    * @return The cluster manager instance to be tested.
    */
   static ClusterManager buildClusterManager()
+          throws UnknownHostException
   {
     final ClusterManager clusterManager = new Hadoop2ClusterManager();
     final Configuration conf = new Configuration();

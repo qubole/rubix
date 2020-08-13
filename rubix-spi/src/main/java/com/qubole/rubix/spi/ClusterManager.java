@@ -39,6 +39,8 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Created by stagra on 14/1/16.
  */
@@ -77,6 +79,7 @@ public abstract class ClusterManager
 
   private List<String> getNodesAndUpdateState()
   {
+    requireNonNull(nodesCache, "ClusterManager used before initialization");
     List<String> nodes = getNodesInternal();
     if (nodes == null) {
       nodes = ImmutableList.of();
@@ -100,20 +103,15 @@ public abstract class ClusterManager
   }
 
   public void initialize(Configuration conf)
+          throws UnknownHostException
   {
     if (nodesCache.get() == null) {
       synchronized (nodesCache) {
         if (nodesCache.get() == null) {
           int nodeRefreshTime = CacheConfig.getClusterNodeRefreshTime(conf);
 
-          try {
-            nodeHostname = InetAddress.getLocalHost().getCanonicalHostName();
-            nodeHostAddress = InetAddress.getLocalHost().getHostAddress();
-          }
-          catch (UnknownHostException e) {
-            log.warn("Could not get nodeName", e);
-            return;
-          }
+          nodeHostname = InetAddress.getLocalHost().getCanonicalHostName();
+          nodeHostAddress = InetAddress.getLocalHost().getHostAddress();
 
           ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
             Thread t = Executors.defaultThreadFactory().newThread(r);

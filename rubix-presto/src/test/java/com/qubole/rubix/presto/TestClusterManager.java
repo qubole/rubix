@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.List;
 
 import static org.testng.Assert.assertTrue;
@@ -113,6 +114,7 @@ public class TestClusterManager
   }
 
   private ClusterManager getPrestoClusterManager()
+          throws UnknownHostException
   {
     ClusterManager clusterManager = new PrestoClusterManager();
     Configuration conf = new Configuration();

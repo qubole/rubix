@@ -140,8 +140,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FilterFile
       manager.initialize(conf);
       clusterManager = manager;
     }
-    catch (ClassNotFoundException | NoSuchMethodException | InstantiationException |
-            IllegalAccessException | InvocationTargetException ex) {
+    catch (Exception ex) {
       String errorMessage = "Not able to initialize ClusterManager class: " + clusterManagerClassName;
       log.error(errorMessage, ex);
       throw new ClusterManagerInitilizationException(errorMessage, ex);

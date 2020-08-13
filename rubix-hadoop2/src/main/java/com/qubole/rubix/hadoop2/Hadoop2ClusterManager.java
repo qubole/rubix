@@ -22,6 +22,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
+import java.net.UnknownHostException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -36,6 +37,7 @@ public class Hadoop2ClusterManager extends ClusterManager
 
   @Override
   public void initialize(Configuration conf)
+          throws UnknownHostException
   {
     super.initialize(conf);
     yconf = new YarnConfiguration(conf);

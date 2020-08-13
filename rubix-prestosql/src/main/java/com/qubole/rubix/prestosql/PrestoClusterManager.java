@@ -62,6 +62,7 @@ public class PrestoClusterManager extends ClusterManager
   // Safe to use single instance of HttpClient since Supplier.get() provides synchronization
   @Override
   public void initialize(Configuration conf)
+          throws UnknownHostException
   {
     super.initialize(conf);
     this.serverPort = conf.getInt(serverPortConf, serverPort);
