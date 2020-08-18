@@ -216,7 +216,8 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       @Override
       public Double getValue()
       {
-        return ((double) cacheRequestCount.getCount() / (cacheRequestCount.getCount() + remoteRequestCount.getCount()));
+        return ((double) cacheRequestCount.getCount() + nonlocalRequestCount.getCount() /
+                (cacheRequestCount.getCount() + remoteRequestCount.getCount() + nonlocalRequestCount.getCount()));
       }
     });
     metrics.register(CACHE_MISS_RATE_GAUGE.getMetricName(), new Gauge<Double>()
@@ -224,7 +225,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       @Override
       public Double getValue()
       {
-        return ((double) remoteRequestCount.getCount() / (cacheRequestCount.getCount() + remoteRequestCount.getCount()));
+        return ((double) remoteRequestCount.getCount() / (cacheRequestCount.getCount() + remoteRequestCount.getCount() + nonlocalRequestCount.getCount()));
       }
     });
     metrics.register(CACHE_SIZE_GAUGE.getMetricName(), new Gauge<Integer>()
