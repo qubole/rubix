@@ -34,7 +34,7 @@ public class BasicCachingFileSystemStats
         this.conf = conf;
     }
 
-    @Managed(description = "Gets the total size in MB that was read from Source")
+    @Managed(description = "Gets the total size in MB that was read from Source during the reads")
     public long getMB_read_from_source()
     {
         return BYTES.toMB(statsProvider.getStats().getDirectRRCDataRead() +

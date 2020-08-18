@@ -119,9 +119,9 @@ Following sections cover the metrics available under both these types in detail.
 +------------------------------------------------+--------------------------------------------+
 | Metric                                         | Description                                |
 +================================================+============================================+
-| mb_read_from_cache                             | Data read from cache                       |
+| mb_read_from_cache                             | Data read from cache by the client jobs    |
 +------------------------------------------------+--------------------------------------------+
-| mb_read_from_source                            | Data read from Source                      |
+| mb_read_from_source                            | Data read from Source by the client jobs   |
 +------------------------------------------------+--------------------------------------------+
 | cache_hit                                      | Cache Hit ratio, between 0 and 1           |
 +------------------------------------------------+--------------------------------------------+
@@ -131,11 +131,16 @@ Following sections cover the metrics available under both these types in detail.
 +------------------------------------------------+--------------------------------------------+
 | Metric                                         | Description                                |
 +================================================+============================================+
-| mb_read_from_cache                             | Data read from cache                       |
+| mb_read_from_cache                             | Data read from cache by the client jobs    |
 +------------------------------------------------+--------------------------------------------+
-| mb_read_from_source                            | Data read from Source                      |
+| mb_read_from_source                            | Data read from Source by the client jobs   |
 +------------------------------------------------+--------------------------------------------+
 | cache_hit                                      | Cache Hit ratio, between 0 and 1           |
++------------------------------------------------+--------------------------------------------+
+| total_system_source_mb_read                    | Total data read from source. This includes |
+|                                                | data read from source by BookKeeper (for   |
+|                                                | parallel warmup) in addition to data read   |
+|                                                | from source by the client jobs             |
 +------------------------------------------------+--------------------------------------------+
 | cached_rrc_data_read                           | Data read from local cache                 |
 +------------------------------------------------+--------------------------------------------+

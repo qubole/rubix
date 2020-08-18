@@ -130,4 +130,12 @@ public class DetailedCachingFileSystemStats
     {
         return statsProvider.getStats().getCorruptedFileCount();
     }
+
+    @Managed(description = "Total data read from source by the system")
+    // getMB_read_from_source only includes the data read from source during the reads
+    // It ignores the data read by BookKeeper in async warmup
+    public long getTotal_system_source_MB_read()
+    {
+        return getMB_read_from_source() + statsProvider.getStats().getDownloadedFromSourceParallel(bookKeeperFactory, conf);
+    }
 }
