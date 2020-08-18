@@ -4,8 +4,12 @@
 Metrics
 =======
 
-Health
-------
+BookKeeper Server Metrics
+-------------------------
+
+These metrics are available on the BookKeeper server.
+
+**Health Metrics**
 
 Metrics relating to daemon & service health.
 
@@ -19,8 +23,7 @@ Metrics relating to daemon & service health.
 |                                                  | validation success.                        | (one or more workers failed validation) |
 +--------------------------------------------------+--------------------------------------------+-----------------------------------------+
 
-Cache
------
+**Cache Metrics**
 
 Metrics relating to cache interactions.
 
@@ -80,8 +83,7 @@ Metrics relating to cache interactions.
 |                                                |                                            |                                |
 +------------------------------------------------+--------------------------------------------+--------------------------------+
 
-JVM
----
+**JVM Metrics**
 
 Metrics relating to JVM statistics, supplied by the Dropwizard Metrics ``metrics-jvm`` module. (https://metrics.dropwizard.io/3.1.0/manual/jvm/)
 
@@ -97,3 +99,87 @@ Metrics relating to JVM statistics, supplied by the Dropwizard Metrics ``metrics
 | rubix.bookkeeper.jvm.threads.* | Metrics relating to thread states      |               |
 | rubix.ldts.jvm.threads.*       | (CachedThreadStatesGaugeSet)           |               |
 +--------------------------------+----------------------------------------+---------------+
+
+Client side Metrics
+-------------------
+
+These metrics are available on the client side i.e. Presto or Spark where the jobs to read data are run.
+
+Client side Metrics is divided into two:
+
+1. Basic stats: These stats are available under name `rubix:name=stats`
+2. Detailed stats: These stats are available under name `rubix:name=stats,type=detailed`
+
+If Rubix is used in embedded mode, an engine specific suffix is added to these names, e.g., Presto adds `catalog=<catalog_name>` suffix.
+
+Following sections cover the metrics available under both these types in detail.
+
+**Basic stats**
+
++------------------------------------------------+--------------------------------------------+
+| Metric                                         | Description                                |
++================================================+============================================+
+| mb_read_from_cache                             | Data read from cache                       |
++------------------------------------------------+--------------------------------------------+
+| mb_read_from_source                            | Data read from Source                      |
++------------------------------------------------+--------------------------------------------+
+| cache_hit                                      | Cache Hit ratio, between 0 and 1           |
++------------------------------------------------+--------------------------------------------+
+
+**Detailed Stats**
+
++------------------------------------------------+--------------------------------------------+
+| Metric                                         | Description                                |
++================================================+============================================+
+| mb_read_from_cache                             | Data read from cache                       |
++------------------------------------------------+--------------------------------------------+
+| mb_read_from_source                            | Data read from Source                      |
++------------------------------------------------+--------------------------------------------+
+| cache_hit                                      | Cache Hit ratio, between 0 and 1           |
++------------------------------------------------+--------------------------------------------+
+| cached_rrc_data_read                           | Data read from local cache                 |
++------------------------------------------------+--------------------------------------------+
+| cached_rrc_requests                            | Number of requests served from local cache |
++------------------------------------------------+--------------------------------------------+
+| direct_rrc_data_read                           | Data read from Source, but not cached      |
++------------------------------------------------+--------------------------------------------+
+| direct_rrc_requests                            | Number of requests served from source      |
+|                                                | but not cached                             |
++------------------------------------------------+--------------------------------------------+
+| nonlocal_rrc_requests                          | Number of request served from              |
+|                                                | non-local caches                           |
++------------------------------------------------+--------------------------------------------+
+| nonlocal_rrc_data_read                         | Data read from non-local caches            |
++------------------------------------------------+--------------------------------------------+
+| remote_rrc_data_read                           | Data downloaded for local requests         |
++------------------------------------------------+--------------------------------------------+
+| remote_rrc_extra_data_read                     | Extra data downloaded for local requests   |
+|                                                | due to block boundary alignments           |
++------------------------------------------------+--------------------------------------------+
+| remote_rrc_requests                            | Number of local requests on cold cache     |
++------------------------------------------------+--------------------------------------------+
+| remote_rrc_warmup_penalty                      | Seconds spent in copying data into cache   |
+|                                                | while downloading data for local requests  |
++------------------------------------------------+--------------------------------------------+
+| corrupted_file_count                           | Number of corrupted files that have been   |
+|                                                | invalidated                                |
++------------------------------------------------+--------------------------------------------+
+| bks_data_downloaded_in_parallel_warmup         | Data downloaded by BookKeeper, when        |
+|                                                | parallel warmup is enabled                 |
++------------------------------------------------+--------------------------------------------+
+| bks_time_for_parallel_downloads                | Seconds spent in downloading data          |
+|                                                | when parallel warmup is enabled            |
++------------------------------------------------+--------------------------------------------+
+| bks_data_downloaded_in_read_through            | Data downloaded by BookKeeper              |
+|                                                | when parallel warmup is disabled           |
++------------------------------------------------+--------------------------------------------+
+| bks_extra_data_read_in_read_through            | Extra  data read from source due to block  |
+|                                                | alignment by BookKeeper                    |
+|                                                | when parallel warmup is disabled           |
++------------------------------------------------+--------------------------------------------+
+| bks_warmup_penalty_in_read_through             | Seconds spent in copying data into cache   |
+|                                                | by BookKeeper                              |
+|                                                | when parallel warmup is disabled           |
++------------------------------------------------+--------------------------------------------+
+
+*Data unit in all metrics above is MB*
