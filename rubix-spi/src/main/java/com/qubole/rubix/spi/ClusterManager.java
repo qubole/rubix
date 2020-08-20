@@ -12,30 +12,24 @@
  */
 package com.qubole.rubix.spi;
 
-import com.google.common.base.Charsets;
-import com.google.common.base.Throwables;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.common.hash.HashCode;
-import com.google.common.hash.HashFunction;
-import com.google.common.hash.Hashing;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.ishugaliy.allgood.consistent.hash.ConsistentHash;
+import org.ishugaliy.allgood.consistent.hash.HashRing;
+import org.ishugaliy.allgood.consistent.hash.node.SimpleNode;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -53,10 +47,11 @@ public abstract class ClusterManager
 {
   private static Log log = LogFactory.getLog(ClusterManager.class);
 
-  private int currentNodeIndex = -1;
+  private String currentNodeIndex = "";
   private String nodeHostname;
   private String nodeHostAddress;
   private final AtomicReference<LoadingCache<String, List<String>>> nodesCache = new AtomicReference<>();
+  protected final ConsistentHash<SimpleNode> consistentHashRing = HashRing.<SimpleNode>newBuilder().build();
 
   public abstract ClusterType getClusterType();
 
@@ -91,11 +86,28 @@ public abstract class ClusterManager
       Collections.sort(nodes);
     }
 
-    currentNodeIndex = nodes.indexOf(getCurrentNodeHostname());
-    if (currentNodeIndex == -1) {
-      currentNodeIndex = nodes.indexOf(getCurrentNodeHostAddress());
+    // remove stale nodes from consistent hash ring
+    Set<SimpleNode> ringNodes = consistentHashRing.getNodes();
+    for (SimpleNode ringNode : ringNodes) {
+      if (!nodes.contains(ringNode.getKey()))
+      {
+        consistentHashRing.remove(ringNode);
+      }
     }
-    if (currentNodeIndex == -1) {
+
+    // add new nodes to consistent hash ring
+    for (String node : nodes) {
+      SimpleNode ringNode = SimpleNode.of(node);
+      if (!ringNodes.contains(ringNode)) {
+        consistentHashRing.add(ringNode);
+      }
+    }
+
+    currentNodeIndex = getCurrentNodeHostname();
+    if (!consistentHashRing.getNodes().contains(SimpleNode.of(currentNodeIndex))) {
+      currentNodeIndex = getCurrentNodeHostAddress();
+    }
+    if (currentNodeIndex.isEmpty()) {
       log.error(String.format("Could not initialize cluster nodes=%s nodeHostName=%s nodeHostAddress=%s " +
               "currentNodeIndex=%d", nodes, getCurrentNodeHostname(), getCurrentNodeHostAddress(), currentNodeIndex));
     }
@@ -136,11 +148,12 @@ public abstract class ClusterManager
     }
   }
 
-  public int getNodeIndex(int numNodes, String key)
+  public String locateKey(String key)
   {
-    HashFunction hf = Hashing.md5();
-    HashCode hc = hf.hashString(key, Charsets.UTF_8);
-    return Hashing.consistentHash(hc, numNodes);
+//    HashFunction hf = Hashing.md5();
+//    HashCode hc = hf.hashString(key, Charsets.UTF_8);
+//    return Hashing.consistentHash(hc, numNodes);
+    return consistentHashRing.locate(key).get().getKey();
   }
 
   // Returns sorted list of nodes in the cluster
@@ -159,9 +172,9 @@ public abstract class ClusterManager
   public static class ClusterInfo
   {
     private final List<String> nodes;
-    private final int currentNodeIndex;
+    private final String currentNodeIndex;
 
-    public ClusterInfo(List<String> nodes, int currentNodeIndex)
+    public ClusterInfo(List<String> nodes, String currentNodeIndex)
     {
       this.nodes = nodes;
       this.currentNodeIndex = currentNodeIndex;
@@ -172,7 +185,7 @@ public abstract class ClusterManager
       return nodes;
     }
 
-    public int getCurrentNodeIndex()
+    public String getCurrentNodeIndex()
     {
       return currentNodeIndex;
     }

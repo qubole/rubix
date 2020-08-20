@@ -44,6 +44,12 @@
             <version>${dep.mockito.version}</version>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>com.qubole</groupId>
+            <artifactId>allgood-consistent-hash-shaded</artifactId>
+            <version>1.0</version>
+        </dependency>
     </dependencies>
 
     <build>

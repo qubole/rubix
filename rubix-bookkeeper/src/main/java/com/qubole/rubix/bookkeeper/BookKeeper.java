@@ -57,13 +57,13 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.DirectBufferPool;
 import org.apache.thrift.shaded.TException;
+import org.ishugaliy.allgood.consistent.hash.node.Node;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.nio.file.Paths;
@@ -260,13 +260,13 @@ public abstract class BookKeeper implements BookKeeperService.Iface
 
     ClusterManager.ClusterInfo clusterInfo = clusterManager.getClusterInfo();
     List<String> nodes = clusterInfo.getNodes();
-    int currentNodeIndex = clusterInfo.getCurrentNodeIndex();
-    if (currentNodeIndex == -1 || nodes == null) {
+    String currentNodeIndex = clusterInfo.getCurrentNodeIndex();
+    if (currentNodeIndex.isEmpty() || nodes == null) {
       log.error("Initialization not done for Cluster Type" + ClusterType.findByValue(request.getClusterType()));
       return null;
     }
 
-    Map<Long, Integer> blockSplits = new HashMap<>();
+    Map<Long, String> blockSplits = new HashMap<>();
     long blockNumber = 0;
 
     long fileLength = request.getFileLength();
@@ -282,8 +282,8 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         end = fileLength;
       }
       String key = remotePath + i + end;
-      int nodeIndex = clusterManager.getNodeIndex(nodes.size(), key);
-      blockSplits.put(blockNumber, nodeIndex);
+      String nodeAddress = clusterManager.locateKey(key);
+      blockSplits.put(blockNumber, nodeAddress);
       blockNumber++;
     }
 
@@ -331,16 +331,16 @@ public abstract class BookKeeper implements BookKeeperService.Iface
 
         long split = (blockNum * blockSize) / splitSize;
         if (!blockSplits.get(split).equals(currentNodeIndex)) {
-          blockLocations.add(new BlockLocation(Location.NON_LOCAL, nodes.get(blockSplits.get(split))));
+          blockLocations.add(new BlockLocation(Location.NON_LOCAL, blockSplits.get(split)));
           nonLocalRequests++;
         }
         else {
           if (md.isBlockCached(blockNum)) {
-            blockLocations.add(new BlockLocation(Location.CACHED, nodes.get(blockSplits.get(split))));
+            blockLocations.add(new BlockLocation(Location.CACHED, blockSplits.get(split)));
             cacheRequests++;
           }
           else {
-            blockLocations.add(new BlockLocation(Location.LOCAL, nodes.get(blockSplits.get(split))));
+            blockLocations.add(new BlockLocation(Location.LOCAL, blockSplits.get(split)));
             remoteRequests++;
           }
         }
