@@ -57,7 +57,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.DirectBufferPool;
 import org.apache.thrift.shaded.TException;
-import org.ishugaliy.allgood.consistent.hash.node.Node;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -260,7 +259,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
 
     ClusterManager.ClusterInfo clusterInfo = clusterManager.getClusterInfo();
     List<String> nodes = clusterInfo.getNodes();
-    String currentNodeIndex = clusterInfo.getCurrentNodeIndex();
+    String currentNodeIndex = clusterInfo.getCurrentNodeName();
     if (currentNodeIndex.isEmpty() || nodes == null) {
       log.error("Initialization not done for Cluster Type" + ClusterType.findByValue(request.getClusterType()));
       return null;

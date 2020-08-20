@@ -27,7 +27,6 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -47,7 +46,7 @@ public abstract class ClusterManager
 {
   private static Log log = LogFactory.getLog(ClusterManager.class);
 
-  private String currentNodeIndex = "";
+  private String currentNodeName = "";
   private String nodeHostname;
   private String nodeHostAddress;
   private final AtomicReference<LoadingCache<String, List<String>>> nodesCache = new AtomicReference<>();
@@ -87,8 +86,7 @@ public abstract class ClusterManager
     }
 
     // remove stale nodes from consistent hash ring
-    Set<SimpleNode> ringNodes = consistentHashRing.getNodes();
-    for (SimpleNode ringNode : ringNodes) {
+    for (SimpleNode ringNode : consistentHashRing.getNodes()) {
       if (!nodes.contains(ringNode.getKey()))
       {
         consistentHashRing.remove(ringNode);
@@ -98,18 +96,18 @@ public abstract class ClusterManager
     // add new nodes to consistent hash ring
     for (String node : nodes) {
       SimpleNode ringNode = SimpleNode.of(node);
-      if (!ringNodes.contains(ringNode)) {
+      if (!consistentHashRing.contains(ringNode)) {
         consistentHashRing.add(ringNode);
       }
     }
 
-    currentNodeIndex = getCurrentNodeHostname();
-    if (!consistentHashRing.getNodes().contains(SimpleNode.of(currentNodeIndex))) {
-      currentNodeIndex = getCurrentNodeHostAddress();
+    currentNodeName = getCurrentNodeHostname();
+    if (!consistentHashRing.contains(SimpleNode.of(currentNodeName))) {
+      currentNodeName = getCurrentNodeHostAddress();
     }
-    if (currentNodeIndex.isEmpty()) {
+    if (!consistentHashRing.contains(SimpleNode.of(currentNodeName))) {
       log.error(String.format("Could not initialize cluster nodes=%s nodeHostName=%s nodeHostAddress=%s " +
-              "currentNodeIndex=%d", nodes, getCurrentNodeHostname(), getCurrentNodeHostAddress(), currentNodeIndex));
+              "currentNodeIndex=%s", nodes, getCurrentNodeHostname(), getCurrentNodeHostAddress(), currentNodeName));
     }
     return nodes;
   }
@@ -150,9 +148,6 @@ public abstract class ClusterManager
 
   public String locateKey(String key)
   {
-//    HashFunction hf = Hashing.md5();
-//    HashCode hc = hf.hashString(key, Charsets.UTF_8);
-//    return Hashing.consistentHash(hc, numNodes);
     return consistentHashRing.locate(key).get().getKey();
   }
 
@@ -166,18 +161,18 @@ public abstract class ClusterManager
   {
     // getNodes() updates the currentNodeIndex
     List<String> nodes = getNodes();
-    return new ClusterInfo(nodes, currentNodeIndex);
+    return new ClusterInfo(nodes, currentNodeName);
   }
 
   public static class ClusterInfo
   {
     private final List<String> nodes;
-    private final String currentNodeIndex;
+    private String currentNodeName = "";
 
-    public ClusterInfo(List<String> nodes, String currentNodeIndex)
+    public ClusterInfo(List<String> nodes, String currentNodeName)
     {
       this.nodes = nodes;
-      this.currentNodeIndex = currentNodeIndex;
+      this.currentNodeName = currentNodeName;
     }
 
     public List<String> getNodes()
@@ -185,9 +180,9 @@ public abstract class ClusterManager
       return nodes;
     }
 
-    public String getCurrentNodeIndex()
+    public String getCurrentNodeName()
     {
-      return currentNodeIndex;
+      return currentNodeName;
     }
   }
 }
