@@ -110,7 +110,7 @@ public class TestHadoop2ClusterManagerUtil
     ClusterManager clusterManager = getClusterManagerInstance(clusterType, conf);
     clusterManager.initialize(conf);
     final List<String> nodes = clusterManager.getNodes();
-    final int index = clusterManager.getNodeIndex(nodes.size(), key);
+    final int index = nodes.indexOf(clusterManager.locateKey(key));
 
     server.stop(0);
     return index;
