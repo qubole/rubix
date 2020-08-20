@@ -421,9 +421,9 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FilterFile
             end = file.getLen();
           }
           String key = file.getPath().toString() + i + end;
-          String nodeIndex = clusterManager.locateKey(key);
-          String[] name = new String[]{nodeIndex};
-          String[] host = new String[]{nodeIndex};
+          String nodeName = clusterManager.locateKey(key);
+          String[] name = new String[]{nodeName};
+          String[] host = new String[]{nodeName};
           blockLocations[blockNumber++] = new BlockLocation(name, host, i, end - i);
           log.debug(String.format("BlockLocation %s %d %d %s totalHosts: %s", file.getPath().toString(), i, end - i, host[0], nodes.size()));
         }
