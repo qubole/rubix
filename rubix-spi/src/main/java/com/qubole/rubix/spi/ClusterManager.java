@@ -89,6 +89,7 @@ public abstract class ClusterManager
     for (SimpleNode ringNode : consistentHashRing.getNodes()) {
       if (!nodes.contains(ringNode.getKey()))
       {
+        log.debug("Removing node: " + ringNode.getKey() + " from consistent hash ring");
         consistentHashRing.remove(ringNode);
       }
     }
@@ -97,9 +98,12 @@ public abstract class ClusterManager
     for (String node : nodes) {
       SimpleNode ringNode = SimpleNode.of(node);
       if (!consistentHashRing.contains(ringNode)) {
+        log.debug("Adding node: " + ringNode.getKey() + " to consistent hash ring");
         consistentHashRing.add(ringNode);
       }
     }
+
+    log.debug("Total nodes in consistent hash ring: " + consistentHashRing.getNodes());
 
     currentNodeName = getCurrentNodeHostname();
     if (!consistentHashRing.contains(SimpleNode.of(currentNodeName))) {
@@ -148,7 +152,9 @@ public abstract class ClusterManager
 
   public String locateKey(String key)
   {
-    return consistentHashRing.locate(key).get().getKey();
+    String nodeAddress = consistentHashRing.locate(key).orElseThrow(() -> new RuntimeException("Unable to locate key: " + key)).getKey();
+    log.debug("Located key: " + key + " present on node: " + nodeAddress);
+    return nodeAddress;
   }
 
   // Returns sorted list of nodes in the cluster
