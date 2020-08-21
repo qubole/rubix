@@ -46,9 +46,9 @@
         </dependency>
 
         <dependency>
-            <groupId>com.qubole</groupId>
-            <artifactId>allgood-consistent-hash-shaded</artifactId>
-            <version>1.0</version>
+            <groupId>com.github.ishugaliy</groupId>
+            <artifactId>allgood-consistent-hash</artifactId>
+            <version>1.0.0</version>
         </dependency>
     </dependencies>
 
