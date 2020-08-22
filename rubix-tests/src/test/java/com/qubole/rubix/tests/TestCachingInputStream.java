@@ -161,7 +161,7 @@ public class TestCachingInputStream
     conf.clear();
   }
 
-  @Test
+  @Test(priority=1)
   public void testCaching() throws IOException, InterruptedException
   {
     // 1. Seek and read
@@ -175,7 +175,7 @@ public class TestCachingInputStream
     testCachingHelper(false);
   }
 
-  @Test
+  @Test(priority=2)
   public void testCachingPositionedRead() throws IOException, InterruptedException
   {
     // 1. Positioned read
@@ -189,7 +189,7 @@ public class TestCachingInputStream
     testCachingHelper(true);
   }
 
-/*  @Test
+  @Test(priority=3)
   public void testStaleCachedRead() throws IOException, InterruptedException
   {
     Configuration staleConf = new Configuration(conf);
@@ -208,7 +208,7 @@ public class TestCachingInputStream
       readSize = inputStream.read(200, buffer, 0, 1000);
       assertions(readSize, 1000, buffer, DataGen.generateContent().substring(200, 1200));
     }
-  }*/
+  }
 
   private void testCachingHelper(boolean positionedRead)
       throws IOException
@@ -228,7 +228,7 @@ public class TestCachingInputStream
     assertions(readSize, 1000, buffer, expectedOutput);
   }
 
-  @Test
+  @Test(priority=4)
   public void testChunkCachingAndEviction()
       throws IOException, InterruptedException
   {
