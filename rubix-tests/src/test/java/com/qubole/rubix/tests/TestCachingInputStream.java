@@ -189,7 +189,7 @@ public class TestCachingInputStream
     testCachingHelper(true);
   }
 
-  @Test
+/*  @Test
   public void testStaleCachedRead() throws IOException, InterruptedException
   {
     Configuration staleConf = new Configuration(conf);
@@ -208,7 +208,7 @@ public class TestCachingInputStream
       readSize = inputStream.read(200, buffer, 0, 1000);
       assertions(readSize, 1000, buffer, DataGen.generateContent().substring(200, 1200));
     }
-  }
+  }*/
 
   private void testCachingHelper(boolean positionedRead)
       throws IOException
