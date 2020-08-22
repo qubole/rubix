@@ -41,6 +41,7 @@ import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Arrays;
 
 import static com.qubole.rubix.spi.CacheUtil.UNKONWN_GENERATION_NUMBER;
 import static org.testng.Assert.assertEquals;
@@ -278,7 +279,7 @@ public class TestCachingInputStream
     assertions(readSize, 1000, buffer, expectedOutput);
   }
 
-/*  @Test
+  @Test
   public void testEOF() throws IOException
   {
     inputStream.seek(2500);
@@ -290,7 +291,7 @@ public class TestCachingInputStream
 
     readSize = inputStream.read(buffer, 100, 100);
     assertTrue(readSize == -1, "Did not get EOF");
-  }*/
+  }
 
   private void assertions(int readSize, int expectedReadSize, byte[] outputBuffer, String expectedOutput)
   {
