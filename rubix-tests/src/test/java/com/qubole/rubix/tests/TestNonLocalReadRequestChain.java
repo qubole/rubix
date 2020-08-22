@@ -96,8 +96,8 @@ public class TestNonLocalReadRequestChain
   {
     CacheConfig.setOnMaster(conf, true);
     CacheConfig.setIsStrictMode(conf, true);
-    CacheConfig.setBookKeeperServerPort(conf, 3456);
-    CacheConfig.setDataTransferServerPort(conf, 2222);
+    CacheConfig.setBookKeeperServerPort(conf, 3457);
+    CacheConfig.setDataTransferServerPort(conf, 2223);
     CacheConfig.setBlockSize(conf, blockSize);
     CacheConfig.setCacheDataDirPrefix(conf, testDirectoryPrefix + "dir");
     CacheConfig.setMaxDisks(conf, 1);
@@ -148,7 +148,7 @@ public class TestNonLocalReadRequestChain
     return requestChain;
   }
 
-  @Test
+  @Test(priority=1)
   public void testRemoteRead()
       throws Exception
   {
@@ -161,7 +161,7 @@ public class TestNonLocalReadRequestChain
     test(nonLocalReadRequestChain);
   }
 
-  @Test
+  @Test(priority=2)
   public void testDirectRead()
       throws Exception
   {
@@ -169,7 +169,7 @@ public class TestNonLocalReadRequestChain
     test(nonLocalReadRequestChain);
   }
 
-  @Test
+  @Test(priority=3)
   public void testDirectRead2()
       throws Exception
   {
@@ -213,7 +213,7 @@ public class TestNonLocalReadRequestChain
     assertTrue(expectedOutput.equals(output), "Wrong data read, expected\n" + expectedOutput + "\nBut got\n" + output);
   }
 
-  @Test
+  @Test(priority=4)
   public void testRemoteRead_WhenAllBlocksAreCached() throws Exception
   {
     localDataTransferServer.start();
@@ -232,7 +232,7 @@ public class TestNonLocalReadRequestChain
     assertTrue(request.getStats().getDirectRRCDataRead() == 0, "Total direct data read didn't match");
   }
 
-  @Test(expectedExceptions = Exception.class)
+  @Test(expectedExceptions = Exception.class,priority=5)
   public void testRemoteRead_WhenSomeBlocksAreCached_WithStrictMode_ParallelWarmup() throws Exception
   {
     localDataTransferServer.start();
@@ -250,7 +250,7 @@ public class TestNonLocalReadRequestChain
     test(request);
   }
 
-  @Test
+  @Test(priority=6)
   public void testRemoteRead_WhenSomeBlocksAreCached_WithoutStrictMode_ParallelWarmup() throws Exception
   {
     localDataTransferServer.start();
@@ -271,7 +271,7 @@ public class TestNonLocalReadRequestChain
     assertTrue(request.getStats().getDirectRRCDataRead() == 100, "Total direct data read didn't match: " + request.getStats().getDirectRRCDataRead());
   }
 
-  @Test
+  @Test(priority=7)
   public void testRemoteRead_WhenSomeBlocksAreCached_WithStrictMode_NoParallelWarmup() throws Exception
   {
     localDataTransferServer.start();
