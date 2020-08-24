@@ -267,8 +267,8 @@ public class TestNonLocalReadRequestChain
     request.strictMode = false;
     test(request);
 
-    assertTrue(request.getStats().getNonLocalRRCDataRead() == 250, "Total non-local data read didn't match: " + request.getStats().getNonLocalRRCDataRead());
-    assertTrue(request.getStats().getDirectRRCDataRead() == 100, "Total direct data read didn't match: " + request.getStats().getDirectRRCDataRead());
+    assertTrue(request.getStats().getNonLocalRRCDataRead() == 250, "Total non-local data read didn't match");
+    assertTrue(request.getStats().getDirectRRCDataRead() == 100, "Total direct data read didn't match");
   }
 
   @Test(priority=7)
