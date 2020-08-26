@@ -70,6 +70,7 @@
         <module>assembly</module>
         <module>rubix-rpm</module>
         <module>rubix-presto-shaded</module>
+        <module>rubix-build</module>
     </modules>
 
     <repositories>

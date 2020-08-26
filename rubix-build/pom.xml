@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <groupId>com.qubole.rubix</groupId>
         <artifactId>rubix-root</artifactId>
+        <groupId>com.qubole.rubix</groupId>
         <version>0.3.17-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.qubole.rubix</groupId>
-    <artifactId>rubix-presto-shaded</artifactId>
-
+    <artifactId>rubix-build</artifactId>
+    <name>rubix-build</name>
     <properties>
         <main.basedir>${project.parent.basedir}</main.basedir>
     </properties>
@@ -30,6 +31,18 @@
         <dependency>
             <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-bookkeeper</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.qubole.rubix</groupId>
+            <artifactId>rubix-hadoop2</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.qubole.rubix</groupId>
+            <artifactId>rubix-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.qubole.rubix</groupId>
+            <artifactId>rubix-presto</artifactId>
         </dependency>
         <dependency>
             <groupId>com.qubole.rubix</groupId>
@@ -64,16 +77,11 @@
                                     <include>com.qubole.rubix:rubix-bookkeeper</include>
                                     <include>com.qubole.rubix:rubix-hadoop2</include>
                                     <include>com.qubole.rubix:rubix-prestosql</include>
+                                    <include>com.qubole.rubix:rubix-presto</include>
+                                    <include>com.qubole.rubix:rubix-client</include>
                                 </includes>
                             </artifactSet>
                             <relocations>
-                                <relocation>
-                                    <pattern>com.google</pattern>
-                                    <shadedPattern>com.google.shaded</shadedPattern>
-                                    <excludes>
-                                        <exclude>com.google.cloud.**</exclude>
-                                    </excludes>
-                                </relocation>
                                 <relocation>
                                     <pattern>org.apache.thrift</pattern>
                                     <shadedPattern>org.apache.thrift.shaded</shadedPattern>
@@ -105,5 +113,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>

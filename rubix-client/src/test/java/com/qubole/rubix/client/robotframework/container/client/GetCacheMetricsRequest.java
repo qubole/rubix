@@ -13,7 +13,7 @@
 package com.qubole.rubix.client.robotframework.container.client;
 
 import com.qubole.rubix.spi.RetryingPooledBookkeeperClient;
-import org.apache.thrift.shaded.TException;
+import org.apache.thrift.TException;
 
 import java.io.Serializable;
 import java.util.HashMap;
