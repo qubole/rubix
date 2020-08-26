@@ -285,7 +285,7 @@ public class TestBookKeeper
    *
    * @throws TException when file metadata cannot be fetched or refreshed.
    */
-  @Test
+  @Test(priority = 1)
   public void verifyTotalRequestMetricIsReported() throws TException
   {
     final long totalRequests = TEST_END_BLOCK - TEST_START_BLOCK;
@@ -302,7 +302,7 @@ public class TestBookKeeper
     assertEquals(metrics.getCounters().get(BookKeeperMetrics.CacheMetric.TOTAL_REQUEST_COUNT.getMetricName()).getCount(), totalRequests);
   }
 
-  @Test
+  @Test(priority = 2)
   public void verifyTotalRequestMetricIsNotReportedWhenMetricsAreNotIncremented() throws TException
   {
     final long totalRequests = TEST_END_BLOCK - TEST_START_BLOCK;
@@ -322,7 +322,7 @@ public class TestBookKeeper
    *
    * @throws TException when file metadata cannot be fetched or refreshed.
    */
-  @Test
+  @Test(priority = 3)
   public void verifyRemoteRequestMetricIsReported() throws TException
   {
     final long totalRequests = TEST_END_BLOCK - TEST_START_BLOCK;
@@ -344,7 +344,7 @@ public class TestBookKeeper
    *
    * @throws TException when file metadata cannot be fetched or refreshed.
    */
-  @Test
+  @Test(priority = 4)
   public void verifyLocalRequestMetricIsReported() throws TException
   {
     final long totalRequests = TEST_END_BLOCK - TEST_START_BLOCK;
@@ -368,7 +368,7 @@ public class TestBookKeeper
    *
    * @throws TException when file metadata cannot be fetched or refreshed.
    */
-  @Test
+  @Test(priority = 5)
   public void verifyNonlocalRequestMetricIsReported() throws TException
   {
     final long totalRequests = TEST_END_BLOCK - TEST_START_BLOCK;
@@ -416,7 +416,7 @@ public class TestBookKeeper
    * @throws TException when file metadata cannot be fetched or refreshed.
    * @throws FileNotFoundException when cache directories cannot be created.
    */
-  @Test
+  @Test(priority = 6)
   public void verifyCacheExpiryMetricIsReported() throws TException, IOException
   {
     final FakeTicker ticker = new FakeTicker();
@@ -448,7 +448,7 @@ public class TestBookKeeper
    *
    * @throws TException when file metadata cannot be fetched or refreshed.
    */
-  @Test
+  @Test(priority = 7)
   public void verifyCacheHitAndMissMetricsAreReported() throws TException
   {
     assertEquals(metrics.getGauges().get(BookKeeperMetrics.CacheMetric.CACHE_HIT_RATE_GAUGE.getMetricName()).getValue(), Double.NaN);
@@ -473,7 +473,7 @@ public class TestBookKeeper
   /**
    * Test that calling setAllCached with blocks which are in cache does not increase file size
    */
-  @Test
+  @Test(priority = 8)
   public void testSetAllCacheIngoresCachedBlocks() throws Exception
   {
     CacheStatusRequest request = new CacheStatusRequest(TEST_REMOTE_PATH, TEST_FILE_LENGTH, TEST_LAST_MODIFIED,
