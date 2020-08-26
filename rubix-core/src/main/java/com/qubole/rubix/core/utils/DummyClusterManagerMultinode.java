@@ -45,4 +45,10 @@ public class DummyClusterManagerMultinode extends ClusterManager
     {
         return ClusterType.TEST_CLUSTER_MANAGER;
     }
+
+    @Override
+    public ClusterInfo getClusterInfo()
+    {
+        return new ClusterInfo(getNodes(), getNodes().get(1));
+    }
 }
