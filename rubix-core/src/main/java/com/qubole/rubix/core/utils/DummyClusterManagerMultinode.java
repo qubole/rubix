@@ -51,4 +51,9 @@ public class DummyClusterManagerMultinode extends ClusterManager
     {
         return getNodes().get(1);
     }
+
+    public String locateKey(String key)
+    {
+        return getNodes().get(0);
+    }
 }
