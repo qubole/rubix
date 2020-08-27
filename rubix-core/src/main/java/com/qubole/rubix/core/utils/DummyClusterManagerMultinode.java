@@ -47,8 +47,8 @@ public class DummyClusterManagerMultinode extends ClusterManager
     }
 
     @Override
-    public ClusterInfo getClusterInfo()
+    public String getCurrentNodeName()
     {
-        return new ClusterInfo(getNodes(), getNodes().get(1));
+        return getNodes().get(1);
     }
 }

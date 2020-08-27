@@ -257,13 +257,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       return null;
     }
 
-    ClusterManager.ClusterInfo clusterInfo = clusterManager.getClusterInfo();
-    List<String> nodes = clusterInfo.getNodes();
-    String currentNodeIndex = clusterInfo.getCurrentNodeName();
-    if (currentNodeIndex.isEmpty() || nodes == null) {
-      log.error("Initialization not done for Cluster Type" + ClusterType.findByValue(request.getClusterType()));
-      return null;
-    }
+    String currentNodeName = clusterManager.getCurrentNodeName();
 
     Map<Long, String> blockSplits = new HashMap<>();
     long blockNumber = 0;
@@ -329,7 +323,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
         totalRequests++;
 
         long split = (blockNum * blockSize) / splitSize;
-        if (!blockSplits.get(split).equals(currentNodeIndex)) {
+        if (!blockSplits.get(split).equals(currentNodeName)) {
           blockLocations.add(new BlockLocation(Location.NON_LOCAL, blockSplits.get(split)));
           nonLocalRequests++;
         }

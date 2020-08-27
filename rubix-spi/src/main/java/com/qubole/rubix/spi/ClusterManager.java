@@ -25,7 +25,6 @@ import org.ishugaliy.allgood.consistent.hash.node.SimpleNode;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -81,8 +80,6 @@ public abstract class ClusterManager
       // Empty result set => server up and only master node running, return localhost has the only node
       // Do not need to consider failed nodes list as 1node cluster and server is up since it replied to allNodesRequest
       nodes = ImmutableList.of(getCurrentNodeHostAddress());
-    } else {
-      Collections.sort(nodes);
     }
 
     // remove stale nodes from consistent hash ring
@@ -105,13 +102,17 @@ public abstract class ClusterManager
 
     log.debug("Total nodes in consistent hash ring: " + consistentHashRing.getNodes());
 
-    currentNodeName = getCurrentNodeHostname();
-    if (!consistentHashRing.contains(SimpleNode.of(currentNodeName))) {
-      currentNodeName = getCurrentNodeHostAddress();
-    }
-    if (!consistentHashRing.contains(SimpleNode.of(currentNodeName))) {
-      log.error(String.format("Could not initialize cluster nodes=%s nodeHostName=%s nodeHostAddress=%s " +
-              "currentNodeIndex=%s", nodes, getCurrentNodeHostname(), getCurrentNodeHostAddress(), currentNodeName));
+    if (currentNodeName.isEmpty()) {
+      if (consistentHashRing.contains(SimpleNode.of(nodeHostname))) {
+        currentNodeName = getCurrentNodeHostname();
+      }
+      else if (consistentHashRing.contains(SimpleNode.of(nodeHostAddress))) {
+        currentNodeName = getCurrentNodeHostAddress();
+      }
+      else {
+        log.error(String.format("Could not initialize cluster nodes=%s nodeHostName=%s nodeHostAddress=%s " +
+                "currentNodeIndex=%s", nodes, getCurrentNodeHostname(), getCurrentNodeHostAddress(), currentNodeName));
+      }
     }
     return nodes;
   }
@@ -163,17 +164,21 @@ public abstract class ClusterManager
     return nodesCache.get().getUnchecked("nodes");
   }
 
-  public ClusterInfo getClusterInfo()
+  public String getCurrentNodeName()
   {
     // getNodes() updates the currentNodeIndex
     List<String> nodes = getNodes();
-    return new ClusterInfo(nodes, currentNodeName);
+    if (currentNodeName.isEmpty() || nodes == null) {
+      log.error("Initialization not done for Cluster Type: " + getClusterType());
+      throw new RuntimeException("Unable to find current node name");
+    }
+    return currentNodeName;
   }
 
   public static class ClusterInfo
   {
     private final List<String> nodes;
-    private String currentNodeName = "";
+    private final String currentNodeName;
 
     public ClusterInfo(List<String> nodes, String currentNodeName)
     {
