@@ -49,11 +49,11 @@ public class DummyClusterManagerMultinode extends ClusterManager
     @Override
     public String getCurrentNodeName()
     {
-        return getNodes().get(1);
+        return getNodes().get(0);
     }
 
     public String locateKey(String key)
     {
-        return getNodes().get(0);
+        return getNodes().get(1);
     }
 }
