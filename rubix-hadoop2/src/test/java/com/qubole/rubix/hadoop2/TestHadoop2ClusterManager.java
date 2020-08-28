@@ -198,15 +198,12 @@ public class TestHadoop2ClusterManager
   }
 
   @Test
-  public void testClusterIndex()
+  public void testClusterNodeName()
       throws IOException
   {
-    final List<String> nodeHostnames = TestHadoop2ClusterManagerUtil.getNodeHostnamesFromCluster(
-        TestHadoop2ClusterManagerUtil.CLUSTER_NODES_ENDPOINT,
-        worker.new MultipleWorkersOneNew(), conf, ClusterType.HADOOP2_CLUSTER_MANAGER);
-    ClusterManager manager = TestHadoop2ClusterManagerUtil.getClusterManagerInstance(ClusterType.HADOOP2_CLUSTER_MANAGER, conf);
-    //int index = nodeHostnames.indexOf(manager.getNode(nodeHostnames.size(), "1").getKey());
+    String nodeName = TestHadoop2ClusterManagerUtil.getConsistentHashedNodeNameFromCluster(TestHadoop2ClusterManagerUtil.CLUSTER_NODES_ENDPOINT,
+            worker.new MultipleWorkersOneNew(), "1", conf, ClusterType.HADOOP2_CLUSTER_MANAGER);
 
-    //assertTrue(index == 1, "Consistent Hasing logic returned wrong node index");
+    assertTrue(nodeName.equals(TestHadoop2ClusterManagerUtil.WORKER_HOSTNAME_1), "Consistent hashing logic returned wrong node: " + nodeName);
   }
 }

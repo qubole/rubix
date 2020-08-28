@@ -100,7 +100,7 @@ public class TestHadoop2ClusterManagerUtil
     return nodes;
   }
 
-  static int getConsistentHashedNodeIndexFromCluster(String endpoint, HttpHandler responseHandler, String key,
+  static String getConsistentHashedNodeNameFromCluster(String endpoint, HttpHandler responseHandler, String key,
                                                      Configuration conf, ClusterType clusterType)
       throws IOException
   {
@@ -109,11 +109,11 @@ public class TestHadoop2ClusterManagerUtil
 
     ClusterManager clusterManager = getClusterManagerInstance(clusterType, conf);
     clusterManager.initialize(conf);
-    final List<String> nodes = clusterManager.getNodes();
-    final int index = nodes.indexOf(clusterManager.locateKey(key));
-
+    clusterManager.getNodes();
+    String nodeName = clusterManager.locateKey(key);
     server.stop(0);
-    return index;
+
+    return nodeName;
   }
 
   static Set<String> generateRandomKeys(int numKeys)
@@ -139,15 +139,15 @@ public class TestHadoop2ClusterManagerUtil
     return saltStr;
   }
 
-  static Map<String, Integer> getConsistentHashedMembership(TestWorker worker, Set<String> keys,
+  static Map<String, String> getConsistentHashedMembership(TestWorker worker, Set<String> keys,
                                                             Configuration conf, ClusterType clusterType)
       throws IOException
   {
-    Map<String, Integer> keyMembership = new HashMap<>();
-    int nodeIndex = 0;
+    Map<String, String> keyMembership = new HashMap<>();
+    String nodeIndex;
 
     for (String key : keys) {
-      nodeIndex = getConsistentHashedNodeIndexFromCluster(CLUSTER_NODES_ENDPOINT, worker, key, conf, clusterType);
+      nodeIndex = getConsistentHashedNodeNameFromCluster(CLUSTER_NODES_ENDPOINT, worker, key, conf, clusterType);
       keyMembership.put(key, nodeIndex);
     }
     return keyMembership;
@@ -158,16 +158,16 @@ public class TestHadoop2ClusterManagerUtil
       throws IOException
   {
     final List<String> nodeHostnames1 = getNodeHostnamesFromCluster(CLUSTER_NODES_ENDPOINT, prevWorker, conf, clusterType);
-    Map<String, Integer> keyMembership1 = getConsistentHashedMembership(prevWorker, keys, conf, clusterType);
+    Map<String, String> keyMembership1 = getConsistentHashedMembership(prevWorker, keys, conf, clusterType);
 
     final List<String> nodeHostnames2 = getNodeHostnamesFromCluster(CLUSTER_NODES_ENDPOINT, newWorker, conf, clusterType);
-    Map<String, Integer> keyMembership2 = getConsistentHashedMembership(newWorker, keys, conf, clusterType);
+    Map<String, String> keyMembership2 = getConsistentHashedMembership(newWorker, keys, conf, clusterType);
 
     int match = 0;
     int nonMatch = 0;
 
     for (String key : keys) {
-      if (nodeHostnames1.get(keyMembership1.get(key)).equals(nodeHostnames2.get(keyMembership2.get(key)))) {
+      if (keyMembership1.get(key).equals(keyMembership2.get(key))) {
         match++;
       }
       else {
