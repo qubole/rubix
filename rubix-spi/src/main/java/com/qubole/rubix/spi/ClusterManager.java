@@ -46,7 +46,7 @@ public abstract class ClusterManager
 {
   private static Log log = LogFactory.getLog(ClusterManager.class);
 
-  private String currentNodeName = "";
+  private String currentNodeName;
   private String nodeHostname;
   private String nodeHostAddress;
   private final AtomicReference<LoadingCache<String, List<String>>> nodesCache = new AtomicReference<>();
@@ -106,11 +106,11 @@ public abstract class ClusterManager
 
     log.debug("Total nodes in consistent hash ring: " + consistentHashRing.getNodes());
 
-    if (currentNodeName.isEmpty()) {
-      if (consistentHashRing.contains(SimpleNode.of(nodeHostname))) {
+    if (currentNodeName == null) {
+      if (consistentHashRing.contains(SimpleNode.of(getCurrentNodeHostname()))) {
         currentNodeName = getCurrentNodeHostname();
       }
-      else if (consistentHashRing.contains(SimpleNode.of(nodeHostAddress))) {
+      else if (consistentHashRing.contains(SimpleNode.of(getCurrentNodeHostAddress()))) {
         currentNodeName = getCurrentNodeHostAddress();
       }
       else {
@@ -157,9 +157,7 @@ public abstract class ClusterManager
 
   public String locateKey(String key)
   {
-    String nodeAddress = consistentHashRing.locate(key).orElseThrow(() -> new RuntimeException("Unable to locate key: " + key)).getKey();
-    log.debug("Located key: " + key + " present on node: " + nodeAddress);
-    return nodeAddress;
+    return consistentHashRing.locate(key).orElseThrow(() -> new RuntimeException("Unable to locate key: " + key)).getKey();
   }
 
   // Returns sorted list of nodes in the cluster
@@ -172,7 +170,7 @@ public abstract class ClusterManager
   {
     // getNodes() updates the currentNodeIndex
     List<String> nodes = getNodes();
-    if (currentNodeName.isEmpty() || nodes == null) {
+    if (currentNodeName == null || nodes == null) {
       log.error("Initialization not done for Cluster Type: " + getClusterType());
       throw new RuntimeException("Unable to find current node name");
     }
