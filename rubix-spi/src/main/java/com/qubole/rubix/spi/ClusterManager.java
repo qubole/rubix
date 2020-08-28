@@ -21,6 +21,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.ishugaliy.allgood.consistent.hash.ConsistentHash;
 import org.ishugaliy.allgood.consistent.hash.HashRing;
+import org.ishugaliy.allgood.consistent.hash.hasher.DefaultHasher;
 import org.ishugaliy.allgood.consistent.hash.node.SimpleNode;
 
 import java.net.InetAddress;
@@ -49,7 +50,10 @@ public abstract class ClusterManager
   private String nodeHostname;
   private String nodeHostAddress;
   private final AtomicReference<LoadingCache<String, List<String>>> nodesCache = new AtomicReference<>();
-  protected final ConsistentHash<SimpleNode> consistentHashRing = HashRing.<SimpleNode>newBuilder().build();
+  // Concluded from testing that Metro Hash results in better load distribution across the nodes in cluster.
+  private final ConsistentHash<SimpleNode> consistentHashRing = HashRing.<SimpleNode>newBuilder()
+          .hasher(DefaultHasher.METRO_HASH)
+          .build();
 
   public abstract ClusterType getClusterType();
 
@@ -173,27 +177,5 @@ public abstract class ClusterManager
       throw new RuntimeException("Unable to find current node name");
     }
     return currentNodeName;
-  }
-
-  public static class ClusterInfo
-  {
-    private final List<String> nodes;
-    private final String currentNodeName;
-
-    public ClusterInfo(List<String> nodes, String currentNodeName)
-    {
-      this.nodes = nodes;
-      this.currentNodeName = currentNodeName;
-    }
-
-    public List<String> getNodes()
-    {
-      return nodes;
-    }
-
-    public String getCurrentNodeName()
-    {
-      return currentNodeName;
-    }
   }
 }
