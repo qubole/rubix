@@ -183,13 +183,19 @@ public class FileMetadata
   }
 
   private static void addFilesForDeletion(int generationNumber, String remotePath, Configuration conf) {
-    try {
-      for (int i = 1; i <= generationNumber; i++) {
-        Files.delete(Paths.get(CacheUtil.getLocalPath(remotePath, conf, i)));
-        Files.delete(Paths.get(CacheUtil.getMetadataFilePath(remotePath, conf, i)));
+    for (int i = 1; i <= generationNumber; i++) {
+      String localPath = CacheUtil.getLocalPath(remotePath, conf, i);
+      String mdPath = CacheUtil.getMetadataFilePath(remotePath, conf, i);
+      try {
+        Files.delete(Paths.get(localPath));
+      } catch (IOException e) {
+        log.warn(String.format("Exception while deleting old local file %s", localPath), e);
       }
-    } catch (Exception e) {
-      log.warn("Exception while deleting old files", e);
+      try {
+        Files.delete(Paths.get(mdPath));
+      } catch (IOException e) {
+        log.warn(String.format("Exception while deleting old md file %s ", mdPath), e);
+      }
     }
   }
 
@@ -348,9 +354,13 @@ public class FileMetadata
     try {
       lock.lock();
       Files.delete(Paths.get(mdFilePath));
+    } catch (IOException ex) {
+      log.error(String.format("Could not delete cached files %s", mdFilePath), ex);
+    }
+    try {
       Files.delete(Paths.get(localPath));
     } catch (IOException ex) {
-      log.error("Could not delete cached files", ex);
+      log.error(String.format("Could not delete cached files %s", localPath), ex);
     }
     finally {
       lock.unlock();
