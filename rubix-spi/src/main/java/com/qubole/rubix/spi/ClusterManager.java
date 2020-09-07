@@ -90,7 +90,7 @@ public abstract class ClusterManager
     for (SimpleNode ringNode : consistentHashRing.getNodes()) {
       if (!nodes.contains(ringNode.getKey()))
       {
-        log.debug("Removing node: " + ringNode.getKey() + " from consistent hash ring");
+        log.debug("Removing node: " + ringNode.getKey() + " from consistent hash ring, Total nodes: " + consistentHashRing.getNodes());
         consistentHashRing.remove(ringNode);
       }
     }
@@ -99,12 +99,10 @@ public abstract class ClusterManager
     for (String node : nodes) {
       SimpleNode ringNode = SimpleNode.of(node);
       if (!consistentHashRing.contains(ringNode)) {
-        log.debug("Adding node: " + ringNode.getKey() + " to consistent hash ring");
+        log.debug("Adding node: " + ringNode.getKey() + " to consistent hash ring, Total nodes: " + consistentHashRing.getNodes());
         consistentHashRing.add(ringNode);
       }
     }
-
-    log.debug("Total nodes in consistent hash ring: " + consistentHashRing.getNodes());
 
     if (currentNodeName == null) {
       if (consistentHashRing.contains(SimpleNode.of(getCurrentNodeHostname()))) {
@@ -168,11 +166,13 @@ public abstract class ClusterManager
 
   public String getCurrentNodeName()
   {
-    // getNodes() updates the currentNodeIndex
-    List<String> nodes = getNodes();
-    if (currentNodeName == null || nodes == null) {
-      log.error("Initialization not done for Cluster Type: " + getClusterType());
-      throw new RuntimeException("Unable to find current node name");
+    if (currentNodeName == null) {
+      // getNodes() updates the currentNodeName
+      List<String> nodes = getNodes();
+      if (nodes == null) {
+        log.error("Initialization not done for Cluster Type: " + getClusterType());
+        throw new RuntimeException("Unable to find current node name");
+      }
     }
     return currentNodeName;
   }
