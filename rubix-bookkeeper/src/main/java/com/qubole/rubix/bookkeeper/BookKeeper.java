@@ -48,6 +48,7 @@ import com.qubole.rubix.spi.thrift.CacheStatusResponse;
 import com.qubole.rubix.spi.thrift.FileInfo;
 import com.qubole.rubix.spi.thrift.Location;
 import com.qubole.rubix.spi.thrift.ReadResponse;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -63,9 +64,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -661,8 +662,19 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     }
 
     long avail = 0;
+    long cachedFileSize = 0;
     for (int d = 0; d < cacheDiskCount; d++) {
       avail += new File(CacheUtil.getDirPath(d, conf)).getUsableSpace();
+      java.nio.file.Path dir = Paths.get(CacheUtil.getDirPath(d, conf));
+      try {
+        cachedFileSize = Files.walk(dir)
+                .filter(p -> p.toFile().isFile())
+                .mapToLong(p -> p.toFile().length())
+                .sum();
+      } catch (IOException e) {
+        log.debug("unable to get size of cached files", e);
+      }
+      avail -= cachedFileSize;
     }
     avail = BYTES.toMB(avail);
 
@@ -772,7 +784,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
             metadata.getLastModified(),
             currentFileSize,
             conf,
-            metadata.getGenerationNumber());
+            new ImmutablePair<>(metadata.getGenerationNumber(), false));
         fileMetadataCache.put(key, newMetaData);
       }
     }

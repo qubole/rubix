@@ -20,6 +20,7 @@ import com.google.common.io.Closer;
 import com.google.common.util.concurrent.Striped;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -49,7 +50,7 @@ public class FileMetadata
   private final long lastModified;
   private long currentFileSize;
   private boolean needsRefresh = true;
-  private final int generationNumber;
+  private final ImmutablePair<Integer, Boolean> generationNumber;
 
   int bitmapFileSizeBytes;
   ByteBufferBitmap blockBitmap;
@@ -83,15 +84,21 @@ public class FileMetadata
       long lastModified,
       long currentFileSize,
       Configuration conf,
-      int generationNumber)
+      ImmutablePair<Integer, Boolean> generationNumber)
   {
     this.remotePath = remotePath;
     this.size = fileLength;
     this.lastModified = lastModified;
-    this.currentFileSize = currentFileSize;
     this.generationNumber = generationNumber;
-    localPath = CacheUtil.getLocalPath(remotePath, conf, generationNumber);
-    mdFilePath = CacheUtil.getMetadataFilePath(remotePath, conf, generationNumber);
+    localPath = CacheUtil.getLocalPath(remotePath, conf, generationNumber.getLeft());
+    mdFilePath = CacheUtil.getMetadataFilePath(remotePath, conf, generationNumber.getLeft());
+    this.currentFileSize = currentFileSize;
+    if (generationNumber.getRight()) {
+      this.currentFileSize = new File(mdFilePath).length();
+    }
+    else  {
+      this.currentFileSize = currentFileSize;
+    }
     int bitsRequired = (int) Math.ceil((double) size / getBlockSize(conf)); //numBlocks
     bitmapFileSizeBytes = (int) Math.ceil((double) bitsRequired / 8);
 
@@ -120,8 +127,13 @@ public class FileMetadata
     file.setReadable(true, false);
   }
 
-  // Should not be called in parallel for the same remotePath
-  private static int findGenerationNumber(String remotePath,
+  /**
+   * @return a pair consisting of generation number of file and
+   * boolean value indicating whether it is being reused when
+   * rubix.cache.cleanup.files.during.start is disabled.
+   * It should not be called in parallel for the same remotePath
+   */
+  private static ImmutablePair<Integer, Boolean> findGenerationNumber(String remotePath,
       Configuration conf,
       Cache<String, Integer> generationNumberCache,
       BloomFilter fileAccessedBloomFilter)
@@ -130,10 +142,11 @@ public class FileMetadata
     // For Dummy-Mode, stay at fixed generationNumber to avoid complications of fetching generation number
     // in updateCacheStatus calls of NonLocalReads
     if (CacheConfig.isDummyModeEnabled(conf)) {
-      return DUMMY_MODE_GENERATION_NUMBER;
+      return new ImmutablePair(DUMMY_MODE_GENERATION_NUMBER, false);
     }
 
     int genNumber;
+    boolean reUse = false;
     Closer oldFilesRemover = Closer.create();
 
     if (!fileAccessedBloomFilter.mightContain(remotePath)) {
@@ -161,6 +174,7 @@ public class FileMetadata
                 new File(CacheUtil.getMetadataFilePath(remotePath, conf, highestGenNumberOnDisk)).exists()) {
           addFilesForDeletion(oldFilesRemover, highestGenNumberOnDisk - 1, remotePath, conf);
           genNumber = highestGenNumberOnDisk;
+          reUse = true;
         }
         else {
           addFilesForDeletion(oldFilesRemover, highestGenNumberOnDisk, remotePath, conf);
@@ -184,7 +198,7 @@ public class FileMetadata
     catch (IOException e) {
       log.warn("Exception while deleting old files", e);
     }
-    return genNumber;
+    return new ImmutablePair(genNumber, reUse);
   }
 
   private static void addFilesForDeletion(Closer fileRemover, int generationNumber, String remotePath, Configuration conf)
@@ -378,6 +392,6 @@ public class FileMetadata
 
   public int getGenerationNumber()
   {
-    return generationNumber;
+    return generationNumber.getLeft();
   }
 }
