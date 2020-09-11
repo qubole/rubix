@@ -50,7 +50,7 @@ import static java.util.Objects.requireNonNull;
  */
 public class PrestoClusterManager extends ClusterManager
 {
-  private static final String DEFAULT_USER = "qubole";
+  private static final String DEFAULT_USER = "rubix";
   private int serverPort = 8081;
   private String serverAddress = "localhost";
 
