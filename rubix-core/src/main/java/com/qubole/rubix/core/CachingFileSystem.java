@@ -45,7 +45,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.net.URI;
@@ -422,9 +421,9 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FilterFile
             end = file.getLen();
           }
           String key = file.getPath().toString() + i + end;
-          int nodeIndex = clusterManager.getNodeIndex(nodes.size(), key);
-          String[] name = new String[]{nodes.get(nodeIndex)};
-          String[] host = new String[]{nodes.get(nodeIndex)};
+          String nodeName = clusterManager.locateKey(key);
+          String[] name = new String[]{nodeName};
+          String[] host = new String[]{nodeName};
           blockLocations[blockNumber++] = new BlockLocation(name, host, i, end - i);
           log.debug(String.format("BlockLocation %s %d %d %s totalHosts: %s", file.getPath().toString(), i, end - i, host[0], nodes.size()));
         }

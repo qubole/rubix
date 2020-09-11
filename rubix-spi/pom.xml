@@ -44,6 +44,12 @@
             <version>${dep.mockito.version}</version>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>com.github.ishugaliy</groupId>
+            <artifactId>allgood-consistent-hash</artifactId>
+            <version>1.0.0</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -106,6 +112,8 @@
                                 <includes>
                                     <include>org.apache.thrift:libthrift</include>
                                     <include>com.google.guava:guava</include>
+                                    <include>com.github.ishugaliy:allgood-consistent-hash</include>
+                                    <include>net.openhft:zero-allocation-hashing</include>
                                 </includes>
                             </artifactSet>
                             <relocations>

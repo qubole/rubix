@@ -12,30 +12,23 @@
  */
 package com.qubole.rubix.spi;
 
-import com.google.common.base.Charsets;
-import com.google.common.base.Throwables;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.common.hash.HashCode;
-import com.google.common.hash.HashFunction;
-import com.google.common.hash.Hashing;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.ishugaliy.allgood.consistent.hash.ConsistentHash;
+import org.ishugaliy.allgood.consistent.hash.HashRing;
+import org.ishugaliy.allgood.consistent.hash.hasher.DefaultHasher;
+import org.ishugaliy.allgood.consistent.hash.node.SimpleNode;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -53,10 +46,14 @@ public abstract class ClusterManager
 {
   private static Log log = LogFactory.getLog(ClusterManager.class);
 
-  private int currentNodeIndex = -1;
+  private String currentNodeName;
   private String nodeHostname;
   private String nodeHostAddress;
   private final AtomicReference<LoadingCache<String, List<String>>> nodesCache = new AtomicReference<>();
+  // Concluded from testing that Metro Hash results in better load distribution across the nodes in cluster.
+  private final ConsistentHash<SimpleNode> consistentHashRing = HashRing.<SimpleNode>newBuilder()
+          .hasher(DefaultHasher.METRO_HASH)
+          .build();
 
   public abstract ClusterType getClusterType();
 
@@ -87,17 +84,37 @@ public abstract class ClusterManager
       // Empty result set => server up and only master node running, return localhost has the only node
       // Do not need to consider failed nodes list as 1node cluster and server is up since it replied to allNodesRequest
       nodes = ImmutableList.of(getCurrentNodeHostAddress());
-    } else {
-      Collections.sort(nodes);
     }
 
-    currentNodeIndex = nodes.indexOf(getCurrentNodeHostname());
-    if (currentNodeIndex == -1) {
-      currentNodeIndex = nodes.indexOf(getCurrentNodeHostAddress());
+    // remove stale nodes from consistent hash ring
+    for (SimpleNode ringNode : consistentHashRing.getNodes()) {
+      if (!nodes.contains(ringNode.getKey()))
+      {
+        log.debug("Removing node: " + ringNode.getKey() + " from consistent hash ring, Total nodes: " + consistentHashRing.getNodes());
+        consistentHashRing.remove(ringNode);
+      }
     }
-    if (currentNodeIndex == -1) {
-      log.error(String.format("Could not initialize cluster nodes=%s nodeHostName=%s nodeHostAddress=%s " +
-              "currentNodeIndex=%d", nodes, getCurrentNodeHostname(), getCurrentNodeHostAddress(), currentNodeIndex));
+
+    // add new nodes to consistent hash ring
+    for (String node : nodes) {
+      SimpleNode ringNode = SimpleNode.of(node);
+      if (!consistentHashRing.contains(ringNode)) {
+        log.debug("Adding node: " + ringNode.getKey() + " to consistent hash ring, Total nodes: " + consistentHashRing.getNodes());
+        consistentHashRing.add(ringNode);
+      }
+    }
+
+    if (currentNodeName == null) {
+      if (consistentHashRing.contains(SimpleNode.of(getCurrentNodeHostname()))) {
+        currentNodeName = getCurrentNodeHostname();
+      }
+      else if (consistentHashRing.contains(SimpleNode.of(getCurrentNodeHostAddress()))) {
+        currentNodeName = getCurrentNodeHostAddress();
+      }
+      else {
+        log.error(String.format("Could not initialize cluster nodes=%s nodeHostName=%s nodeHostAddress=%s " +
+                "currentNodeIndex=%s", nodes, getCurrentNodeHostname(), getCurrentNodeHostAddress(), currentNodeName));
+      }
     }
     return nodes;
   }
@@ -136,11 +153,9 @@ public abstract class ClusterManager
     }
   }
 
-  public int getNodeIndex(int numNodes, String key)
+  public String locateKey(String key)
   {
-    HashFunction hf = Hashing.md5();
-    HashCode hc = hf.hashString(key, Charsets.UTF_8);
-    return Hashing.consistentHash(hc, numNodes);
+    return consistentHashRing.locate(key).orElseThrow(() -> new RuntimeException("Unable to locate key: " + key)).getKey();
   }
 
   // Returns sorted list of nodes in the cluster
@@ -149,32 +164,16 @@ public abstract class ClusterManager
     return nodesCache.get().getUnchecked("nodes");
   }
 
-  public ClusterInfo getClusterInfo()
+  public String getCurrentNodeName()
   {
-    // getNodes() updates the currentNodeIndex
-    List<String> nodes = getNodes();
-    return new ClusterInfo(nodes, currentNodeIndex);
-  }
-
-  public static class ClusterInfo
-  {
-    private final List<String> nodes;
-    private final int currentNodeIndex;
-
-    public ClusterInfo(List<String> nodes, int currentNodeIndex)
-    {
-      this.nodes = nodes;
-      this.currentNodeIndex = currentNodeIndex;
+    if (currentNodeName == null) {
+      // getNodes() updates the currentNodeName
+      List<String> nodes = getNodes();
+      if (nodes == null) {
+        log.error("Initialization not done for Cluster Type: " + getClusterType());
+        throw new RuntimeException("Unable to find current node name");
+      }
     }
-
-    public List<String> getNodes()
-    {
-      return nodes;
-    }
-
-    public int getCurrentNodeIndex()
-    {
-      return currentNodeIndex;
-    }
+    return currentNodeName;
   }
 }
