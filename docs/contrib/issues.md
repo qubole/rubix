@@ -2,7 +2,7 @@
 
 A bug report means something is broken, preventing normal/typical use of Rubix.
 
-Make sure the bug isn’t already resolved. Search for similar [issues](https://github.com/rubix/issues).
+Make sure the bug isn’t already resolved. Search for similar [issues](https://github.com/qubole/rubix/issues).
 
 Make sure you have clear instructions to reproduce your problem.
 
