@@ -19,21 +19,20 @@
         <dependency>
             <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-core</artifactId>
+            <type>test-jar</type>
             <scope>test</scope>
-            <version>${parent.version}</version>
         </dependency>
+
         <dependency>
             <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-core</artifactId>
-            <type>test-jar</type>
             <scope>test</scope>
-            <version>${parent.version}</version>
         </dependency>
+
         <dependency>
             <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-bookkeeper</artifactId>
             <scope>test</scope>
-            <version>${parent.version}</version>
         </dependency>
 
         <dependency>
