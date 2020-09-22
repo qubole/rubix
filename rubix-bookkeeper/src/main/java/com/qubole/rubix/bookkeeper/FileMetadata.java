@@ -20,7 +20,6 @@ import com.google.common.io.Closer;
 import com.google.common.util.concurrent.Striped;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
-import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -52,7 +51,7 @@ public class FileMetadata
   private final long lastModified;
   private long currentFileSize;
   private boolean needsRefresh = true;
-  private final ImmutablePair<Integer, Boolean> generationNumber;
+  private final int generationNumber;
 
   int bitmapFileSizeBytes;
   ByteBufferBitmap blockBitmap;
@@ -86,16 +85,16 @@ public class FileMetadata
       long lastModified,
       long currentFileSize,
       Configuration conf,
-      ImmutablePair<Integer, Boolean> generationNumber)
+      Pair generationNumber)
   {
     this.remotePath = remotePath;
     this.size = fileLength;
     this.lastModified = lastModified;
-    this.generationNumber = generationNumber;
-    localPath = CacheUtil.getLocalPath(remotePath, conf, generationNumber.getLeft());
-    mdFilePath = CacheUtil.getMetadataFilePath(remotePath, conf, generationNumber.getLeft());
+    this.generationNumber = generationNumber.getGenerationNumber();
+    localPath = CacheUtil.getLocalPath(remotePath, conf, generationNumber.getGenerationNumber());
+    mdFilePath = CacheUtil.getMetadataFilePath(remotePath, conf, generationNumber.getGenerationNumber());
     this.currentFileSize = currentFileSize;
-    if (generationNumber.getRight()) {
+    if (generationNumber.isUsingOldGenerationNumber()) {
       this.currentFileSize = new File(mdFilePath).length();
     }
     else  {
@@ -135,7 +134,7 @@ public class FileMetadata
    * rubix.cache.cleanup.files.during.start is disabled.
    * It should not be called in parallel for the same remotePath
    */
-  private static ImmutablePair<Integer, Boolean> findGenerationNumber(String remotePath,
+  private static Pair findGenerationNumber(String remotePath,
       Configuration conf,
       Cache<String, Integer> generationNumberCache,
       BloomFilter fileAccessedBloomFilter)
@@ -144,12 +143,11 @@ public class FileMetadata
     // For Dummy-Mode, stay at fixed generationNumber to avoid complications of fetching generation number
     // in updateCacheStatus calls of NonLocalReads
     if (CacheConfig.isDummyModeEnabled(conf)) {
-      return new ImmutablePair(DUMMY_MODE_GENERATION_NUMBER, false);
+      return new Pair(DUMMY_MODE_GENERATION_NUMBER, false);
     }
 
     int genNumber;
-    boolean reUse = false;
-    Closer oldFilesRemover = Closer.create();
+    boolean useOldGenerationNumber = false;
 
     if (!fileAccessedBloomFilter.mightContain(remotePath)) {
       // first access to the file since BKS started
@@ -176,7 +174,7 @@ public class FileMetadata
                 new File(CacheUtil.getMetadataFilePath(remotePath, conf, highestGenNumberOnDisk)).exists()) {
           addFilesForDeletion(highestGenNumberOnDisk - 1, remotePath, conf);
           genNumber = highestGenNumberOnDisk;
-          reUse = true;
+          useOldGenerationNumber = true;
         }
         else {
           addFilesForDeletion(highestGenNumberOnDisk, remotePath, conf);
@@ -194,13 +192,7 @@ public class FileMetadata
       addFilesForDeletion(genNumber - 1, remotePath, conf);
     }
     generationNumberCache.put(remotePath, genNumber);
-    try {
-      oldFilesRemover.close();
-    }
-    catch (IOException e) {
-      log.warn("Exception while deleting old files", e);
-    }
-    return new ImmutablePair(genNumber, reUse);
+    return new Pair(genNumber, useOldGenerationNumber);
   }
 
   private static void addFilesForDeletion(int generationNumber, String remotePath, Configuration conf) {
@@ -401,6 +393,21 @@ public class FileMetadata
 
   public int getGenerationNumber()
   {
-    return generationNumber.getLeft();
+    return generationNumber;
+  }
+
+  static class Pair {
+    int generationNumber;
+    boolean usingOldGenerationNumber;
+    Pair(int generationNumber, boolean usingOldGenerationNumber) {
+      this.generationNumber = generationNumber;
+      this.usingOldGenerationNumber = usingOldGenerationNumber;
+    }
+    int getGenerationNumber() {
+      return generationNumber;
+    }
+    boolean isUsingOldGenerationNumber() {
+      return usingOldGenerationNumber;
+    }
   }
 }
