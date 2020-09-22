@@ -50,6 +50,7 @@ import static java.util.Objects.requireNonNull;
  */
 public class PrestoClusterManager extends ClusterManager
 {
+  private static final String DEFAULT_USER = "rubix";
   private int serverPort = 8081;
   private String serverAddress = "localhost";
 
@@ -80,9 +81,7 @@ public class PrestoClusterManager extends ClusterManager
       URL allNodesRequest = getNodeUrl();
       URL failedNodesRequest = getFailedNodeUrl();
 
-      HttpURLConnection allHttpCon = (HttpURLConnection) allNodesRequest.openConnection();
-      allHttpCon.setConnectTimeout(500); //ms
-      allHttpCon.setRequestMethod("GET");
+      HttpURLConnection allHttpCon = getHttpURLConnection(allNodesRequest);
 
       int allNodesResponseCode = allHttpCon.getResponseCode();
 
@@ -116,9 +115,7 @@ public class PrestoClusterManager extends ClusterManager
         allHttpCon.disconnect();
       }
 
-      HttpURLConnection failHttpConn = (HttpURLConnection) failedNodesRequest.openConnection();
-      failHttpConn.setConnectTimeout(500);    //ms
-      failHttpConn.setRequestMethod("GET");
+      HttpURLConnection failHttpConn = getHttpURLConnection(failedNodesRequest);
       int failedNodesResponseCode = failHttpConn.getResponseCode();
       // check on failed nodes
       try {
@@ -170,6 +167,17 @@ public class PrestoClusterManager extends ClusterManager
     catch (IOException e) {
       throw Throwables.propagate(e);
     }
+  }
+
+  private HttpURLConnection getHttpURLConnection(URL urlRequest)
+          throws IOException
+  {
+    requireNonNull(urlRequest, "urlRequest is null");
+    HttpURLConnection allHttpCon = (HttpURLConnection) urlRequest.openConnection();
+    allHttpCon.setConnectTimeout(500); //ms
+    allHttpCon.setRequestMethod("GET");
+    allHttpCon.setRequestProperty("X-Presto-User", DEFAULT_USER);
+    return allHttpCon;
   }
 
   private List<String> getNodesFromNodeManager()

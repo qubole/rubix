@@ -29,6 +29,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.OptionalInt;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.locks.Lock;
@@ -161,7 +163,7 @@ public class FileMetadata
       highestGenNumberOnDisk--;
       if (CacheConfig.isCleanupFilesDuringStartEnabled(conf)) {
         // Pick the generationNumber as one more than the highestGenNumberOnDisk
-        addFilesForDeletion(oldFilesRemover, highestGenNumberOnDisk, remotePath, conf);
+        addFilesForDeletion(highestGenNumberOnDisk, remotePath, conf);
         genNumber = highestGenNumberOnDisk + 1;
       }
       else {
@@ -172,12 +174,12 @@ public class FileMetadata
         // If both datafile and mdfile exist for highestGenNumberOnDisk, use that as genNumber
         else if (new File(CacheUtil.getLocalPath(remotePath, conf, highestGenNumberOnDisk)).exists() &&
                 new File(CacheUtil.getMetadataFilePath(remotePath, conf, highestGenNumberOnDisk)).exists()) {
-          addFilesForDeletion(oldFilesRemover, highestGenNumberOnDisk - 1, remotePath, conf);
+          addFilesForDeletion(highestGenNumberOnDisk - 1, remotePath, conf);
           genNumber = highestGenNumberOnDisk;
           reUse = true;
         }
         else {
-          addFilesForDeletion(oldFilesRemover, highestGenNumberOnDisk, remotePath, conf);
+          addFilesForDeletion(highestGenNumberOnDisk, remotePath, conf);
           genNumber = highestGenNumberOnDisk + 1;
         }
       }
@@ -189,7 +191,7 @@ public class FileMetadata
               new File(CacheUtil.getMetadataFilePath(remotePath, conf, genNumber)).exists()) {
         genNumber++;
       }
-      addFilesForDeletion(oldFilesRemover, genNumber - 1, remotePath, conf);
+      addFilesForDeletion(genNumber - 1, remotePath, conf);
     }
     generationNumberCache.put(remotePath, genNumber);
     try {
@@ -201,11 +203,20 @@ public class FileMetadata
     return new ImmutablePair(genNumber, reUse);
   }
 
-  private static void addFilesForDeletion(Closer fileRemover, int generationNumber, String remotePath, Configuration conf)
-  {
+  private static void addFilesForDeletion(int generationNumber, String remotePath, Configuration conf) {
     for (int i = 1; i <= generationNumber; i++) {
-      fileRemover.register(new File(CacheUtil.getLocalPath(remotePath, conf, i))::delete);
-      fileRemover.register(new File(CacheUtil.getMetadataFilePath(remotePath, conf, i))::delete);
+      String localPath = CacheUtil.getLocalPath(remotePath, conf, i);
+      String mdPath = CacheUtil.getMetadataFilePath(remotePath, conf, i);
+      try {
+        Files.delete(Paths.get(localPath));
+      } catch (IOException e) {
+        log.warn(String.format("Exception while deleting old local file %s", localPath), e);
+      }
+      try {
+        Files.delete(Paths.get(mdPath));
+      } catch (IOException e) {
+        log.warn(String.format("Exception while deleting old md file %s ", mdPath), e);
+      }
     }
   }
 
@@ -363,16 +374,14 @@ public class FileMetadata
     Lock lock = stripes.get(getRemotePath());
     try {
       lock.lock();
-
-      File mdFile = new File(mdFilePath);
-      if (!mdFile.delete()) {
-        log.error("Failed to delete metadata file " + mdFilePath);
-      }
-
-      File localFile = new File(localPath);
-      if (!localFile.delete()) {
-        log.error("Failed to delete local file " + localPath);
-      }
+      Files.delete(Paths.get(mdFilePath));
+    } catch (IOException ex) {
+      log.error(String.format("Could not delete cached files %s", mdFilePath), ex);
+    }
+    try {
+      Files.delete(Paths.get(localPath));
+    } catch (IOException ex) {
+      log.error(String.format("Could not delete cached files %s", localPath), ex);
     }
     finally {
       lock.unlock();

@@ -36,7 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.thrift.shaded.TException;
+import org.apache.thrift.TException;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;

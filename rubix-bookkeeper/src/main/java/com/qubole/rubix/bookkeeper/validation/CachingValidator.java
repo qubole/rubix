@@ -27,7 +27,7 @@ import com.qubole.rubix.spi.thrift.ReadResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.thrift.shaded.TException;
+import org.apache.thrift.TException;
 
 import java.io.File;
 import java.io.IOException;

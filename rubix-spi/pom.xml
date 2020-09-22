@@ -3,7 +3,7 @@
     <parent>
         <groupId>com.qubole.rubix</groupId>
         <artifactId>rubix-root</artifactId>
-        <version>0.3.17-SNAPSHOT</version>
+        <version>0.3.18-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -43,6 +43,12 @@
             <artifactId>mockito-core</artifactId>
             <version>${dep.mockito.version}</version>
             <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github.ishugaliy</groupId>
+            <artifactId>allgood-consistent-hash</artifactId>
+            <version>1.0.0</version>
         </dependency>
     </dependencies>
 
@@ -106,16 +112,14 @@
                                 <includes>
                                     <include>org.apache.thrift:libthrift</include>
                                     <include>com.google.guava:guava</include>
+                                    <include>com.github.ishugaliy:allgood-consistent-hash</include>
+                                    <include>net.openhft:zero-allocation-hashing</include>
                                 </includes>
                             </artifactSet>
                             <relocations>
                                 <relocation>
                                     <pattern>com.google</pattern>
                                     <shadedPattern>com.google.shaded</shadedPattern>
-                                </relocation>
-                               <relocation>
-                                    <pattern>org.apache.thrift</pattern>
-                                    <shadedPattern>org.apache.thrift.shaded</shadedPattern>
                                 </relocation>
                             </relocations>
                         </configuration>

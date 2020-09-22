@@ -18,8 +18,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.thrift.shaded.TException;
-import org.apache.thrift.shaded.transport.TTransportException;
+import org.apache.thrift.TException;
+import org.apache.thrift.transport.TTransportException;
 import org.testng.annotations.Test;
 
 import static org.mockito.Mockito.mock;

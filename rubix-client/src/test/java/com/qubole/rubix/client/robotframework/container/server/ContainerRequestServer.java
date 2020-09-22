@@ -23,7 +23,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.thrift.shaded.transport.TTransportException;
+import org.apache.thrift.transport.TTransportException;
 
 import java.io.IOException;
 import java.net.URI;
