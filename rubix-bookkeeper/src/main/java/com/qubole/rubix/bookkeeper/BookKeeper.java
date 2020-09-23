@@ -154,9 +154,9 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     this.metrics = bookKeeperMetrics.getMetricsRegistry();
     this.ticker = ticker;
     this.splitSize = CacheConfig.getCacheFileSplitSize(conf);
+    cleanupOldCacheFiles(conf);
     initializeMetrics();
     initializeCache(conf, ticker);
-    cleanupOldCacheFiles(conf);
 
     fetchProcessor = null;
     if (CacheConfig.isParallelWarmupEnabled(conf)) {
