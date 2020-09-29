@@ -110,7 +110,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
 
   protected static Cache<String, FileMetadata> fileMetadataCache;
   private static LoadingCache<String, FileInfo> fileInfoCache;
-  protected ClusterManager clusterManager;
+  protected volatile ClusterManager clusterManager;
   protected final Configuration conf;
   private static Integer lock = 1;
   private long splitSize;
