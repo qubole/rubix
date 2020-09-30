@@ -16,7 +16,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.cache.Cache;
 import com.google.common.cache.RemovalCause;
 import com.google.common.hash.BloomFilter;
-import com.google.common.io.Closer;
 import com.google.common.util.concurrent.Striped;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
@@ -34,10 +33,10 @@ import java.util.OptionalInt;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.locks.Lock;
 
-import static com.qubole.rubix.spi.utils.DataSizeUnits.BYTES;
 import static com.qubole.rubix.spi.CacheConfig.getBlockSize;
 import static com.qubole.rubix.spi.CacheUtil.DUMMY_MODE_GENERATION_NUMBER;
 import static com.qubole.rubix.spi.CacheUtil.UNKONWN_GENERATION_NUMBER;
+import static com.qubole.rubix.spi.utils.DataSizeUnits.BYTES;
 
 /**
  * Created by stagra on 29/12/15.
@@ -311,7 +310,7 @@ public class FileMetadata
   public void closeAndCleanup(RemovalCause cause, Cache cache)
   {
     if (cause != RemovalCause.REPLACED) {
-      log.warn("Evicting " + getRemotePath() + " due to " + cause);
+      log.debug("Evicting " + getRemotePath() + " due to " + cause);
       deleteFiles(cache);
     }
   }
