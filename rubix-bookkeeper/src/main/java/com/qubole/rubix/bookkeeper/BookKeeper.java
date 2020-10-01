@@ -626,23 +626,29 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     return endBlock;
   }
 
+  private void skipInitializeCache()
+  {
+    totalAvailableForCacheInMB = 0;
+    fileInfoCache = CacheBuilder.newBuilder().build(
+            new CacheLoader<String, FileInfo>()
+            {
+              @Override
+              public FileInfo load(String key) throws Exception
+              {
+                throw new UnsupportedOperationException(
+                        String.format("unexpected load call for key %s; cache disabled on master node", key));
+              }
+            });
+    fileMetadataCache = new ThrowingEmptyCache<>();
+    return;
+  }
+
   private synchronized void initializeCache(final Configuration conf, final Ticker ticker)
       throws FileNotFoundException
   {
     if (CacheConfig.isOnMaster(conf) && !CacheConfig.isCacheDataOnMasterEnabled(conf)) {
       log.info("Cache disabled on master node; skipping initialization");
-      totalAvailableForCacheInMB = 0;
-      fileInfoCache = CacheBuilder.newBuilder().build(
-              new CacheLoader<String, FileInfo>()
-              {
-                @Override
-                public FileInfo load(String key) throws Exception
-                {
-                  throw new UnsupportedOperationException(
-                          String.format("unexpected load call for key %s; cache disabled on master node", key));
-                }
-              });
-      fileMetadataCache = new ThrowingEmptyCache<>();
+      skipInitializeCache();
       return;
     }
 
@@ -658,7 +664,13 @@ public abstract class BookKeeper implements BookKeeperService.Iface
       avail += new File(CacheUtil.getDirPath(d, conf)).getUsableSpace();
     }
     avail = BYTES.toMB(avail);
-    avail -= DiskUtils.getCacheSizeMB(conf);
+    int cachedFileSize = DiskUtils.getCacheSizeMB(conf);
+    // TODO: Maintain blacklisted cache directory which retuned -1
+    if (cachedFileSize == -1) {
+      skipInitializeCache();
+      return;
+    }
+    avail += cachedFileSize;
 
     // In corner cases evictions might not make enough space for new entries
     // To minimize those cases, consider available space lower than actual
@@ -766,7 +778,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
             metadata.getLastModified(),
             currentFileSize,
             conf,
-            new FileMetadata.Pair(metadata.getGenerationNumber(), false));
+            new FileMetadata.GenerationInfo(metadata.getGenerationNumber(), false));
         fileMetadataCache.put(key, newMetaData);
       }
     }

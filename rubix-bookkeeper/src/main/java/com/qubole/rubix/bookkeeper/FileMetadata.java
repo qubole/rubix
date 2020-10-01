@@ -16,7 +16,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.cache.Cache;
 import com.google.common.cache.RemovalCause;
 import com.google.common.hash.BloomFilter;
-import com.google.common.io.Closer;
 import com.google.common.util.concurrent.Striped;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
@@ -85,20 +84,17 @@ public class FileMetadata
       long lastModified,
       long currentFileSize,
       Configuration conf,
-      Pair generationNumber)
+      GenerationInfo generationInfo)
   {
     this.remotePath = remotePath;
     this.size = fileLength;
     this.lastModified = lastModified;
-    this.generationNumber = generationNumber.getGenerationNumber();
-    localPath = CacheUtil.getLocalPath(remotePath, conf, generationNumber.getGenerationNumber());
-    mdFilePath = CacheUtil.getMetadataFilePath(remotePath, conf, generationNumber.getGenerationNumber());
+    this.generationNumber = generationInfo.getGenerationNumber();
+    this.localPath = CacheUtil.getLocalPath(remotePath, conf, generationNumber);
+    this.mdFilePath = CacheUtil.getMetadataFilePath(remotePath, conf, generationNumber);
     this.currentFileSize = currentFileSize;
-    if (generationNumber.isUsingOldGenerationNumber()) {
-      this.currentFileSize = new File(mdFilePath).length();
-    }
-    else  {
-      this.currentFileSize = currentFileSize;
+    if (generationInfo.isPickedFromDisk()) {
+      this.currentFileSize = new File(localPath).length();
     }
     int bitsRequired = (int) Math.ceil((double) size / getBlockSize(conf)); //numBlocks
     bitmapFileSizeBytes = (int) Math.ceil((double) bitsRequired / 8);
@@ -130,11 +126,11 @@ public class FileMetadata
 
   /**
    * @return a pair consisting of generation number of file and
-   * boolean value indicating whether it is being reused when
+   * boolean value indicating whether it is being picked from disk when
    * rubix.cache.cleanup.files.during.start is disabled.
    * It should not be called in parallel for the same remotePath
    */
-  private static Pair findGenerationNumber(String remotePath,
+  private static GenerationInfo findGenerationNumber(String remotePath,
       Configuration conf,
       Cache<String, Integer> generationNumberCache,
       BloomFilter fileAccessedBloomFilter)
@@ -143,11 +139,11 @@ public class FileMetadata
     // For Dummy-Mode, stay at fixed generationNumber to avoid complications of fetching generation number
     // in updateCacheStatus calls of NonLocalReads
     if (CacheConfig.isDummyModeEnabled(conf)) {
-      return new Pair(DUMMY_MODE_GENERATION_NUMBER, false);
+      return new GenerationInfo(DUMMY_MODE_GENERATION_NUMBER, false);
     }
 
     int genNumber;
-    boolean useOldGenerationNumber = false;
+    boolean pickedFromDisk = false;
 
     if (!fileAccessedBloomFilter.mightContain(remotePath)) {
       // first access to the file since BKS started
@@ -174,7 +170,7 @@ public class FileMetadata
                 new File(CacheUtil.getMetadataFilePath(remotePath, conf, highestGenNumberOnDisk)).exists()) {
           addFilesForDeletion(highestGenNumberOnDisk - 1, remotePath, conf);
           genNumber = highestGenNumberOnDisk;
-          useOldGenerationNumber = true;
+          pickedFromDisk = true;
         }
         else {
           addFilesForDeletion(highestGenNumberOnDisk, remotePath, conf);
@@ -192,7 +188,7 @@ public class FileMetadata
       addFilesForDeletion(genNumber - 1, remotePath, conf);
     }
     generationNumberCache.put(remotePath, genNumber);
-    return new Pair(genNumber, useOldGenerationNumber);
+    return new GenerationInfo(genNumber, pickedFromDisk);
   }
 
   private static void addFilesForDeletion(int generationNumber, String remotePath, Configuration conf) {
@@ -396,18 +392,22 @@ public class FileMetadata
     return generationNumber;
   }
 
-  static class Pair {
-    int generationNumber;
-    boolean usingOldGenerationNumber;
-    Pair(int generationNumber, boolean usingOldGenerationNumber) {
+  static class GenerationInfo
+  {
+    private int generationNumber;
+    private boolean pickedFromDisk;
+    GenerationInfo(int generationNumber, boolean pickedFromDisk)
+    {
       this.generationNumber = generationNumber;
-      this.usingOldGenerationNumber = usingOldGenerationNumber;
+      this.pickedFromDisk = pickedFromDisk;
     }
-    int getGenerationNumber() {
+    int getGenerationNumber()
+    {
       return generationNumber;
     }
-    boolean isUsingOldGenerationNumber() {
-      return usingOldGenerationNumber;
+    boolean isPickedFromDisk()
+    {
+      return pickedFromDisk;
     }
   }
 }
