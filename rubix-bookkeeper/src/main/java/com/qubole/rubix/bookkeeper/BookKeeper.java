@@ -110,7 +110,7 @@ public abstract class BookKeeper implements BookKeeperService.Iface
 
   protected static Cache<String, FileMetadata> fileMetadataCache;
   private static LoadingCache<String, FileInfo> fileInfoCache;
-  protected ClusterManager clusterManager;
+  protected volatile ClusterManager clusterManager;
   protected final Configuration conf;
   private static Integer lock = 1;
   private long splitSize;
@@ -154,9 +154,9 @@ public abstract class BookKeeper implements BookKeeperService.Iface
     this.metrics = bookKeeperMetrics.getMetricsRegistry();
     this.ticker = ticker;
     this.splitSize = CacheConfig.getCacheFileSplitSize(conf);
+    cleanupOldCacheFiles(conf);
     initializeMetrics();
     initializeCache(conf, ticker);
-    cleanupOldCacheFiles(conf);
 
     fetchProcessor = null;
     if (CacheConfig.isParallelWarmupEnabled(conf)) {

@@ -84,6 +84,13 @@
                                     <pattern>org.apache.thrift</pattern>
                                     <shadedPattern>org.apache.thrift.shaded</shadedPattern>
                                 </relocation>
+                                <relocation>
+                                    <pattern>com.google</pattern>
+                                    <shadedPattern>com.google.shaded</shadedPattern>
+                                    <excludes>
+                                        <exclude>com.google.cloud.**</exclude>
+                                    </excludes>
+                                </relocation>
                             </relocations>
 
                         </configuration>

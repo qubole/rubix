@@ -19,16 +19,16 @@
         <dependency>
             <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-core</artifactId>
+            <type>test-jar</type>
             <scope>test</scope>
-            <version>0.3.17-SNAPSHOT</version>
         </dependency>
+
         <dependency>
             <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-core</artifactId>
-            <type>test-jar</type>
             <scope>test</scope>
-            <version>0.3.17-SNAPSHOT</version>
         </dependency>
+
         <dependency>
             <groupId>com.qubole.rubix</groupId>
             <artifactId>rubix-bookkeeper</artifactId>
