@@ -12,6 +12,7 @@
  */
 package com.qubole.rubix.core;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -38,6 +39,7 @@ public abstract class ReadRequestChain implements Callable<Long>
   ReadRequest lastRequest;
   boolean isLocked;
   boolean cancelled;
+  private long maxReadRequestSize;
   protected final int generationNumber;
 
   protected String threadName;
@@ -47,9 +49,22 @@ public abstract class ReadRequestChain implements Callable<Long>
 
   public ReadRequestChain(int generationNumber)
   {
+    this(generationNumber, Long.MAX_VALUE);
+  }
+
+  // Caller responsible to keep maxReadRequestSize block aligned
+  public ReadRequestChain(int generationNumber, long maxReadRequestSize)
+  {
     super();
     this.generationNumber = generationNumber;
+    this.maxReadRequestSize = maxReadRequestSize;
     this.threadName = Thread.currentThread().getName();
+  }
+
+  @VisibleForTesting
+  public void setMaxReadRequestSize(long maxReadRequestSize)
+  {
+    this.maxReadRequestSize = maxReadRequestSize;
   }
 
   // Should be added in forward seek fashion for better performance
@@ -58,7 +73,7 @@ public abstract class ReadRequestChain implements Callable<Long>
     checkState(!isLocked, "Adding request to a locked chain");
     log.debug(String.format("Request to add ReadRequest: [%d, %d, %d, %d, %d]", readRequest.getBackendReadStart(), readRequest.getBackendReadEnd(), readRequest.getActualReadStart(), readRequest.getActualReadEnd(), readRequest.getDestBufferOffset()));
     if (lastRequest == null) {
-      addRequest(readRequest);
+      lastRequest = readRequest;
     }
     else {
       // since one chain contains request of same buffer, we can collate
@@ -69,7 +84,8 @@ public abstract class ReadRequestChain implements Callable<Long>
         log.debug(String.format("Updated last to: [%d, %d, %d, %d, %d]", lastRequest.getBackendReadStart(), lastRequest.getBackendReadEnd(), lastRequest.getActualReadStart(), lastRequest.getActualReadEnd(), lastRequest.getDestBufferOffset()));
       }
       else {
-        addRequest(readRequest);
+        addRequest(lastRequest);
+        lastRequest = readRequest;
       }
     }
     requests++;
@@ -77,14 +93,43 @@ public abstract class ReadRequestChain implements Callable<Long>
 
   private void addRequest(ReadRequest readRequest)
   {
+    long backendReadLength = readRequest.getBackendReadLength();
+    if (backendReadLength <= maxReadRequestSize) {
+      addRequestToQueue(readRequest);
+      return;
+    }
+
+    long backendReadStart = 0;
+    long actualReadStart = readRequest.getActualReadStart();
+    while (backendReadStart < backendReadLength) {
+      long backendReadEnd = backendReadStart + Math.min(maxReadRequestSize, backendReadLength - backendReadStart);
+      ReadRequest chunkedRequest = new ReadRequest(
+              backendReadStart,
+              backendReadEnd,
+              actualReadStart,
+              Math.min(readRequest.getActualReadEnd(), backendReadEnd),
+              readRequest.getDestBuffer(),
+              readRequest.getDestBufferOffset() + Math.toIntExact(actualReadStart - readRequest.getActualReadStart()),
+              readRequest.getBackendFileSize());
+      addRequestToQueue(chunkedRequest);
+      backendReadStart = backendReadEnd;
+      actualReadStart = backendReadStart;
+    }
+  }
+
+  private void addRequestToQueue(ReadRequest readRequest)
+  {
     readRequests.add(readRequest);
-    lastRequest = readRequest;
     log.debug(String.format("Added ReadRequest: [%d, %d, %d, %d, %d]", readRequest.getBackendReadStart(), readRequest.getBackendReadEnd(), readRequest.getActualReadStart(), readRequest.getActualReadEnd(), readRequest.getDestBufferOffset()));
   }
 
   public void lock()
   {
     isLocked = true;
+    if (lastRequest != null) {
+      addRequest(lastRequest);
+      lastRequest = null;
+    }
   }
 
   public List<ReadRequest> getReadRequests()

@@ -20,6 +20,7 @@ import com.qubole.rubix.common.metrics.BookKeeperMetrics;
 import com.qubole.rubix.common.utils.DataGen;
 import com.qubole.rubix.common.utils.TestUtil;
 import com.qubole.rubix.core.ClusterManagerInitilizationException;
+import com.qubole.rubix.core.ReadRequestChain;
 import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.CacheUtil;
 import com.qubole.rubix.spi.ClusterType;
@@ -121,6 +122,7 @@ public class TestFileDownloader
     context.addDownloadRange(500, 800);
 
     final List<FileDownloadRequestChain> requestChains = downloader.getFileDownloadRequestChains(contextMap);
+    requestChains.stream().forEach(ReadRequestChain::lock);
 
     assertTrue(requestChains.size() == 2,
         "Wrong Number of Request Chains. Expected = 2 Got = " + requestChains.size());

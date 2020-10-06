@@ -13,6 +13,9 @@
 package com.qubole.rubix.core;
 
 import java.util.Arrays;
+import java.util.Objects;
+
+import static com.google.common.base.MoreObjects.toStringHelper;
 
 /**
  * Created by stagra on 4/1/16.
@@ -160,5 +163,49 @@ public class ReadRequest
     otherRequest.backendFileSize = this.backendFileSize;
 
     return otherRequest;
+  }
+
+  @Override
+  public boolean equals (Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    ReadRequest that = (ReadRequest) o;
+
+    return backendReadStart == that.backendReadStart &&
+            backendReadEnd == that.backendReadEnd &&
+            actualReadStart == that.actualReadStart &&
+            actualReadEnd == that.actualReadEnd &&
+            destBufferOffset == that.destBufferOffset &&
+            backendFileSize == that.backendFileSize &&
+            Arrays.equals(destBuffer, that.destBuffer);
+  }
+
+  @Override
+  public int hashCode ()
+  {
+    int result = Objects.hash(backendReadStart, backendReadEnd, actualReadStart, actualReadEnd, destBufferOffset, backendFileSize);
+    result = 31 * result + Arrays.hashCode(destBuffer);
+    return result;
+  }
+
+  @Override
+  public String toString ()
+  {
+    return toStringHelper(this)
+            .add("backendReadStart", backendReadStart)
+            .add("backendReadEnd", backendReadEnd)
+            .add("actualReadStart", actualReadStart)
+            .add("actualReadEnd", actualReadEnd)
+            .add("destBuffer", destBuffer)
+            .add("destBufferOffset", destBufferOffset)
+            .add("backendFileSize", backendFileSize)
+            .toString();
   }
 }
