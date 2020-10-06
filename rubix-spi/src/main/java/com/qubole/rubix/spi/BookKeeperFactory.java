@@ -72,7 +72,7 @@ public class BookKeeperFactory
     }
     else {
       Poolable<TTransport> obj;
-      obj = pool.borrowObject(host, conf);
+      obj = pool.borrowObject(host);
       RetryingPooledBookkeeperClient retryingBookkeeperClient = new RetryingPooledBookkeeperClient(obj, host, conf);
       return retryingBookkeeperClient;
     }

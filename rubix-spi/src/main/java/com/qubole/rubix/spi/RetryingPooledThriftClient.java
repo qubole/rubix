@@ -76,7 +76,7 @@ public abstract class RetryingPooledThriftClient
 
         // unset transportPoolable so that close() doesnt return it again to pool if borrowObject hits an exception
         transportPoolable = null;
-        transportPoolable = objectPool.borrowObject(host, conf);
+        transportPoolable = objectPool.borrowObject(host);
         updateClient(transportPoolable);
       }
     }

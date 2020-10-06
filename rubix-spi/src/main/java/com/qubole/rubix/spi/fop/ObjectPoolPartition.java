@@ -66,8 +66,6 @@ public class ObjectPoolPartition<T>
     if (!objectFactory.validate(object.getObject())) {
       log.debug(String.format("Invalid object...removing: %s ", object));
       decreaseObject(object);
-      // Compensate for the removed object. Needed to prevent endless wait when in parallel a borrowObject is called
-      increaseObjects(1, false);
       return;
     }
 
@@ -115,7 +113,7 @@ public class ObjectPoolPartition<T>
     return freeObject;
   }
 
-  private synchronized Poolable<T> increaseObjects(int delta, boolean returnObject)
+  private Poolable<T> increaseObjects(int delta, boolean returnObject)
   {
     int oldCount = totalCount;
     if (delta + totalCount > config.getMaxSize()) {

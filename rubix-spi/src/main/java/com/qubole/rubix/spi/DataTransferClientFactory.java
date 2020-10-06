@@ -20,7 +20,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -53,7 +52,7 @@ public class DataTransferClientFactory
         }
       }
     }
-    Poolable<SocketChannel> socketChannelPoolable = pool.borrowObject(host, conf);
+    Poolable<SocketChannel> socketChannelPoolable = pool.borrowObject(host);
     return new DataTransferClient(socketChannelPoolable);
   }
 

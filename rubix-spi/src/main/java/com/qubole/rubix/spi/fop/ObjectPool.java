@@ -19,14 +19,12 @@ package com.qubole.rubix.spi.fop;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.Thread.currentThread;
@@ -67,7 +65,7 @@ public class ObjectPool<T>
     return new ArrayBlockingQueue<>(poolConfig.getMaxSize());
   }
 
-  public Poolable<T> borrowObject(String host, Configuration conf)
+  public Poolable<T> borrowObject(String host)
   {
     if (!hostToPoolMap.containsKey(host)) {
       synchronized (hostToPoolMap) {
