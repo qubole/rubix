@@ -71,7 +71,6 @@ public abstract class ReadRequestChain implements Callable<Long>
   public void addReadRequest(ReadRequest readRequest)
   {
     checkState(!isLocked, "Adding request to a locked chain");
-    log.debug(String.format("Request to add ReadRequest: [%d, %d, %d, %d, %d]", readRequest.getBackendReadStart(), readRequest.getBackendReadEnd(), readRequest.getActualReadStart(), readRequest.getActualReadEnd(), readRequest.getDestBufferOffset()));
     if (lastRequest == null) {
       lastRequest = readRequest;
     }
@@ -81,7 +80,6 @@ public abstract class ReadRequestChain implements Callable<Long>
         // Since the ReadRequests coming in are for same buffer, can merge the two
         lastRequest.setBackendReadEnd(readRequest.getBackendReadEnd());
         lastRequest.setActualReadEnd(readRequest.getActualReadEnd());
-        log.debug(String.format("Updated last to: [%d, %d, %d, %d, %d]", lastRequest.getBackendReadStart(), lastRequest.getBackendReadEnd(), lastRequest.getActualReadStart(), lastRequest.getActualReadEnd(), lastRequest.getDestBufferOffset()));
       }
       else {
         addRequest(lastRequest);
