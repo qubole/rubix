@@ -12,10 +12,7 @@
  */
 package com.qubole.rubix.spi;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.hadoop.conf.Configuration;
-
-import java.util.List;
 
 import static com.qubole.rubix.spi.utils.DataSizeUnits.MEGABYTES;
 
@@ -52,6 +49,7 @@ public class CacheConfig
   private static final String KEY_POOL_MIN_SIZE = "rubix.pool.size.min";
   private static final String KEY_POOL_DELTA_SIZE = "rubix.pool.delta.size";
   private static final String KEY_POOL_MAX_WAIT_TIMEOUT = "rubix.pool.wait.timeout";
+  private static final String KEY_POOL_SCAVENGER_INTERVAL = "rubix.pool.scavenger.interval";
   private static final String KEY_DATA_CACHE_EXPIRY_AFTER_WRITE = "rubix.cache.expiration.after-write";
   private static final String KEY_DATA_CACHE_DIR_PREFIX = "rubix.cache.dirprefix.list";
   private static final String KEY_DATA_CACHE_DIR_SUFFIX = "rubix.cache.dirsuffix";
@@ -310,7 +308,7 @@ public class CacheConfig
 
   public static int getScavengeInterval(Configuration conf)
   {
-    return conf.getInt(KEY_POOL_MAX_WAIT_TIMEOUT, DEFAULT_SCAVENGE_INTERVAL);
+    return conf.getInt(KEY_POOL_SCAVENGER_INTERVAL, DEFAULT_SCAVENGE_INTERVAL);
   }
 
   public static int get(Configuration conf)
