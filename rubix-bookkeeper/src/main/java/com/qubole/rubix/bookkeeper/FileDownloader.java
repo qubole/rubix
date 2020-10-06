@@ -214,12 +214,7 @@ class FileDownloader
       }
       try {
         long read = future.get();
-        // Updating the cache only when we have downloaded the same amount of data that we requested
-        // This takes care of the scenario where the data is download partially but the cache
-        // metadata gets updated for all the requested blocks.
         if (read == totalBytesToBeDownloaded) {
-          requestChain.updateCacheStatus(requestChain.getRemotePath(), requestChain.getFileSize(),
-              requestChain.getLastModified(), CacheConfig.getBlockSize(conf), conf);
           stats.addReadRequestChainStats(requestChain.getStats());
           sizeRead += read;
           this.totalTimeToDownload.inc(requestChain.getTimeSpentOnDownload());
