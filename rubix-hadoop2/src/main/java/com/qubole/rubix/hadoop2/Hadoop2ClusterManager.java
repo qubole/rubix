@@ -12,10 +12,12 @@
  */
 package com.qubole.rubix.hadoop2;
 
+import com.google.api.client.util.Sets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import com.qubole.rubix.spi.ClusterManager;
+import com.qubole.rubix.spi.AsyncClusterManager;
 import com.qubole.rubix.spi.ClusterType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -30,7 +32,7 @@ import java.util.Set;
 /**
  * Created by sakshia on 28/7/16.
  */
-public class Hadoop2ClusterManager extends ClusterManager
+public class Hadoop2ClusterManager extends AsyncClusterManager
 {
   YarnConfiguration yconf;
   private Log log = LogFactory.getLog(Hadoop2ClusterManager.class);
@@ -44,7 +46,7 @@ public class Hadoop2ClusterManager extends ClusterManager
   }
 
   @Override
-  public List<String> getNodesInternal()
+  public Set<String> getNodesInternal()
   {
     try {
       List<Hadoop2ClusterManagerUtil.Node> allNodes = Hadoop2ClusterManagerUtil.getAllNodes(yconf);
@@ -53,7 +55,7 @@ public class Hadoop2ClusterManager extends ClusterManager
       }
 
       if (allNodes.isEmpty()) {
-        return ImmutableList.of();
+        return ImmutableSet.of();
       }
 
       Set<String> hosts = new HashSet<>();
@@ -70,8 +72,7 @@ public class Hadoop2ClusterManager extends ClusterManager
         throw new Exception("No healthy data nodes found.");
       }
 
-      List<String> hostList = Lists.newArrayList(hosts.toArray(new String[0]));
-      return hostList;
+      return ImmutableSet.copyOf(hosts);
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

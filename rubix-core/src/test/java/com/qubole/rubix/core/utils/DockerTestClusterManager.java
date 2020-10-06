@@ -13,17 +13,18 @@
 package com.qubole.rubix.core.utils;
 
 import com.google.common.collect.Lists;
-import com.qubole.rubix.spi.ClusterManager;
+import com.google.common.collect.Sets;
+import com.qubole.rubix.spi.AsyncClusterManager;
 import com.qubole.rubix.spi.ClusterType;
 
-import java.util.List;
+import java.util.Set;
 
-public class DockerTestClusterManager extends ClusterManager
+public class DockerTestClusterManager extends AsyncClusterManager
 {
   @Override
-  public List<String> getNodesInternal()
+  public Set<String> getNodesInternal()
   {
-    return Lists.newArrayList("172.18.8.1", "172.18.8.2");
+    return Sets.newHashSet("172.18.8.1", "172.18.8.2");
   }
 
   @Override

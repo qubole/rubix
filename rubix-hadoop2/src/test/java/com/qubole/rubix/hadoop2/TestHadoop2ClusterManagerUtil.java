@@ -84,7 +84,7 @@ public class TestHadoop2ClusterManagerUtil
    * @return A list of hostnames for the nodes in the cluster.
    * @throws IOException if the cluster server could not be created.
    */
-  static List<String> getNodeHostnamesFromCluster(String endpoint, HttpHandler responseHandler,
+  static Set<String> getNodeHostnamesFromCluster(String endpoint, HttpHandler responseHandler,
                                                   Configuration conf, ClusterType clusterType)
       throws IOException
   {
@@ -93,7 +93,7 @@ public class TestHadoop2ClusterManagerUtil
 
     ClusterManager clusterManager = getClusterManagerInstance(clusterType, conf);
     clusterManager.initialize(conf);
-    final List<String> nodes = clusterManager.getNodes();
+    final Set<String> nodes = clusterManager.getNodes();
     log.info("Got nodes: " + nodes);
 
     server.stop(0);
@@ -157,10 +157,10 @@ public class TestHadoop2ClusterManagerUtil
                               Configuration conf, ClusterType clusterType)
       throws IOException
   {
-    final List<String> nodeHostnames1 = getNodeHostnamesFromCluster(CLUSTER_NODES_ENDPOINT, prevWorker, conf, clusterType);
+    final Set<String> nodeHostnames1 = getNodeHostnamesFromCluster(CLUSTER_NODES_ENDPOINT, prevWorker, conf, clusterType);
     Map<String, String> keyMembership1 = getConsistentHashedMembership(prevWorker, keys, conf, clusterType);
 
-    final List<String> nodeHostnames2 = getNodeHostnamesFromCluster(CLUSTER_NODES_ENDPOINT, newWorker, conf, clusterType);
+    final Set<String> nodeHostnames2 = getNodeHostnamesFromCluster(CLUSTER_NODES_ENDPOINT, newWorker, conf, clusterType);
     Map<String, String> keyMembership2 = getConsistentHashedMembership(newWorker, keys, conf, clusterType);
 
     int match = 0;

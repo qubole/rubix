@@ -12,7 +12,6 @@
  */
 package com.qubole.rubix.prestosql;
 
-import com.qubole.rubix.spi.CacheConfig;
 import com.qubole.rubix.spi.ClusterManager;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -26,8 +25,9 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.net.UnknownHostException;
-import java.util.List;
+import java.util.Set;
 
 import static org.testng.Assert.assertTrue;
 
@@ -49,16 +49,19 @@ public class TestClusterManager
   {
     HttpServer server = createServer("/v1/node", new MultipleWorkers(), "/v1/node/failed", new NoFailedNode());
 
-    log.info("STARTED SERVER");
+    try {
+      log.info("STARTED SERVER");
 
-    ClusterManager clusterManager = getPrestoClusterManager();
-    List<String> nodes = clusterManager.getNodes();
-    log.info("Got nodes: " + nodes);
+      ClusterManager clusterManager = getPrestoClusterManager();
+      Set<String> nodes = clusterManager.getNodes();
+      log.info("Got nodes: " + nodes);
 
-    assertTrue(nodes.size() == 2, "Should only have two nodes");
-    assertTrue(nodes.get(0).equals("192.168.1.3") && nodes.get(1).equals("192.168.2.252"), "Wrong nodes data");
-
-    server.stop(0);
+      assertTrue(nodes.size() == 2, "Should only have two nodes");
+      assertTrue(nodes.contains("192.168.1.3") && nodes.contains("192.168.2.252"), "Wrong nodes data");
+    }
+    finally {
+      server.stop(0);
+    }
   }
 
   @Test
@@ -70,15 +73,20 @@ public class TestClusterManager
   {
     HttpServer server = createServer("/v1/node", new NoWorker(), "/v1/node/failed", new NoFailedNode());
 
-    log.info("STARTED SERVER");
+    try {
+      log.info("STARTED SERVER");
 
-    ClusterManager clusterManager = getPrestoClusterManager();
-    List<String> nodes = clusterManager.getNodes();
-    log.info("Got nodes: " + nodes);
+      ClusterManager clusterManager = getPrestoClusterManager();
+      Set<String> nodes = clusterManager.getNodes();
+      log.info("Got nodes: " + nodes);
+      log.info(" Host address: " + InetAddress.getLocalHost().getHostAddress());
 
-    assertTrue(nodes.size() == 1, "Should have added localhost in list");
-    assertTrue(nodes.get(0).equals(InetAddress.getLocalHost().getHostAddress()), "Not added right hostname");
-    server.stop(0);
+      assertTrue(nodes.size() == 1, "Should have added localhost in list");
+      assertTrue(nodes.contains(InetAddress.getLocalHost().getHostAddress()), "Not added right hostname");
+    }
+    finally {
+      server.stop(0);
+    }
   }
 
   @Test
@@ -89,17 +97,19 @@ public class TestClusterManager
           throws IOException
   {
     HttpServer server = createServer("/v1/node", new MultipleWorkers(), "/v1/node/failed", new OneFailedNode());
+    try {
+      log.info("STARTED SERVER");
 
-    log.info("STARTED SERVER");
+      ClusterManager clusterManager = getPrestoClusterManager();
+      Set<String> nodes = clusterManager.getNodes();
+      log.info("Got nodes: " + nodes);
 
-    ClusterManager clusterManager = getPrestoClusterManager();
-    List<String> nodes = clusterManager.getNodes();
-    log.info("Got nodes: " + nodes);
-
-    assertTrue(nodes.size() == 1, "Should only have two nodes");
-    assertTrue(nodes.get(0).equals("192.168.2.252"), "Wrong nodes data");
-
-    server.stop(0);
+      assertTrue(nodes.size() == 1, "Should only have two nodes");
+      assertTrue(nodes.contains("192.168.2.252"), "Wrong nodes data");
+    }
+    finally {
+      server.stop(0);
+    }
   }
 
   private HttpServer createServer(String endpoint1, HttpHandler handler1, String endpoint2, HttpHandler handler2)
@@ -116,10 +126,11 @@ public class TestClusterManager
   private ClusterManager getPrestoClusterManager()
           throws UnknownHostException
   {
-    ClusterManager clusterManager = new PrestoClusterManager();
+    PrestoClusterManager clusterManager = new PrestoClusterManager();
     Configuration conf = new Configuration();
-    conf.setInt(PrestoClusterManager.serverPortConf, 45326);
+    conf.setInt(TestingNodeManager.SERVER_PORT_CONF_KEY, 45326);
     clusterManager.initialize(conf);
+    PrestoClusterManager.setNodeManager(new TestingNodeManager(conf, new TestingNodeManager.TestingNode(URI.create("http://" + InetAddress.getLocalHost().getHostAddress()))));
     return clusterManager;
   }
 
