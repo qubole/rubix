@@ -134,7 +134,7 @@ public class FileDownloadRequestChain extends ReadRequestChain
     FileChannel fileChannel = null;
     FileSystem fileSystem = remoteFileSystem;
     try {
-      inputStream = fileSystem.open(new Path(remotePath), CacheConfig.getBlockSize(conf));
+      inputStream = fileSystem.open(new Path(remotePath));
       fileChannel = new FileOutputStream(new RandomAccessFile(file, "rw").getFD()).getChannel();
       for (ReadRequest readRequest : readRequests) {
         if (isCancelled()) {
