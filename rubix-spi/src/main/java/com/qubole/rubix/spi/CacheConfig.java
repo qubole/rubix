@@ -108,6 +108,7 @@ public class CacheConfig
   private static final String KEY_DUMMY_MODE = "rubix.cache.dummy.mode";
   private static final String KEY_EMBEDDED_MODE = "rubix.cluster.embedded.mode";
   private static final String KEY_HEARTBEAT_ENABLED = "rubix.cluster.heartbeat.enabled";
+  private static final String KEY_PARALLEL_WARMUP_MAX_CHUNK_SIZE = "rubix.cache.parallel.warmup.max_chunk_size";
 
   // Internal Configurations used in RubiX
   private static final String KEY_YARN_RESOURCEMANAGER_ADDRESS = "yarn.resourcemanager.address";
@@ -183,6 +184,7 @@ public class CacheConfig
   private static final boolean DEFAULT_EMBEDDED_MODE = false;
   public static final String DEFAULT_RUBIX_SITE_LOCATION = "/usr/lib/rubix/etc/rubix-site.xml";
   private static final boolean DEFAULT_HEARTBEAT_ENABLED = true;
+  private static final long DEFAULT_PARALLEL_WARMUP_MAX_CHUNK_SIZE = MEGABYTES.toBytes(100);
 
   private CacheConfig()
   {
@@ -576,6 +578,11 @@ public class CacheConfig
     return conf.get(KEY_RUBIX_CURRENT_NODE_HOSTNAME, null);
   }
 
+  public static long getParallelWarmupMaxChunkSize (Configuration conf)
+  {
+    return conf.getLong(KEY_PARALLEL_WARMUP_MAX_CHUNK_SIZE, DEFAULT_PARALLEL_WARMUP_MAX_CHUNK_SIZE);
+  }
+
   public static void setRubixConfigApplied(Configuration conf, boolean value)
   {
     conf.setBoolean(KEY_RUBIX_SITE_CONFIG_APPLIED, value);
@@ -879,5 +886,10 @@ public class CacheConfig
   public static void setMaxCacheSizeInMB(Configuration conf, long size)
   {
     conf.setLong(KEY_MAX_CACHE_SIZE_IN_MB, size);
+  }
+
+  public static void setParallelWarmupMaxChunkSize(Configuration conf, long size)
+  {
+    conf.setLong(KEY_PARALLEL_WARMUP_MAX_CHUNK_SIZE, size);
   }
 }

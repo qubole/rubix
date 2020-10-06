@@ -64,7 +64,7 @@ public class FileDownloadRequestChain extends ReadRequestChain
       long lastModified,
       int generationNumber)
   {
-    super(generationNumber);
+    super(generationNumber, getBlockAlignedMaxChunkSize(conf));
     this.bookKeeper = bookKeeper;
     this.remoteFileSystem = remoteFileSystem;
     this.localFile = localfile;
@@ -74,6 +74,13 @@ public class FileDownloadRequestChain extends ReadRequestChain
     this.lastModified = lastModified;
     this.directBuffer = directBuffer;
     this.maxRemoteReadBufferSize = CacheConfig.getDataTransferBufferSize(conf);
+  }
+
+  private static long getBlockAlignedMaxChunkSize(Configuration conf)
+  {
+    long maxReadRequestLength = CacheConfig.getParallelWarmupMaxChunkSize(conf);
+    long blockSize = CacheConfig.getBlockSize(conf);
+    return (maxReadRequestLength / blockSize) * blockSize;
   }
 
   public String getRemotePath()

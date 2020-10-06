@@ -16,6 +16,7 @@ import org.testng.annotations.Test;
 
 import java.util.List;
 
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
 /**
@@ -31,6 +32,7 @@ public class TestReadRequestChain
     CachedReadRequestChain chain = new CachedReadRequestChain();
     chain.addReadRequest(rr1);
     chain.addReadRequest(rr2);
+    chain.lock();
 
     List<ReadRequest> finalRequests = chain.getReadRequests();
 
@@ -41,5 +43,39 @@ public class TestReadRequestChain
     assertTrue(rr.getBackendReadEnd() == 2048, "Wrong backend read end");
     assertTrue(rr.getActualReadStart() == 0, "Wrong actual read start");
     assertTrue(rr.getActualReadEnd() == 2048, "Wrong actual read end");
+  }
+
+  @Test
+  public void testMaxReadRequestSize()
+  {
+    ReadRequest rr1 = new ReadRequest(0, 1024, 40, 1024, null, 0, 2500);
+    ReadRequest rr2 = new ReadRequest(1024, 1280, 1024, 1280, null, 0, 2500);
+    ReadRequest rr3 = new ReadRequest(1280, 1792, 1280, 1792, null, 0, 2500);
+    ReadRequest rr4 = new ReadRequest(1792, 2048, 1792, 2000, null, 0, 2500);
+    ReadRequest rr5 = new ReadRequest(2100, 2200, 2100, 2200, null, 0, 2500);
+
+    CachedReadRequestChain chain = new CachedReadRequestChain();
+    chain.setMaxReadRequestSize(512);
+    chain.addReadRequest(rr1);
+    chain.addReadRequest(rr2);
+    chain.addReadRequest(rr3);
+    chain.addReadRequest(rr4);
+    chain.addReadRequest(rr5);
+    chain.lock();
+
+    // Expected chains
+    ReadRequest[] expectedReadRequests = {
+            new ReadRequest(0, 512, 40, 512, null, 0, 2500),
+            new ReadRequest(512, 1024, 512, 1024, null, 472, 2500),
+            new ReadRequest(1024, 1536, 1024, 1536, null, 984, 2500),
+            new ReadRequest(1536, 2048, 1536, 2000, null, 1496, 2500),
+            new ReadRequest(2100, 2200, 2100, 2200, null, 0, 2500),
+    };
+
+    int idx = 0;
+    for (ReadRequest expected : expectedReadRequests) {
+      assertEquals(chain.getReadRequests().get(idx), expected, String.format("Expected=%s and actual=%s", expected, chain.getReadRequests().get(idx)));
+      idx++;
+    }
   }
 }
