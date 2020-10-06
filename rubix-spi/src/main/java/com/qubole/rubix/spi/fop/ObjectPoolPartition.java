@@ -107,7 +107,10 @@ public class ObjectPoolPartition<T>
   {
     Poolable<T> object;
     try {
-      takeSemaphore.tryAcquire(config.getMaxWaitMilliseconds(), TimeUnit.MILLISECONDS);
+      if (!takeSemaphore.tryAcquire(config.getMaxWaitMilliseconds(), TimeUnit.MILLISECONDS)) {
+        // Not able to acquire semaphore in the given timeout, return null
+        return null;
+      }
     }
     catch (InterruptedException e) {
       Thread.currentThread().interrupt();

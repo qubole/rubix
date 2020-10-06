@@ -75,19 +75,15 @@ public class ObjectPool<T>
       }
     }
     log.debug(this.name + " : Borrowing object for partition: " + host);
-    for (int i = 0; i < 3; i++) { // try at most three times
-      Poolable<T> result = getObject(host);
-      if (result == null) {
-        continue;
-      }
-      else if (factory.validate(result.getObject())) {
-        return result;
-      }
-      else {
-        this.hostToPoolMap.get(host).decreaseObject(result);
-      }
+    Poolable<T> result = getObject(host);
+    if (result == null) {
+      throw new RuntimeException("Unable to find a free object from connection pool: " + this.name);
     }
-    throw new RuntimeException("Cannot find a valid object");
+    else if (!factory.validate(result.getObject())) {
+      this.hostToPoolMap.get(host).decreaseObject(result);
+      throw new RuntimeException("Cannot find a valid object from connection pool: " + this.name);
+    }
+    return result;
   }
 
   private Poolable<T> getObject(String host)

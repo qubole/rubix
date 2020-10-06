@@ -12,6 +12,7 @@
  */
 package com.qubole.rubix.spi;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.qubole.rubix.spi.fop.ObjectPool;
 import com.qubole.rubix.spi.fop.Poolable;
 import org.apache.commons.logging.Log;
@@ -82,6 +83,12 @@ public abstract class RetryingPooledThriftClient
     }
 
     throw new TException();
+  }
+
+  @VisibleForTesting
+  public Poolable<TTransport> getTransportPoolable()
+  {
+    return transportPoolable;
   }
 
   @Override
