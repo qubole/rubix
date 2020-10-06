@@ -12,7 +12,6 @@
  */
 package com.qubole.rubix.bookkeeper;
 
-import com.google.common.base.Throwables;
 import com.qubole.rubix.core.ReadRequest;
 import com.qubole.rubix.core.ReadRequestChain;
 import com.qubole.rubix.core.ReadRequestChainStats;
@@ -51,6 +50,7 @@ public class FileDownloadRequestChain extends ReadRequestChain
   Configuration conf;
   ByteBuffer directBuffer;
   private long timeSpentOnDownload;
+  private int blockSize;
 
   private static final Log log = LogFactory.getLog(FileDownloadRequestChain.class);
 
@@ -74,6 +74,7 @@ public class FileDownloadRequestChain extends ReadRequestChain
     this.lastModified = lastModified;
     this.directBuffer = directBuffer;
     this.maxRemoteReadBufferSize = CacheConfig.getDataTransferBufferSize(conf);
+    this.blockSize = CacheConfig.getBlockSize(conf);
   }
 
   private static long getBlockAlignedMaxChunkSize(Configuration conf)
@@ -143,6 +144,9 @@ public class FileDownloadRequestChain extends ReadRequestChain
 
         long readBytes = copyIntoCache(inputStream, fileChannel, readRequest.getBackendReadStart(), readRequest.getBackendReadLength(), remoteReadBuffer);
         totalRequestedRead += readBytes;
+
+        // Update BookKeeper about the downloaded data asap to minimze the errors in disk space accounting
+        updateCacheStatus(readRequest);
       }
       long endTime = System.currentTimeMillis();
       timeSpentOnDownload = (endTime - startTime) / 1000;
@@ -208,22 +212,24 @@ public class FileDownloadRequestChain extends ReadRequestChain
     }
   }
 
-  @Override
-  public void updateCacheStatus(String remotePath, long fileSize, long lastModified, int blockSize, Configuration conf)
+  private void updateCacheStatus(ReadRequest readRequest)
   {
+    long startBlock = toStartBlock(readRequest.getBackendReadStart(), blockSize);
+    long endBlock = toEndBlock(readRequest.getBackendReadEnd(), blockSize);
     try {
-      for (ReadRequest readRequest : getReadRequests()) {
-        log.debug("Setting cached from : " + toStartBlock(readRequest.getBackendReadStart(), blockSize) + " block to : " + (toEndBlock(readRequest.getBackendReadEnd(), blockSize)));
-        bookKeeper.setAllCached(remotePath,
-            fileSize,
-            lastModified,
-            toStartBlock(readRequest.getBackendReadStart(), blockSize),
-            toEndBlock(readRequest.getBackendReadEnd(), blockSize),
-            generationNumber);
-      }
+      bookKeeper.setAllCached(remotePath,
+              fileSize,
+              lastModified,
+              startBlock,
+              endBlock,
+              generationNumber);
     }
     catch (Exception e) {
-      log.debug("Could not update BookKeeper about newly cached blocks: " + Throwables.getStackTraceAsString(e));
+      log.warn(String.format("Unable to update cache status for %s:%d:%d, this can cause wrong accounting of disk utilization",
+              remotePath,
+              startBlock,
+              endBlock),
+              e);
     }
   }
 
