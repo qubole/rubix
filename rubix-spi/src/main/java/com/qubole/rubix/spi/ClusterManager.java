@@ -166,14 +166,18 @@ public abstract class ClusterManager
 
   public String getCurrentNodeName()
   {
-    if (currentNodeName == null) {
-      // getNodes() updates the currentNodeName
-      List<String> nodes = getNodes();
-      if (nodes == null) {
-        log.error("Initialization not done for Cluster Type: " + getClusterType());
-        throw new RuntimeException("Unable to find current node name");
-      }
-    }
+    // refresh cluster nodes first, which updates currentNodeName if it is not set.
+    refreshClusterNodes();
     return currentNodeName;
+  }
+
+  private void refreshClusterNodes()
+  {
+    // getNodes() updates the currentNodeName
+    List<String> nodes = getNodes();
+    if (nodes == null) {
+      log.error("Initialization not done for Cluster Type: " + getClusterType());
+      throw new RuntimeException("Unable to find current node name");
+    }
   }
 }
