@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.URI;
 import java.net.UnknownHostException;
 import java.util.Set;
 
@@ -36,7 +35,7 @@ import static org.testng.Assert.assertTrue;
  */
 
 @Test(singleThreaded = true)
-public class TestClusterManager
+public abstract class TestClusterManager
 {
   private Log log = LogFactory.getLog(TestClusterManager.class);
 
@@ -123,14 +122,15 @@ public class TestClusterManager
     return server;
   }
 
+  abstract protected ClusterManager newPrestoClusterManager(Configuration conf);
+
   private ClusterManager getPrestoClusterManager()
           throws UnknownHostException
   {
-    PrestoClusterManager clusterManager = new PrestoClusterManager();
     Configuration conf = new Configuration();
-    conf.setInt(TestingNodeManager.SERVER_PORT_CONF_KEY, 45326);
+    conf.setInt(StandaloneNodeManager.SERVER_PORT_CONF_KEY, 45326);
+    ClusterManager clusterManager = newPrestoClusterManager(conf);
     clusterManager.initialize(conf);
-    PrestoClusterManager.setNodeManager(new TestingNodeManager(conf, new TestingNodeManager.TestingNode(URI.create("http://" + InetAddress.getLocalHost().getHostAddress()))));
     return clusterManager;
   }
 

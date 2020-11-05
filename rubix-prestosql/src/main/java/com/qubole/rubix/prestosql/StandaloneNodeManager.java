@@ -20,6 +20,8 @@ import com.qubole.rubix.common.utils.ClusterUtil;
 import io.prestosql.spi.HostAddress;
 import io.prestosql.spi.Node;
 import io.prestosql.spi.NodeManager;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -39,8 +41,9 @@ import java.util.Set;
 
 import static java.util.Objects.requireNonNull;
 
-public class TestingNodeManager implements NodeManager {
-  private static Log LOG = LogFactory.getLog(TestingNodeManager.class);
+public class StandaloneNodeManager
+    implements NodeManager {
+  private static Log LOG = LogFactory.getLog(StandaloneNodeManager.class);
   private static final int DEFAULT_SERVER_PORT = 8081;
   private static final String DEFAULT_USER = "rubix";
   public static final String SERVER_PORT_CONF_KEY = "caching.fs.presto-server-port";
@@ -49,10 +52,16 @@ public class TestingNodeManager implements NodeManager {
   private final Node currentNode;
   private final int serverPort;
 
-  public TestingNodeManager(Configuration conf, Node currentNode)
-  {
+  public StandaloneNodeManager(Configuration conf) {
     this.serverPort = conf.getInt(SERVER_PORT_CONF_KEY, DEFAULT_SERVER_PORT);
     this.serverAddress = ClusterUtil.getMasterHostname(conf);
+    Node currentNode = null;
+    try {
+      currentNode = new StandaloneNode(URI.create("http://" + InetAddress.getLocalHost().getHostAddress()));
+    }
+    catch (UnknownHostException e) {
+      LOG.warn("Unable to set current node", e);
+    }
     this.currentNode = currentNode;
   }
 
@@ -145,7 +154,7 @@ public class TestingNodeManager implements NodeManager {
 
       Set<Node> hosts = new HashSet<Node>();
       for (Stats node : allNodes) {
-        hosts.add(new TestingNode(node.getUri()));
+        hosts.add(new StandaloneNode(node.getUri()));
       }
 
       return hosts;
@@ -188,11 +197,12 @@ public class TestingNodeManager implements NodeManager {
     return new URL("http://" + serverAddress + ":" + serverPort + "/v1/node/failed");
   }
 
-  public static class TestingNode implements Node
+  public static class StandaloneNode
+      implements Node
   {
     private final URI uri;
 
-    public TestingNode(URI uri) {
+    public StandaloneNode(URI uri) {
       this.uri = uri;
     }
 

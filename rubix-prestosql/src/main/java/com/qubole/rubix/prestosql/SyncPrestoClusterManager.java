@@ -12,46 +12,35 @@
  */
 package com.qubole.rubix.prestosql;
 
-import com.qubole.rubix.spi.AsyncClusterManager;
 import com.qubole.rubix.spi.ClusterType;
+import com.qubole.rubix.spi.SyncClusterManager;
 import io.prestosql.spi.Node;
 import io.prestosql.spi.NodeManager;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 
-import java.net.UnknownHostException;
 import java.util.Set;
 
-/**
- * Created by stagra on 14/1/16.
- */
-public class PrestoClusterManager extends AsyncClusterManager
+import static java.util.Objects.requireNonNull;
+
+public class SyncPrestoClusterManager extends SyncClusterManager
 {
-  private static Log log = LogFactory.getLog(PrestoClusterManager.class);
-  static volatile NodeManager NODE_MANAGER;
-
-  public static void setNodeManager(NodeManager nodeManager)
-  {
-    PrestoClusterManager.NODE_MANAGER = nodeManager;
-  }
-
-  private volatile NodeManager nodeManager;
+  private static Log log = LogFactory.getLog(SyncPrestoClusterManager.class);
+  private volatile Set<Node> workerNodes;
 
   @Override
-  public void initialize(Configuration conf) throws UnknownHostException
-  {
-    super.initialize(conf);
-    nodeManager = NODE_MANAGER;
-    if (nodeManager == null) {
-      nodeManager = new StandaloneNodeManager(conf);
-    }
+  protected boolean hasStateChanged() {
+    requireNonNull(PrestoClusterManager.NODE_MANAGER, "nodeManager is null");
+    Set<Node> workerNodes = PrestoClusterManager.NODE_MANAGER.getWorkerNodes();
+    boolean hasChanged = !workerNodes.equals(this.workerNodes);
+    this.workerNodes = workerNodes;
+    return hasChanged;
   }
 
   @Override
   public Set<String> getNodesInternal()
   {
-    return ClusterManagerNodeGetter.getNodesInternal(nodeManager);
+    return ClusterManagerNodeGetter.getNodesInternal(PrestoClusterManager.NODE_MANAGER);
   }
 
   @Override

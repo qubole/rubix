@@ -21,32 +21,32 @@ public abstract class SyncClusterManager extends ClusterManager
 {
   private static Log log = LogFactory.getLog(SyncClusterManager.class);
 
-  private Set<String> currentNodes;
+  private volatile Set<String> currentNodes;
 
   protected abstract boolean hasStateChanged();
 
-  private synchronized void updateStateIfChanged() {
+  private void updateStateIfChanged() {
     if (hasStateChanged()) {
       currentNodes = getNodesAndUpdateState();
     }
   }
 
   @Override
-  public synchronized String locateKey(String key)
+  public String locateKey(String key)
   {
     updateStateIfChanged();
     return super.locateKey(key);
   }
 
   @Override
-  public synchronized String getCurrentNodeName()
+  public String getCurrentNodeName()
   {
     updateStateIfChanged();
     return super.getCurrentNodeName();
   }
   // Returns sorted list of nodes in the cluster
   @Override
-  public synchronized Set<String> getNodes()
+  public Set<String> getNodes()
   {
     updateStateIfChanged();
     return currentNodes;

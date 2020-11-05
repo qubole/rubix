@@ -67,7 +67,7 @@ public abstract class ClusterManager
     return nodeHostAddress;
   }
 
-  protected Set<String> getNodesAndUpdateState()
+  protected synchronized Set<String> getNodesAndUpdateState()
   {
     Set<String> nodes = getNodesInternal();
     if (nodes == null) {
