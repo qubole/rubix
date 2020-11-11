@@ -1,5 +1,5 @@
 =============================
-Release 0.3.18 (next release)
+Release 0.3.20 (next release)
 =============================
 
 Fixes and Features
