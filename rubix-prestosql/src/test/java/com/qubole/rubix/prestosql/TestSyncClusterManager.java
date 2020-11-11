@@ -10,26 +10,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-package com.qubole.rubix.core.utils;
+package com.qubole.rubix.prestosql;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
-import com.qubole.rubix.spi.AsyncClusterManager;
-import com.qubole.rubix.spi.ClusterType;
+import com.qubole.rubix.spi.ClusterManager;
+import org.apache.hadoop.conf.Configuration;
 
-import java.util.Set;
-
-public class DockerTestClusterManager extends AsyncClusterManager
-{
+public class TestSyncClusterManager extends TestClusterManager {
   @Override
-  public Set<String> getNodesInternal()
-  {
-    return Sets.newHashSet("172.18.8.1", "172.18.8.2");
-  }
-
-  @Override
-  public ClusterType getClusterType()
-  {
-    return ClusterType.TEST_CLUSTER_MANAGER;
+  protected ClusterManager newPrestoClusterManager(Configuration conf) {
+    PrestoClusterManager.setNodeManager(new StandaloneNodeManager(conf));
+    return new SyncPrestoClusterManager();
   }
 }

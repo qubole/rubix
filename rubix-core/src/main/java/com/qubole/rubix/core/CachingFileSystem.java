@@ -48,7 +48,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.net.URI;
-import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -401,7 +401,7 @@ public abstract class CachingFileSystem<T extends FileSystem> extends FilterFile
       return fs.getFileBlockLocations(file, start, len);
     }
 
-    List<String> nodes = clusterManager.getNodes();
+    Set<String> nodes = clusterManager.getNodes();
 
     if (nodes == null) {
       return fs.getFileBlockLocations(file, start, len);

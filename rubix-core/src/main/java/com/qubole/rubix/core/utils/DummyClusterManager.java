@@ -12,23 +12,25 @@
  */
 package com.qubole.rubix.core.utils;
 
-import com.qubole.rubix.spi.ClusterManager;
+import com.qubole.rubix.spi.AsyncClusterManager;
 import com.qubole.rubix.spi.ClusterType;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Created by Abhishek on 6/8/18.
  */
-public class DummyClusterManager extends ClusterManager
+public class DummyClusterManager extends AsyncClusterManager
 {
   @Override
-  public List<String> getNodesInternal()
+  public Set<String> getNodesInternal()
   {
-    List<String> list = new ArrayList<String>();
+    Set<String> list = new HashSet<>();
     String hostName = "";
     try {
       hostName = InetAddress.getLocalHost().getCanonicalHostName();
@@ -51,6 +53,6 @@ public class DummyClusterManager extends ClusterManager
   @Override
   public String getCurrentNodeName()
   {
-    return getNodes().get(0);
+    return getNodes().iterator().next();
   }
 }

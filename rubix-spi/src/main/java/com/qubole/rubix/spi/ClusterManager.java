@@ -12,10 +12,7 @@
  */
 package com.qubole.rubix.spi;
 
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -26,13 +23,7 @@ import org.ishugaliy.allgood.consistent.hash.node.SimpleNode;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-
-import static java.util.Objects.requireNonNull;
+import java.util.Set;
 
 /**
  * Created by stagra on 14/1/16.
@@ -46,10 +37,9 @@ public abstract class ClusterManager
 {
   private static Log log = LogFactory.getLog(ClusterManager.class);
 
-  private String currentNodeName;
+  protected String currentNodeName;
   private String nodeHostname;
   private String nodeHostAddress;
-  private final AtomicReference<LoadingCache<String, List<String>>> nodesCache = new AtomicReference<>();
   // Concluded from testing that Metro Hash results in better load distribution across the nodes in cluster.
   private final ConsistentHash<SimpleNode> consistentHashRing = HashRing.<SimpleNode>newBuilder()
           .hasher(DefaultHasher.METRO_HASH)
@@ -62,7 +52,10 @@ public abstract class ClusterManager
    * returns null in case node list cannot be fetched
    * returns empty in case of master-only setup
    */
-  protected abstract List<String> getNodesInternal();
+  protected abstract Set<String> getNodesInternal();
+
+  // Returns sorted list of nodes in the cluster
+  public abstract Set<String> getNodes();
 
   protected String getCurrentNodeHostname()
   {
@@ -74,16 +67,15 @@ public abstract class ClusterManager
     return nodeHostAddress;
   }
 
-  private List<String> getNodesAndUpdateState()
+  protected synchronized Set<String> getNodesAndUpdateState()
   {
-    requireNonNull(nodesCache, "ClusterManager used before initialization");
-    List<String> nodes = getNodesInternal();
+    Set<String> nodes = getNodesInternal();
     if (nodes == null) {
-      nodes = ImmutableList.of();
+      nodes = ImmutableSet.of();
     } else if (nodes.isEmpty()) {
       // Empty result set => server up and only master node running, return localhost has the only node
       // Do not need to consider failed nodes list as 1node cluster and server is up since it replied to allNodesRequest
-      nodes = ImmutableList.of(getCurrentNodeHostAddress());
+      nodes = ImmutableSet.of(getCurrentNodeHostAddress());
     }
 
     // remove stale nodes from consistent hash ring
@@ -122,32 +114,11 @@ public abstract class ClusterManager
   public void initialize(Configuration conf)
           throws UnknownHostException
   {
-    if (nodesCache.get() == null) {
-      synchronized (nodesCache) {
-        if (nodesCache.get() == null) {
-          int nodeRefreshTime = CacheConfig.getClusterNodeRefreshTime(conf);
-
+    if (nodeHostname == null) {
+      synchronized (this) {
+        if (nodeHostname == null) {
           nodeHostname = InetAddress.getLocalHost().getCanonicalHostName();
           nodeHostAddress = InetAddress.getLocalHost().getHostAddress();
-
-          ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
-            Thread t = Executors.defaultThreadFactory().newThread(r);
-            t.setName("rubix-get-nodes-thread");
-            t.setDaemon(true);
-            return t;
-          });
-
-          nodesCache.set(
-                  CacheBuilder.newBuilder()
-                  .refreshAfterWrite(nodeRefreshTime, TimeUnit.SECONDS)
-                  .build(CacheLoader.asyncReloading(new CacheLoader<String, List<String>>()
-                  {
-                    @Override
-                    public List<String> load(String s)
-                    {
-                      return getNodesAndUpdateState();
-                    }
-                  }, executor)));
         }
       }
     }
@@ -156,12 +127,6 @@ public abstract class ClusterManager
   public String locateKey(String key)
   {
     return consistentHashRing.locate(key).orElseThrow(() -> new RuntimeException("Unable to locate key: " + key)).getKey();
-  }
-
-  // Returns sorted list of nodes in the cluster
-  public List<String> getNodes()
-  {
-    return nodesCache.get().getUnchecked("nodes");
   }
 
   public String getCurrentNodeName()
@@ -174,7 +139,7 @@ public abstract class ClusterManager
   private void refreshClusterNodes()
   {
     // getNodes() updates the currentNodeName
-    List<String> nodes = getNodes();
+    Set<String> nodes = getNodes();
     if (nodes == null) {
       log.error("Initialization not done for Cluster Type: " + getClusterType());
       throw new RuntimeException("Unable to find current node name");

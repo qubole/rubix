@@ -28,6 +28,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.List;
+import java.util.Set;
 
 import static org.testng.Assert.assertTrue;
 
@@ -52,11 +53,11 @@ public class TestClusterManager
     log.info("STARTED SERVER");
 
     ClusterManager clusterManager = getPrestoClusterManager();
-    List<String> nodes = clusterManager.getNodes();
+    Set<String> nodes = clusterManager.getNodes();
     log.info("Got nodes: " + nodes);
 
     assertTrue(nodes.size() == 2, "Should only have two nodes");
-    assertTrue(nodes.get(0).equals("192.168.1.3") && nodes.get(1).equals("192.168.2.252"), "Wrong nodes data");
+    assertTrue(nodes.contains("192.168.1.3") && nodes.contains("192.168.2.252"), "Wrong nodes data");
 
     server.stop(0);
   }
@@ -73,11 +74,11 @@ public class TestClusterManager
     log.info("STARTED SERVER");
 
     ClusterManager clusterManager = getPrestoClusterManager();
-    List<String> nodes = clusterManager.getNodes();
+    Set<String> nodes = clusterManager.getNodes();
     log.info("Got nodes: " + nodes);
 
     assertTrue(nodes.size() == 1, "Should have added localhost in list");
-    assertTrue(nodes.get(0).equals(InetAddress.getLocalHost().getHostAddress()), "Not added right hostname");
+    assertTrue(nodes.contains(InetAddress.getLocalHost().getHostAddress()), "Not added right hostname");
     server.stop(0);
   }
 
@@ -93,11 +94,11 @@ public class TestClusterManager
     log.info("STARTED SERVER");
 
     ClusterManager clusterManager = getPrestoClusterManager();
-    List<String> nodes = clusterManager.getNodes();
+    Set<String> nodes = clusterManager.getNodes();
     log.info("Got nodes: " + nodes);
 
     assertTrue(nodes.size() == 1, "Should only have two nodes");
-    assertTrue(nodes.get(0).equals("192.168.2.252"), "Wrong nodes data");
+    assertTrue(nodes.contains("192.168.2.252"), "Wrong nodes data");
 
     server.stop(0);
   }

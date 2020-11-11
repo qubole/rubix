@@ -12,32 +12,41 @@
  */
 package com.qubole.rubix.core.utils;
 
-import com.qubole.rubix.spi.ClusterManager;
+import com.qubole.rubix.spi.AsyncClusterManager;
 import com.qubole.rubix.spi.ClusterType;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
-public class DummyClusterManagerMultinode extends ClusterManager
+public class DummyClusterManagerMultinode extends AsyncClusterManager
 {
-    @Override
-    public List<String> getNodesInternal()
+    private final String currentNode;
+    private final String otherNode;
+    private final Set<String> nodes = new HashSet<>();
+
+    public DummyClusterManagerMultinode()
     {
-        List<String> list = new ArrayList<String>();
-        String hostName = "";
+        String currentNode;
         try {
-            hostName = InetAddress.getLocalHost().getCanonicalHostName();
+            currentNode = InetAddress.getLocalHost().getCanonicalHostName();
         }
         catch (UnknownHostException e) {
-            hostName = "localhost";
+            currentNode = "localhost";
         }
+        this.currentNode = currentNode;
+        nodes.add(currentNode);
+        this.otherNode = currentNode + "_copy";
+        nodes.add(otherNode);
+    }
 
-        list.add(hostName);
-        list.add(hostName + "_copy");
-
-        return list;
+    @Override
+    public Set<String> getNodesInternal()
+    {
+        return nodes;
     }
 
     @Override
@@ -49,11 +58,11 @@ public class DummyClusterManagerMultinode extends ClusterManager
     @Override
     public String getCurrentNodeName()
     {
-        return getNodes().get(0);
+        return currentNode;
     }
 
     public String locateKey(String key)
     {
-        return getNodes().get(1);
+        return otherNode;
     }
 }

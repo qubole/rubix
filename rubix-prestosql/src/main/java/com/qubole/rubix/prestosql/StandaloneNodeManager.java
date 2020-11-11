@@ -10,17 +10,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-package com.qubole.rubix.presto;
+package com.qubole.rubix.prestosql;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import com.qubole.rubix.common.utils.ClusterUtil;
-import com.qubole.rubix.spi.AsyncClusterManager;
-import com.qubole.rubix.spi.ClusterType;
+import io.prestosql.spi.HostAddress;
+import io.prestosql.spi.Node;
+import io.prestosql.spi.NodeManager;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -33,7 +34,6 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
-import java.net.UnknownHostException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -41,34 +41,37 @@ import java.util.Set;
 
 import static java.util.Objects.requireNonNull;
 
-/**
- * Created by stagra on 14/1/16.
- */
-public class PrestoClusterManager extends AsyncClusterManager
-{
+public class StandaloneNodeManager
+    implements NodeManager {
+  private static Log LOG = LogFactory.getLog(StandaloneNodeManager.class);
+  private static final int DEFAULT_SERVER_PORT = 8081;
   private static final String DEFAULT_USER = "rubix";
-  private int serverPort = 8081;
-  private String serverAddress = "localhost";
+  public static final String SERVER_PORT_CONF_KEY = "caching.fs.presto-server-port";
 
-  private Log log = LogFactory.getLog(PrestoClusterManager.class);
+  private final String serverAddress;
+  private final Node currentNode;
+  private final int serverPort;
 
-  public static String serverPortConf = "caching.fs.presto-server-port";
-  public static String serverAddressConf = "master.hostname";
-  public static String yarnServerAddressConf = "yarn.resourcemanager.address";
-
-  // Safe to use single instance of HttpClient since Supplier.get() provides synchronization
-  @Override
-  public void initialize(Configuration conf)
-          throws UnknownHostException
-  {
-    super.initialize(conf);
-    this.serverPort = conf.getInt(serverPortConf, serverPort);
+  public StandaloneNodeManager(Configuration conf) {
+    this.serverPort = conf.getInt(SERVER_PORT_CONF_KEY, DEFAULT_SERVER_PORT);
     this.serverAddress = ClusterUtil.getMasterHostname(conf);
+    Node currentNode = null;
+    try {
+      currentNode = new StandaloneNode(URI.create("http://" + InetAddress.getLocalHost().getHostAddress()));
+    }
+    catch (UnknownHostException e) {
+      LOG.warn("Unable to set current node", e);
+    }
+    this.currentNode = currentNode;
   }
 
   @Override
-  public Set<String> getNodesInternal()
-  {
+  public Set<Node> getAllNodes() {
+    return getWorkerNodes();
+  }
+
+  @Override
+  public Set<Node> getWorkerNodes() {
     try {
       URL allNodesRequest = getNodeUrl();
       URL failedNodesRequest = getFailedNodeUrl();
@@ -96,7 +99,7 @@ public class PrestoClusterManager extends AsyncClusterManager
           }
         }
         else {
-          log.warn("v1/node failed with code: " + allNodesResponseCode);
+          LOG.warn("v1/node failed with code: " + allNodesResponseCode);
           return null;
         }
       }
@@ -141,27 +144,38 @@ public class PrestoClusterManager extends AsyncClusterManager
 
       List<Stats> allNodes = gson.fromJson(allResponse.toString(), type);
       List<Stats> failedNodes = gson.fromJson(failedResponse.toString(), type);
-      if (allNodes.isEmpty()) {
-        return ImmutableSet.of();
+
+      if (failedNodes.isEmpty()) {
+        failedNodes = ImmutableList.of();
       }
 
       // keep only the healthy nodes
       allNodes.removeAll(failedNodes);
 
-      Set<String> hosts = new HashSet<String>();
-
+      Set<Node> hosts = new HashSet<Node>();
       for (Stats node : allNodes) {
-        hosts.add(node.getUri().getHost());
+        hosts.add(new StandaloneNode(node.getUri()));
       }
-      return ImmutableSet.copyOf(hosts);
+
+      return hosts;
     }
     catch (IOException e) {
       throw Throwables.propagate(e);
     }
   }
 
+  @Override
+  public Node getCurrentNode() {
+    return currentNode;
+  }
+
+  @Override
+  public String getEnvironment() {
+    return "testenv";
+  }
+
   private HttpURLConnection getHttpURLConnection(URL urlRequest)
-          throws IOException
+      throws IOException
   {
     requireNonNull(urlRequest, "urlRequest is null");
     HttpURLConnection allHttpCon = (HttpURLConnection) urlRequest.openConnection();
@@ -169,17 +183,6 @@ public class PrestoClusterManager extends AsyncClusterManager
     allHttpCon.setRequestMethod("GET");
     allHttpCon.setRequestProperty("X-Presto-User", DEFAULT_USER);
     return allHttpCon;
-  }
-
-  @Override
-  public ClusterType getClusterType()
-  {
-    return ClusterType.PRESTO_CLUSTER_MANAGER;
-  }
-
-  public static void setPrestoServerPort(Configuration conf, int port)
-  {
-    conf.setInt(serverPortConf, port);
   }
 
   private URL getNodeUrl()
@@ -194,7 +197,47 @@ public class PrestoClusterManager extends AsyncClusterManager
     return new URL("http://" + serverAddress + ":" + serverPort + "/v1/node/failed");
   }
 
-  public static class Stats
+  public static class StandaloneNode
+      implements Node
+  {
+    private final URI uri;
+
+    public StandaloneNode(URI uri) {
+      this.uri = uri;
+    }
+
+    @Override
+    public String getHost() {
+      return uri.getHost();
+    }
+
+    @Override
+    public HostAddress getHostAndPort() {
+      return HostAddress.fromUri(uri);
+    }
+
+    @Override
+    public URI getHttpUri() {
+      return uri;
+    }
+
+    @Override
+    public String getNodeIdentifier() {
+      return uri.toString();
+    }
+
+    @Override
+    public String getVersion() {
+      return "<unknown>";
+    }
+
+    @Override
+    public boolean isCoordinator() {
+      return false;
+    }
+  }
+
+  private static class Stats
   {
     URI uri;
     String lastResponseTime;
