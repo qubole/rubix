@@ -12,6 +12,8 @@
  */
 package com.qubole.rubix.prestosql;
 
+import static java.util.Objects.requireNonNull;
+
 import com.qubole.rubix.spi.AsyncClusterManager;
 import com.qubole.rubix.spi.ClusterType;
 import io.prestosql.spi.Node;
@@ -49,9 +51,25 @@ public class PrestoClusterManager extends AsyncClusterManager
   }
 
   @Override
-  public Set<String> getNodesInternal()
-  {
+  public Set<String> getNodesInternal() {
     return ClusterManagerNodeGetter.getNodesInternal(nodeManager);
+  }
+
+  @Override
+  protected String getCurrentNodeHostname() {
+    return ClusterManagerNodeGetter.getCurrentNodeHostname(nodeManager);
+  }
+
+  @Override
+  protected String getCurrentNodeHostAddress() {
+    try {
+      return ClusterManagerNodeGetter.getCurrentNodeHostAddress(nodeManager);
+    }
+    catch (UnknownHostException e) {
+      log.warn("Could not get HostAddress from NodeManager", e);
+      // fallback
+    }
+    return super.getCurrentNodeHostAddress();
   }
 
   @Override

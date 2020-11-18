@@ -52,17 +52,11 @@ public class StandaloneNodeManager
   private final Node currentNode;
   private final int serverPort;
 
-  public StandaloneNodeManager(Configuration conf) {
+  public StandaloneNodeManager(Configuration conf)
+      throws UnknownHostException {
     this.serverPort = conf.getInt(SERVER_PORT_CONF_KEY, DEFAULT_SERVER_PORT);
     this.serverAddress = ClusterUtil.getMasterHostname(conf);
-    Node currentNode = null;
-    try {
-      currentNode = new StandaloneNode(URI.create("http://" + InetAddress.getLocalHost().getHostAddress()));
-    }
-    catch (UnknownHostException e) {
-      LOG.warn("Unable to set current node", e);
-    }
-    this.currentNode = currentNode;
+    this.currentNode = new StandaloneNode(URI.create("http://" + InetAddress.getLocalHost().getHostAddress()));
   }
 
   @Override

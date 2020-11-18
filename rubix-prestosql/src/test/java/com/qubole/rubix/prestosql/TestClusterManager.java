@@ -122,7 +122,8 @@ public abstract class TestClusterManager
     return server;
   }
 
-  abstract protected ClusterManager newPrestoClusterManager(Configuration conf);
+  abstract protected ClusterManager newPrestoClusterManager(Configuration conf)
+      throws UnknownHostException;
 
   private ClusterManager getPrestoClusterManager()
           throws UnknownHostException

@@ -13,11 +13,13 @@
 package com.qubole.rubix.prestosql;
 
 import com.qubole.rubix.spi.ClusterManager;
+import java.net.UnknownHostException;
 import org.apache.hadoop.conf.Configuration;
 
 public class TestSyncClusterManager extends TestClusterManager {
   @Override
-  protected ClusterManager newPrestoClusterManager(Configuration conf) {
+  protected ClusterManager newPrestoClusterManager(Configuration conf)
+      throws UnknownHostException {
     PrestoClusterManager.setNodeManager(new StandaloneNodeManager(conf));
     return new SyncPrestoClusterManager();
   }

@@ -16,6 +16,7 @@ import com.qubole.rubix.spi.ClusterType;
 import com.qubole.rubix.spi.SyncClusterManager;
 import io.prestosql.spi.Node;
 import io.prestosql.spi.NodeManager;
+import java.net.UnknownHostException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -38,9 +39,25 @@ public class SyncPrestoClusterManager extends SyncClusterManager
   }
 
   @Override
-  public Set<String> getNodesInternal()
-  {
+  public Set<String> getNodesInternal() {
     return ClusterManagerNodeGetter.getNodesInternal(PrestoClusterManager.NODE_MANAGER);
+  }
+
+  @Override
+  protected String getCurrentNodeHostname() {
+    return ClusterManagerNodeGetter.getCurrentNodeHostname(PrestoClusterManager.NODE_MANAGER);
+  }
+
+  @Override
+  protected String getCurrentNodeHostAddress() {
+    try {
+      return ClusterManagerNodeGetter.getCurrentNodeHostAddress(PrestoClusterManager.NODE_MANAGER);
+    }
+    catch (UnknownHostException e) {
+      log.warn("Could not get HostAddress from NodeManager", e);
+      // fallback
+    }
+    return super.getCurrentNodeHostAddress();
   }
 
   @Override

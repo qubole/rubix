@@ -14,11 +14,18 @@ package com.qubole.rubix.prestosql;
 
 import io.prestosql.spi.Node;
 import io.prestosql.spi.NodeManager;
+import java.net.UnknownHostException;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
 
+/*
+ * Class that encapsulates logic using NodeManager to satisfy API
+ * of ClusterManager. This logic was put in a separate class so
+ * that both PrestoClusterManager and SyncPrestoClusterManager
+ * can share it.
+ */
 public class ClusterManagerNodeGetter {
   public static Set<String> getNodesInternal(NodeManager nodeManager)
   {
@@ -26,5 +33,16 @@ public class ClusterManagerNodeGetter {
     return nodeManager.getWorkerNodes().stream()
         .map(Node::getHost)
         .collect(Collectors.toSet());
+  }
+
+  public static String getCurrentNodeHostname(NodeManager nodeManager) {
+    requireNonNull(nodeManager, "nodeManager is null");
+    return nodeManager.getCurrentNode().getHost();
+  }
+
+  public static String getCurrentNodeHostAddress(NodeManager nodeManager)
+      throws UnknownHostException {
+    requireNonNull(nodeManager, "nodeManager is null");
+    return nodeManager.getCurrentNode().getHostAndPort().toInetAddress().getHostAddress();
   }
 }
