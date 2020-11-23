@@ -54,9 +54,13 @@ public class StandaloneNodeManager
 
   public StandaloneNodeManager(Configuration conf)
       throws UnknownHostException {
+    this (conf, InetAddress.getLocalHost().getHostAddress());
+  }
+
+  public StandaloneNodeManager(Configuration conf, String currentHostAddress) {
     this.serverPort = conf.getInt(SERVER_PORT_CONF_KEY, DEFAULT_SERVER_PORT);
     this.serverAddress = ClusterUtil.getMasterHostname(conf);
-    this.currentNode = new StandaloneNode(URI.create("http://" + InetAddress.getLocalHost().getHostAddress()));
+    this.currentNode = new StandaloneNode(URI.create("http://" + currentHostAddress));
   }
 
   @Override

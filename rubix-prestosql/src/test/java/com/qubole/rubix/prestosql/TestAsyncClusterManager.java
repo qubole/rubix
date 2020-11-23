@@ -17,7 +17,8 @@ import org.apache.hadoop.conf.Configuration;
 
 public class TestAsyncClusterManager extends TestClusterManager {
   @Override
-  protected ClusterManager newPrestoClusterManager(Configuration configuration) {
-    return new PrestoClusterManager();
+  protected ClusterManager newPrestoClusterManager(Configuration configuration, String hostAddress)
+  {
+    return new PrestoClusterManager(configuration, hostAddress);
   }
 }

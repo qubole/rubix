@@ -40,13 +40,22 @@ public class PrestoClusterManager extends AsyncClusterManager
 
   private volatile NodeManager nodeManager;
 
+  public PrestoClusterManager()
+  {
+  }
+
+  // For testing
+  PrestoClusterManager(Configuration conf, String hostAddress)
+  {
+    nodeManager = new StandaloneNodeManager(conf, hostAddress);
+  }
+
   @Override
   public void initialize(Configuration conf) throws UnknownHostException
   {
     super.initialize(conf);
-    nodeManager = NODE_MANAGER;
     if (nodeManager == null) {
-      nodeManager = new StandaloneNodeManager(conf);
+      nodeManager = NODE_MANAGER == null ? new StandaloneNodeManager(conf) : NODE_MANAGER;
     }
   }
 
