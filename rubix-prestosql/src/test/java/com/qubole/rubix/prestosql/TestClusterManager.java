@@ -28,6 +28,7 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Set;
 
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
 /**
@@ -57,6 +58,27 @@ public abstract class TestClusterManager
 
       assertTrue(nodes.size() == 2, "Should only have two nodes");
       assertTrue(nodes.contains("192.168.1.3") && nodes.contains("192.168.2.252"), "Wrong nodes data");
+    }
+    finally {
+      server.stop(0);
+    }
+  }
+
+  @Test
+  /*
+   * Tests that the current node name is correctly returned based on the NodeManager API
+   */
+  public void testGetCurrentNodeName()
+      throws IOException
+  {
+    HttpServer server = createServer("/v1/node", new MultipleWorkers(), "/v1/node/failed", new NoFailedNode());
+
+    try {
+      log.info("STARTED SERVER");
+
+      ClusterManager clusterManager = getPrestoClusterManager("192.168.2.252");
+      String currentNodeName = clusterManager.getCurrentNodeName();
+      assertEquals("192.168.2.252", currentNodeName, "Got current node name: " + currentNodeName);
     }
     finally {
       server.stop(0);
@@ -122,17 +144,22 @@ public abstract class TestClusterManager
     return server;
   }
 
-  abstract protected ClusterManager newPrestoClusterManager(Configuration conf)
-      throws UnknownHostException;
+  abstract protected ClusterManager newPrestoClusterManager(Configuration conf, String hostAddress);
 
-  private ClusterManager getPrestoClusterManager()
+  private ClusterManager getPrestoClusterManager(String hostAddress)
           throws UnknownHostException
   {
     Configuration conf = new Configuration();
     conf.setInt(StandaloneNodeManager.SERVER_PORT_CONF_KEY, 45326);
-    ClusterManager clusterManager = newPrestoClusterManager(conf);
+    ClusterManager clusterManager = newPrestoClusterManager(conf, hostAddress);
     clusterManager.initialize(conf);
     return clusterManager;
+  }
+
+  private ClusterManager getPrestoClusterManager()
+          throws UnknownHostException
+  {
+    return getPrestoClusterManager(InetAddress.getLocalHost().getHostAddress());
   }
 
   class MultipleWorkers implements HttpHandler

@@ -18,9 +18,9 @@ import org.apache.hadoop.conf.Configuration;
 
 public class TestSyncClusterManager extends TestClusterManager {
   @Override
-  protected ClusterManager newPrestoClusterManager(Configuration conf)
-      throws UnknownHostException {
-    PrestoClusterManager.setNodeManager(new StandaloneNodeManager(conf));
+  protected ClusterManager newPrestoClusterManager(Configuration conf, String hostAddress)
+  {
+    PrestoClusterManager.setNodeManager(new StandaloneNodeManager(conf, hostAddress));
     return new SyncPrestoClusterManager();
   }
 }

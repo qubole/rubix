@@ -14,6 +14,7 @@ package com.qubole.rubix.prestosql;
 
 import static java.util.Objects.requireNonNull;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.qubole.rubix.spi.AsyncClusterManager;
 import com.qubole.rubix.spi.ClusterType;
 import io.prestosql.spi.Node;
@@ -40,13 +41,22 @@ public class PrestoClusterManager extends AsyncClusterManager
 
   private volatile NodeManager nodeManager;
 
+  public PrestoClusterManager()
+  {
+  }
+
+  @VisibleForTesting
+  PrestoClusterManager(Configuration conf, String hostAddress)
+  {
+    nodeManager = new StandaloneNodeManager(conf, hostAddress);
+  }
+
   @Override
   public void initialize(Configuration conf) throws UnknownHostException
   {
     super.initialize(conf);
-    nodeManager = NODE_MANAGER;
     if (nodeManager == null) {
-      nodeManager = new StandaloneNodeManager(conf);
+      nodeManager = NODE_MANAGER == null ? new StandaloneNodeManager(conf) : NODE_MANAGER;
     }
   }
 
