@@ -114,7 +114,7 @@ public class TestPoolingClient
             retries,
             conf,
             "localhost",
-            pool.borrowObject("localhost", conf));
+            pool.borrowObject("localhost"));
   }
 
   private static void startServerAsync(final Configuration conf)

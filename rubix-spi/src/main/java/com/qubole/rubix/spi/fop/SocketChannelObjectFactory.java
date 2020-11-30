@@ -37,9 +37,10 @@ public class SocketChannelObjectFactory
 
   @Override
   public SocketChannel create(String host, int socketTimeout, int connectTimeout)
+          throws IOException
   {
     SocketAddress sad = new InetSocketAddress(host, this.port);
-    SocketChannel socket = null;
+    SocketChannel socket;
     try {
       socket = SocketChannel.open();
       socket.socket().setSoTimeout(socketTimeout);
@@ -49,6 +50,7 @@ public class SocketChannelObjectFactory
     }
     catch (IOException e) {
       log.warn(LDS_POOL + " : Unable to open connection to host " + host, e);
+      throw e;
     }
     return socket;
   }

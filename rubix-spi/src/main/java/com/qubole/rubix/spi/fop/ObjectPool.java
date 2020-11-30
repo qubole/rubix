@@ -19,14 +19,12 @@ package com.qubole.rubix.spi.fop;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.Thread.currentThread;
@@ -67,7 +65,7 @@ public class ObjectPool<T>
     return new ArrayBlockingQueue<>(poolConfig.getMaxSize());
   }
 
-  public Poolable<T> borrowObject(String host, Configuration conf)
+  public Poolable<T> borrowObject(String host)
   {
     if (!hostToPoolMap.containsKey(host)) {
       synchronized (hostToPoolMap) {
@@ -77,22 +75,21 @@ public class ObjectPool<T>
       }
     }
     log.debug(this.name + " : Borrowing object for partition: " + host);
-    for (int i = 0; i < 3; i++) { // try at most three times
-      Poolable<T> result = getObject(false, host);
-      if (factory.validate(result.getObject())) {
-        return result;
-      }
-      else {
-        this.hostToPoolMap.get(host).decreaseObject(result);
-      }
+    Poolable<T> result = getObject(host);
+    if (result == null) {
+      throw new RuntimeException("Unable to find a free object from connection pool: " + this.name);
     }
-    throw new RuntimeException("Cannot find a valid object");
+    else if (!factory.validate(result.getObject())) {
+      this.hostToPoolMap.get(host).decreaseObject(result);
+      throw new RuntimeException("Cannot find a valid object from connection pool: " + this.name);
+    }
+    return result;
   }
 
-  private Poolable<T> getObject(boolean blocking, String host)
+  private Poolable<T> getObject(String host)
   {
     ObjectPoolPartition<T> subPool = this.hostToPoolMap.get(host);
-    return subPool.getObject(blocking);
+    return subPool.getObject();
   }
 
   public void returnObject(Poolable<T> obj)
@@ -105,7 +102,7 @@ public class ObjectPool<T>
   {
     int size = 0;
     for (ObjectPoolPartition<T> subPool : hostToPoolMap.values()) {
-      size += subPool.getTotalCount();
+      size += subPool.getAliveObjectCount();
     }
     return size;
   }

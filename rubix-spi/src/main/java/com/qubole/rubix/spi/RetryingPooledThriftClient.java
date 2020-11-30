@@ -12,6 +12,7 @@
  */
 package com.qubole.rubix.spi;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.qubole.rubix.spi.fop.ObjectPool;
 import com.qubole.rubix.spi.fop.Poolable;
 import org.apache.commons.logging.Log;
@@ -76,12 +77,18 @@ public abstract class RetryingPooledThriftClient
 
         // unset transportPoolable so that close() doesnt return it again to pool if borrowObject hits an exception
         transportPoolable = null;
-        transportPoolable = objectPool.borrowObject(host, conf);
+        transportPoolable = objectPool.borrowObject(host);
         updateClient(transportPoolable);
       }
     }
 
     throw new TException();
+  }
+
+  @VisibleForTesting
+  public Poolable<TTransport> getTransportPoolable()
+  {
+    return transportPoolable;
   }
 
   @Override

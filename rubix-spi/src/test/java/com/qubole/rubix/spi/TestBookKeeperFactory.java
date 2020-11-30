@@ -12,6 +12,7 @@
  */
 package com.qubole.rubix.spi;
 
+import com.qubole.rubix.spi.fop.Poolable;
 import com.qubole.rubix.spi.thrift.BookKeeperService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -21,6 +22,7 @@ import org.apache.thrift.server.TServer;
 import org.apache.thrift.server.TThreadPoolServer;
 import org.apache.thrift.transport.TServerSocket;
 import org.apache.thrift.transport.TServerTransport;
+import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -30,7 +32,9 @@ import org.testng.annotations.Test;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 
 public class TestBookKeeperFactory
 {
@@ -144,6 +148,43 @@ public class TestBookKeeperFactory
 
     final RetryingPooledBookkeeperClient client = createTestBookKeeperClient(socketTimeout, connectTimeout, 0);
     client.isBookKeeperAlive(); // should throw expected exception due to socket timeout
+  }
+
+  @Test
+  public void testConnectionPoolSemaphoreLogic() throws TException, InterruptedException
+  {
+    final int connectTimeout = 500;
+    final int socketTimeout = 500;
+
+    // Create a connection pool of size = 1
+    conf.setInt("rubix.pool.size.max", 1);
+    server = startMockServer(true, NO_DELAY, NO_DELAY);
+
+    RetryingPooledBookkeeperClient bookKeeperClient = createTestBookKeeperClient(socketTimeout, connectTimeout, 3);
+    assertTrue(bookKeeperClient.isBookKeeperAlive(), "Unable to connect to bookkeeper");
+
+    Poolable<TTransport> transportPoolable = bookKeeperClient.getTransportPoolable();
+
+    try {
+      bookKeeperFactory.createBookKeeperClient("localhost", conf);
+    }
+    catch (Exception e) {
+      assertEquals(e.getMessage(), "Unable to find a free object from connection pool: bks-pool");
+
+      // close the client which should have added back the free connection the pool.
+      bookKeeperClient.close();
+
+      bookKeeperClient = bookKeeperFactory.createBookKeeperClient("localhost", conf);
+      assertTrue(bookKeeperClient.isBookKeeperAlive(), "Unable to connect to bookkeeper");
+
+      // Verify that the pool return the same connection instead of creating the new one.
+      assertEquals(transportPoolable.getObject(), bookKeeperClient.getTransportPoolable().getObject(), "Same connection should be reused from the pool");
+      return;
+    }
+    finally {
+      stopMockServer();
+    }
+    fail("Expected exception to be thrown while creating bookkeeper client");
   }
 
   private MockBookKeeperServer startMockServer(boolean waitForStart, int startDelay, int aliveCallDelay) throws InterruptedException
