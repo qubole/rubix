@@ -49,7 +49,7 @@
         <dep.prestosql.version>322</dep.prestosql.version>
         <commons-httpclient.version>3.0.1</commons-httpclient.version>
         <dep.guava.version>26.0-jre</dep.guava.version>
-        <dep.hadoop.version>3.2.0</dep.hadoop.version>
+        <dep.hadoop.version>3.2.4</dep.hadoop.version>
         <dep.gcs.version>2.0.0</dep.gcs.version>
         <dep.metrics.version>3.1.0</dep.metrics.version>
         <dep.testng.version>6.9.8</dep.testng.version>
